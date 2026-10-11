@@ -16,9 +16,9 @@ Xcode, con su propia forma de colocar las ventanas nuevas (*dwindle*) y sin el l
 | Gestor de ventanas (árbol, workspaces, comandos, CLI) | Funciona como AeroSpace `74a1bf1`, con otro nombre |
 | Build, instalación y desinstalación sin Xcode | Hecho |
 | Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) |
-| Barra de menús con *chips* de workspaces, temas y ajustes | Pendiente (hoy: el icono de menú de AeroSpace) |
+| Barra de menús con *chips* de workspaces, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) |
 | Bordes de ventana | Pendiente |
-| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración y los comandos del árbol. El resto de la suite original (XCTest) está por migrar |
+| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración, los comandos del árbol, la barra de menús y el editor de la config. El resto de la suite original (XCTest) está por migrar |
 
 El formato de configuración y los comandos son los de AeroSpace con las diferencias de [Mosaico](#mosaico): su
 [guía](https://nikitabobko.github.io/AeroSpace/guide) y su
@@ -105,6 +105,34 @@ un aviso (no con un error) y se tratan como `tiles`:
 
 Los avisos salen en `inlay reload-config` y en el menú de la barra («Config contains warnings...»).
 
+## Barra de menús y Ajustes
+
+El item de la barra muestra **todos los workspaces** y marca el enfocado (no distingue monitores). Se configura
+en la tabla `[menu-bar]` de la config; está documentada en
+[`docs/config-examples/default-config.toml`](docs/config-examples/default-config.toml).
+
+| Clave | Valores | Por defecto |
+|---|---|---|
+| `enabled` | `true`, `false` | `true` |
+| `theme` | `'chips'`, `'chips-icons'`, `'square'`, `'minimal'` | `'chips'` |
+| `show-app-icons` | `true`, `false` | lo decide el tema (`true` en `chips-icons`) |
+| `dim-empty-workspaces` | `true`, `false` | `true` |
+| `show-mode` | `true`, `false` | `false` |
+| `[menu-bar.colors]` `accent` | color | `'system-accent'` |
+| `[menu-bar.colors]` `focused`, `occupied`, `empty` | color o `'auto'` | `'auto'` |
+
+Un color es `'#RRGGBB'`, `'#RRGGBBAA'` o `'system-accent'`. `'auto'` es el color del texto de la barra (blanco
+en barra oscura, negro en clara). Con todo en `'auto'` y sin iconos, el item es una imagen plantilla idéntica
+a la de Aeromenu; un color fijo no se adapta a la barra.
+
+- **Clic** en un workspace: va a él. **Clic en el enfocado** o **clic derecho**: abre el menú (workspaces,
+  ventana enfocada, layout, modo, config, pausar y Ajustes).
+- **Ajustes…** (⌘, en el menú, o abrir Inlay otra vez desde Aplicaciones) edita esas claves **en tu fichero de
+  config**, línea a línea y sin tocar comentarios ni el resto del fichero, y recarga la config. Si la config es
+  un enlace simbólico, se escribe en su destino. Si aún no tienes config, el primer cambio crea
+  `~/.config/inlay/inlay.toml` a partir de la incluida. Una clave escrita con puntos (`menu-bar.theme = …`) o
+  dentro de una tabla en línea no se edita desde Ajustes: su control aparece desactivado.
+
 ## Desinstalación
 
 ```sh
@@ -121,6 +149,14 @@ identidad de firma (bórrala en *Acceso a Llaveros* si quieres).
 scripts/build-app.sh    # compila y deja build/Inlay.app firmada (no instala nada)
 scripts/test.sh         # ejecuta los tests (acepta los argumentos de 'swift test', p. ej. --filter DwindleTest)
 scripts/make-icon.sh    # regenera Support/AppIcon.icns a partir de scripts/icon/AppIcon.swift
+```
+
+Para ver el item de la barra sin arrancar Inlay, `--render-menu-bar` lo dibuja fuera de pantalla (cada tema, en
+barra oscura y clara, con colores por defecto y personalizados; `_sheet.png` los reúne todos) y termina:
+
+```sh
+build/Inlay.app/Contents/MacOS/Inlay --render-menu-bar /tmp/inlay-item
+INLAY_RENDER_DIR=/tmp/inlay-item scripts/test.sh --filter SettingsModelTest   # las pestañas de Ajustes, a PNG
 ```
 
 Los scripts fuerzan `DEVELOPER_DIR=/Library/Developer/CommandLineTools` aunque `xcode-select` apunte a Xcode,

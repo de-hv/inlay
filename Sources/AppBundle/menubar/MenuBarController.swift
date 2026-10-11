@@ -124,7 +124,9 @@ final class MenuBarController: NSObject {
     // MARK: - Clicks
 
     @objc private func clicked() {
-        guard let state, let layout, let button = statusItem?.button, let event = NSApp.currentEvent else { return openMenu() }
+        // Without a mouse event (the item was pressed through the accessibility API) there is no workspace to tell
+        guard let state, let layout, let button = statusItem?.button,
+              let event = NSApp.currentEvent, event.type == .leftMouseUp || event.type == .rightMouseUp else { return openMenu() }
         let isRightButton = event.type == .rightMouseUp || event.modifierFlags.contains(.control)
         let point = Self.layoutPoint(of: event, in: button, layoutSize: layout.size)
         switch layout.clickAction(at: point, isRightButton: isRightButton, snapshot: state.snapshot) {

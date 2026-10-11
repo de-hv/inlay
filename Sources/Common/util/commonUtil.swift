@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import Foundation
 
-public let socketPath = "/tmp/\(aeroSpaceAppId)-\(unixUserName).sock"
+public let socketPath = "/tmp/\(inlayAppId)-\(unixUserName).sock"
 public let unixUserName = NSUserName()
 public let mainModeId = "main"
 
@@ -23,12 +23,11 @@ public func bugPrompt(
     let _message = __message.contains("\n") ? "\n" + __message.prefixLines(with: "    ") : __message
     let thread = Thread.current
     return """
-        Please report to:
-            https://github.com/nikitabobko/AeroSpace/discussions/categories/potential-bugs
-            Please describe what you did to trigger this error
+        This is a bug in Inlay (a fork of AeroSpace). Please do NOT report it to the AeroSpace project.
+            Report it to the maintainer of Inlay, and describe what you did to trigger this error
 
         Message: \(_message)
-        Version: \(aeroSpaceAppVersion)
+        Version: \(inlayAppVersion)
         Git hash: \(gitHash)
         refreshSessionEvent: \(refreshSessionEvent.prettyDescription)
         Date: \(Date.now)
@@ -59,9 +58,9 @@ public func dieT<T>(
     if !isUnitTest && isServer {
         showMessageInGui(
             filenameIfConsoleApp: recursionDetectorDuringTermination
-                ? "aerospace-runtime-error-recursion.txt"
-                : "aerospace-runtime-error.txt",
-            title: "AeroSpace Runtime Error",
+                ? "inlay-runtime-error-recursion.txt"
+                : "inlay-runtime-error.txt",
+            title: "Inlay Runtime Error",
             message: message,
         )
     }

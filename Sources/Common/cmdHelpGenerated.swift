@@ -1,5 +1,5 @@
-// FILE IS GENERATED FROM docs/aerospace-*.adoc files
-// TO REGENERATE THE FILE RUN generate.sh
+// FILE WAS GENERATED UPSTREAM FROM docs/aerospace-*.adoc files (see docs/upstream-aerospace)
+// Inlay keeps it as a static file. Edit it by hand when a command changes
 
 let balance_sizes_help_generated = """
     USAGE: balance-sizes [-h|--help] [--workspace <workspace>]
@@ -28,7 +28,7 @@ let enable_help_generated = """
        OR: enable [-h|--help] off [--fail-if-noop]
     """
 let eval_help_generated = """
-    USAGE: eval [-h|--help] [--stdin] [--] <aerospace-shell-expr>
+    USAGE: eval [-h|--help] [--stdin] [--] <inlay-shell-expr>
     """
 let exec_and_forget_help_generated = """
     USAGE: exec-and-forget <bash-script>

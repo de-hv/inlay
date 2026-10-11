@@ -12,7 +12,7 @@ final class TestApp: AbstractApp {
 
     private init() {
         self.pid = 0
-        self.rawAppBundleId = "bobko.AeroSpace.test-app"
+        self.rawAppBundleId = "com.davidhiguita.Inlay.test-app"
         self.name = rawAppBundleId
     }
 

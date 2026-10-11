@@ -1,15 +1,15 @@
-// FILE IS GENERATED FROM docs/aerospace-*.adoc files
-// TO REGENERATE THE FILE RUN generate.sh
+// FILE WAS GENERATED UPSTREAM FROM docs/aerospace-*.adoc files (see docs/upstream-aerospace)
+// Inlay keeps it as a static file. Edit it by hand when a command changes
 
 let subcommandDescriptions = [
     ["  balance-sizes", "Balance sizes of all windows in the current workspace"],
     ["  close-all-windows-but-current", "On the focused workspace, close all windows but current"],
     ["  close", "Close the focused window"],
-    ["  config", "Query AeroSpace config options"],
+    ["  config", "Query Inlay config options"],
     ["  debug-windows", "Interactive command to record Accessibility API debug information to create bug reports"],
     ["  echo", "Print arguments and interpolation variables to stdout"],
     ["  enable", "Temporarily disable window management"],
-    ["  eval", "Send multiple commands to AeroSpace at once"],
+    ["  eval", "Send multiple commands to Inlay at once"],
     ["  false", "Return false value"],
     ["  flatten-workspace-tree", "Flatten the tree of the focused workspace"],
     ["  focus-back-and-forth", "Switch between the current and previously focused elements back and forth"],
@@ -34,14 +34,14 @@ let subcommandDescriptions = [
     ["  move", "Move the focused window in the given direction"],
     ["  reload-config", "Reload currently active config"],
     ["  resize", "Resize the focused window"],
-    ["  run-callback", "Run AeroSpace config callbacks on demand"],
+    ["  run-callback", "Run Inlay config callbacks on demand"],
     ["  split", "Split focused window"],
-    ["  subscribe", "Subscribe to AeroSpace events and receive notifications via socket"],
+    ["  subscribe", "Subscribe to Inlay events and receive notifications via socket"],
     ["  summon-workspace", "Move the requested workspace to the focused monitor."],
     ["  swap", "Swaps the focused window with another window."],
     ["  test-not", "Negative condition evaluation utility"],
     ["  test", "Condition evaluation utility"],
-    ["  trigger-binding", "Trigger AeroSpace binding as if it was pressed by user"],
+    ["  trigger-binding", "Trigger Inlay binding as if it was pressed by user"],
     ["  true", "Return true value"],
     ["  volume", "Manipulate volume"],
     ["  workspace-back-and-forth", "Switch between the focused workspace and previously focused workspace back and forth"],

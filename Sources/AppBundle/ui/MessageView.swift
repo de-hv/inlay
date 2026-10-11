@@ -3,11 +3,11 @@ import SwiftUI
 
 @MainActor
 public func getMessageWindow(messageModel: MessageModel) -> some Scene {
-    // Using SwiftUI.Window because another class in AeroSpace is already called Window
-    SwiftUI.Window(messageModel.message?.title ?? aeroSpaceAppName, id: messageWindowId) {
+    // Using SwiftUI.Window because another class in Inlay is already called Window
+    SwiftUI.Window(messageModel.message?.title ?? inlayAppName, id: messageWindowId) {
         MessageView(model: messageModel)
             .onAppear {
-                // Set activation policy; otherwise, AeroSpace windows won't be able to receive focus and accept keyboard input
+                // Set activation policy; otherwise, Inlay windows won't be able to receive focus and accept keyboard input
                 NSApp.setActivationPolicy(.accessory)
                 NSApplication.shared.windows.forEach {
                     if $0.identifier?.rawValue == messageWindowId {
@@ -22,7 +22,7 @@ public func getMessageWindow(messageModel: MessageModel) -> some Scene {
     //.windowLevel(.floating) //This might be the SwiftUI way of doing window level instead of the onAppear block above, but it's only available from macOS 15.0
 }
 
-public let messageWindowId = "\(aeroSpaceAppName).messageView"
+public let messageWindowId = "\(inlayAppName).messageView"
 
 struct MessageView: View {
     @StateObject private var model: MessageModel
@@ -84,7 +84,7 @@ struct MessageView: View {
         }
         .textSelection(.enabled)
         .frame(minWidth: 480, maxWidth: 960, minHeight: 200)
-        .onChange(of: model.message) { message in
+        .onChange(of: model.message) { _, message in
             if message == nil {
                 self.dismiss()
             }
@@ -119,8 +119,8 @@ public struct Message: Hashable, Equatable {
 
     init(
         type: MessageType = .config,
-        title: String = aeroSpaceAppName,
-        description: String = "AeroSpace Config Diagnostics",
+        title: String = inlayAppName,
+        description: String = "Inlay Config Diagnostics",
         body: String,
         containsWarnings: Bool,
     ) {

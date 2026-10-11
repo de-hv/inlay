@@ -5,8 +5,8 @@ import SwiftUI
 @MainActor
 public func menuBar(viewModel: TrayMenuModel) -> some Scene { // todo should it be converted to "SwiftUI struct"?
     MenuBarExtra {
-        let shortIdentification = "\(aeroSpaceAppName) v\(aeroSpaceAppVersion) \(gitShortHash)"
-        let identification      = "\(aeroSpaceAppName) v\(aeroSpaceAppVersion) \(gitHash)"
+        let shortIdentification = "\(inlayAppName) v\(inlayAppVersion) \(gitShortHash)"
+        let identification      = "\(inlayAppName) v\(inlayAppVersion) \(gitHash)"
         Text(shortIdentification)
         Button("Copy to clipboard") { identification.copyToClipboard() }
             .keyboardShortcut("C", modifiers: .command)
@@ -61,11 +61,11 @@ public func menuBar(viewModel: TrayMenuModel) -> some Scene { // todo should it 
             openConfigButton()
             reloadConfigButton(warningsAsErrors: false)
         } else {
-            Button("AeroSpace requires accessibility permission to move windows") {
+            Button("Inlay requires accessibility permission to move windows") {
                 viewModel.axPermissionStatus = .waitingWithPrompt
             }
         }
-        Button("Quit \(aeroSpaceAppName)") {
+        Button("Quit \(inlayAppName)") {
             Task.startUnstructured {
                 terminationHandler?.beforeTermination()
                 terminateApp()

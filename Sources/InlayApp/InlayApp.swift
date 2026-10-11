@@ -1,10 +1,9 @@
 import AppBundle
 import SwiftUI
 
-// This file is shared between SPM and xcode project
 
 @main
-struct AeroSpaceApp: App {
+struct InlayApp: App {
     @StateObject var viewModel = TrayMenuModel.shared
     @StateObject var messageModel = MessageModel.shared
     @Environment(\.openWindow) var openWindow: OpenWindowAction
@@ -16,7 +15,7 @@ struct AeroSpaceApp: App {
     var body: some Scene {
         menuBar(viewModel: viewModel)
         getMessageWindow(messageModel: messageModel)
-            .onChange(of: messageModel.message) { message in
+            .onChange(of: messageModel.message) { _, message in
                 if message != nil {
                     openWindow(id: messageWindowId)
                 }

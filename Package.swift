@@ -8,18 +8,44 @@ let swiftSettings: [SwiftSetting] = [
     .strictMemorySafety(),
 ]
 
+// scripts/build-app.sh sets both variables. A plain 'swift build' gets the defaults of Sources/BuildInfo/BuildInfo.c
+// The values reach the C code unquoted, so they must be plain tokens: digits, letters, dots and dashes
+let buildInfoDefines: [CSetting] = [
+    ("INLAY_VERSION", "INLAY_BUILD_VERSION"),
+    ("INLAY_GIT_HASH", "INLAY_BUILD_GIT_HASH"),
+].compactMap { (envVar, define) -> CSetting? in
+    guard let value = Context.environment[envVar], !value.isEmpty else { return nil }
+    precondition(
+        value.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "-") },
+        "\(envVar) may only contain ASCII letters, digits, dots and dashes: '\(value)'",
+    )
+    return .define(define, to: value)
+}
+
+// XCTest doesn't ship with the Command Line Tools, so the upstream XCTest suite only builds with a full Xcode.
+// It is opt-in until it is migrated to Swift Testing: INLAY_XCTEST=1 swift test
+let xcTestTargets: [Target] = Context.environment["INLAY_XCTEST"] == "1"
+    ? [
+        .testTarget(
+            name: "AppBundleTests",
+            dependencies: [
+                .target(name: "AppBundle"),
+            ],
+            swiftSettings: swiftSettings,
+        ),
+    ]
+    : []
+
 let package = Package(
-    name: "AeroSpacePackage",
-    // Runtime support for parameterized protocol types is only available in macOS 13.0.0 or newer
-    // And it specifies deploymentTarget for CLI
-    platforms: [.macOS(.v13)],
+    name: "Inlay",
+    platforms: [.macOS(.v14)],
     // Products define the executables and libraries a package produces, making them visible to other packages.
     products: [
-        .executable(name: "aerospace", targets: ["Cli"]),
-        // Don't use this build for release, use xcode instead
-        .executable(name: "AeroSpaceApp", targets: ["AeroSpaceApp"]),
-        // We only need to expose this as a product for xcode
-        .library(name: "AppBundle", targets: ["AppBundle"]),
+        // The CLI client. It only talks to the server over a unix socket
+        .executable(name: "inlay", targets: ["Cli"]),
+        // The server (window manager + menu bar). scripts/build-app.sh wraps it into Inlay.app
+        // It can't be called 'Inlay': on a case-insensitive file system it would overwrite the 'inlay' CLI
+        .executable(name: "InlayApp", targets: ["InlayApp"]),
     ],
     dependencies: [
         .package(url: "https://github.com/InerziaSoft/ISSoundAdditions.git", exact: "2.0.1"),
@@ -36,10 +62,16 @@ let package = Package(
             path: "Sources/PrivateApi",
             publicHeadersPath: "include",
         ),
+        // Version and git hash of the build
+        .target(
+            name: "BuildInfo",
+            cSettings: buildInfoDefines,
+        ),
         .target(
             name: "Common",
             dependencies: [
                 .product(name: "Collections", package: "swift-collections"),
+                .target(name: "BuildInfo"),
             ],
             swiftSettings: swiftSettings,
         ),
@@ -56,7 +88,7 @@ let package = Package(
             swiftSettings: swiftSettings,
         ),
         .executableTarget(
-            name: "AeroSpaceApp",
+            name: "InlayApp",
             dependencies: [
                 .target(name: "AppBundle"),
             ],
@@ -69,12 +101,5 @@ let package = Package(
             ],
             swiftSettings: swiftSettings,
         ),
-        .testTarget(
-            name: "AppBundleTests",
-            dependencies: [
-                .target(name: "AppBundle"),
-            ],
-            swiftSettings: swiftSettings,
-        ),
-    ],
+    ] + xcTestTargets,
 )

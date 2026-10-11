@@ -56,8 +56,8 @@ private struct FrozenFocus: AeroAny, Equatable, Sendable {
 
 /// Global focus.
 /// Commands must be cautious about accessing this property directly. There are legitimate cases.
-/// But, in general, commands must firstly check --window-id, --workspace, AEROSPACE_WINDOW_ID env and
-/// AEROSPACE_WORKSPACE env before accessing the global focus.
+/// But, in general, commands must firstly check --window-id, --workspace, INLAY_WINDOW_ID env and
+/// INLAY_WORKSPACE env before accessing the global focus.
 @MainActor var focus: LiveFocus { _focus.live }
 
 @MainActor func setFocus(to newFocus: LiveFocus) -> Bool {
@@ -180,17 +180,17 @@ extension Workspace {
         process.executableURL = URL(filePath: exec)
         process.arguments = Array(config.execOnWorkspaceChange.dropFirst())
         var environment = config.execConfig.envVariables
-        environment[AEROSPACE_FOCUSED_WORKSPACE] = newWorkspace
-        environment[AEROSPACE_PREV_WORKSPACE] = oldWorkspace
+        environment[INLAY_FOCUSED_WORKSPACE] = newWorkspace
+        environment[INLAY_PREV_WORKSPACE] = oldWorkspace
         switch focus.asLeaf {
             case .emptyWorkspace(let w):
-                environment[AEROSPACE_WORKSPACE] = w.name
-                environment[AEROSPACE_WINDOW_ID] = nil
+                environment[INLAY_WORKSPACE] = w.name
+                environment[INLAY_WINDOW_ID] = nil
             case .window(let w):
-                environment[AEROSPACE_WORKSPACE] = nil
-                environment[AEROSPACE_WINDOW_ID] = w.windowId.description
+                environment[INLAY_WORKSPACE] = nil
+                environment[INLAY_WINDOW_ID] = w.windowId.description
         }
-        process.environment = environment
+        process.environment = environment.withLegacyEnvVarAliases()
         _ = Result { try process.run() }
     }
 }

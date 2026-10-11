@@ -238,7 +238,7 @@ final class FormatTest: XCTestCase {
         let window = TestWindow.new(id: 1, parent: Workspace.get(byName: name).rootTilingContainer)
         let obj = AeroObj.window(.forTest(window: window, title: nil))
         assertPrimitive(FormatVar.app(.appPid).expandFormatVar(obj: obj), .int(Int64(0)))
-        assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("bobko.AeroSpace.test-app"))
+        assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
     }
 
     func testExpandWorkspaceVars() {
@@ -276,8 +276,8 @@ final class FormatTest: XCTestCase {
 
     func testExpandAppVars() {
         let obj = AeroObj.app(TestApp.shared)
-        assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("bobko.AeroSpace.test-app"))
-        assertPrimitive(FormatVar.app(.appName).expandFormatVar(obj: obj), .string("bobko.AeroSpace.test-app"))
+        assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
+        assertPrimitive(FormatVar.app(.appName).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
         assertPrimitive(FormatVar.app(.appPid).expandFormatVar(obj: obj), .int(Int64(0)))
         assertPrimitive(FormatVar.app(.appExecPath).expandFormatVar(obj: obj), .string("NULL-APP-EXEC-PATH"))
         assertPrimitive(FormatVar.app(.appBundlePath).expandFormatVar(obj: obj), .string("NULL-APP-BUNDLE-PATH"))
@@ -311,7 +311,7 @@ final class FormatTest: XCTestCase {
         let result: [AeroObj] = []
         assertSucc(
             result.formatToJson([.interVar(.formatVar(.window(.windowId)))], ignoreRightPaddingVar: true),
-            JSONEncoder.aeroSpaceDefault.encodeToString([[String: Primitive]]()).orDie(),
+            JSONEncoder.inlayDefault.encodeToString([[String: Primitive]]()).orDie(),
         )
     }
 
@@ -327,7 +327,7 @@ final class FormatTest: XCTestCase {
             ],
             ignoreRightPaddingVar: true,
         )
-        let expected = JSONEncoder.aeroSpaceDefault.encodeToString([[
+        let expected = JSONEncoder.inlayDefault.encodeToString([[
             "window-id": Primitive.int(42),
             "window-title": Primitive.string("hello"),
             "window-is-fullscreen": Primitive.bool(true),
@@ -345,7 +345,7 @@ final class FormatTest: XCTestCase {
                 [.interVar(.formatVar(.window(.windowId)))],
                 ignoreRightPaddingVar: true,
             )
-            let expected = JSONEncoder.aeroSpaceDefault.encodeToString([
+            let expected = JSONEncoder.inlayDefault.encodeToString([
                 ["window-id": Primitive.int(1)],
                 ["window-id": Primitive.int(2)],
             ])
@@ -364,7 +364,7 @@ final class FormatTest: XCTestCase {
             ],
             ignoreRightPaddingVar: true,
         )
-        let expected = JSONEncoder.aeroSpaceDefault.encodeToString([["window-id": Primitive.int(7)]])
+        let expected = JSONEncoder.inlayDefault.encodeToString([["window-id": Primitive.int(7)]])
         assertSucc(result, expected.orDie())
     }
 
@@ -378,7 +378,7 @@ final class FormatTest: XCTestCase {
             ],
             ignoreRightPaddingVar: true,
         )
-        let expected = JSONEncoder.aeroSpaceDefault.encodeToString([["window-id": Primitive.int(8)]])
+        let expected = JSONEncoder.inlayDefault.encodeToString([["window-id": Primitive.int(8)]])
         assertSucc(result, expected.orDie())
     }
 
@@ -406,7 +406,7 @@ final class FormatTest: XCTestCase {
             ],
             ignoreRightPaddingVar: true,
         )
-        let expected = JSONEncoder.aeroSpaceDefault.encodeToString([[
+        let expected = JSONEncoder.inlayDefault.encodeToString([[
             "window-id": Primitive.int(11),
             "newline": Primitive.string("\n"),
             "tab": Primitive.string("\t"),
@@ -454,7 +454,7 @@ final class FormatTest: XCTestCase {
             ],
             ignoreRightPaddingVar: true,
         )
-        let expected = JSONEncoder.aeroSpaceDefault.encodeToString([[
+        let expected = JSONEncoder.inlayDefault.encodeToString([[
             "window-is-fullscreen": Primitive.bool(false),
         ]])
         assertSucc(result, expected.orDie())

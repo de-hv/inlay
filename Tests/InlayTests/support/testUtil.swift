@@ -41,6 +41,8 @@ func setUpWorkspacesForTests() {
     TestApp.shared.windows = []
 
     global_layoutForNextDetectedWindow = nil
+    activeMode = mainModeId
+    ServerState.shared.isEnabled = true
 }
 
 extension ParsedCmd {
@@ -105,4 +107,13 @@ func parseCommand(_ raw: String) -> ParsedCmd<Shell<any Command>> { parseCommand
 
 extension Result {
     var okOrNil: Success? { try? get() }
+}
+
+extension Result {
+    var errorOrNil: Failure? {
+        switch self {
+            case .success: nil
+            case .failure(let error): error
+        }
+    }
 }

@@ -1,0 +1,482 @@
+@testable import AppBundle
+import AppKit
+import Common
+import Testing
+
+extension InlayTests {
+    @Suite final class MenuBarLayoutTest {
+        /// Every character is 7 pt wide (5 pt in '+2'), so the expected frames are easy to tell
+        private static func measure(_ string: String, _ font: MenuBarFont) -> CGSize {
+            switch font {
+                case .chipName: CGSize(width: 7 * CGFloat(string.count), height: 15)
+                case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
+                case .overflow: CGSize(width: 5 * CGFloat(string.count), height: 11)
+                case .modeInitial: CGSize(width: 8, height: 12)
+            }
+        }
+
+        private static let ghostty = MenuBarSnapshot.App(bundleId: "com.mitchellh.ghostty", name: "Ghostty")
+        private static let zed = MenuBarSnapshot.App(bundleId: "dev.zed.Zed", name: "Zed")
+        private static let apps = (1 ... 5).map { MenuBarSnapshot.App(bundleId: "app\($0)", name: "App \($0)") }
+
+        /// 1: one app, 2: one app and the focus, 3: five apps, 4: empty
+        private var snapshot = MenuBarSnapshot(
+            workspaces: [
+                .init(name: "1", isOccupied: true, apps: [ghostty]),
+                .init(name: "2", isOccupied: true, apps: [zed]),
+                .init(name: "3", isOccupied: true, apps: apps),
+                .init(name: "4", isOccupied: false),
+            ],
+            focusedWorkspace: "2",
+        )
+
+        private func layout(_ config: MenuBarConfig = MenuBarConfig(), _ snapshot: MenuBarSnapshot? = nil, transition: MenuBarFocusTransition? = nil) -> MenuBarLayout {
+            MenuBarLayout.make(snapshot ?? self.snapshot, config, transition: transition, measure: Self.measure)
+        }
+
+        // MARK: - Chips
+
+        @Test func testChips() {
+            let layout = layout()
+            assertEquals(layout.style, .chips)
+            // 4 chips of 17 pt, 2.5 pt apart, in an item of 22 pt
+            assertEquals(layout.size, CGSize(width: 4 * 17 + 3 * 2.5, height: 22))
+            assertEquals(layout.cells.map(\.workspace), ["1", "2", "3", "4"])
+            assertEquals(layout.cells.map(\.frame), [
+                CGRect(x: 0, y: 2.5, width: 17, height: 17),
+                CGRect(x: 19.5, y: 2.5, width: 17, height: 17),
+                CGRect(x: 39, y: 2.5, width: 17, height: 17),
+                CGRect(x: 58.5, y: 2.5, width: 17, height: 17),
+            ])
+            // The name in the middle of the chip
+            assertEquals(layout.cells[0].name, .init(string: "1", font: .chipName, frame: CGRect(x: 5, y: 3.5, width: 7, height: 15)))
+            assertEquals(layout.cells.map(\.isOccupied), [true, true, true, false])
+            assertEquals(layout.cells.map(\.isDimmed), [false, false, false, true])
+            assertEquals(layout.cells.map(\.focus), [0, 1, 0, 0])
+            assertEquals(layout.cells.flatMap(\.icons), [])
+            assertEquals(layout.marker, .init(frame: CGRect(x: 19.5, y: 2.5, width: 17, height: 17), cornerRadius: 4.5, isOutlined: false))
+            assertEquals(layout.modeBadge, nil)
+            assertEquals(layout.layoutIcon, nil)
+            assertEquals(layout.placeholder, nil)
+            assertEquals(layout.needsColor, false)
+        }
+
+        @Test func testChipsWithTheRealFont() {
+            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(), measure: MenuBarFont.size)
+            // The size of the Chips style of Aeromenu with six workspaces
+            assertEquals(layout.size, CGSize(width: 114.5, height: 22))
+            assertEquals(layout.cells.map(\.frame.width), [17, 17, 17, 17, 17, 17])
+        }
+
+        @Test func testLongNamesGrowTheChip() {
+            snapshot.workspaces[2].name = "web"
+            let layout = layout()
+            // 3 pt of padding on each side
+            assertEquals(layout.cells[2].frame, CGRect(x: 39, y: 2.5, width: 27, height: 17))
+            assertEquals(layout.cells[2].name.frame, CGRect(x: 42, y: 3.5, width: 21, height: 15))
+            assertEquals(layout.cells[3].frame.minX, 68.5)
+            assertEquals(layout.size.width, 85.5)
+        }
+
+        @Test func testDimEmptyWorkspaces() {
+            assertEquals(layout(MenuBarConfig(dimEmptyWorkspaces: false)).cells.map(\.isDimmed), [false, false, false, false])
+        }
+
+        @Test func testFullscreen() {
+            snapshot.isFocusedWorkspaceFullscreen = true
+            assertEquals(layout().marker?.isOutlined, true)
+            assertEquals(layout(MenuBarConfig(theme: .square)).marker?.isOutlined, true)
+        }
+
+        @Test func testChipsIcons() {
+            let layout = layout(MenuBarConfig(theme: .chipsIcons))
+            // 5 + name + (3 + icon) + 3
+            assertEquals(layout.cells[0].frame, CGRect(x: 0, y: 2.5, width: 5 + 7 + 3 + 13 + 3, height: 17))
+            assertEquals(layout.cells[0].name.frame, CGRect(x: 5, y: 3.5, width: 7, height: 15))
+            assertEquals(layout.cells[0].icons, [.init(app: Self.ghostty, frame: CGRect(x: 15, y: 4.5, width: 13, height: 13))])
+            assertEquals(layout.cells[1].frame.minX, 33.5)
+            // Up to 3 icons, and '+n' for the rest
+            let third = layout.cells[2]
+            assertEquals(third.icons.map(\.app), Array(Self.apps.prefix(3)))
+            assertEquals(third.icons.map(\.frame.minX), [82, 98, 114])
+            assertEquals(third.overflow, .init(string: "+2", font: .overflow, frame: CGRect(x: 130, y: 5.5, width: 10, height: 11)))
+            assertEquals(third.frame, CGRect(x: 67, y: 2.5, width: 76, height: 17))
+            // An empty workspace is a chip like any other
+            assertEquals(layout.cells[3].frame, CGRect(x: 145.5, y: 2.5, width: 17, height: 17))
+            assertEquals(layout.cells[3].icons, [])
+            assertEquals(layout.size.width, 162.5)
+            // The marker covers the whole chip
+            assertEquals(layout.marker?.frame, layout.cells[1].frame)
+            assertEquals(layout.needsColor, true)
+        }
+
+        @Test func testShowAppIconsIsIndependentOfTheTheme() {
+            assertEquals(layout(MenuBarConfig(theme: .chips, showAppIcons: true)), layout(MenuBarConfig(theme: .chipsIcons)))
+            assertEquals(layout(MenuBarConfig(theme: .chipsIcons, showAppIcons: false)), layout(MenuBarConfig(theme: .chips)))
+            assertEquals(layout(MenuBarConfig(theme: .minimal, showAppIcons: true)).cells.map(\.icons.count), [1])
+            assertEquals(layout(MenuBarConfig(theme: .square, showAppIcons: true)).cells.map(\.icons.count), [1, 1, 3, 0])
+        }
+
+        @Test func testModeBadge() {
+            snapshot.mode = "resize"
+            // Off by default
+            assertEquals(layout().modeBadge, nil)
+            let layout = layout(MenuBarConfig(showMode: true))
+            // 14 pt, 6 pt after the chips
+            assertEquals(layout.modeBadge?.frame, CGRect(x: 75.5 + 6, y: 4, width: 14, height: 14))
+            assertEquals(layout.modeBadge?.initial, .init(string: "R", font: .modeInitial, frame: CGRect(x: 84.5, y: 5, width: 8, height: 12)))
+            assertEquals(layout.size.width, 95.5)
+            assertEquals(layout.needsColor, true)
+            // Not in the main mode
+            snapshot.mode = "main"
+            assertEquals(self.layout(MenuBarConfig(showMode: true)).modeBadge, nil)
+            assertEquals(MenuBarLayout.modeInitial("service"), "S")
+            assertEquals(MenuBarLayout.modeInitial("ñu"), "Ñ")
+            assertEquals(MenuBarLayout.modeInitial(""), "?")
+        }
+
+        // MARK: - Minimal
+
+        @Test func testMinimal() {
+            let layout = layout(MenuBarConfig(theme: .minimal))
+            // Only the focused workspace
+            assertEquals(layout.cells.map(\.workspace), ["2"])
+            assertEquals(layout.size, CGSize(width: 17, height: 22))
+            assertEquals(layout.marker?.frame, CGRect(x: 0, y: 2.5, width: 17, height: 17))
+            snapshot.mode = "resize"
+            assertEquals(self.layout(MenuBarConfig(theme: .minimal, showMode: true)).size.width, 17 + 6 + 14)
+        }
+
+        // MARK: - Square
+
+        @Test func testSquare() {
+            let layout = layout(MenuBarConfig(theme: .square))
+            assertEquals(layout.style, .square)
+            assertEquals(layout.layoutIcon, .init(frame: CGRect(x: 0, y: 0, width: 16, height: 22), orientation: .h))
+            // Slots of 15 pt after the icon, 17 pt for the focused one
+            assertEquals(layout.cells.map(\.frame), [
+                CGRect(x: 26, y: 0, width: 15, height: 22),
+                CGRect(x: 41, y: 0, width: 17, height: 22),
+                CGRect(x: 58, y: 0, width: 15, height: 22),
+                CGRect(x: 73, y: 0, width: 15, height: 22),
+            ])
+            assertEquals(layout.size, CGSize(width: 88, height: 22))
+            assertEquals(layout.cells[0].name.frame, CGRect(x: 29.5, y: 3, width: 8, height: 16))
+            // A square of 8.5 pt in the place of the focused workspace
+            assertEquals(layout.marker, .init(frame: CGRect(x: 45.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(layout.modeBadge, nil)
+            assertEquals(layout.needsColor, false)
+
+            snapshot.orientation = .v
+            assertEquals(self.layout(MenuBarConfig(theme: .square)).layoutIcon?.orientation, .v)
+        }
+
+        @Test func testSquareMode() {
+            snapshot.mode = "resize"
+            // The square always shows the mode, whatever 'show-mode' says. There is no separate badge
+            let layout = layout(MenuBarConfig(theme: .square))
+            assertEquals(layout.marker?.frame, CGRect(x: 42.5, y: 4, width: 14, height: 14))
+            assertEquals(layout.marker?.cornerRadius, 3.5)
+            assertEquals(layout.marker?.initial?.string, "R")
+            assertEquals(layout.modeBadge, nil)
+            assertEquals(self.layout(MenuBarConfig(theme: .square, showMode: true)), layout)
+            // Nothing shifts when the mode changes
+            snapshot.mode = "main"
+            assertEquals(self.layout(MenuBarConfig(theme: .square)).cells, layout.cells)
+        }
+
+        // MARK: - Slide
+
+        @Test func testSlideOfTheChipsMarker() {
+            // From 4 to 2
+            let start = layout(transition: .init(from: "4", progress: 0))
+            assertEquals(start.marker?.frame, CGRect(x: 58.5, y: 2.5, width: 17, height: 17))
+            assertEquals(start.cells.map(\.focus), [0, 0, 0, 1])
+            let middle = layout(transition: .init(from: "4", progress: 0.5))
+            assertEquals(middle.marker?.frame, CGRect(x: 39, y: 2.5, width: 17, height: 17))
+            assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
+            // The chips don't move while the marker slides
+            assertEquals(middle.cells.map(\.frame), layout().cells.map(\.frame))
+            assertEquals(layout(transition: .init(from: "4", progress: 1)), layout())
+            assertEquals(layout(transition: .init(from: "4", progress: 7)), layout())
+            assertEquals(layout(transition: .init(from: "4", progress: -1)), start)
+            // The workspace the marker comes from is gone
+            assertEquals(layout(transition: .init(from: "9", progress: 0.3)), layout())
+        }
+
+        @Test func testSlideBetweenChipsOfDifferentWidths() {
+            snapshot.workspaces[3].name = "web"
+            let middle = layout(transition: .init(from: "web", progress: 0.5))
+            // The width and the center go from one chip to the other
+            assertEquals(middle.marker?.frame, CGRect(x: 39, y: 2.5, width: 22, height: 17))
+        }
+
+        @Test func testSlideOfTheSquare() {
+            let middle = layout(MenuBarConfig(theme: .square), transition: .init(from: "4", progress: 0.5))
+            // Both slots are half way between 15 and 17 pt
+            assertEquals(middle.cells.map(\.frame.width), [15, 16, 15, 16])
+            assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
+            assertEquals(middle.marker?.frame.midX, (49 + 80) / 2)
+            assertEquals(middle.size.width, 88)
+        }
+
+        // MARK: - Placeholders
+
+        @Test func testPlaceholders() {
+            snapshot.status = .paused
+            let paused = layout(MenuBarConfig(theme: .square, showMode: true))
+            assertEquals(paused.cells, [])
+            assertEquals(paused.marker, nil)
+            assertEquals(paused.layoutIcon, nil)
+            assertEquals(paused.placeholder?.symbolName, "pause.fill")
+            assertEquals(paused.placeholder?.glyphOpacity, 1)
+            // The size of the item of Aeromenu while AeroSpace is disabled
+            assertEquals(paused.size, CGSize(width: 33.5, height: 22))
+            assertEquals(paused.workspace(at: CGPoint(x: 10, y: 10)), nil)
+
+            snapshot.status = .needsAccessibility
+            let needsAccessibility = layout()
+            assertEquals(needsAccessibility.placeholder?.symbolName, "exclamationmark.triangle.fill")
+            assertEquals(needsAccessibility.placeholder?.glyphOpacity, 0.5)
+        }
+
+        // MARK: - Hit testing
+
+        @Test func testHitTestingOfChips() {
+            let layout = layout()
+            assertEquals(layout.workspace(at: CGPoint(x: 0, y: 0)), "1")
+            assertEquals(layout.workspace(at: CGPoint(x: 8, y: 11)), "1")
+            // The gap between two chips is split in two halves
+            assertEquals(layout.workspace(at: CGPoint(x: 18, y: 11)), "1")
+            assertEquals(layout.workspace(at: CGPoint(x: 18.5, y: 11)), "2")
+            assertEquals(layout.workspace(at: CGPoint(x: 37.5, y: 11)), "2")
+            assertEquals(layout.workspace(at: CGPoint(x: 38, y: 11)), "3")
+            // Above and below the chip, inside of the menu bar
+            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 0.5)), "3")
+            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 21.5)), "3")
+            assertEquals(layout.workspace(at: CGPoint(x: 75, y: 11)), "4")
+            // Outside of the item
+            assertEquals(layout.workspace(at: CGPoint(x: 77, y: 11)), nil)
+            assertEquals(layout.workspace(at: CGPoint(x: -2, y: 11)), nil)
+            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 23)), nil)
+            assertEquals(layout.workspace(at: CGPoint(x: 45, y: -1)), nil)
+        }
+
+        @Test func testHitFramesDoNotOverlap() {
+            for config in [MenuBarConfig(), MenuBarConfig(theme: .chipsIcons), MenuBarConfig(theme: .square), MenuBarConfig(theme: .square, showAppIcons: true)] {
+                let layout = layout(config)
+                for (left, right) in zip(layout.cells, layout.cells.dropFirst()) {
+                    assertEquals(left.hitFrame.maxX, right.hitFrame.minX, additionalMsg: config.theme.rawValue)
+                }
+                // Every point of the item between the first and the last workspace hits exactly one of them
+                var x = layout.cells[0].hitFrame.minX
+                while x < layout.cells[3].hitFrame.maxX {
+                    assertEquals(layout.cells.count { $0.hitFrame.contains(CGPoint(x: x, y: 11)) }, 1, additionalMsg: "\(config.theme.rawValue) \(x)")
+                    x += 0.25
+                }
+            }
+        }
+
+        @Test func testHitTestingWithIcons() {
+            let layout = layout(MenuBarConfig(theme: .chipsIcons))
+            // The icons and '+2' belong to their workspace
+            assertEquals(layout.workspace(at: CGPoint(x: 20, y: 11)), "1")
+            assertEquals(layout.workspace(at: CGPoint(x: 120, y: 11)), "3")
+            assertEquals(layout.workspace(at: CGPoint(x: 135, y: 11)), "3")
+            assertEquals(layout.workspace(at: CGPoint(x: 150, y: 11)), "4")
+        }
+
+        @Test func testHitTestingOfSquare() {
+            let layout = layout(MenuBarConfig(theme: .square))
+            // The layout icon and the space after it aren't workspaces
+            assertEquals(layout.workspace(at: CGPoint(x: 8, y: 11)), nil)
+            assertEquals(layout.workspace(at: CGPoint(x: 25, y: 11)), nil)
+            assertEquals(layout.workspace(at: CGPoint(x: 26, y: 11)), "1")
+            assertEquals(layout.workspace(at: CGPoint(x: 49, y: 11)), "2")
+            assertEquals(layout.workspace(at: CGPoint(x: 87, y: 21)), "4")
+            assertEquals(layout.workspace(at: CGPoint(x: 88, y: 11)), nil)
+        }
+
+        @Test func testClickActions() {
+            snapshot.mode = "resize"
+            let layout = layout(MenuBarConfig(showMode: true))
+            func action(_ x: CGFloat, right: Bool = false) -> MenuBarClickAction {
+                layout.clickAction(at: CGPoint(x: x, y: 11), isRightButton: right, snapshot: snapshot)
+            }
+            // A workspace that isn't focused: go there
+            assertEquals(action(8), .focusWorkspace("1"))
+            assertEquals(action(66), .focusWorkspace("4"))
+            // The focused workspace opens the menu
+            assertEquals(action(28), .openMenu)
+            // So do the mode badge and the right button
+            assertEquals(action(88), .openMenu)
+            assertEquals(action(8, right: true), .openMenu)
+            assertEquals(action(66, right: true), .openMenu)
+
+            // 'minimal' has nothing but the focused workspace
+            let minimal = self.layout(MenuBarConfig(theme: .minimal))
+            assertEquals(minimal.clickAction(at: CGPoint(x: 8, y: 11), isRightButton: false, snapshot: snapshot), .openMenu)
+
+            // While Inlay doesn't manage windows, there is nowhere to go
+            var paused = snapshot
+            paused.status = .paused
+            assertEquals(self.layout(MenuBarConfig(), paused).clickAction(at: CGPoint(x: 8, y: 11), isRightButton: false, snapshot: paused), .openMenu)
+        }
+    }
+
+    @Suite struct MenuBarPaletteTest {
+        private let accent = Rgba(red: 1, green: 0.5, blue: 0)
+
+        private func palette(_ config: MenuBarConfig = MenuBarConfig(), style: MenuBarLayout.Style = .chips, dark: Bool = true, needsColor: Bool = false) -> MenuBarPalette {
+            MenuBarPalette.resolve(config, style: style, isDarkBar: dark, systemAccent: accent, needsColor: needsColor)
+        }
+
+        @Test func testDefaultIsATemplate() {
+            // One color, like Aeromenu: macOS picks black or white for the menu bar
+            for dark in [true, false] {
+                let palette = palette(dark: dark)
+                assertEquals(palette.isTemplate, true)
+                assertEquals(palette.base, .black)
+                assertEquals(palette.focused, .black)
+                assertEquals(palette.focusedName, nil)
+                assertEquals(palette.occupiedName, Rgba.black.withAlpha(0.72))
+                assertEquals(palette.occupiedBackground, Rgba.black.withAlpha(0.14))
+                assertEquals(palette.emptyName, Rgba.black.withAlpha(0.35))
+                assertEquals(palette.accent, accent)
+            }
+            assertEquals(palette(MenuBarConfig(dimEmptyWorkspaces: false)).emptyName, Rgba.black.withAlpha(0.72))
+            // 'accent' alone doesn't need colors: it is only used by the mode badge
+            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(accent: .rgba(.white)))).isTemplate, true)
+        }
+
+        @Test func testSquareNamesAreNotFaded() {
+            let palette = palette(style: .square)
+            assertEquals(palette.isTemplate, true)
+            assertEquals(palette.occupiedName, .black)
+            assertEquals(palette.emptyName, Rgba.black.withAlpha(0.35))
+        }
+
+        @Test func testIconsAndBadgeNeedColor() {
+            // The same look, but with the color of the menu bar text baked in
+            let dark = palette(dark: true, needsColor: true)
+            assertEquals(dark.isTemplate, false)
+            assertEquals(dark.base, .white)
+            assertEquals(dark.focused, .white)
+            assertEquals(dark.focusedName, nil)
+            assertEquals(dark.occupiedName, Rgba.white.withAlpha(0.72))
+            assertEquals(dark.occupiedBackground, Rgba.white.withAlpha(0.14))
+            assertEquals(dark.emptyName, Rgba.white.withAlpha(0.35))
+            let light = palette(dark: false, needsColor: true)
+            assertEquals(light.isTemplate, false)
+            assertEquals(light.base, .black)
+            assertEquals(light.occupiedName, Rgba.black.withAlpha(0.72))
+        }
+
+        @Test func testFixedColors() {
+            let orange = Rgba(hex: "#D19A66").orDie()
+            let gray = Rgba(hex: "#ABB2BF").orDie()
+            let translucent = Rgba(hex: "#CDD6F466").orDie()
+            let config = MenuBarConfig(colors: MenuBarColors(accent: .rgba(.white), focused: .rgba(orange), occupied: .rgba(gray), empty: .rgba(translucent)))
+            for dark in [true, false] {
+                // A fixed color doesn't adapt to the menu bar
+                let palette = palette(config, dark: dark)
+                assertEquals(palette.isTemplate, false)
+                assertEquals(palette.base, dark ? .white : .black)
+                assertEquals(palette.focused, orange)
+                // Black or white, the one with more contrast
+                assertEquals(palette.focusedName, .black)
+                assertEquals(palette.occupiedName, gray)
+                assertEquals(palette.occupiedBackground, gray.withAlpha(0.16))
+                assertEquals(palette.emptyName, translucent)
+                assertEquals(palette.accent, .white)
+                assertEquals(palette.accentName, .black)
+            }
+            // Without dimming, the empty workspaces look like the names of the occupied ones
+            var noDim = config
+            noDim.dimEmptyWorkspaces = false
+            assertEquals(palette(noDim).emptyName, gray)
+        }
+
+        @Test func testOneFixedColorIsEnoughToLeaveTheTemplate() {
+            let navy = Rgba(hex: "#1E3A8A").orDie()
+            let focused = palette(MenuBarConfig(colors: MenuBarColors(focused: .rgba(navy))))
+            assertEquals(focused.isTemplate, false)
+            assertEquals(focused.focusedName, .white)
+            // The colors that stay 'auto' follow the menu bar
+            assertEquals(focused.occupiedName, Rgba.white.withAlpha(0.72))
+            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(focused: .rgba(navy))), dark: false).occupiedName, Rgba.black.withAlpha(0.72))
+            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(occupied: .rgba(navy)))).isTemplate, false)
+            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(empty: .rgba(navy)))).isTemplate, false)
+
+            let systemAccent = palette(MenuBarConfig(colors: MenuBarColors(focused: .systemAccent)))
+            assertEquals(systemAccent.isTemplate, false)
+            assertEquals(systemAccent.focused, accent)
+            assertEquals(systemAccent.accentName, .white)
+        }
+    }
+
+    @Suite @MainActor struct MenuBarRendererTest {
+        private func alpha(_ bitmap: NSBitmapImageRep, _ x: Int, _ y: Int) -> Int {
+            Int(((bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) * 255).rounded())
+        }
+
+        @Test func testTemplateImage() throws {
+            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(), measure: MenuBarFont.size)
+            let palette = MenuBarPalette.resolve(MenuBarConfig(), style: .chips, isDarkBar: true, systemAccent: .white)
+            let image = try #require(MenuBarRenderer.image(layout, palette, scale: 2))
+            assertEquals(image.isTemplate, true)
+            assertEquals(image.size, CGSize(width: 114.5, height: 22))
+            let bitmap = try #require(MenuBarRenderer.bitmap(layout, palette, scale: 2))
+            assertEquals(bitmap.pixelsWide, 229)
+            assertEquals(bitmap.pixelsHigh, 44)
+            // Above the chips: nothing
+            assertEquals(alpha(bitmap, 16, 2), 0)
+            // The corner of the first chip (occupied): its faint background, 14%
+            assertEquals(alpha(bitmap, 4, 20), 36)
+            // The corner of the second chip (focused): solid
+            assertEquals(alpha(bitmap, 43, 20), 255)
+            // The gap between two chips
+            assertEquals(alpha(bitmap, 36, 20), 0)
+            // The last chip (empty) has no background
+            assertEquals(alpha(bitmap, 199, 20), 0)
+            // The name of the focused workspace is cut out of its chip: some pixel in the middle of it is clear
+            assertEquals((44 ..< 68).contains { alpha(bitmap, $0, 22) == 0 }, true)
+        }
+
+        @Test func testColorImage() throws {
+            let config = MenuBarConfig(colors: MenuBarColors(focused: .rgba(Rgba(red: 1, green: 0, blue: 0))))
+            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, config, measure: MenuBarFont.size)
+            let palette = MenuBarPalette.resolve(config, style: .chips, isDarkBar: true, systemAccent: .white)
+            assertEquals(try #require(MenuBarRenderer.image(layout, palette, scale: 2)).isTemplate, false)
+            let bitmap = try #require(MenuBarRenderer.bitmap(layout, palette, scale: 2))
+            let focused = try #require(bitmap.colorAt(x: 43, y: 20))
+            assertEquals([focused.redComponent, focused.greenComponent, focused.blueComponent, focused.alphaComponent], [1, 0, 0, 1])
+            // The name isn't cut out: every pixel of the chip is opaque
+            assertEquals((44 ..< 68).allSatisfy { alpha(bitmap, $0, 22) == 255 }, true)
+        }
+
+        @Test func testRenderSamples() throws {
+            let directory = FileManager.default.temporaryDirectory.appending(path: "inlay-render-\(UUID().uuidString)")
+            defer { _ = try? FileManager.default.removeItem(at: directory) }
+            try renderMenuBarSamples(to: directory)
+            let files = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            // Every theme, in a dark and in a light menu bar, with the default and with custom colors
+            for theme in MenuBarTheme.allCases {
+                for variant in ["default", "custom"] {
+                    for bar in ["dark", "light"] {
+                        let name = "\(theme.rawValue)-\(variant)-\(bar).png"
+                        assertEquals(files.contains(name), true, additionalMsg: name)
+                        assertEquals(try #require(NSImage(contentsOf: directory.appending(path: name))).size.height, 24, additionalMsg: name)
+                    }
+                }
+            }
+            // Only what is one color is a template: no icons, no mode badge, no fixed colors
+            assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), [
+                "chips-default-template.png", "chips-fullscreen-template.png", "chips-no-dim-template.png",
+                "minimal-default-template.png", "minimal-fullscreen-template.png",
+                "needs-accessibility-template.png", "paused-template.png",
+                "square-default-template.png", "square-fullscreen-template.png", "square-mode-template.png",
+            ])
+        }
+    }
+}

@@ -65,6 +65,8 @@ private let serverHelp = """
       --read-only             Disable window management.
                               Useful if you want to use only debug-windows or other query commands.
       --unregister-login-item Remove Inlay from the login items and exit. Used by scripts/uninstall.sh
+      --render-menu-bar <dir> Draw the menu bar item to PNG files (every theme, dark and light menu bar,
+                              default and custom colors) and exit. Inlay doesn't start
     """
 
 nonisolated(unsafe) private var _serverArgs = ServerArgs()

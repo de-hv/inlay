@@ -48,8 +48,16 @@ struct ReloadConfigResult {
                 MessageModel.shared.message = nil
         }
     }
+    if !args.dryRun {
+        ServerState.shared.lastConfigLoad = ConfigLoadStatus(
+            date: .now,
+            url: result.configUrl,
+            errorCount: parseResult.errors.count,
+            warningCount: parseResult.warnings.count,
+            isApplied: parseResult.allowReloadConfig,
+        )
+    }
     if parseResult.allowReloadConfig && !args.dryRun {
-        TrayMenuModel.shared.lastReloadConfigContainedWarnings = containsWarnings
         resetHotKeys()
         config = parseResult.config
         configUrl = result.configUrl
@@ -58,6 +66,7 @@ struct ReloadConfigResult {
         syncFocusFollowsMouse(config)
         syncConfigFileWatcher()
     }
+    if !args.dryRun { publishUiState() }
 
     if warningsAsErrors {
         errors += warnings

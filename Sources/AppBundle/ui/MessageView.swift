@@ -1,32 +1,63 @@
+import AppKit
+import Combine
 import Common
 import SwiftUI
 
+/// Shows the diagnostics of the config (see: reloadConfig_nonCancellable) in a window, for as long as `MessageModel` has a message.
+///
+/// Inlay has no Dock icon and is never the active app on its own, so the window floats and is brought forward by hand
 @MainActor
-public func getMessageWindow(messageModel: MessageModel) -> some Scene {
-    // Using SwiftUI.Window because another class in Inlay is already called Window
-    SwiftUI.Window(messageModel.message?.title ?? inlayAppName, id: messageWindowId) {
-        MessageView(model: messageModel)
-            .onAppear {
-                // Set activation policy; otherwise, Inlay windows won't be able to receive focus and accept keyboard input
-                NSApp.setActivationPolicy(.accessory)
-                NSApplication.shared.windows.forEach {
-                    if $0.identifier?.rawValue == messageWindowId {
-                        $0.level = .floating
-                        $0.styleMask.remove(.miniaturizable) // Disable minimize button, because we don't unminimize the window on config error
-                    }
-                }
-            }
-        // .windowMinimizeBehavior(WindowInteractionBehavior.disabled) // SwiftUI way of hiding minimize button. Available only since macOS 15
+final class MessageWindowController: NSObject, NSWindowDelegate {
+    static let shared = MessageWindowController()
+
+    private var window: NSWindow?
+    private var subscription: AnyCancellable?
+
+    override private init() {}
+
+    /// It must be called once, after the app has finished launching
+    func start() {
+        // The publisher fires before the property changes, that's why the new value is passed along
+        subscription = MessageModel.shared.$message.sink { [weak self] message in
+            Task { @MainActor in self?.sync(message) }
+        }
     }
-    .windowResizability(.contentMinSize)
-    //.windowLevel(.floating) //This might be the SwiftUI way of doing window level instead of the onAppear block above, but it's only available from macOS 15.0
+
+    private func sync(_ message: Message?) {
+        guard let message else {
+            window?.close()
+            return
+        }
+        let window = window ?? makeWindow()
+        self.window = window
+        window.title = message.title
+        if !window.isVisible { window.center() }
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    private func makeWindow() -> NSWindow {
+        let window = NSWindow(contentViewController: NSHostingController(rootView: MessageView(model: MessageModel.shared)))
+        // No minimize button, because the window isn't unminimized on a config error
+        window.styleMask = [.titled, .closable, .resizable]
+        window.identifier = NSUserInterfaceItemIdentifier(messageWindowId)
+        window.level = .floating
+        window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 720, height: 420))
+        window.delegate = self
+        return window
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        // If the user closes the window and then the error is still the same, the window must appear again
+        if MessageModel.shared.message != nil { MessageModel.shared.message = nil }
+    }
 }
 
 public let messageWindowId = "\(inlayAppName).messageView"
 
 struct MessageView: View {
     @StateObject private var model: MessageModel
-    @Environment(\.dismiss) private var dismiss: DismissAction
     @FocusState var focus: Bool
 
     init(model: MessageModel) {
@@ -84,15 +115,6 @@ struct MessageView: View {
         }
         .textSelection(.enabled)
         .frame(minWidth: 480, maxWidth: 960, minHeight: 200)
-        .onChange(of: model.message) { _, message in
-            if message == nil {
-                self.dismiss()
-            }
-        }
-        .onDisappear {
-            // If user closes the screen with the macOS native close (x) button and then the error is still the same, this window will not appear again
-            model.message = nil
-        }
         .onAppear {
             focus = true
         }
@@ -129,5 +151,38 @@ public struct Message: Hashable, Equatable {
         self.description = description
         self.body = body
         self.containsWarnings = containsWarnings
+    }
+}
+
+@MainActor @ViewBuilder
+func openConfigButton(showShortcutGroup: Bool = false) -> some View {
+    let editor = getTextEditorToOpenConfig()
+    let button = Button("Open config in '\(editor.lastPathComponent)'") { openConfigInEditor() }
+        .keyboardShortcut(",", modifiers: .command)
+    switch showShortcutGroup {
+        case true: shortcutGroup(label: Text("⌘ ,"), content: button)
+        case false: button
+    }
+}
+
+@MainActor @ViewBuilder
+func reloadConfigButton(showShortcutGroup: Bool = false, warningsAsErrors: Bool) -> some View {
+    if RunSessionGuard.isServerEnabled != nil {
+        let button = Button("Reload config") { reloadConfigFromUi(warningsAsErrors: warningsAsErrors) }
+            .keyboardShortcut("R", modifiers: .command)
+        switch showShortcutGroup {
+            case true: shortcutGroup(label: Text("⌘ R"), content: button)
+            case false: button
+        }
+    }
+}
+
+func shortcutGroup(label: some View, content: some View) -> some View {
+    GroupBox {
+        VStack(alignment: .trailing, spacing: 6) {
+            label
+                .foregroundStyle(Color.secondary)
+            content
+        }
     }
 }

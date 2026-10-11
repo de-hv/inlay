@@ -78,9 +78,11 @@ struct Rgba: Equatable, Sendable {
 
     /// '#RRGGBB', or '#RRGGBBAA' if the color isn't opaque
     var hex: String {
-        func byte(_ component: Double) -> Int { Int((min(max(component, 0), 1) * 255).rounded()) }
-        let rgb = String(format: "#%02X%02X%02X", byte(red), byte(green), byte(blue))
-        return byte(alpha) == 255 ? rgb : rgb + String(format: "%02X", byte(alpha))
+        func byte(_ component: Double) -> String {
+            let hex = String(Int((min(max(component, 0), 1) * 255).rounded()), radix: 16, uppercase: true)
+            return hex.count == 1 ? "0" + hex : hex
+        }
+        return "#" + byte(red) + byte(green) + byte(blue) + (byte(alpha) == "FF" ? "" : byte(alpha))
     }
 
     func withAlpha(_ alpha: Double) -> Rgba { Rgba(red: red, green: green, blue: blue, alpha: alpha) }

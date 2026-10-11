@@ -29,7 +29,7 @@ func runHeavyCompleteRefreshSession(
 ) async {
     let state = signposter.beginInterval(#function, "event: \(event) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
     defer { signposter.endInterval(#function, state) }
-    if !TrayMenuModel.shared.isEnabled { return }
+    if !ServerState.shared.isEnabled { return }
     let res = await Result {
         try await $refreshSessionEvent.withValue(event) {
             let nativeFocused = try await getNativeFocusedWindow(.cancellable)
@@ -42,10 +42,10 @@ func runHeavyCompleteRefreshSession(
             try await refresh()
             gcMonitors()
 
-            updateTrayText()
             SecureInputPanel.shared.refresh()
             try await normalizeLayoutReason()
             if shouldLayoutWorkspaces { try await layoutWorkspaces() }
+            publishUiState()
         }
     }
     switch res {
@@ -77,9 +77,9 @@ func runLightSession<T>(
 
         let focusAfter = focus.windowOrNil
 
-        updateTrayText()
         SecureInputPanel.shared.refresh()
         if !event.isFocusFollowsMouse { try await layoutWorkspaces() }
+        publishUiState()
         if focusBefore != focusAfter {
             focusAfter?.nativeFocus() // syncFocusToMacOs
         }
@@ -90,7 +90,7 @@ func runLightSession<T>(
 
 struct RunSessionGuard: Sendable {
     @MainActor
-    static var isServerEnabled: RunSessionGuard? { TrayMenuModel.shared.isEnabled ? forceRun : nil }
+    static var isServerEnabled: RunSessionGuard? { ServerState.shared.isEnabled ? forceRun : nil }
     @MainActor
     static func isServerEnabled(orIsEnableCommand command: (any Command)?) -> RunSessionGuard? {
         command is EnableCommand ? .forceRun : .isServerEnabled
@@ -143,7 +143,7 @@ private func refresh() async throws {
 func refreshObs(_: AXObserver, _: AXUIElement, notif: CFString, _: UnsafeMutableRawPointer?) {
     let notif = notif as String
     Task.startUnstructured { @MainActor in
-        if !TrayMenuModel.shared.isEnabled { return }
+        if !ServerState.shared.isEnabled { return }
         scheduleCancellableCompleteRefreshSession(.ax(notif))
     }
 }
@@ -154,7 +154,7 @@ enum OptimalHideCorner {
 
 @MainActor
 private func layoutWorkspaces() async throws {
-    if !TrayMenuModel.shared.isEnabled {
+    if !ServerState.shared.isEnabled {
         for workspace in Workspace.all {
             workspace.allLeafWindowsRecursive.forEach { ($0 as! MacWindow).unhideFromCorner() } // todo as!
             try await workspace.layoutWorkspace() // Unhide tiling windows from corner

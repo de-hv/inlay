@@ -6,11 +6,11 @@ struct EnableCommand: Command {
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
     func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
-        let prevState = TrayMenuModel.shared.isEnabled
+        let prevState = ServerState.shared.isEnabled
         let newState: Bool = switch args.targetState.val {
             case .on: true
             case .off: false
-            case .toggle: !TrayMenuModel.shared.isEnabled
+            case .toggle: !ServerState.shared.isEnabled
         }
         if newState == prevState {
             switch args.failIfNoop {
@@ -23,7 +23,7 @@ struct EnableCommand: Command {
             }
         }
 
-        TrayMenuModel.shared.isEnabled = newState
+        ServerState.shared.isEnabled = newState
         if newState {
             for workspace in Workspace.all {
                 for window in workspace.allLeafWindowsRecursive where window.isFloating {

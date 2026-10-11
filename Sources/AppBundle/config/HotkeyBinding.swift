@@ -50,6 +50,7 @@ extension HotKey {
     let oldMode = activeMode
     activeMode = targetMode
     if oldMode != targetMode {
+        publishUiState()
         broadcastEvent(.modeChanged(mode: targetMode))
         _ = await config.onModeChanged.run(.defaultEnv, .emptyStdin)
     }

@@ -106,7 +106,7 @@ private func parseMatcher(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c:
         case .dict(let raw):
             return .legacy(raw.parseTable(LegacyWindowDetectedCallbackMatcher(), matcherParsers, backtrace, &c))
         case .string(let raw):
-            return .command(parseCommand(raw, allowExecAndForget: false, allowEval: false).toResult().toParsedConfig(backtrace).getOrNil(appendErrorTo: &c.errors) ?? .empty)
+            return .command(parseCommandForConfig(raw, backtrace, &c, allowExecAndForget: false))
         default:
             // Intentionally skip Table type from the list of expected types
             c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: raw.tomlType)))
@@ -128,9 +128,9 @@ private func parseWindowDetectedCallback(_ raw: OrderedJson, _ backtrace: Config
         myContext.errors.append(.init(backtrace, "'run' is mandatory key"))
     }
 
+    c.warnings += myContext.warnings
     if !myContext.errors.isEmpty {
         c.errors += myContext.errors
-        c.warnings += myContext.warnings
         return nil
     }
 

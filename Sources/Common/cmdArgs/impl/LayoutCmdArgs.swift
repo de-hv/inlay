@@ -11,7 +11,7 @@ public struct LayoutCmdArgs: CmdArgs {
             "--fail-if-noop": trueBoolFlag(\.failIfNoop),
             "--for-next-detected-window": trueBoolFlag(\.forNextDetectedWindow),
         ],
-        posArgs: [newMandatoryPosArgParser(\.toggleBetween, parseToggleBetween, placeholder: LayoutDescription.unionLiteral)],
+        posArgs: [newMandatoryPosArgParser(\.parsedToggleBetween, parseToggleBetween, placeholder: LayoutDescription.unionLiteral)],
         conflictingOptions: [
             ["--window-id", "--workspace"],
 
@@ -30,10 +30,14 @@ public struct LayoutCmdArgs: CmdArgs {
         self.toggleBetween = .initialized(toggleBetween)
     }
 
+    /// Inlay has no accordion layout. The accordion arguments of AeroSpace (accordion, h_accordion, v_accordion) are
+    /// accepted and treated as the tiles layout of the same orientation. Here are those arguments as the user typed them
+    public var accordionArgs: [String] = []
+
     public enum LayoutDescription: String, CaseIterable, Equatable, Sendable, AeroAny {
-        case accordion, tiles
+        case tiles
         case horizontal, vertical
-        case h_accordion, v_accordion, h_tiles, v_tiles
+        case h_tiles, v_tiles
         case tiling, floating
     }
 
@@ -46,14 +50,56 @@ public let layoutCommandRootFlagIncompatibilityMsg = "layout command: --root and
 public let layoutCommandForNextDetectedWindowFlagIncompatibilityMsg =
     "layout command: --for-next-detected-window allows only one tiling|floating <target-layout> argument"
 
-private func parseToggleBetween(input: PosArgParserInput) -> ParsedCliArgs<[LayoutCmdArgs.LayoutDescription]> {
+extension LayoutCmdArgs {
+    /// The warning to show to the user if the command uses the accordion arguments of AeroSpace
+    public var accordionWarning: String? {
+        if accordionArgs.isEmpty { return nil }
+        let mapping = accordionArgs.map { "'\($0)' is treated as '\(accordionArgToTiles[$0].orDie().rawValue)'" }
+        return "Inlay has no accordion layout: " + mapping.joined(separator: ", ")
+    }
+
+    fileprivate var parsedToggleBetween: Lateinit<ParsedToggleBetween> {
+        get {
+            switch toggleBetween {
+                case .initialized(let layouts): .initialized(ParsedToggleBetween(layouts: layouts, accordionArgs: accordionArgs))
+                case .uninitialized: .uninitialized
+            }
+        }
+        set {
+            switch newValue {
+                case .initialized(let parsed):
+                    toggleBetween = .initialized(parsed.layouts)
+                    accordionArgs = parsed.accordionArgs
+                case .uninitialized:
+                    toggleBetween = .uninitialized
+                    accordionArgs = []
+            }
+        }
+    }
+}
+
+private struct ParsedToggleBetween: Sendable {
+    var layouts: [LayoutCmdArgs.LayoutDescription] = []
+    var accordionArgs: [String] = []
+}
+
+private let accordionArgToTiles: [String: LayoutCmdArgs.LayoutDescription] = [
+    "accordion": .tiles,
+    "h_accordion": .h_tiles,
+    "v_accordion": .v_tiles,
+]
+
+private func parseToggleBetween(input: PosArgParserInput) -> ParsedCliArgs<ParsedToggleBetween> {
     let args = input.nonFlagArgs()
 
-    var result: [LayoutCmdArgs.LayoutDescription] = []
+    var result = ParsedToggleBetween()
     var i = 0
     for arg in args {
         if let layout = arg.parseLayoutDescription() {
-            result.append(layout)
+            result.layouts.append(layout)
+        } else if let layout = accordionArgToTiles[arg] {
+            result.accordionArgs.append(arg)
+            result.layouts.append(layout)
         } else {
             return .fail(
                 "Can't parse '\(arg)'\nPossible values: \(LayoutCmdArgs.LayoutDescription.unionLiteral)",
@@ -63,6 +109,14 @@ private func parseToggleBetween(input: PosArgParserInput) -> ParsedCliArgs<[Layo
         i += 1
     }
 
+    if !result.accordionArgs.isEmpty {
+        // 'layout tiles accordion' used to toggle between two layouts. Now, it's the same layout twice
+        var unique: [LayoutCmdArgs.LayoutDescription] = []
+        for layout in result.layouts where !unique.contains(layout) {
+            unique.append(layout)
+        }
+        result.layouts = unique
+    }
     return .succ(result, advanceBy: args.count)
 }
 
@@ -76,9 +130,7 @@ func parseLayoutCmdArgs(_ args: StrArrSlice) -> ParsedCmd<LayoutCmdArgs> {
             !cmdArgs.root || cmdArgs.toggleBetween.val.allSatisfy {
                 switch $0 {
                     case .floating, .tiling: false
-                    case .accordion, .h_accordion, .h_tiles,
-                         .horizontal, .tiles, .v_accordion, .v_tiles,
-                         .vertical: true
+                    case .h_tiles, .horizontal, .tiles, .v_tiles, .vertical: true
                 }
             }
         }
@@ -86,9 +138,7 @@ func parseLayoutCmdArgs(_ args: StrArrSlice) -> ParsedCmd<LayoutCmdArgs> {
             !cmdArgs.forNextDetectedWindow || true == cmdArgs.toggleBetween.val.singleOrNil()?.then {
                 switch $0 {
                     case .floating, .tiling: true
-                    case .accordion, .h_accordion, .h_tiles,
-                         .horizontal, .tiles, .v_accordion, .v_tiles,
-                         .vertical: false
+                    case .h_tiles, .horizontal, .tiles, .v_tiles, .vertical: false
                 }
             }
         }

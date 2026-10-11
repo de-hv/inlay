@@ -580,11 +580,11 @@ extension InlayTests {
         @Test func testParseDefaultRootContainerLayout() {
             let result = parseConfig(
                 """
-                default-root-container-layout = 'accordion'
+                default-root-container-layout = 'tiles'
                 """,
             )
             assertEquals(result.errors, [])
-            assertEquals(result.config.defaultRootContainerLayout, .accordion)
+            assertEquals(result.config.defaultRootContainerLayout, .tiles)
 
             let listResult = parseConfig(
                 """

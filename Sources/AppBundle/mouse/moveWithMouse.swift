@@ -107,8 +107,6 @@ extension CGPoint {
                 tree.children.first(where: {
                     (virtual ? $0.lastAppliedLayoutVirtualRect : $0.lastAppliedLayoutPhysicalRect)?.contains(point) == true
                 })
-            case .accordion:
-                tree.mostRecentChild
         }
         guard let target else { return nil }
         return switch target.tilingTreeNodeCasesOrDie() {

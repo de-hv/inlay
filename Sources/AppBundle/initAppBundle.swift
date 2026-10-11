@@ -31,7 +31,6 @@ import ServiceManagement
             layoutWorkspaces: false,
         )
         try await runLightSession(.startup, .forceRun) {
-            smartLayoutAtStartup()
             _ = await config.afterStartupCommand.run(.defaultEnv, .emptyStdin)
         }
     }
@@ -46,16 +45,6 @@ import ServiceManagement
         \(result.stdout)
         """
     check(result.isOk, msg)
-}
-
-@MainActor
-private func smartLayoutAtStartup() {
-    let workspace = focus.workspace
-    let root = workspace.rootTilingContainer
-    switch root.children.count <= 3 {
-        case true: root.layout = .tiles
-        case false: root.layout = .accordion
-    }
 }
 
 var isStartup: Bool { refreshSessionEvent?.isStartup == true }

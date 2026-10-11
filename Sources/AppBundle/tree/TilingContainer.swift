@@ -55,9 +55,10 @@ extension TilingContainer {
     }
 }
 
+/// Inlay has no accordion layout. 'tiles' is the only layout of tiling containers.
+/// The accordion spellings of AeroSpace are still accepted, with a warning, in the config and in the layout command
 enum Layout: String {
     case tiles
-    case accordion
 }
 
 extension String {

@@ -6,6 +6,9 @@ struct LayoutCommand: Command {
     /*conforms*/ let shouldResetClosedWindowsCache = true
 
     func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
+        if let warning = args.accordionWarning {
+            io.err(warning)
+        }
         if args.forNextDetectedWindow {
             if let it = args.toggleBetween.val.singleOrNil() {
                 global_layoutForNextDetectedWindow = it
@@ -49,16 +52,10 @@ struct LayoutCommand: Command {
             }
         }
         switch targetDescription {
-            case .h_accordion:
-                return changeTilingLayout(io, targetLayout: .accordion, targetOrientation: .h, node: node)
-            case .v_accordion:
-                return changeTilingLayout(io, targetLayout: .accordion, targetOrientation: .v, node: node)
             case .h_tiles:
                 return changeTilingLayout(io, targetLayout: .tiles, targetOrientation: .h, node: node)
             case .v_tiles:
                 return changeTilingLayout(io, targetLayout: .tiles, targetOrientation: .v, node: node)
-            case .accordion:
-                return changeTilingLayout(io, targetLayout: .accordion, targetOrientation: nil, node: node)
             case .tiles:
                 return changeTilingLayout(io, targetLayout: .tiles, targetOrientation: nil, node: node)
             case .horizontal:
@@ -113,12 +110,9 @@ struct LayoutCommand: Command {
 extension ConventionalWindowParentCases {
     fileprivate func matchesDescription(_ layout: LayoutCmdArgs.LayoutDescription) -> Bool {
         return switch layout {
-            case .accordion:   tilingContainerOrNil?.layout == .accordion
             case .tiles:       tilingContainerOrNil?.layout == .tiles
             case .horizontal:  tilingContainerOrNil?.orientation == .h
             case .vertical:    tilingContainerOrNil?.orientation == .v
-            case .h_accordion: tilingContainerOrNil.map { $0.layout == .accordion && $0.orientation == .h } == true
-            case .v_accordion: tilingContainerOrNil.map { $0.layout == .accordion && $0.orientation == .v } == true
             case .h_tiles:     tilingContainerOrNil.map { $0.layout == .tiles && $0.orientation == .h } == true
             case .v_tiles:     tilingContainerOrNil.map { $0.layout == .tiles && $0.orientation == .v } == true
             case .tiling:      tilingContainerOrNil != nil

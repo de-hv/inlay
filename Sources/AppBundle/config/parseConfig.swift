@@ -145,7 +145,7 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "start-at-login": Parser(\.startAtLogin, parseBool),
     "auto-reload-config": Parser(\.autoReloadConfig, parseBool),
     "automatically-unhide-macos-hidden-apps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
-    "accordion-padding": Parser(\.accordionPadding, parseInt),
+    "accordion-padding": Parser(\._accordionPadding, parseAccordionPadding),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
     "exec-on-workspace-change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),
@@ -181,15 +181,21 @@ func parseDeprecatedAfterLoginCommand(_ raw: OrderedJson, _ backtrace: ConfigBac
     return .failure(.init(backtrace, msg))
 }
 
+func parseCommandForConfig(_ raw: String, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext, allowExecAndForget: Bool) -> Shell<any Command> {
+    let shell = parseCommand(raw, allowExecAndForget: allowExecAndForget, allowEval: false).toResult().toParsedConfig(backtrace).getOrNil(appendErrorTo: &c.errors) ?? .empty
+    c.warnings += shell.flatten().filterIsInstance(of: LayoutCommand.self).compactMap(\.args.accordionWarning).map { .init(backtrace, $0) }
+    return shell
+}
+
 func parseShellOfCommandsForConfig(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> Shell<any Command> {
     if let rawString = raw.asStringOrNil {
-        return parseCommand(rawString, allowExecAndForget: true, allowEval: false).toResult().toParsedConfig(backtrace).getOrNil(appendErrorTo: &c.errors) ?? .empty
+        return parseCommandForConfig(rawString, backtrace, &c, allowExecAndForget: true)
     } else if let rawArray = raw.asArrayOrNil {
         var result = [Shell<any Command>]()
         for (index, elem) in rawArray.enumerated() {
             let backtrace = backtrace + .index(index)
             if let elem = elem.asStringOrNil {
-                result.append(parseCommand(elem, allowExecAndForget: true, allowEval: false).toResult().toParsedConfig(backtrace).getOrNil(appendErrorTo: &c.errors) ?? .empty)
+                result.append(parseCommandForConfig(elem, backtrace, &c, allowExecAndForget: true))
             } else {
                 c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: elem.tomlType)))
             }
@@ -385,9 +391,25 @@ private func parseStartupRootContainerLayout(_ raw: OrderedJson, _ backtrace: Co
         .map { _ in () }
 }
 
-private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Layout> {
-    parseString(raw, backtrace)
-        .flatMap { $0.parseLayout().toResult(.init(backtrace, "Can't parse layout '\($0)'")) }
+private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> Layout {
+    let layout = parseString(raw, backtrace)
+        .flatMap { (raw: String) -> ResOrConfigParseDiagnostic<Layout> in
+            // Accepted to make it possible to use the config of AeroSpace as is
+            if raw == "accordion" {
+                c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordion' is treated as 'tiles'"))
+                return .success(.tiles)
+            }
+            return raw.parseLayout().toResult(.init(backtrace, "Can't parse layout '\(raw)'"))
+        }
+        .getOrNil(appendErrorTo: &c.errors)
+    return layout ?? Config().defaultRootContainerLayout
+}
+
+// Accepted to make it possible to use the config of AeroSpace as is
+private func parseAccordionPadding(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
+    if parseInt(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
+        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config"))
+    }
 }
 
 private func skipParsing<T: Sendable>(_ value: T) -> @Sendable (_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<T> {

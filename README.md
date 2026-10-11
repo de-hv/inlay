@@ -8,19 +8,19 @@ Se compila e instala **solo con las Command Line Tools de Xcode**: sin Xcode, si
 
 ## Estado del proyecto
 
-En desarrollo. Esta es la fase de **fundaciones**: Inlay es, por ahora, un *fork* renombrado de
-[AeroSpace](https://github.com/nikitabobko/AeroSpace) que se compila sin Xcode.
+En desarrollo. Inlay es un *fork* de [AeroSpace](https://github.com/nikitabobko/AeroSpace) que se compila sin
+Xcode, con su propia forma de colocar las ventanas nuevas (*dwindle*) y sin el layout *accordion*.
 
 | Parte | Estado |
 |---|---|
 | Gestor de ventanas (árbol, workspaces, comandos, CLI) | Funciona como AeroSpace `74a1bf1`, con otro nombre |
 | Build, instalación y desinstalación sin Xcode | Hecho |
-| Auto-tiling tipo *dwindle*, sin layout *accordion* | Pendiente |
+| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) |
 | Barra de menús con *chips* de workspaces, temas y ajustes | Pendiente (hoy: el icono de menú de AeroSpace) |
 | Bordes de ventana | Pendiente |
-| Tests | La suite original usa XCTest, que no viene en las Command Line Tools; se migrará a Swift Testing |
+| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración y los comandos del árbol. El resto de la suite original (XCTest) está por migrar |
 
-El formato de configuración y los comandos son, de momento, los de AeroSpace: su
+El formato de configuración y los comandos son los de AeroSpace con las diferencias de [Mosaico](#mosaico): su
 [guía](https://nikitabobko.github.io/AeroSpace/guide) y su
 [lista de comandos](https://nikitabobko.github.io/AeroSpace/commands) sirven cambiando `aerospace` por `inlay`.
 Hay una copia de esa documentación en [`docs/upstream-aerospace`](./docs/upstream-aerospace).
@@ -81,6 +81,30 @@ Los programas que Inlay lanza reciben las variables `INLAY_WINDOW_ID`, `INLAY_WO
 `INLAY_FOCUSED_WORKSPACE` e `INLAY_PREV_WORKSPACE` (y también con el nombre `AEROSPACE_*`, para que los scripts
 escritos para AeroSpace sigan funcionando).
 
+### Mosaico
+
+Una ventana nueva **divide en dos la ventana enfocada**, como el layout *dwindle* de Hyprland: si la enfocada es
+más ancha que alta quedan lado a lado; si no, apiladas. La nueva va a la derecha o debajo. Al cerrar una ventana,
+su vecina recupera el espacio.
+
+```toml
+[tiling]
+    new-window-placement = 'dwindle'   # o 'after-focused': el comportamiento de AeroSpace
+    split-ratio = 0.5                  # 0.1 – 0.9: fracción que conserva la ventana que se divide
+```
+
+Inlay **no tiene layout *accordion***. Para poder usar tal cual un `aerospace.toml`, sus formas se aceptan con
+un aviso (no con un error) y se tratan como `tiles`:
+
+| En el `aerospace.toml` | En Inlay |
+|---|---|
+| `default-root-container-layout = 'accordion'` | Se usa `'tiles'` |
+| `accordion-padding = 30` | Se ignora |
+| `layout accordion`, `layout h_accordion`, `layout v_accordion` | `layout tiles`, `layout h_tiles`, `layout v_tiles` |
+| `layout tiles accordion` (alternar) | `layout tiles` |
+
+Los avisos salen en `inlay reload-config` y en el menú de la barra («Config contains warnings...»).
+
 ## Desinstalación
 
 ```sh
@@ -95,6 +119,7 @@ identidad de firma (bórrala en *Acceso a Llaveros* si quieres).
 
 ```sh
 scripts/build-app.sh    # compila y deja build/Inlay.app firmada (no instala nada)
+scripts/test.sh         # ejecuta los tests (acepta los argumentos de 'swift test', p. ej. --filter DwindleTest)
 scripts/make-icon.sh    # regenera Support/AppIcon.icns a partir de scripts/icon/AppIcon.swift
 ```
 
@@ -103,7 +128,12 @@ para garantizar que el proyecto no depende de él. Para compilar a mano:
 
 ```sh
 DEVELOPER_DIR=/Library/Developer/CommandLineTools swift build
+DEVELOPER_DIR=/Library/Developer/CommandLineTools swift test
 ```
+
+Los tests usan Swift Testing (XCTest no viene en las Command Line Tools). Todas las suites van anidadas en
+`InlayTests` (`extension InlayTests { @Suite @MainActor struct FooTest { ... } }`), que es `.serialized`: los tests
+comparten el modelo global y no pueden ejecutarse en paralelo.
 
 | Ruta | Contenido |
 |---|---|
@@ -113,9 +143,10 @@ DEVELOPER_DIR=/Library/Developer/CommandLineTools swift build
 | `Sources/Common` | Código compartido por la app y la CLI |
 | `Sources/BuildInfo` | Versión y hash de git, que `build-app.sh` pasa por variables de entorno |
 | `Sources/PrivateApi` | Cabecera de `_AXUIElementGetWindow` |
-| `Sources/AppBundleTests` | Tests XCTest heredados (no se compilan por defecto: `INLAY_XCTEST=1`, requiere Xcode) |
+| `Tests/InlayTests` | Tests con Swift Testing. En `support/` están las ventanas falsas y demás utilidades |
+| `Sources/AppBundleTests` | Tests XCTest heredados que faltan por migrar (no se compilan por defecto: `INLAY_XCTEST=1`, requiere Xcode) |
 | `Support` | `Info.plist` e icono del bundle |
-| `scripts` | Build, instalación, desinstalación e icono |
+| `scripts` | Build, tests, instalación, desinstalación e icono |
 | `axDumps` | Volcados de Accesibilidad de apps reales que usan los tests |
 
 Cosas a tener en cuenta:

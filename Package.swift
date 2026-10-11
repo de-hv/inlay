@@ -1,6 +1,7 @@
 // swift-tools-version: 6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import Foundation
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
@@ -35,6 +36,24 @@ let xcTestTargets: [Target] = Context.environment["INLAY_XCTEST"] == "1"
         ),
     ]
     : []
+
+// With the Command Line Tools, an incremental build of the test target that follows a change in the app sources
+// (or a plain 'swift build') fails with "plugin for module 'TestingMacros' not found": the compiler isn't told
+// where the macros of Swift Testing are. Only a build of the test target from scratch gets it right.
+// Pointing the compiler to the plugin directory of the toolchain in use makes every build work.
+// Xcode keeps the plugin somewhere else and doesn't have the problem, so nothing is added for it
+let testingMacrosSettings: [SwiftSetting] = {
+    // The toolchain in use: DEVELOPER_DIR, then the choice of xcode-select, then Xcode.app, then the Command Line Tools
+    let fileManager = FileManager.default
+    let developerDir = Context.environment["DEVELOPER_DIR"].flatMap { $0.isEmpty ? nil : $0 }
+        ?? (try? fileManager.destinationOfSymbolicLink(atPath: "/var/db/xcode_select_link"))
+        ?? (fileManager.fileExists(atPath: "/Applications/Xcode.app") ? nil : "/Library/Developer/CommandLineTools")
+    guard let developerDir else { return [] }
+    let pluginDir = developerDir + "/usr/lib/swift/host/plugins/testing"
+    return fileManager.fileExists(atPath: pluginDir + "/libTestingMacros.dylib")
+        ? [.unsafeFlags(["-plugin-path", pluginDir])]
+        : []
+}()
 
 let package = Package(
     name: "Inlay",
@@ -107,7 +126,7 @@ let package = Package(
             dependencies: [
                 .target(name: "AppBundle"),
             ],
-            swiftSettings: swiftSettings,
+            swiftSettings: swiftSettings + testingMacrosSettings,
         ),
     ] + xcTestTargets,
 )

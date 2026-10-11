@@ -1,6 +1,7 @@
 import AppKit
 import Common
 import Foundation
+import ServiceManagement
 
 @MainActor public func initAppBundle() {
     Task.startUnstructured {
@@ -74,6 +75,7 @@ private let serverHelp = """
                               and ${XDG_CONFIG_HOME}/inlay/inlay.toml
       --read-only             Disable window management.
                               Useful if you want to use only debug-windows or other query commands.
+      --unregister-login-item Remove Inlay from the login items and exit. Used by scripts/uninstall.sh
     """
 
 nonisolated(unsafe) private var _serverArgs = ServerArgs()
@@ -96,6 +98,12 @@ private func initServerArgs() {
                     case nil: exit(EXIT_CODE_TWO, err: "Missing <path> in --config-path flag")
                 }
                 index += 1
+            case "--unregister-login-item":
+                // Exits before the accessibility prompt and before any window is touched
+                switch Result(catching: { try SMAppService.mainApp.unregister() }) {
+                    case .success: exit(EXIT_CODE_ZERO, out: "Inlay was removed from the login items")
+                    case .failure(let e): exit(EXIT_CODE_TWO, err: "Can't remove Inlay from the login items: \(e.localizedDescription)")
+                }
             case "--read-only": // todo rename to '--disabled' and unite with disabled feature
                 unsafe _serverArgs.isReadOnly = true
             case "-NSDocumentRevisionsDebugMode" where isDebug:

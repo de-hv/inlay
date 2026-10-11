@@ -99,6 +99,51 @@ gaps.outer.right =      0
     # Fallback value (if you omit the key): split-ratio = 0.5
     split-ratio = 0.5
 
+# The menu bar item
+[menu-bar]
+    # Show the menu bar item. With 'false' Inlay keeps working: use the key bindings and the CLI
+    # Fallback value (if you omit the key): enabled = true
+    enabled = true
+
+    # The shape of the item. All the existing workspaces are shown, and the focused one is marked
+    # Possible values: chips|chips-icons|square|minimal
+    # - chips.       The workspaces alone. The ones with windows have a faint background,
+    #                the focused one has a solid background, and the empty ones are dimmed.
+    # - chips-icons. chips + the icons of the apps of every workspace.
+    # - square.      The layout icon, the names of the workspaces, and a square in place of the focused workspace.
+    #                In a binding mode other than 'main' the square shows the initial of the mode.
+    # - minimal.     Only the focused workspace.
+    # Fallback value (if you omit the key): theme = 'chips'
+    theme = 'chips'
+
+    # Show the icons of the apps next to the name of every workspace (up to 3 icons and '+n').
+    # If you omit the key, the theme decides: true in 'chips-icons', false in the other themes
+    # show-app-icons = false
+
+    # Draw the workspaces without windows fainter
+    # Fallback value (if you omit the key): dim-empty-workspaces = true
+    dim-empty-workspaces = true
+
+    # Show a badge with the initial of the binding mode when the mode isn't 'main'.
+    # The 'square' theme always shows the mode in its square
+    # Fallback value (if you omit the key): show-mode = false
+    show-mode = false
+
+    # Colors of the item.
+    # Possible values:
+    # - '#RRGGBB' or '#RRGGBBAA'
+    # - 'system-accent'. System Settings -> Appearance -> Accent color
+    # - 'auto'.          The color of the menu bar text: white on a dark menu bar, black on a light one.
+    #                    Not available for 'accent'
+    # With a fixed color in 'focused', the name of the workspace is drawn in black or white,
+    # whichever has more contrast. 'occupied' is the color of the name and, at 16%, of its background.
+    # A fixed color doesn't adapt to the menu bar
+    [menu-bar.colors]
+        accent = 'system-accent' # The mode badge
+        focused = 'auto'         # The background of the focused workspace
+        occupied = 'auto'        # The workspaces with windows
+        empty = 'auto'           # The workspaces without windows
+
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 # 'main' binding mode must be always presented

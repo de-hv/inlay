@@ -102,3 +102,7 @@ extension FocusCommand {
 }
 
 func parseCommand(_ raw: String) -> ParsedCmd<Shell<any Command>> { parseCommand(raw, allowExecAndForget: true, allowEval: true) }
+
+extension Result {
+    var okOrNil: Success? { try? get() }
+}

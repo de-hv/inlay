@@ -19,18 +19,15 @@ final class MacWindow: Window {
     static func getOrRegister(windowId: UInt32, macApp: MacApp) async throws -> MacWindow {
         if let existing = allWindowsMap[windowId] { return existing }
         let rect = try await macApp.getAxRect(windowId, .cancellable)
-        let data = try await unbindAndGetBindingDataForNewWindow(
-            windowId,
-            macApp,
-            isStartup
-                ? (rect?.center.monitorApproximation ?? mainMonitorInfo).activeWorkspace
-                : focus.workspace,
-            window: nil,
-            .cancellable,
-        )
+        let workspace = isStartup
+            ? (rect?.center.monitorApproximation ?? mainMonitorInfo).activeWorkspace
+            : focus.workspace
+        let windowType = try await macApp.getAxUiElementWindowType(windowId, getWindowLevel(for: windowId), .cancellable)
 
         // atomic synchronous section
         if let existing = allWindowsMap[windowId] { return existing }
+        // Must be a part of the atomic section, because it may change the tree to make room for the window
+        let data = unbindAndGetBindingDataForNewWindow(windowType, workspace, window: nil)
         let window = MacWindow(windowId, macApp, lastFloatingSize: rect?.size, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
         allWindowsMap[windowId] = window
 
@@ -81,6 +78,7 @@ final class MacWindow: Window {
             return
         }
         if !skipClosedWindowsCache { cacheClosedWindowIfNeeded() }
+        releaseTilingSpaceToNeighbor()
         let parent = unbindFromParent().parent
         let deadWindowWorkspace = parent.nodeWorkspace
         let focus = focus
@@ -202,18 +200,23 @@ final class MacWindow: Window {
 extension Window {
     @MainActor
     func relayoutWindow(on workspace: Workspace, _ cm: CancellationMode, forceTile: Bool = false) async throws {
-        let data = forceTile
-            ? unbindAndGetBindingDataForNewTilingWindow(workspace, window: self)
-            : try await unbindAndGetBindingDataForNewWindow(self.asMacWindow().windowId, self.asMacWindow().macApp, workspace, window: self, cm)
+        let data: BindingData
+        if forceTile {
+            data = unbindAndGetBindingDataForNewTilingWindow(workspace, window: self)
+        } else {
+            let macWindow = asMacWindow()
+            let windowType = try await macWindow.macApp.getAxUiElementWindowType(macWindow.windowId, getWindowLevel(for: macWindow.windowId), cm)
+            data = unbindAndGetBindingDataForNewWindow(windowType, workspace, window: self)
+        }
         bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
     }
 }
 
 // The function is private because it's unsafe. It leaves the window in unbound state
+// The window must be bound with the returned data right away, without suspension points in between
 @MainActor
-private func unbindAndGetBindingDataForNewWindow(_ windowId: UInt32, _ macApp: MacApp, _ workspace: Workspace, window: Window?, _ cm: CancellationMode) async throws -> BindingData {
-    let windowLevel = getWindowLevel(for: windowId)
-    return switch try await macApp.getAxUiElementWindowType(windowId, windowLevel, cm) {
+private func unbindAndGetBindingDataForNewWindow(_ windowType: AxUiElementWindowType, _ workspace: Workspace, window: Window?) -> BindingData {
+    switch windowType {
         case .popup: BindingData(parent: macosPopupWindowsContainer, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
         case .dialog: BindingData(parent: workspace.floatingWindowsContainer, adaptiveWeight: WEIGHT_AUTO, index: INDEX_BIND_LAST)
         case .window: unbindAndGetBindingDataForNewTilingWindow(workspace, window: window)
@@ -221,9 +224,27 @@ private func unbindAndGetBindingDataForNewWindow(_ windowId: UInt32, _ macApp: M
 }
 
 // The function is private because it's unsafe. It leaves the window in unbound state
+// The window must be bound with the returned data right away, without suspension points in between
 @MainActor
 private func unbindAndGetBindingDataForNewTilingWindow(_ workspace: Workspace, window: Window?) -> BindingData {
+    // Ask for the focus before unbinding. While the focused window is unbound, the focus falls back to an arbitrary window
+    let focused = focus.windowOrNil?.takeIf { $0 != window }
     window?.unbindFromParent() // It's important to unbind to get correct data from below
+    return getBindingDataForNewTilingWindow(workspace, focused: focused)
+}
+
+/// Where to bind a tiling window that appears in the workspace. See: 'tiling.new-window-placement' config option
+///
+/// The window must not be bound to the workspace.
+/// The window must be bound with the returned data right away, without suspension points in between,
+/// because the function may change the tree to make room for the window
+@MainActor
+func getBindingDataForNewTilingWindow(_ workspace: Workspace, focused: Window?) -> BindingData {
+    switch config.tiling.newWindowPlacement {
+        case .dwindle:
+            if let data = prepareDwindleBindingDataForNewTilingWindow(workspace, focused: focused) { return data }
+        case .afterFocused: break
+    }
     let mruWindow = workspace.mostRecentWindowRecursive
     if let mruWindow, let tilingParent = mruWindow.parent as? TilingContainer {
         return BindingData(

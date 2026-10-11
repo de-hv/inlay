@@ -4,11 +4,52 @@ extension Workspace {
     @MainActor
     func layoutWorkspace() async throws {
         if isEffectivelyEmpty { return }
+        let frame = layoutFrame
+        try await layoutRecursive(frame.point, width: frame.width, height: frame.height, virtual: frame.virtual, LayoutContext(self))
+    }
+
+    /// The frame of the workspace, and of its root tiling container
+    @MainActor
+    fileprivate var layoutFrame: LayoutFrame {
         let rect = workspaceMonitor.visibleRectPaddedByOuterGaps
         // If monitors are aligned vertically and the monitor below has smaller width, then macOS may not allow the
         // window on the upper monitor to take full width. rect.height - 1 resolves this problem
         // But I also faced this problem in monitors horizontal configuration. ¯\_(ツ)_/¯
-        try await layoutRecursive(rect.topLeftCorner, width: rect.width, height: rect.height - 1, virtual: rect, LayoutContext(self))
+        return LayoutFrame(point: rect.topLeftCorner, width: rect.width, height: rect.height - 1, virtual: rect)
+    }
+}
+
+/// The place of a node on the screen. Physical frame (with real inner gaps): point, width, height
+private struct LayoutFrame {
+    let point: CGPoint
+    let width: CGFloat
+    let height: CGFloat
+    let virtual: Rect // as if inner gaps were always zero
+
+    var physicalRect: Rect { Rect(topLeftX: point.x, topLeftY: point.y, width: width, height: height) }
+}
+
+extension TreeNode {
+    /// The physical rect (with real inner gaps) that the next layout pass gives to the node, as long as the tree doesn't change.
+    /// Unlike ``lastAppliedLayoutPhysicalRect``, it's available before the node is laid out for the first time,
+    /// and it's never outdated.
+    ///
+    /// Side effect: just like the layout pass, it normalizes the weights of the nodes on the way from the root
+    /// container to the node, and the weights of their siblings. After the call, the weights are in screen points.
+    ///
+    /// nil if the node isn't a part of the tiling tree of a workspace
+    @MainActor
+    func predictLayoutRect() -> Rect? {
+        let path: [TreeNode] = parentsWithSelf.reversed() // workspace, root container, ..., self
+        guard let workspace = path.first as? Workspace, path.count >= 2 else { return nil }
+        let gaps = ResolvedGaps(gaps: config.gaps, monitor: workspace.workspaceMonitor)
+        var frame = workspace.layoutFrame
+        for (parent, child) in zip(path.dropFirst(), path.dropFirst(2)) {
+            guard let parent = parent as? TilingContainer else { return nil }
+            guard let childFrame = parent.tileChildren(frame, gaps).first(where: { $0.child === child })?.frame else { return nil }
+            frame = childFrame
+        }
+        return path[1] is TilingContainer ? frame.physicalRect : nil
     }
 }
 
@@ -105,24 +146,37 @@ extension Window {
 extension TilingContainer {
     @MainActor
     fileprivate func layoutTiles(_ point: CGPoint, width: CGFloat, height: CGFloat, virtual: Rect, _ context: LayoutContext) async throws {
-        var point = point
-        var virtualPoint = virtual.topLeftCorner
+        let frame = LayoutFrame(point: point, width: width, height: height, virtual: virtual)
+        for (child, frame) in tileChildren(frame, context.resolvedGaps) {
+            try await child.layoutRecursive(frame.point, width: frame.width, height: frame.height, virtual: frame.virtual, context)
+        }
+    }
+
+    /// Normalizes the weights of the children (their sum becomes the size of the container), and
+    /// returns the frames of the children
+    @MainActor
+    fileprivate func tileChildren(_ frame: LayoutFrame, _ gaps: ResolvedGaps) -> [(child: TreeNode, frame: LayoutFrame)] {
+        let width = frame.width
+        let height = frame.height
+        var point = frame.point
+        var virtualPoint = frame.virtual.topLeftCorner
 
         guard let delta = ((orientation == .h ? width : height) - CGFloat(children.sumOfDouble { $0.getWeight(orientation) }))
-            .div(children.count) else { return }
+            .div(children.count) else { return [] }
 
+        var result: [(child: TreeNode, frame: LayoutFrame)] = []
         let lastIndex = children.indices.last
         for (i, child) in children.enumerated() {
             child.setWeight(orientation, child.getWeight(orientation) + delta)
-            let rawGap = context.resolvedGaps.inner.get(orientation).toDouble()
+            let rawGap = gaps.inner.get(orientation).toDouble()
             // Gaps. Consider 4 cases:
             // 1. Multiple children. Layout first child
             // 2. Multiple children. Layout last child
             // 3. Multiple children. Layout child in the middle
             // 4. Single child   let rawGap = gaps.inner.get(orientation).toDouble()
             let gap = rawGap - (i == 0 ? rawGap / 2 : 0) - (i == lastIndex ? rawGap / 2 : 0)
-            try await child.layoutRecursive(
-                i == 0 ? point : point.addingOffset(orientation, rawGap / 2),
+            let childFrame = LayoutFrame(
+                point: i == 0 ? point : point.addingOffset(orientation, rawGap / 2),
                 width: orientation == .h ? child.hWeight - gap : width,
                 height: orientation == .v ? child.vWeight - gap : height,
                 virtual: Rect(
@@ -131,10 +185,11 @@ extension TilingContainer {
                     width: orientation == .h ? child.hWeight : width,
                     height: orientation == .v ? child.vWeight : height,
                 ),
-                context,
             )
+            result.append((child, childFrame))
             virtualPoint = orientation == .h ? virtualPoint.addingXOffset(child.hWeight) : virtualPoint.addingYOffset(child.vWeight)
             point = orientation == .h ? point.addingXOffset(child.hWeight) : point.addingYOffset(child.vWeight)
         }
+        return result
     }
 }

@@ -28,8 +28,10 @@ struct MoveNodeToWorkspaceCommand: Command {
     }
 }
 
+/// - Parameter index: The index of the tiling window in the root container of the target workspace.
+///   nil means that the window is placed as a new window of the target workspace. See: 'tiling.new-window-placement' config option
 @MainActor
-func moveWindowToWorkspace(_ window: Window, _ targetWorkspace: Workspace, _ io: CmdIo, focusFollowsWindow: Bool, failIfNoop: Bool, index: Int = INDEX_BIND_LAST) -> BinaryExitCode {
+func moveWindowToWorkspace(_ window: Window, _ targetWorkspace: Workspace, _ io: CmdIo, focusFollowsWindow: Bool, failIfNoop: Bool, index: Int? = nil) -> BinaryExitCode {
     if window.nodeWorkspace == targetWorkspace {
         return switch failIfNoop {
             case true: .fail
@@ -37,9 +39,16 @@ func moveWindowToWorkspace(_ window: Window, _ targetWorkspace: Workspace, _ io:
                 .succ(io.err("Window '\(window.windowId)' already belongs to workspace '\(targetWorkspace.name)'. Tip: use --fail-if-noop to exit with non-zero code"))
         }
     }
-    let targetContainer: NonLeafTreeNodeObject = window.isFloating
-        ? targetWorkspace.floatingWindowsContainer
-        : targetWorkspace.rootTilingContainer
-    window.bind(to: targetContainer, adaptiveWeight: WEIGHT_AUTO, index: index)
+    let binding: BindingData
+    if window.isFloating {
+        binding = BindingData(parent: targetWorkspace.floatingWindowsContainer, adaptiveWeight: WEIGHT_AUTO, index: index ?? INDEX_BIND_LAST)
+    } else {
+        window.releaseTilingSpaceToNeighbor()
+        let dwindle = index == nil && config.tiling.newWindowPlacement == .dwindle
+            ? prepareDwindleBindingDataForNewTilingWindow(targetWorkspace, focused: focus.windowOrNil)
+            : nil
+        binding = dwindle ?? BindingData(parent: targetWorkspace.rootTilingContainer, adaptiveWeight: WEIGHT_AUTO, index: index ?? INDEX_BIND_LAST)
+    }
+    window.bind(to: binding.parent, adaptiveWeight: binding.adaptiveWeight, index: binding.index)
     return .from(bool: focusFollowsWindow ? window.focusWindow() : true)
 }

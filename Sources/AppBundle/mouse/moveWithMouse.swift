@@ -63,6 +63,7 @@ private func moveTilingWindow(_ window: Window) {
         } else {
             0
         }
+        window.releaseTilingSpaceToNeighbor()
         window.bind(
             to: swapTarget?.parent ?? targetWorkspace.rootTilingContainer,
             adaptiveWeight: WEIGHT_AUTO,

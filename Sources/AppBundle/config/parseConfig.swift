@@ -157,6 +157,7 @@ private let configParser: [String: any ParserProtocol<Config>] = [
     "focus-follows-mouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
     "tiling": Parser(\.tiling, parseTiling),
     "menu-bar": Parser(\.menuBar, parseMenuBar),
+    "borders": Parser(\.borders, parseBorders),
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 

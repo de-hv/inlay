@@ -51,9 +51,10 @@ automatically-unhide-macos-hidden-apps = false
 # even when they are invisible.
 # This config option is only available since 'config-version = 2'
 # Fallback value (if you omit the key): persistent-workspaces = []
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B",
-                         "C", "D", "E", "F", "G", "I", "M", "N", "O", "P", "Q",
-                         "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
+# Only 1-9: every persistent workspace takes room in the menu bar item, and the item of a long list
+# doesn't fit next to the notch of a laptop. The letter workspaces (alt-a ... alt-z below) still work:
+# a workspace exists while it has windows or it is the visible one
+persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 # A callback that runs every time binding mode changes
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -74,12 +75,17 @@ key-mapping.preset = 'qwerty'
 #                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
 #                 See:
 #                 https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
-gaps.inner.horizontal = 0
-gaps.inner.vertical =   0
-gaps.outer.left =       0
-gaps.outer.bottom =     0
-gaps.outer.top =        0
-gaps.outer.right =      0
+# The window borders (see [borders] below) are drawn outside of the windows, in the gaps: with the default
+# border of 4 points, 14 points of gap leave 6 points of air between the borders of two neighbor windows.
+# Keep the gaps at least twice as big as borders.width, or the borders of neighbor windows touch.
+# The outer gaps must be at least as big as borders.width, or the border is cut by the edge of the screen
+# Fallback value (if you omit the keys): 0
+gaps.inner.horizontal = 14
+gaps.inner.vertical =   14
+gaps.outer.left =       14
+gaps.outer.bottom =     14
+gaps.outer.top =        14
+gaps.outer.right =      14
 
 # Where a new tiling window is placed
 [tiling]
@@ -143,6 +149,44 @@ gaps.outer.right =      0
         focused = 'auto'         # The background of the focused workspace
         occupied = 'auto'        # The workspaces with windows
         empty = 'auto'           # The workspaces without windows
+
+# The borders of the windows
+[borders]
+    # Draw a border around every tiling and floating window of the visible workspaces.
+    # No border for: fullscreen windows (the fullscreen of Inlay and the native one of macOS),
+    # minimized windows, windows of hidden apps, popups and dialogs
+    # Fallback value (if you omit the key): enabled = true
+    enabled = true
+
+    # The thickness of the border, in points. The border is drawn outside of the frame of the window:
+    # it never covers the content of the window, it takes a part of the gap. See the gaps above
+    # Possible values: 1 ... 20
+    # Fallback value (if you omit the key): width = 4
+    width = 4
+
+    # The radius of the corners, in points. Inlay can't read the real radius of the windows of other apps,
+    # so tune it by eye. 16 is close to the windows of macOS 26 and later, 10 to the ones of macOS 14 and 15.
+    # 0 = square corners
+    # Possible values: 0 ... 40
+    # Fallback value (if you omit the key): corner-radius = 16
+    corner-radius = 16
+
+    # Colors.
+    # Possible values:
+    # - '#RRGGBB' or '#RRGGBBAA'
+    # - 'system-accent'. System Settings -> Appearance -> Accent color
+    # A fully transparent color ('#00000000') means "no border":
+    # with inactive-color = '#00000000' only the focused window has a border
+    active-color = 'system-accent' # The focused window, if it is a tiling one
+    inactive-color = '#8E8E9373'   # The windows that aren't focused
+    floating-color = '#BF5AF2'     # The focused window, if it is a floating one
+
+    # The color of the border of the focused window while a binding mode is active.
+    # It wins over active-color and floating-color. A mode without an entry keeps the normal color.
+    # Empty by default
+    [borders.mode-colors]
+        # resize = '#30D158'
+        # service = '#FF453A'
 
 # 'main' binding mode declaration
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes

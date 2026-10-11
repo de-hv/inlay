@@ -21,6 +21,7 @@ func setUpWorkspacesForTests() {
     config.enableNormalizationFlattenContainers = false // Make layout tests more predictable
     config.enableNormalizationOppositeOrientationForNestedContainers = false // Make layout tests more predictable
     config.defaultRootContainerOrientation = .horizontal // Make default layout predictable
+    config.gaps = .zero // The built-in config has gaps, to leave room for the borders. Make the frames predictable
 
     // Don't create any bindings and workspaces for tests
     config.modes = [mainModeId: Mode(bindings: [:])]

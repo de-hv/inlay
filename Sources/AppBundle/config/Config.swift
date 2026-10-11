@@ -53,6 +53,7 @@ struct Config: ConvenienceMutable {
     var focusFollowsMouse: FocusFollowsMouse = FocusFollowsMouse()
     var tiling: TilingConfig = TilingConfig()
     var menuBar: MenuBarConfig = MenuBarConfig()
+    var borders: BordersConfig = BordersConfig()
 
     var onFocusChanged: Shell<any Command> = .empty
     // var onFocusedWorkspaceChanged: [any Command] = []

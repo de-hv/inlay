@@ -422,7 +422,7 @@ extension InlayTests {
                 // Only one line is different
                 let before = defaultConfig.split(separator: "\n", omittingEmptySubsequences: false)
                 let after = patched.split(separator: "\n", omittingEmptySubsequences: false)
-                assertEquals(after.filter { !before.contains($0) }.count, patched.contains("[borders]") ? 2 : 1, additionalMsg: key.label)
+                assertEquals(after.filter { !before.contains($0) }.count, 1, additionalMsg: key.label)
                 assertEquals(before.filter { !after.contains($0) }.count <= 1, true, additionalMsg: key.label)
 
                 let removed = remove(patched, key.path)

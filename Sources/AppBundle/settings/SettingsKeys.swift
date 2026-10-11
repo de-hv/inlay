@@ -37,7 +37,7 @@ extension SettingsKey {
     static let menuBarOccupied = SettingsKey(["menu-bar", "colors"], "occupied", default: .string(ConfigColor.autoLiteral))
     static let menuBarEmpty = SettingsKey(["menu-bar", "colors"], "empty", default: .string(ConfigColor.autoLiteral))
 
-    // Borders. The schema of the [borders] table that the borders will implement
+    // Borders. The defaults are the ones of BordersConfig
     static let bordersEnabled = SettingsKey(["borders"], "enabled", default: .bool(true))
     static let bordersWidth = SettingsKey(["borders"], "width", default: .int(4))
     static let bordersCornerRadius = SettingsKey(["borders"], "corner-radius", default: .int(16))
@@ -48,9 +48,6 @@ extension SettingsKey {
 
 /// What the settings window can show
 enum SettingsFeatures {
-    /// The Borders tab edits the [borders] table of the config. The config parser doesn't know the table yet,
-    /// so the tab would only produce "Unknown top-level key" errors.
-    ///
-    /// This is the single switch for it: set it to true once the [borders] table is parsed
-    static let borders = false
+    /// The Borders tab edits the [borders] table of the config. See: BordersConfig
+    static let borders = true
 }

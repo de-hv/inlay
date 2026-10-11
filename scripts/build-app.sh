@@ -5,7 +5,6 @@
 #
 #   scripts/build-app.sh                          release build, ad hoc signature
 #   scripts/build-app.sh --sign-identity <name>   sign with a code signing identity from the keychain
-#   CONFIGURATION=debug scripts/build-app.sh
 #
 # Result:
 #   build/Inlay.app/Contents/MacOS/Inlay                         the app
@@ -25,9 +24,11 @@ cd "$(dirname "$0")/.."
 # shellcheck source=scripts/lib.sh
 . scripts/lib.sh
 
-usage() { sed -n '3,20s/^# \{0,1\}//p' "$0"; }
+usage() { sed -n '3,19s/^# \{0,1\}//p' "$0"; }
 
-CONFIGURATION="${CONFIGURATION:-release}"
+# Always a release build: a debug build calls itself Inlay-Debug and uses another bundle id and socket, so it
+# doesn't fit this bundle. For debugging use 'swift build' and run .build/.../InlayApp directly
+CONFIGURATION="release"
 IDENTITY="${INLAY_SIGN_IDENTITY:--}"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -40,10 +41,6 @@ while [ $# -gt 0 ]; do
     *) usage >&2; fail "unknown option: $1" ;;
   esac
 done
-case "$CONFIGURATION" in
-  release|debug) ;;
-  *) fail "CONFIGURATION must be 'release' or 'debug', not '$CONFIGURATION'." ;;
-esac
 
 use_command_line_tools
 

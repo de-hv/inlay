@@ -111,3 +111,36 @@ CNF
   note "It lives in $keychain. To remove it, delete \"$SIGN_IDENTITY_NAME\" in Keychain Access."
   return 0
 }
+
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
+inlay_is_running() { pgrep -x "$APP_NAME" >/dev/null 2>&1; }
+
+# Quits a running Inlay and waits for it. Inlay restores the hidden windows when it gets SIGTERM.
+quit_running_inlay() {
+  local i=0
+  inlay_is_running || return 0
+  info "Quitting the running $APP_NAME"
+  pkill -x "$APP_NAME" 2>/dev/null || true
+  while inlay_is_running; do
+    i=$((i + 1))
+    if [ "$i" -gt 100 ]; then
+      fail "$APP_NAME is still running. Quit it from its menu bar icon and run this script again."
+    fi
+    sleep 0.1
+  done
+}
+
+# Directories where the 'inlay' CLI may be linked, best first
+cli_dir_candidates() {
+  printf '%s\n' "$HOME/.local/bin" /opt/homebrew/bin /usr/local/bin
+}
+
+dir_is_in_path() {
+  case ":$PATH:" in
+    *":$1:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+config_home() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}"; }

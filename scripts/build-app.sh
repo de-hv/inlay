@@ -62,8 +62,8 @@ export INLAY_VERSION="$VERSION"
 export INLAY_GIT_HASH="$GIT_HASH"
 
 info "Building $APP_NAME $VERSION ($GIT_HASH, $CONFIGURATION) with $(swift --version 2>&1 | head -n 1)"
-swift build --configuration "$CONFIGURATION" --product InlayApp
-swift build --configuration "$CONFIGURATION" --product "$CLI_NAME"
+# One invocation for both products (InlayApp and inlay): building them one by one compiles the shared code twice
+swift build --configuration "$CONFIGURATION"
 BIN_DIR="$(swift build --configuration "$CONFIGURATION" --show-bin-path)"
 [ -x "$BIN_DIR/InlayApp" ] || fail "$BIN_DIR/InlayApp was not built."
 [ -x "$BIN_DIR/$CLI_NAME" ] || fail "$BIN_DIR/$CLI_NAME was not built."

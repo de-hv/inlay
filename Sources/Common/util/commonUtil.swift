@@ -147,7 +147,16 @@ public func check(
     }
 }
 
-public var isUnitTest: Bool { NSClassFromString("XCTestCase") != nil }
+public var isUnitTest: Bool { NSClassFromString("XCTestCase") != nil || isSwiftTestingLoaded }
+
+/// Swift Testing has no Objective-C classes to look for, and 'swift test' with the Command Line Tools runs it
+/// in a process that doesn't load XCTest. So look for the Testing library among the loaded images instead.
+/// The test bundle links it, hence it's already loaded when the first test starts
+private let isSwiftTestingLoaded: Bool = (0 ..< _dyld_image_count()).contains { index in
+    guard let name = unsafe _dyld_get_image_name(index) else { return false }
+    let path = unsafe String(cString: name)
+    return path.hasSuffix("/Testing.framework/Versions/A/Testing") || path.hasSuffix("/Testing.framework/Testing") || path.hasSuffix("/libTesting.dylib")
+}
 
 extension CaseIterable where Self: RawRepresentable, RawValue == String {
     public static var cliArgsCases: [String] { allCases.map(\.rawValue) }

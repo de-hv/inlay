@@ -1,0 +1,28 @@
+@testable import AppBundle
+import Common
+import Testing
+
+extension InlayTests {
+    @Suite @MainActor struct BalanceSizesCommandTest {
+        let name = "BalanceSizesCommandTest"
+
+        init() { setUpWorkspacesForTests() }
+
+        @Test func testBalanceSizesCommand() async {
+            let workspace = Workspace.get(byName: name).apply { wsp in
+                wsp.rootTilingContainer.apply {
+                    TestWindow.new(id: 1, parent: $0).setWeight(wsp.rootTilingContainer.orientation, 1)
+                    TestWindow.new(id: 2, parent: $0).setWeight(wsp.rootTilingContainer.orientation, 2)
+                    TestWindow.new(id: 3, parent: $0).setWeight(wsp.rootTilingContainer.orientation, 3)
+                }
+            }
+
+            await parseCommand("balance-sizes").cmdOrDie
+                .run(.defaultEnv.withWorkspaceName(name), .emptyStdin)
+
+            for window in workspace.rootTilingContainer.children {
+                assertEquals(window.getWeight(workspace.rootTilingContainer.orientation), 1)
+            }
+        }
+    }
+}

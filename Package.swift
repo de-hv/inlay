@@ -23,7 +23,7 @@ let buildInfoDefines: [CSetting] = [
 }
 
 // XCTest doesn't ship with the Command Line Tools, so the upstream XCTest suite only builds with a full Xcode.
-// It is opt-in until it is migrated to Swift Testing: INLAY_XCTEST=1 swift test
+// It is opt-in until it is migrated to Swift Testing (Tests/InlayTests): INLAY_XCTEST=1 swift test
 let xcTestTargets: [Target] = Context.environment["INLAY_XCTEST"] == "1"
     ? [
         .testTarget(
@@ -98,6 +98,14 @@ let package = Package(
             name: "Cli",
             dependencies: [
                 .target(name: "Common"),
+            ],
+            swiftSettings: swiftSettings,
+        ),
+        // Swift Testing suite. It builds and runs with the Command Line Tools alone: swift test
+        .testTarget(
+            name: "InlayTests",
+            dependencies: [
+                .target(name: "AppBundle"),
             ],
             swiftSettings: swiftSettings,
         ),

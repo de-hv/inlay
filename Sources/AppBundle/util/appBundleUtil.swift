@@ -23,6 +23,25 @@ func initTerminationHandler() {
     unsafe _terminationHandler = AppServerTerminationHandler()
 }
 
+@MainActor private var sigtermSource: (any DispatchSourceSignal)? = nil
+
+/// 'pkill Inlay' (that's how scripts/install.sh and scripts/uninstall.sh quit a running copy) sends SIGTERM.
+/// Without this, the windows of the invisible workspaces would stay parked in the corner of the screen
+/// after Inlay is gone. The "Quit" menu item does the same
+@MainActor
+func restoreWindowsOnSigterm() {
+    signal(SIGTERM, SIG_IGN) // The dispatch source below only gets the signal if the default action is off
+    let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+    source.setEventHandler {
+        MainActor.assumeIsolated {
+            terminationHandler?.beforeTermination()
+            exit(EXIT_SUCCESS)
+        }
+    }
+    source.resume()
+    sigtermSource = source
+}
+
 private struct AppServerTerminationHandler: TerminationHandler {
     @MainActor
     func beforeTermination() {

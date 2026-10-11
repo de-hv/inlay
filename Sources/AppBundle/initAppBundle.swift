@@ -5,6 +5,7 @@ import Foundation
 @MainActor public func initAppBundle() {
     Task.startUnstructured {
         initTerminationHandler()
+        restoreWindowsOnSigterm()
         unsafe _isCli = false
         initServerArgs()
         await waitForAccessibilityPermission_nonCancellable()

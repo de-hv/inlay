@@ -9,5 +9,6 @@
 @MainActor
 func publishUiState() {
     MenuBarStore.shared.refresh()
+    BordersController.shared.refresh()
     SettingsWindowController.shared.modelDidChange()
 }

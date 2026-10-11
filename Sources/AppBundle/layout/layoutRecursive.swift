@@ -111,6 +111,7 @@ extension Window {
     fileprivate func layoutFloatingWindow(_ context: LayoutContext) async throws {
         let workspace = context.workspace
         let windowRect = try await getAxRect(.cancellable) // Probably not idempotent
+        lastKnownFloatingRect = windowRect
         let currentMonitor = windowRect?.center.monitorApproximation
         if let currentMonitor, let windowRect, workspace != currentMonitor.activeWorkspace {
             let windowTopLeftCorner = windowRect.topLeftCorner
@@ -127,8 +128,10 @@ extension Window {
             newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
 
             setAxFrame(CGPoint(x: newX, y: newY), nil)
+            lastKnownFloatingRect = Rect(topLeftX: newX, topLeftY: newY, width: windowWidth, height: windowHeight)
         }
         if isFullscreen {
+            lastKnownFloatingRect = nil
             layoutFullscreen(context)
             isFullscreen = false
         }

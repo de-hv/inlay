@@ -5,6 +5,9 @@ open class Window: TreeNode, Hashable {
     let windowId: UInt32
     let app: any AbstractApp
     var lastFloatingSize: CGSize?
+    /// The frame of the window as of the last layout pass, if the window was floating then. The layout pass doesn't
+    /// decide the frame of a floating window, it reads it. Used to draw the border of the window
+    var lastKnownFloatingRect: Rect? = nil
     var isFullscreen: Bool = false
     var noOuterGapsInFullscreen: Bool = false
     var layoutReason: LayoutReason = .standard

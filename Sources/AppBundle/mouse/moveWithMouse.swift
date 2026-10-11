@@ -13,6 +13,7 @@ func movedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutableR
             scheduleCancellableCompleteRefreshSession(.ax(notif))
             return
         }
+        hideBorderWhileManipulatedWithMouse(window)
         moveWithMouseTask?.cancel()
         moveWithMouseTask = Task.startUnstructured {
             try checkCancellation()

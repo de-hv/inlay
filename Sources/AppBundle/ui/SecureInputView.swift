@@ -42,8 +42,15 @@ public final class SecureInputPanel: NSPanelHud {
     }
 }
 
+// Used instead of @State: in the macOS 27 SDK @State is a macro whose plugin only ships with Xcode, and Inlay must
+// build with the Command Line Tools alone. @StateObject is a plain property wrapper and gives the same lifetime
+private final class SecureInputViewModel: ObservableObject {
+    @Published var isMinimized: Bool = true
+}
+
 struct SecureInputView: View {
-    @State var isMinimized: Bool = true
+    @StateObject private var model = SecureInputViewModel()
+    private var isMinimized: Bool { model.isMinimized }
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
     private var fontColor: Color {
@@ -60,7 +67,7 @@ struct SecureInputView: View {
                     .aspectRatio(contentMode: .fit)
                     .padding(6)
             } else {
-                Text("AeroSpace cannot respond to keyboard shortcuts while **Secure Input** is active. **Secure Input** is a macOS security feature that prevents applications from reading keyboard events.")
+                Text("Inlay cannot respond to keyboard shortcuts while **Secure Input** is active. **Secure Input** is a macOS security feature that prevents applications from reading keyboard events.")
                     .font(.title3)
                     .padding(10)
             }
@@ -71,7 +78,7 @@ struct SecureInputView: View {
             if !isMinimized {
                 SecureInputPanel.shared.refresh()
             }
-            isMinimized.toggle()
+            model.isMinimized.toggle()
             SecureInputPanel.shared.updateFrame(isMinimized: isMinimized)
         }
         .frame(

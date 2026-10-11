@@ -34,7 +34,9 @@ public final class VolumePanel: NSPanelHud {
 }
 
 struct VolumeView: View {
-    @State var volume: Float? = nil
+    // Not @State: in the macOS 27 SDK @State is a macro whose plugin only ships with Xcode, and Inlay must build with
+    // the Command Line Tools alone. The view never mutates the value anyway: VolumePanel recreates the view
+    var volume: Float? = nil
 
     @Environment(\.colorScheme) var colorScheme: ColorScheme
     private var barColor: Color {

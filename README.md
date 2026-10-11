@@ -17,8 +17,8 @@ Xcode, con su propia forma de colocar las ventanas nuevas (*dwindle*) y sin el l
 | Build, instalación y desinstalación sin Xcode | Hecho |
 | Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) |
 | Barra de menús con *chips* de workspaces, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) |
-| Bordes de ventana | Pendiente |
-| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración, los comandos del árbol, la barra de menús y el editor de la config. El resto de la suite original (XCTest) está por migrar |
+| Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) |
+| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración, los comandos del árbol, la barra de menús, los bordes y el editor de la config. El resto de la suite original (XCTest) está por migrar |
 
 El formato de configuración y los comandos son los de AeroSpace con las diferencias de [Mosaico](#mosaico): su
 [guía](https://nikitabobko.github.io/AeroSpace/guide) y su
@@ -133,6 +133,41 @@ a la de Aeromenu; un color fijo no se adapta a la barra.
   `~/.config/inlay/inlay.toml` a partir de la incluida. Una clave escrita con puntos (`menu-bar.theme = …`) o
   dentro de una tabla en línea no se edita desde Ajustes: su control aparece desactivado.
 
+## Bordes de ventana
+
+Inlay dibuja un borde de color alrededor de cada ventana gestionada (en mosaico o flotante) de los workspaces
+visibles. El color sale del estado que el gestor ya conoce, sin heurísticas de foco. Se configura en la tabla
+`[borders]`, documentada en [`docs/config-examples/default-config.toml`](docs/config-examples/default-config.toml),
+o en la pestaña **Borders** de Ajustes.
+
+| Clave | Valores | Por defecto |
+|---|---|---|
+| `enabled` | `true`, `false` | `true` |
+| `width` | 1 … 20 (puntos) | `4` |
+| `corner-radius` | 0 … 40 (puntos) | `16` |
+| `active-color` | color | `'system-accent'` |
+| `inactive-color` | color | `'#8E8E9373'` |
+| `floating-color` | color | `'#BF5AF2'` |
+| `[borders.mode-colors]` `<modo>` | color | tabla vacía |
+
+- **Color de la ventana enfocada**: el del modo de atajos activo si tiene entrada en `[borders.mode-colors]`; si
+  no, `floating-color` si es flotante; si no, `active-color`. Las demás ventanas usan `inactive-color`.
+- Un color **totalmente transparente** (`'#00000000'`) significa «sin borde»: con
+  `inactive-color = '#00000000'` solo lleva borde la ventana activa.
+- **Sin borde**: ventanas en pantalla completa (la de Inlay y la nativa de macOS), minimizadas, de apps ocultas,
+  diálogos y popups, las de workspaces no visibles, y la ventana que estás arrastrando o redimensionando con el
+  ratón (el borde vuelve al soltar).
+- El borde va **por fuera** del marco de la ventana, en el hueco entre ventanas: no tapa contenido y no recibe
+  clics. Conviene que los `gaps` sean al menos el doble de `width` (la config incluida usa 14 con el borde de 4);
+  con gaps más pequeños los bordes de dos ventanas vecinas se tocan o se solapan.
+- El radio de las esquinas es fijo: macOS no deja leer el de las ventanas de otras apps. Ajústalo a ojo.
+- Los bordes desaparecen al pausar Inlay (`inlay enable off`), al salir y con `enabled = false`.
+- `[borders.mode-colors]` todavía no se edita desde Ajustes: escríbela en el fichero.
+
+Cada borde es una ventana propia de Inlay, transparente, colocada justo encima de su ventana en el orden de
+apilado, así que una ventana flotante de otra app tapa los bordes de las ventanas que tiene detrás. Todo con
+API pública de AppKit; no hay código de JankyBorders ni se usa SkyLight.
+
 ## Desinstalación
 
 ```sh
@@ -157,6 +192,15 @@ barra oscura y clara, con colores por defecto y personalizados; `_sheet.png` los
 ```sh
 build/Inlay.app/Contents/MacOS/Inlay --render-menu-bar /tmp/inlay-item
 INLAY_RENDER_DIR=/tmp/inlay-item scripts/test.sh --filter SettingsModelTest   # las pestañas de Ajustes, a PNG
+```
+
+Lo mismo para los bordes. `--render-borders` los dibuja fuera de pantalla en cada estado, y `--debug-borders`
+los muestra de verdad unos segundos alrededor de las ventanas que haya en pantalla (sin mover nada y sin permiso
+de Accesibilidad), imprime cómo han quedado apilados y los quita:
+
+```sh
+build/Inlay.app/Contents/MacOS/Inlay --render-borders /tmp/inlay-borders
+build/Inlay.app/Contents/MacOS/Inlay --debug-borders 5
 ```
 
 Los scripts fuerzan `DEVELOPER_DIR=/Library/Developer/CommandLineTools` aunque `xcode-select` apunte a Xcode,

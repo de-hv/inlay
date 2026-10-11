@@ -67,6 +67,10 @@ private let serverHelp = """
       --unregister-login-item Remove Inlay from the login items and exit. Used by scripts/uninstall.sh
       --render-menu-bar <dir> Draw the menu bar item to PNG files (every theme, dark and light menu bar,
                               default and custom colors) and exit. Inlay doesn't start
+      --render-borders <dir>  Draw the window borders in every state to PNG files and exit. Inlay doesn't start
+      --debug-borders [<sec>] Show the borders around the windows that are on the screen for a few seconds
+                              (4 by default), print how they are stacked, and exit. It needs no permission,
+                              and no window is moved
     """
 
 nonisolated(unsafe) private var _serverArgs = ServerArgs()

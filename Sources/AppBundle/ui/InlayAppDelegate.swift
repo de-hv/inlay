@@ -17,6 +17,21 @@ public func runInlayApp() -> Never {
         }
         exit(EXIT_CODE_ZERO, out: "The menu bar item was rendered to \(directory)")
     }
+    if let index = CommandLine.arguments.firstIndex(of: renderBordersFlag) {
+        guard let directory = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
+            exit(EXIT_CODE_TWO, err: "Missing <dir> in \(renderBordersFlag) flag")
+        }
+        do {
+            try renderBorderSamples(to: URL(filePath: directory))
+        } catch {
+            exit(EXIT_CODE_TWO, err: "Can't render the borders: \(error.localizedDescription)")
+        }
+        exit(EXIT_CODE_ZERO, out: "The borders were rendered to \(directory)")
+    }
+    if let index = CommandLine.arguments.firstIndex(of: debugBordersFlag) {
+        let seconds = CommandLine.arguments.getOrNil(atIndex: index + 1).flatMap(Double.init) ?? 4
+        runBordersDebug(seconds: min(max(seconds, 1), 60))
+    }
     let app = NSApplication.shared
     let delegate = InlayAppDelegate()
     app.delegate = delegate
@@ -35,6 +50,7 @@ final class InlayAppDelegate: NSObject, NSApplicationDelegate {
         NSApp.mainMenu = makeMainMenu()
         MessageWindowController.shared.start()
         MenuBarController.shared.start()
+        BordersController.shared.start()
     }
 
     /// Opening Inlay again (from Applications, Spotlight...) shows the settings.

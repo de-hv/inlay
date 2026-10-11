@@ -51,6 +51,7 @@ struct Config: ConvenienceMutable {
     var keyMapping = KeyMapping()
     var execConfig: ExecConfig = ExecConfig()
     var focusFollowsMouse: FocusFollowsMouse = FocusFollowsMouse()
+    var tiling: TilingConfig = TilingConfig()
 
     var onFocusChanged: Shell<any Command> = .empty
     // var onFocusedWorkspaceChanged: [any Command] = []
@@ -65,6 +66,23 @@ struct Config: ConvenienceMutable {
 
 struct FocusFollowsMouse: ConvenienceMutable {
     var enabled: Bool = false
+}
+
+struct TilingConfig: ConvenienceMutable, Equatable {
+    var newWindowPlacement: NewWindowPlacement = .dwindle
+    /// The fraction of its space that the split window keeps, when newWindowPlacement is dwindle
+    var splitRatio: CGFloat = 0.5
+
+    static let splitRatioRange: ClosedRange<CGFloat> = 0.1 ... 0.9
+}
+
+/// Where a new tiling window is placed
+enum NewWindowPlacement: String, CaseIterable {
+    /// The new window splits the most recent tiling window of the workspace in two, like the dwindle layout of Hyprland
+    case dwindle
+    /// AeroSpace behavior. The new window becomes the next sibling of the most recent window,
+    /// and all the siblings share the space
+    case afterFocused = "after-focused"
 }
 
 enum ConfigVersion: Int, Comparable, CaseIterable, Sendable, CustomStringConvertible {

@@ -238,8 +238,8 @@ extension InlayTests {
             )
 
             assertEquals(
-                parseConfig("foo = 1.0").strErrors,
-                ["[ERROR] foo: Unsupported TOML type: Double"],
+                parseConfig("foo = 1979-05-27").strErrors,
+                ["[ERROR] foo: Unsupported TOML type: LocalDate"],
             )
 
             assertEquals(

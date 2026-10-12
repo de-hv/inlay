@@ -54,6 +54,20 @@ extension InlayTests {
             assertEquals(items.filter { $0.state == .on }.compactMap { $0.representedObject as? String }, ["workspace \(workspace.name)"])
         }
 
+        /// The rows of the workspaces are text: the name of the workspace and the names of its apps, without icons
+        @Test func testWorkspaceRowsHaveNoIcons() {
+            let apps = [MenuBarSnapshot.App(name: "Telegram"), MenuBarSnapshot.App(name: "WhatsApp")]
+            let occupied = MenuBarMenu.workspaceTitle(.init(name: "4", isOccupied: true, apps: apps))
+            assertEquals(occupied.string, "4\u{2003}Telegram, WhatsApp")
+            let empty = MenuBarMenu.workspaceTitle(.init(name: "6", isOccupied: false))
+            assertEquals(empty.string, "6\u{2003}Empty")
+            for title in [occupied, empty] {
+                assertEquals(title.containsAttachments, false)
+            }
+            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
+            assertEquals(openMenu().filter { $0.representedObject as? String == "workspace \(focus.workspace.name)" }.map { $0.image == nil }, [true])
+        }
+
         /// The key bindings of the config aren't shown next to the items, even when one runs the command of the item
         @Test func testNoKeyBindingsOfTheConfig() throws {
             assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)

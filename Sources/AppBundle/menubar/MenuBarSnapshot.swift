@@ -11,7 +11,6 @@ struct MenuBarSnapshot: Equatable, Sendable {
     }
 
     struct App: Hashable, Sendable {
-        var bundleId: String?
         var name: String
     }
 
@@ -65,7 +64,7 @@ extension MenuBarSnapshot {
                     name: workspace.name,
                     isOccupied: !workspace.isEffectivelyEmpty,
                     apps: workspace.allLeafWindowsRecursive
-                        .map { App(bundleId: $0.app.rawAppBundleId, name: $0.app.name?.takeIf { !$0.isEmpty } ?? $0.app.rawAppBundleId ?? "?") }
+                        .map { App(name: $0.app.name?.takeIf { !$0.isEmpty } ?? $0.app.rawAppBundleId ?? "?") }
                         .toOrderedSet()
                         .elements,
                 )

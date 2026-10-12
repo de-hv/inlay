@@ -5,9 +5,6 @@ import Common
 @MainActor
 final class MenuBarMenu: NSObject, NSMenuDelegate {
     let menu = NSMenu()
-    private let icons = AppIconCache()
-
-    private static let iconSize: CGFloat = 16
 
     override init() {
         super.init()
@@ -51,7 +48,7 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         menu.addItem(.sectionHeader(title: Strings.Menu.workspaces))
         for workspace in snapshot.workspaces {
             let item = commandItem(workspace.name, "workspace \(workspace.name)")
-            item.attributedTitle = workspaceTitle(workspace)
+            item.attributedTitle = Self.workspaceTitle(workspace)
             item.state = workspace.name == snapshot.focusedWorkspace ? .on : .off
             menu.addItem(item)
         }
@@ -90,30 +87,21 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         return item
     }
 
-    /// "4  [icon][icon] Telegram, WhatsApp" or "6  Empty"
-    private func workspaceTitle(_ workspace: MenuBarSnapshot.Workspace) -> NSAttributedString {
+    /// "4  Telegram, WhatsApp" or "6  Empty". Text only: the names of the apps, without their icons
+    static func workspaceTitle(_ workspace: MenuBarSnapshot.Workspace) -> NSAttributedString {
         let size = NSFont.menuFont(ofSize: 0).pointSize
-        // Monospaced digits keep the icons in one column
+        // Monospaced digits keep the names of the apps in one column
         let title = NSMutableAttributedString(
             string: workspace.name + "\u{2003}",
             attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .medium)],
         )
         let font = NSFont.menuFont(ofSize: size)
-        guard !workspace.apps.isEmpty else {
+        if workspace.apps.isEmpty {
             title.append(NSAttributedString(string: Strings.Menu.empty, attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor]))
-            return title
+        } else {
+            let names = workspace.apps.map(\.name).joinTruncating(separator: ", ", length: 40)
+            title.append(NSAttributedString(string: names, attributes: [.font: font]))
         }
-        for app in workspace.apps {
-            guard let icon = icons.icon(app) else { continue }
-            let attachment = NSTextAttachment()
-            attachment.image = icon
-            // Centred on the capital letters rather than sitting on the baseline
-            attachment.bounds = NSRect(x: 0, y: (font.capHeight - Self.iconSize) / 2, width: Self.iconSize, height: Self.iconSize)
-            title.append(NSAttributedString(attachment: attachment))
-            title.append(NSAttributedString(string: "\u{2009}"))
-        }
-        let names = workspace.apps.map(\.name).joinTruncating(separator: ", ", length: 40)
-        title.append(NSAttributedString(string: " " + names, attributes: [.font: font]))
         return title
     }
 
@@ -157,21 +145,6 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
             terminationHandler?.beforeTermination()
             terminateApp()
         }
-    }
-}
-
-/// The icons of the apps in the list of workspaces, by bundle id
-@MainActor
-private final class AppIconCache {
-    private var icons: [String: NSImage] = [:]
-
-    func icon(_ app: MenuBarSnapshot.App) -> NSImage? {
-        guard let bundleId = app.bundleId else { return nil }
-        if let cached = icons[bundleId] { return cached }
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
-        let icon = NSWorkspace.shared.icon(forFile: url.path)
-        icons[bundleId] = icon
-        return icon
     }
 }
 

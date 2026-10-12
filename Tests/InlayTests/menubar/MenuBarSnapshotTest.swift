@@ -36,7 +36,7 @@ extension InlayTests {
             assertEquals(Workspace.get(byName: "3").focusWorkspace(), true)
             Workspace.garbageCollectUnusedWorkspaces()
 
-            let app = MenuBarSnapshot.App(bundleId: "com.davidhiguita.Inlay.test-app", name: "com.davidhiguita.Inlay.test-app")
+            let app = MenuBarSnapshot.App(name: "com.davidhiguita.Inlay.test-app")
             let snapshot = MenuBarSnapshot.fromModel()
             assertEquals(snapshot.workspaces, [
                 .init(name: "1", isOccupied: false),

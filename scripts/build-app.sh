@@ -72,7 +72,10 @@ export INLAY_GIT_HASH="$GIT_HASH"
 
 info "Building $APP_NAME $VERSION ($GIT_HASH, $CONFIGURATION) with $(swift --version 2>&1 | head -n 1)"
 # One invocation for both products (InlayApp and inlay): building them one by one compiles the shared code twice
-swift build --configuration "$CONFIGURATION"
+# SwiftPM hands the linker two search paths (Developer/Library/Frameworks and Developer/usr/lib) that exist in an
+# Xcode.app but not in the Command Line Tools. Nothing is looked up there: drop that warning, and only that one
+swift build --configuration "$CONFIGURATION" 2>&1 \
+  | sed -E "/ld: warning: search path '.*\/Developer\/(Library\/Frameworks|usr\/lib)' not found/d"
 BIN_DIR="$(swift build --configuration "$CONFIGURATION" --show-bin-path)"
 [ -x "$BIN_DIR/InlayApp" ] || fail "$BIN_DIR/InlayApp was not built."
 [ -x "$BIN_DIR/$CLI_NAME" ] || fail "$BIN_DIR/$CLI_NAME was not built."

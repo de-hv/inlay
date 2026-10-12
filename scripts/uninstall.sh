@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 #
-# Quits Inlay and removes it.
+# Quits Inlay and removes it. 'inlay uninstall' runs this script (a copy of it: the script deletes the app
+# that contains it), and so does ./uninstall.sh in the repo.
 #
-#   scripts/uninstall.sh            remove the app, the 'inlay' CLI link and the login item
-#   scripts/uninstall.sh --purge    also remove your config and the app's preferences
-#   INSTALL_DIR=~/Apps scripts/uninstall.sh      remove the copy in that directory only (the default is to
-#                                                look in /Applications and ~/Applications)
-#   INLAY_BIN_DIR=~/bin scripts/uninstall.sh
+#   inlay uninstall             remove the app, the 'inlay' CLI link and the login item
+#   inlay uninstall --purge     also remove your config and the app's preferences
+#   inlay uninstall --yes       don't ask for confirmation (needed when there is no terminal to ask on)
+#   INSTALL_DIR=~/Apps inlay uninstall      remove the copy in that directory only (the default is to
+#                                           look in /Applications and ~/Applications)
+#   INLAY_BIN_DIR=~/bin inlay uninstall     also look for the CLI link in that directory
 #
-# Without --purge your config (~/.config/inlay, ~/.inlay.toml) is kept.
+# It works whether Inlay is running or not. A running Inlay is quit first, and on quit it brings the windows
+# of the hidden workspaces back to the screen.
+# Without --purge your config (~/.config/inlay, ~/.inlay.toml) is kept. With --purge it is removed; if it is
+# a symbolic link to a file of yours, only the link is removed, never the file it points to.
 # Never removed: the Accessibility entry (remove it in System Settings > Privacy & Security > Accessibility, or
 # run 'tccutil reset Accessibility com.davidhiguita.inlay') and the signing identity that
 # 'install.sh' created (delete "Inlay Local Code Signing" in Keychain Access).
@@ -18,21 +23,23 @@
 
 set -euo pipefail
 
-usage() { sed -n '3,17s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,23s/^# \{0,1\}//p' "$SCRIPT_DIR/uninstall.sh"; }
 
-# Prints the installed copies of the app, one per line.
-# With INSTALL_DIR only that directory is looked at: the copies in the standard places are left alone
+# Prints the installed copies of the app, one per line: the app that 'inlay uninstall' was run from, and the
+# ones in the standard places. With INSTALL_DIR only that directory is looked at instead of the standard places
 installed_apps() {
-  local dir
-  if [ -n "${INSTALL_DIR:-}" ]; then
-    if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
+  local app
+  {
+    printf '%s\n' "${INLAY_UNINSTALL_APP:-}"
+    if [ -n "${INSTALL_DIR:-}" ]; then
       printf '%s\n' "$INSTALL_DIR/$APP_NAME.app"
+    else
+      printf '%s\n' "/Applications/$APP_NAME.app" "$HOME/Applications/$APP_NAME.app"
     fi
-    return 0
-  fi
-  for dir in /Applications "$HOME/Applications"; do
-    if [ -d "$dir/$APP_NAME.app" ]; then
-      printf '%s\n' "$dir/$APP_NAME.app"
+  } | while IFS= read -r app; do
+    # The physical path, so that the same app reached through two paths is listed once
+    if [ -n "$app" ] && [ -d "$app" ]; then
+      (cd "$app" && pwd -P)
     fi
   done | sort -u
 }
@@ -59,76 +66,148 @@ remove_login_item() {
   fi
 }
 
-remove_cli_links() {
+# Prints the links to the CLI of an Inlay.app, one per line
+cli_links() {
   local dir link target
   while IFS= read -r dir; do
     link="$dir/$CLI_NAME"
     [ -n "$dir" ] && [ -L "$link" ] || continue
     target="$(readlink "$link")"
     case "$target" in
-      */"$APP_NAME.app/$CLI_PATH_IN_APP")
-        rm -f "$link"
-        info "Removed $link"
-        ;;
+      */"$APP_NAME.app/$CLI_PATH_IN_APP") printf '%s\n' "$link" ;;
     esac
-  done <<LIST
+  done <<LIST | sort -u
 ${INLAY_BIN_DIR:-}
 $(cli_dir_candidates)
 LIST
 }
 
-purge() {
+# Prints the config paths that exist, one per line
+config_paths() {
   local path
   for path in "$(config_home)/inlay" "$HOME/.inlay.toml"; do
     if [ -e "$path" ] || [ -L "$path" ]; then
-      rm -rf "$path"
-      info "Removed $path"
+      printf '%s\n' "$path"
     fi
   done
+}
+
+# Prints, for a config path, the symbolic links that 'rm' removes without touching what they point to:
+# "<link> -> <target>" per line. The path itself, or the config file inside the config directory
+config_links() {
+  local path="$1" candidate
+  for candidate in "$path" "$path/inlay.toml"; do
+    if [ -L "$candidate" ]; then
+      printf '%s -> %s\n' "$candidate" "$(readlink "$candidate")"
+    fi
+  done
+}
+
+purge() {
+  local path link
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    while IFS= read -r link; do
+      [ -n "$link" ] || continue
+      note "Symbolic link: only the link is removed, the file it points to is kept ($link)"
+    done <<LINKS
+$(config_links "$path")
+LINKS
+    # Without a trailing slash 'rm -rf' never follows a symbolic link
+    rm -rf "$path"
+    info "Removed $path"
+  done <<LIST
+$(config_paths)
+LIST
   defaults delete "$BUNDLE_ID" >/dev/null 2>&1 || true
-  rm -rf "/tmp/$BUNDLE_ID"
+  rm -rf "$RUNTIME_TMP_DIR/$BUNDLE_ID"
   info "Removed the preferences of $BUNDLE_ID"
 }
 
 main() {
-  local do_purge=false app found=false
+  local do_purge=false assume_yes=false app link apps links
   while [ $# -gt 0 ]; do
     case "$1" in
       --purge) do_purge=true ;;
+      -y|--yes) assume_yes=true ;;
       -h|--help) usage; exit 0 ;;
       *) usage >&2; fail "unknown option: $1" ;;
     esac
     shift
   done
 
+  apps="$(installed_apps)"
+  links="$(cli_links)"
+
+  info "This removes $APP_NAME:"
+  if [ -n "$apps" ]; then
+    while IFS= read -r app; do note "- $app (and its login item)"; done <<LIST
+$apps
+LIST
+  else
+    note "- $APP_NAME.app is not installed"
+  fi
+  if [ -n "$links" ]; then
+    while IFS= read -r link; do note "- $link"; done <<LIST
+$links
+LIST
+  fi
+  if [ "$do_purge" = true ]; then
+    while IFS= read -r link; do
+      [ -n "$link" ] || continue
+      note "- $link (your config)"
+    done <<LIST
+$(config_paths)
+LIST
+    note "- the preferences of $BUNDLE_ID"
+  else
+    note "Your config is kept (use --purge to remove it too)."
+  fi
+
+  if [ "$assume_yes" != true ]; then
+    is_interactive || fail "there is no terminal to ask for confirmation on. Run it again with --yes."
+    if ! ask_yes_no "Remove $APP_NAME?"; then
+      info "Nothing was removed."
+      exit 1
+    fi
+  fi
+
   quit_running_inlay
 
-  while IFS= read -r app; do
-    [ -n "$app" ] || continue
-    found=true
-    remove_login_item "$app"
-    info "Removing $app"
-    rm -rf "$app"
-  done <<LIST
-$(installed_apps)
+  if [ -n "$apps" ]; then
+    while IFS= read -r app; do
+      remove_login_item "$app"
+      info "Removing $app"
+      rm -rf "$app"
+    done <<LIST
+$apps
 LIST
-  [ "$found" = true ] || info "$APP_NAME.app is not installed"
+  fi
 
-  remove_cli_links
+  if [ -n "$links" ]; then
+    while IFS= read -r link; do
+      rm -f "$link"
+      info "Removed $link"
+    done <<LIST
+$links
+LIST
+  fi
 
   if [ "$do_purge" = true ]; then
     purge
-  else
-    note "Your config was kept. Use --purge to remove it too."
   fi
   info "Done"
   note "To go back to AeroSpace: open AeroSpace and AeroMenu, and run 'brew services start borders'."
 }
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
-SCRIPT_PATH="scripts/uninstall.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/lib.sh
-. scripts/lib.sh
+. "$SCRIPT_DIR/lib.sh"
+
+# 'inlay uninstall' runs a temporary copy of this script and of lib.sh, and names its directory here
+case "$(basename "${INLAY_UNINSTALL_SELF_DIR:-}")" in
+  inlay-uninstall.*) trap 'rm -rf "$INLAY_UNINSTALL_SELF_DIR"' EXIT ;;
+esac
 
 # Sourcing the script (for tests) defines the functions without running it.
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then

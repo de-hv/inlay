@@ -54,6 +54,11 @@ struct Main {
             exit(EXIT_CODE_ZERO)
         }
 
+        // Not a command of the server: it removes the server
+        if args.first == "uninstall" {
+            runUninstall(args.slice(1...)?.toArray() ?? [])
+        }
+
         let parsedArgs: any CmdArgs
         switch parseCmdArgs(args) {
             // Optimizations
@@ -179,4 +184,34 @@ func run(_ connection: NWConnection, _ args: StrArrSlice, stdin: String, windowI
         case .failure(let error):
             exit(failExitCode, err: "Failed to read from server socket: \(error)")
     }
+}
+
+/// 'inlay uninstall': runs the uninstall script that ships with Inlay. The script deletes the app that contains
+/// it (and this CLI), so a temporary copy of it is what runs
+func runUninstall(_ args: [String]) -> Never {
+    let files = ["uninstall.sh", "lib.sh"]
+    let sources = files.map { shippedFile(inResources: "scripts/\($0)", inRepo: "scripts/\($0)") }
+    let directory = FileManager.default.temporaryDirectory.appending(path: "inlay-uninstall.\(UUID().uuidString)")
+    do {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for (file, source) in zip(files, sources) {
+            guard let source else {
+                exit(EXIT_CODE_TWO, err: "Can't find the uninstall script (\(file)). Is Inlay installed correctly? It is expected in Inlay.app/Contents/Resources/scripts")
+            }
+            try FileManager.default.copyItem(at: source, to: directory.appending(path: file))
+        }
+    } catch {
+        exit(EXIT_CODE_TWO, err: "Can't prepare the uninstall script in \(directory.path): \(error.localizedDescription)")
+    }
+
+    unsafe setenv("INLAY_UNINSTALL_SELF_DIR", directory.path, 1) // The script removes its own copy
+    // The app that this CLI belongs to, wherever it is installed
+    if let app = appBundle() { unsafe setenv("INLAY_UNINSTALL_APP", app.path, 1) }
+    // The script takes the place of this process, rather than being a child of it: it keeps the terminal,
+    // where it asks for confirmation, and it doesn't depend on a binary that it deletes
+    let arguments = ["/bin/bash", directory.appending(path: "uninstall.sh").path] + args
+    let cArguments: [UnsafeMutablePointer<CChar>?] = unsafe arguments.map { unsafe strdup($0) } + [nil]
+    unsafe execv("/bin/bash", cArguments)
+    let reason = unsafe String(cString: strerror(errno))
+    exit(EXIT_CODE_TWO, err: "Can't run the uninstall script: \(reason)")
 }

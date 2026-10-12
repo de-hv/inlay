@@ -8,22 +8,25 @@ Se compila e instala **solo con las Command Line Tools de Xcode**: sin Xcode, si
 
 ## Estado del proyecto
 
-**Primera versión lista para probar (0.1.0), todavía sin usar en el día a día.** Inlay es un *fork* de
+**Versión 0.1.0, en su primera ronda de uso real.** Inlay es un *fork* de
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) que se compila sin Xcode, con su propia forma de colocar
 las ventanas nuevas (*dwindle*), sin el layout *accordion*, con una barra de menús propia y con bordes de ventana.
 
 | Parte | Estado | Cómo está comprobado |
 |---|---|---|
 | Build, instalación y desinstalación sin Xcode | Hecho | Build limpio desde cero con las Command Line Tools; `install.sh` y `uninstall.sh` ejecutados enteros en un entorno aislado (otro `HOME`, otra carpeta de instalación) |
-| Gestor de ventanas (árbol, workspaces, comandos, CLI) | El de AeroSpace `74a1bf1`, con otro nombre | Tests (ventanas simuladas). **Sin probar con ventanas reales** |
-| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) | Tests, incluida una sesión pseudoaleatoria de 400 pasos. **Sin probar con ventanas reales** |
-| Barra de menús con *chips*, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) | Tests, imágenes renderizadas y arranque real sin permiso. **Sin probar los clics, el menú ni Ajustes con permiso** |
-| Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) | Tests, imágenes renderizadas y `--debug-borders` sobre ventanas reales. **Sin probar sobre ventanas gestionadas** |
-| Tests | 562 tests de Swift Testing (`scripts/test.sh`): toda la suite original de AeroSpace migrada, más los de Inlay | Pasan con las Command Line Tools |
+| Gestor de ventanas (árbol, workspaces, comandos, CLI) | El de AeroSpace `74a1bf1`, con otro nombre | Tests (ventanas simuladas) |
+| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) | Tests (ventanas simuladas), incluida una sesión pseudoaleatoria de 600 pasos |
+| Barra de menús con *chips*, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) | Tests e imágenes renderizadas |
+| Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) | Tests, imágenes renderizadas y `--debug-borders` sobre ventanas reales |
+| Tests | 588 tests de Swift Testing (`scripts/test.sh`): toda la suite original de AeroSpace migrada, más los de Inlay | Pasan con las Command Line Tools |
 
-Lo que falta es lo que solo puede hacer quien concede el permiso de Accesibilidad: usar Inlay de verdad. Hasta
-ahora Inlay solo se ha ejecutado **sin ese permiso** (arranca, muestra su item con el aviso, abre Ajustes y se
-cierra con `pkill`, sin tocar ninguna ventana).
+La columna «Cómo está comprobado» dice lo que se ha verificado de forma automática. Además, Inlay ya se ha
+instalado y usado con el permiso de Accesibilidad (primera prueba, 2026-10-11). De esa prueba salieron los
+cambios de esta revisión, que **aún no se han probado en uso real**, solo con tests e imágenes renderizadas:
+firma estable por defecto, reparto en rejilla al arrancar (`startup-layout`), recuperar el sitio al volver de
+minimizar o de pantalla completa nativa, *glow* opcional en el borde, item de la barra solo informativo y
+colores por modo en Ajustes.
 
 Limitaciones conocidas de esta versión:
 

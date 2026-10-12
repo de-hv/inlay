@@ -73,6 +73,17 @@ new-window-placement = 'dwindle'                              # defecto: 'dwindl
 # 0.5 = mitades iguales; 0.6 = la original se queda el 60 %. Rango 0.1 – 0.9.
 split-ratio = 0.5                                             # defecto: 0.5
 
+# Cómo se reparten las ventanas que YA están abiertas cuando Inlay arranca (o
+# cuando se reanuda con `inlay enable on`), workspace por workspace. Las que se
+# abren después siguen `new-window-placement`.
+#   'grid'     Rejilla equilibrada: ceil(√n) columnas y las filas que hagan
+#              falta. La última fila reparte su ancho entre las ventanas que
+#              tenga: 5 ventanas son 3 arriba y 2 abajo.
+#   'row'      Una sola fila, todas al mismo ancho.
+#   'dwindle'  Sin reparto: entran una detrás de otra, como ventanas nuevas
+#              (con dwindle, una espiral con las últimas muy pequeñas).
+startup-layout = 'grid'                                       # defecto: 'grid'
+
 
 # ─── Barra de menús ──────────────────────────────────────────────────────────
 [menu-bar]
@@ -134,10 +145,18 @@ inactive-color = '#8E8E9373'         # el resto de ventanas          (defecto: '
 floating-color = '#BF5AF2'           # ventana enfocada flotante     (defecto: '#BF5AF2')
 # Para ver solo el borde de la ventana activa:  inactive-color = '#00000000'
 
+# Resplandor del color del borde alrededor de la ventana enfocada (activa,
+# flotante o con color de modo). Las no enfocadas nunca lo llevan. Es exterior:
+# no tapa la ventana ni recibe clics.                          (defecto: false)
+glow = false
+# Radio de desenfoque en puntos: hasta dónde llega, más o menos. Rango 1 – 40.
+glow-radius = 12                     #                               (defecto: 12)
+
 [borders.mode-colors]
 # Color del borde de la ventana enfocada mientras está activo un modo de
 # atajos. Tiene prioridad sobre active-color y floating-color. Un modo sin
-# entrada conserva el color normal. Vacío por defecto.
+# entrada conserva el color normal. Vacío por defecto. También se edita en
+# Ajustes › Borders (una fila por modo definido aquí abajo, menos `main`).
 resize  = '#30D158'
 service = '#FF453A'
 

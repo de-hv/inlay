@@ -95,6 +95,10 @@ private func initServerArgs() {
                 index += 1
             case "--unregister-login-item":
                 // Exits before the accessibility prompt and before any window is touched
+                let status = SMAppService.mainApp.status
+                if status == .notRegistered || status == .notFound {
+                    exit(EXIT_CODE_ZERO, out: "Inlay isn't in the login items")
+                }
                 switch Result(catching: { try SMAppService.mainApp.unregister() }) {
                     case .success: exit(EXIT_CODE_ZERO, out: "Inlay was removed from the login items")
                     case .failure(let e): exit(EXIT_CODE_TWO, err: "Can't remove Inlay from the login items: \(e.localizedDescription)")

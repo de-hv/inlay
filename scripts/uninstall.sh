@@ -4,23 +4,34 @@
 #
 #   scripts/uninstall.sh            remove the app, the 'inlay' CLI link and the login item
 #   scripts/uninstall.sh --purge    also remove your config and the app's preferences
-#   INSTALL_DIR=~/Applications scripts/uninstall.sh
+#   INSTALL_DIR=~/Apps scripts/uninstall.sh      remove the copy in that directory only (the default is to
+#                                                look in /Applications and ~/Applications)
 #   INLAY_BIN_DIR=~/bin scripts/uninstall.sh
 #
 # Without --purge your config (~/.config/inlay, ~/.inlay.toml) is kept.
 # Never removed: the Accessibility entry (remove it in System Settings > Privacy & Security > Accessibility, or
 # run 'tccutil reset Accessibility com.davidhiguita.inlay') and the signing identity that
 # 'install.sh --stable-signing' created (delete "Inlay Local Code Signing" in Keychain Access).
+#
+# Nothing of AeroSpace, AeroMenu or borders is touched. To go back to them, open AeroSpace and AeroMenu again
+# and run 'brew services start borders'.
 
 set -euo pipefail
 
-usage() { sed -n '3,13s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,17s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
-# Prints the installed copies of the app, one per line
+# Prints the installed copies of the app, one per line.
+# With INSTALL_DIR only that directory is looked at: the copies in the standard places are left alone
 installed_apps() {
   local dir
-  for dir in "${INSTALL_DIR:-}" /Applications "$HOME/Applications"; do
-    if [ -n "$dir" ] && [ -d "$dir/$APP_NAME.app" ]; then
+  if [ -n "${INSTALL_DIR:-}" ]; then
+    if [ -d "$INSTALL_DIR/$APP_NAME.app" ]; then
+      printf '%s\n' "$INSTALL_DIR/$APP_NAME.app"
+    fi
+    return 0
+  fi
+  for dir in /Applications "$HOME/Applications"; do
+    if [ -d "$dir/$APP_NAME.app" ]; then
       printf '%s\n' "$dir/$APP_NAME.app"
     fi
   done | sort -u
@@ -41,7 +52,7 @@ remove_login_item() {
     sleep 0.1
   done
   if wait "$pid" 2>/dev/null; then
-    info "Removed the login item of $app"
+    info "$app is not in the login items any more"
   else
     note "Could not remove the login item of $app. If Inlay is still listed in"
     note "System Settings > General > Login Items, remove it there."
@@ -111,6 +122,7 @@ LIST
     note "Your config was kept. Use --purge to remove it too."
   fi
   info "Done"
+  note "To go back to AeroSpace: open AeroSpace and AeroMenu, and run 'brew services start borders'."
 }
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."

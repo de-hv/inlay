@@ -72,8 +72,10 @@ find_conflicts() {
   CONFLICTS="${CONFLICTS# }"
 }
 
+# Sets SIGNED_WITH to 'stable' or 'adhoc'
 build_app() {
   local mode="$1"
+  SIGNED_WITH=adhoc
   if [ "$mode" = auto ]; then
     if has_signing_identity; then mode=stable; else mode=adhoc; fi
   fi
@@ -81,6 +83,7 @@ build_app() {
     note "Signing with a stable identity. macOS may ask for your keychain password: choose \"Always Allow\"."
     if ensure_signing_identity; then
       scripts/build-app.sh --sign-identity "$SIGN_IDENTITY_NAME"
+      SIGNED_WITH=stable
       return
     fi
     warn "falling back to an ad hoc signature: the Accessibility permission will be lost on every rebuild."
@@ -168,8 +171,7 @@ ensure_config() {
       # cp follows a symlink, so the result is a regular file of your own
       cp "$source" "$xdg"
       info "Created $xdg from $source"
-      note "Review it: commands that call 'aerospace' should call '$CLI_NAME', and scripts can read"
-      note "INLAY_* variables (the AEROSPACE_* ones are still set for them)."
+      review_imported_config "$xdg"
       return 0
     fi
     warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
@@ -182,11 +184,38 @@ ensure_config() {
   fi
 }
 
+# What to look at in a config that was written for AeroSpace. Only tells: the copy is never edited
+review_imported_config() {
+  local file="$1"
+  note "Review it. Inlay reads it as it is ('accordion' is accepted with a warning and treated as 'tiles'):"
+  note "'$CLI_NAME reload-config' and the menu bar item list the warnings and the errors."
+  if grep -Eq '^[[:space:]]*start-at-login[[:space:]]*=[[:space:]]*true' "$file"; then
+    note "- It has 'start-at-login = true': Inlay will add itself to the login items the first time it runs."
+    note "  If AeroSpace also starts at login, both will start. Set it to false until you pick one."
+  fi
+  if grep -Eq '^[^#]*(aerospace|AEROSPACE_)' "$file"; then
+    note "- It mentions 'aerospace' outside of the comments. Commands and scripts that call the 'aerospace'"
+    note "  CLI talk to AeroSpace, not to Inlay: they should call '$CLI_NAME'. Scripts can read INLAY_*"
+    note "  variables (the AEROSPACE_* ones are still set for them)."
+  fi
+  note "- The window borders are 4 points thick, outside of the windows: with gaps under 8 the borders of two"
+  note "  neighbors overlap, and with gaps of 8 they touch. The built-in config uses 14."
+}
+
 explain_accessibility() {
   info "Accessibility permission"
   note "Inlay moves and resizes windows through the Accessibility API. The first time it opens, macOS asks"
-  note "for the permission: turn Inlay on in System Settings > Privacy & Security > Accessibility."
+  note "for the permission: turn Inlay on in System Settings > Privacy & Security > Accessibility"
+  note "(it needs an administrator; on a managed Mac the list may be locked by your IT department)."
+  note "Until then Inlay does nothing: its menu bar item shows a warning sign."
   note "If Inlay is on in that list but still asks, remove it from the list (-) and open Inlay again."
+  if [ "${SIGNED_WITH:-adhoc}" = adhoc ]; then
+    note "This build has an ad hoc signature: macOS forgets the permission every time Inlay is rebuilt or"
+    note "reinstalled, and it has to be removed from the list (-) and granted again. To keep it across"
+    note "rebuilds, run once:  scripts/install.sh --stable-signing"
+  else
+    note "This build is signed with \"$SIGN_IDENTITY_NAME\": the permission survives rebuilds."
+  fi
 }
 
 main() {

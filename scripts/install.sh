@@ -74,7 +74,7 @@ find_conflicts() {
 
 # build_app <stable|adhoc>. Sets SIGNED_WITH to 'stable' or 'adhoc': the signature that the build really got
 build_app() {
-  local mode="$1"
+  local mode="$1" signature
   if [ "$mode" = stable ]; then
     note "Signing with a stable identity. macOS may ask for your keychain password: choose \"Always Allow\"."
     if ensure_signing_identity; then
@@ -87,12 +87,13 @@ build_app() {
   if [ "$mode" = adhoc ]; then
     scripts/build-app.sh --sign-identity -
   fi
-  # build-app.sh falls back to an ad hoc signature on its own when codesign can't use the identity
-  if codesign --display --verbose "build/$APP_NAME.app" 2>&1 | grep -q '^Signature=adhoc$'; then
-    SIGNED_WITH=adhoc
-  else
-    SIGNED_WITH=stable
-  fi
+  # build-app.sh falls back to an ad hoc signature on its own when codesign can't use the identity.
+  # Not a pipe into 'grep -q': with pipefail, grep leaving early makes the pipe fail
+  signature="$(codesign --display --verbose "build/$APP_NAME.app" 2>&1 || true)"
+  case "$signature" in
+    *Signature=adhoc*) SIGNED_WITH=adhoc ;;
+    *) SIGNED_WITH=stable ;;
+  esac
 }
 
 install_app() {
@@ -216,7 +217,8 @@ explain_accessibility() {
   if [ "${SIGNED_WITH:-adhoc}" = adhoc ]; then
     note "This build has an ad hoc signature: macOS forgets the permission every time Inlay is rebuilt or"
     note "reinstalled, and it has to be removed from the list (-) and granted again. To keep it across"
-    note "rebuilds, run scripts/install.sh without --adhoc-signing."
+    note "rebuilds it must be signed with the local identity, which is what scripts/install.sh does"
+    note "unless it gets --adhoc-signing or the identity can't be created (see the warning above)."
   else
     note "This build is signed with \"$SIGN_IDENTITY_NAME\": the permission survives rebuilds."
   fi

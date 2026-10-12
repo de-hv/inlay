@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>min-window-size</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// A screen of 1280 x 800 points with two windows. 'resize width -50' on the left one, again and again.
+const W = 1280, H = 800, BAR = 24, GAP = 16, MIN = 100;
+const area = tilingArea(W, H, BAR, GAP);
+const keys = [];
+function key(width, caption, hold, more = {}) {
+  // The weight of a window is its width plus its half of the inner gap
+  const tree = T.box('h', [T.win('1', width + GAP / 2), T.win('2', area.w - width - GAP / 2)]);
+  const wins = tiled(tree, area, GAP, {
+    1: { app: 'notes', focus: true, text: `${Math.round(width)} pt` },
+    2: { app: 'zed' },
+  });
+  keys.push({ wins, caption, hold, ...more });
+}
+const shrinking = 'In a resize mode, <span class="kbd">resize width -50</span> again and again: the focused window gets narrower…';
+let width = 616;
+key(width, shrinking, 1300, { cut: true });
+while (width - 50 >= MIN) { width -= 50; key(width, shrinking, 230); }
+key(MIN, shrinking, 230);
+const limit = '…until it is <b>100 pt</b> wide, which is <code>min-window-size</code>. More resizes change nothing, and are not an error.';
+key(MIN, limit, 900, { pressed: true });
+key(MIN, limit, 2600);
+
+const marker = `<div style="position:absolute;left:${area.x + MIN}px;top:${BAR + 4}px;height:${H - BAR - 8}px;border-left:3px dashed #ffd27a"></div>` +
+  `<div style="position:absolute;left:${area.x + MIN + 14}px;top:${H - 86}px;font:600 26px ui-monospace,Menlo,monospace;color:#ffd27a;background:#1c1c21;padding:4px 12px;border-radius:8px">min-window-size = 100</div>`;
+Anim({
+  W: 800, H: 548, keys, steps: 2,
+  tween: (a, b, t) => ({ ...b, wins: tweenWins(a.wins, b.wins, t) }),
+  draw(el, s) {
+    drawScreen(el, 48, 50, 0.55, W, H, s.wins, { bar: BAR, chips: { n: 6, foc: 2, occ: [1, 2, 3] }, extra: marker });
+    chrome(el, '<code>[tiling] min-window-size = 100</code>', s.caption, 506);
+  },
+});
+</script></body></html>

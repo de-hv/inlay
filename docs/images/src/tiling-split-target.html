@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>split-target</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// Two screens of 800 x 500 points in the same state: the focus is on window 1, and the mouse cursor is over window 3.
+const W = 800, H = 500, BAR = 20, GAP = 14, SCALE = 0.45;
+const area = tilingArea(W, H, BAR, GAP);
+const start = () => T.box('h', [T.win('1'), T.box('v', [T.win('2'), T.win('3')])]);
+const props = focus => Object.fromEntries(['1', '2', '3', '4'].map(id => [id, { num: id, focus: id === focus }]));
+const cursor = { x: 610, y: 400 };
+const panels = [
+  { x: 28, target: '1', label: "<code>split-target = 'focused'</code> (the default)<br>the new window splits the <b>focused</b> window" },
+  { x: 412, target: '3', label: "<code>split-target = 'cursor'</code><br>the new window splits the window <b>under the mouse cursor</b>" },
+];
+const after = panels.map(p => {
+  const tree = start();
+  T.split(tree, p.target, '4', T.layout(tree, area, GAP));
+  return tiled(tree, area, GAP, props('4'));
+});
+const keys = [
+  { cut: true, hold: 2000, wins: panels.map(() => tiled(start(), area, GAP, props('1'))), caption: 'The focus is on window <b>1</b>, and the mouse cursor is over window <b>3</b>. A new window is about to open…' },
+  { hold: 3200, wins: after, caption: 'Window <b>4</b> opens. Without a tiled window under the cursor (a gap, another monitor…), <code>\'cursor\'</code> works like <code>\'focused\'</code>.' },
+];
+Anim({
+  W: 800, H: 392, keys, steps: 6,
+  tween: (a, b, t) => ({ ...b, wins: b.wins.map((w, i) => tweenWins(a.wins[i], w, t)) }),
+  draw(el, s) {
+    panels.forEach((p, i) => {
+      drawScreen(el, p.x, 52, SCALE, W, H, s.wins[i], { bar: BAR, bw: 5, noLights: true, cursor });
+      el.insertAdjacentHTML('beforeend', `<div class="plabel" style="left:${p.x}px;top:288px;width:360px">${p.label}</div>`);
+    });
+    chrome(el, '<code>[tiling] split-target</code>', s.caption, 346);
+  },
+});
+</script></body></html>

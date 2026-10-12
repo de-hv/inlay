@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The states of a workspace in the menu bar item</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 330px; }
+  .big { position: relative; width: 392px; height: 72px; border-radius: 10px; overflow: hidden; background: #383d5c; }
+  .big img { height: 72px; display: block; }
+  .wrap { position: relative; width: 392px; margin: 44px 0 0 0; }
+  .call { position: absolute; font-size: 12px; color: #e9e9f0; white-space: nowrap; transform: translateX(-50%); text-align: center; }
+  .call::after { content: ""; position: absolute; left: 50%; width: 1px; background: #8f91a0; }
+  .call.up { top: -30px; } .call.up::after { top: 18px; height: 14px; }
+  .call.down { top: 82px; } .call.down::after { top: -10px; height: 10px; }
+  .cols { display: grid; grid-template-columns: 420px 1fr; gap: 0 28px; margin-top: 6px; }
+  .side { display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; align-items: center; margin-top: 30px; }
+  .side .box { border-radius: 8px; overflow: hidden; background: #383d5c; height: 36px; } .side img { display: block; height: 36px; }
+  .side .cap { margin: 0; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real render</span>
+  <h1>What every workspace looks like</h1>
+  <div class="sub">All the workspaces are shown, and the focused one is marked. The item is informational: a right click opens the menu.</div>
+  <div class="cols">
+    <div>
+      <div class="wrap">
+        <div class="big"><img src="render/menu-bar-6x/chips-default-dark.png"></div>
+        <span class="call up" style="left:105px"><b>focused</b>: solid background</span>
+        <span class="call down" style="left:48px">with windows:<br>faint background</span>
+        <span class="call down" style="left:333px">empty:<br>dimmed, no background</span>
+      </div>
+    </div>
+    <div class="side">
+      <div class="box"><img class="item" src="render/menu-bar-6x/chips-fullscreen-dark.png" style="height:36px"></div><div class="cap">The focused workspace has a <b>fullscreen</b> window: an outline</div>
+      <div class="box"><img class="item" src="render/menu-bar-6x/square-fullscreen-dark.png" style="height:36px"></div><div class="cap">The same in <code>'square'</code>: a hollow square</div>
+      <div class="box"><img class="item" src="render/menu-bar-6x/paused-dark.png" style="height:36px"></div><div class="cap">Inlay is <b>paused</b> (<code>inlay enable off</code>)</div>
+      <div class="box"><img class="item" src="render/menu-bar-6x/needs-accessibility-dark.png" style="height:36px"></div><div class="cap">The <b>Accessibility permission</b> is not granted yet</div>
+    </div>
+  </div>
+</div>
+<script>fillToml();</script>
+</body></html>

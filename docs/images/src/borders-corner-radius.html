@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>[borders] corner-radius</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 310px; }
+  .grid { grid-template-columns: repeat(4, 1fr); }
+  /* The part of every scene around the gap between the windows, at its real size */
+  .crop { position: relative; height: 136px; overflow: hidden; border-radius: 8px; }
+  .crop img { position: absolute; width: 608px; left: -207.8px; top: -14px; border-radius: 0; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real render</span>
+  <h1>[borders] corner-radius</h1>
+  <div class="sub">From 0 to 40 points. Inlay cannot read the radius of the windows of other apps, so it is tuned by eye: 16 is close to the windows of macOS 26 and later, 10 to the ones of macOS 14 and 15. Detail of the scenes, at their real size.</div>
+  <div class="grid"><div class="cell"><div class="crop"><img src="render/borders/borders-radius-0.png"></div><div class="cap"><code>corner-radius = 0</code></div></div><div class="cell"><div class="crop"><img src="render/borders/borders-radius-8.png"></div><div class="cap"><code>corner-radius = 8</code></div></div><div class="cell"><div class="crop"><img src="render/borders/borders-active-inactive.png"></div><div class="cap"><code>corner-radius = 16</code> (the default)</div></div><div class="cell"><div class="crop"><img src="render/borders/borders-radius-24.png"></div><div class="cap"><code>corner-radius = 24</code></div></div></div>
+</div>
+<script>fillToml();</script>
+</body></html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>gaps</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// A screen of 1280 x 800 points with three windows and borders of 4 points, with different [gaps].
+const W = 1280, H = 800, BAR = 24;
+const tree = T.box('h', [T.win('1'), T.box('v', [T.win('2'), T.win('3')])]);
+const props = { 1: { app: 'zed', focus: true }, 2: { app: 'safari' }, 3: { app: 'ghostty' } };
+const states = [
+  { g: { ih: 0, iv: 0, l: 0, b: 0, t: 0, r: 0 }, caption: 'No <code>[gaps]</code> table: 0 everywhere. The borders of neighbors overlap, and the screen cuts them.' },
+  { g: { ih: 8, iv: 8, l: 8, b: 8, t: 8, r: 8 }, caption: 'The shipped <code>inlay.toml</code>: 8 points. With the default border of 4 points, the borders of two neighbors touch.' },
+  { g: { ih: 16, iv: 16, l: 16, b: 16, t: 16, r: 16 }, caption: 'Gaps of at least <b>twice</b> <code>borders.width</code> leave air between the borders.' },
+  { g: { ih: 48, iv: 16, l: 16, b: 16, t: 56, r: 16 }, hl: ['ih', 't'], caption: 'Every side has its own key: here <code>inner.horizontal = 48</code> and <code>outer.top = 56</code>.' },
+];
+const keys = states.map(s => ({
+  ...s, hold: 2600,
+  wins: tiled(tree, { x: s.g.l, y: BAR + s.g.t, w: W - s.g.l - s.g.r, h: H - BAR - s.g.t - s.g.b }, { h: s.g.ih, v: s.g.iv }, props),
+}));
+const text = s => {
+  const line = (key, name, pad) => `${(s.hl || []).includes(key) ? '>' : ''}    ${name} =${pad} ${s.g[key]}`;
+  return ['[gaps]', line('ih', 'inner.horizontal', ''), line('iv', 'inner.vertical', '  '), line('l', 'outer.left', '      '),
+    line('b', 'outer.bottom', '    '), line('t', 'outer.top', '       '), line('r', 'outer.right', '     '), '', '[borders]', '    width = 4'].join('\n');
+};
+Anim({
+  W: 800, H: 430, keys, steps: 6,
+  tween: (a, b, t) => ({ ...b, wins: tweenWins(a.wins, b.wins, t) }),
+  draw(el, s) {
+    drawScreen(el, 24, 52, 0.4, W, H, s.wins, { bar: BAR, chips: { n: 6, foc: 2, occ: [1, 2] } });
+    el.insertAdjacentHTML('beforeend', `<div class="toml mono" style="position:absolute;left:556px;top:52px;width:220px">${toml(text(s))}</div>`);
+    chrome(el, '<code>[gaps]</code>', s.caption, 388);
+  },
+});
+</script></body></html>

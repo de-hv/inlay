@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>split-ratio</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// Three screens of 800 x 500 points, one per value of the key: a second window opens.
+const W = 800, H = 500, BAR = 20, GAP = 14, SCALE = 0.3;
+const area = tilingArea(W, H, BAR, GAP);
+const panels = [
+  { x: 24, ratio: 0.3, label: '<code>split-ratio = 0.3</code>' },
+  { x: 280, ratio: 0.5, label: '<code>split-ratio = 0.5</code> (the default)' },
+  { x: 536, ratio: 0.7, label: '<code>split-ratio = 0.7</code>' },
+];
+const pct = x => Math.round(x * 100) + '%';
+const one = tiled(T.box('h', [T.win('1')]), area, GAP, { 1: { num: 1, focus: true } });
+const two = panels.map(p => {
+  const tree = T.box('h', [T.win('1')]);
+  T.split(tree, '1', '2', T.layout(tree, area, GAP), p.ratio);
+  return tiled(tree, area, GAP, { 1: { num: 1, text: pct(p.ratio) }, 2: { num: 2, text: pct(1 - p.ratio), focus: true } });
+});
+const keys = [
+  { cut: true, hold: 1500, wins: panels.map(() => one), caption: 'One window. A second one is about to open…' },
+  { hold: 3200, wins: two, caption: 'The window that is split <b>keeps</b> <code>split-ratio</code> of its space, and the new window gets the rest. From 0.1 to 0.9.' },
+];
+Anim({
+  W: 800, H: 316, keys, steps: 6,
+  tween: (a, b, t) => ({ ...b, wins: b.wins.map((w, i) => tweenWins(a.wins[i], w, t)) }),
+  draw(el, s) {
+    panels.forEach((p, i) => {
+      drawScreen(el, p.x, 52, SCALE, W, H, s.wins[i], { bar: BAR, bw: 6, noLights: true });
+      el.insertAdjacentHTML('beforeend', `<div class="plabel" style="left:${p.x}px;top:212px;width:240px">${p.label}</div>`);
+    });
+    chrome(el, '<code>[tiling] split-ratio</code>', s.caption, 262);
+  },
+});
+</script></body></html>

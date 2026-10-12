@@ -1,0 +1,82 @@
+/* Shared styles of the README images. 1 CSS px = 1 macOS point; the PNGs are rendered at 2x.
+   Every image is a dark card of its own, so it reads the same on a light and on a dark GitHub page. */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: transparent; }
+body {
+  font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-size: 13px; line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  color: #e9e9f0; background: #15161c;
+  overflow: hidden; position: relative;
+}
+body.png { border-radius: 14px; }
+.mono, code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+/* ---------- Sheet: title, tag, cells with captions ---------- */
+.sheet { padding: 26px 28px 24px; }
+.sheet h1 { font-size: 17px; font-weight: 700; letter-spacing: -.1px; }
+.sheet .sub { color: #a3a5b3; font-size: 12.5px; margin-top: 4px; max-width: 760px; }
+.tag { position: absolute; right: 22px; top: 22px; font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 5px; }
+.tag.real { background: #143b29; color: #7ee2a8; }
+.tag.illu { background: #4a3a14; color: #ffd27a; }
+.grid { display: grid; gap: 18px 18px; margin-top: 18px; }
+.cell { min-width: 0; }
+.cell img { display: block; width: 100%; border-radius: 8px; }
+.cap { margin-top: 8px; font-size: 12px; color: #c9cad6; }
+.cap code, .key { font-size: 11.5px; color: #ffd27a; background: rgba(255, 210, 122, .09); border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+.cap small { display: block; color: #8f91a0; font-size: 11.5px; margin-top: 2px; }
+.label { font-size: 11px; font-weight: 600; color: #8f91a0; text-transform: uppercase; letter-spacing: .6px; }
+
+/* ---------- TOML ---------- */
+.toml { background: #0f1015; border: 1px solid #262833; border-radius: 9px; padding: 11px 14px; font-size: 12px; line-height: 1.55; color: #d5d8e0; white-space: pre; }
+.toml .c { color: #6b7080; } .toml .t { color: #c9a5ff; } .toml .k { color: #8cc4ff; } .toml .s { color: #f2cc60; } .toml .n { color: #ff9f6b; }
+.toml .hl { background: rgba(255, 159, 10, .22); box-shadow: 0 0 0 2px rgba(255, 159, 10, .22); border-radius: 3px; }
+
+/* ---------- Desktop mock ---------- */
+.screen { position: absolute; overflow: hidden; border-radius: 10px; background: #2a2e4d; box-shadow: 0 0 0 1px #343850; }
+.screen .pt { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.screen .bar { position: absolute; left: 0; right: 0; top: 0; background: #1d2036; display: flex; align-items: center; justify-content: flex-end; padding: 0 14px; }
+.chips { display: inline-flex; gap: 2.5px; align-items: center; }
+.chip { min-width: 17px; height: 17px; padding: 0 3px; border-radius: 4.5px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; line-height: 1; color: rgba(255, 255, 255, .72); }
+.chip.occ { background: rgba(255, 255, 255, .14); }
+.chip.empty { color: rgba(255, 255, 255, .35); }
+.chip.foc { background: #fff; color: #2f3157; }
+.w { position: absolute; border-radius: 16px; background: #1c1c21; }
+.w .ring { position: absolute; pointer-events: none; }
+.w .lights { position: absolute; left: 14px; top: 13px; display: flex; gap: 8px; }
+.w .lights i { width: 12px; height: 12px; border-radius: 50%; background: #45454c; display: block; }
+.w.focus .lights i:nth-child(1) { background: #ff5f57; } .w.focus .lights i:nth-child(2) { background: #febc2e; } .w.focus .lights i:nth-child(3) { background: #28c840; }
+.w .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #c9c9d3; font-weight: 600; overflow: hidden; border-radius: 16px; }
+.w .mid img { display: block; }
+.w .mid .num { color: #e9e9f0; font-weight: 700; }
+.w .mid .dim { color: #8f91a0; font-weight: 500; }
+.cursor { position: absolute; width: 0; height: 0; }
+.cursor svg { position: absolute; left: -3px; top: -2px; }
+
+/* ---------- Animation chrome ---------- */
+.frame { position: relative; overflow: hidden; background: #15161c; }
+.frame .title { position: absolute; left: 24px; top: 16px; font-size: 14px; font-weight: 700; }
+.frame .title code { font-size: 12.5px; font-weight: 500; color: #ffd27a; }
+.frame .caption { position: absolute; left: 24px; right: 24px; font-size: 13px; color: #d6d7e2; }
+.frame .caption b { color: #fff; }
+.frame .caption code { font-size: 12px; color: #ffd27a; }
+.frame .illu { position: absolute; right: 18px; top: 17px; font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: #8f91a0; }
+.frame .plabel { position: absolute; font-size: 12px; color: #c9cad6; text-align: center; }
+.frame .plabel code { font-size: 12px; color: #ffd27a; }
+.kbd { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: #2a2b35; border: 1px solid #3c3e4c; border-radius: 5px; padding: 1px 7px; color: #e3e3ea; }
+#sprite { display: grid; }
+
+/* ---------- Terminal ---------- */
+.term { border-radius: 12px; background: #101116; box-shadow: 0 0 0 1px #2a2c38; overflow: hidden; }
+.term .tb { height: 34px; display: flex; align-items: center; padding: 0 13px; position: relative; background: #1a1b22; }
+.term .tb .lights { display: flex; gap: 8px; }
+.term .tb .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.term .tb .lights i:nth-child(1) { background: #ff5f57; } .term .tb .lights i:nth-child(2) { background: #febc2e; } .term .tb .lights i:nth-child(3) { background: #28c840; }
+.term .tb span { position: absolute; left: 0; right: 0; text-align: center; font-size: 12.5px; font-weight: 600; color: #a3a5b3; }
+.term pre { padding: 13px 16px 15px; font-size: 12px; line-height: 1.5; color: #cfd2db; white-space: pre-wrap; }
+.term .p { color: #7ee2a8; font-weight: 600; } .term .cmd { color: #fff; font-weight: 600; }
+.term .dim { color: #70748a; } .term .warn { color: #f2cc60; } .term .ok { color: #7ee2a8; } .term .in { color: #8cc4ff; font-weight: 600; }
+.term .t { color: #c9a5ff; } .term .k { color: #8cc4ff; } .term .n { color: #ff9f6b; } .term .c { color: #70748a; }

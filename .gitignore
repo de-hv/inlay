@@ -4,3 +4,4 @@ build/
 *.xcodeproj
 xcuserdata/
 .swiftpm/
+docs/images/src/render/

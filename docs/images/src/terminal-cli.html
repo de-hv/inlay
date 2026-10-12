@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The inlay CLI</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 486px; }
+  .note { margin-top: 12px; font-size: 12px; color: #8f91a0; }
+  .term pre { font-size: 11.5px; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real output</span>
+  <h1>The inlay CLI</h1>
+  <div class="sub"><code class="key">inlay config --explain</code> prints the reference of a key, a table or the whole config, without Inlay running. The other commands talk to the running Inlay.</div>
+  <div style="margin-top:16px"><div class="term"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay — zsh</span></div>
+<pre class="mono"><span class="p">❯</span> <span class="cmd">inlay config --explain borders.width</span>
+<span class="t">[borders]</span>
+
+    <span class="c"># The thickness of the border, in points. The border is drawn outside of the frame of the window:</span>
+    <span class="c"># it never covers the content of the window, it takes a part of the gap. See [gaps]</span>
+    <span class="c"># Possible values: 1 ... 20</span>
+    <span class="c"># Fallback value (if you omit the key): width = 4</span>
+    <span class="k">width</span> = <span class="n">4</span>
+
+<span class="p">❯</span> <span class="cmd">inlay list-workspaces --all</span>
+1
+2
+3
+4
+5
+6</pre></div></div>
+  <div class="note">The second command, with the six persistent workspaces of the shipped config.</div>
+</div>
+<script>fillToml();</script>
+</body></html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The file and the Settings window in sync</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// On the left, the config file. On the right, the Borders tab of the Settings window: real renders of the app
+// (render/settings*/settings-borders.png, made by 'Inlay --render-settings'), with 'width' at 4, 8 and 2.
+const img = { 4: 'render/settings/settings-borders.png', 8: 'render/settings-width-8/settings-borders.png', 2: 'render/settings-width-2/settings-borders.png' };
+const file = (width, hl) => `# ~/.config/inlay/inlay.toml
+auto-reload-config = true
+
+[borders]
+    enabled = true
+${hl ? '>' : ''}    width = ${width}
+    corner-radius = 16
+    active-color = 'system-accent'
+    glow = false`;
+const keys = [
+  { hold: 1900, file: 4, shown: 4, caption: 'The config file and the Settings window are two views of the same config.' },
+  { hold: 1700, file: 8, shown: 4, hlFile: true, caption: 'Change a value in the file <b>by hand</b> and save it…' },
+  { hold: 2700, file: 8, shown: 8, hlFile: true, hlRow: true, caption: '…with <code>auto-reload-config = true</code>, Inlay reloads it: Settings, the menu bar item and the borders follow.' },
+  { hold: 1700, file: 8, shown: 2, hlRow: true, pointer: true, caption: 'Move a control in <b>Settings</b>…' },
+  { hold: 2900, file: 2, shown: 2, hlFile: true, hlRow: true, pointer: true, caption: '…and Settings writes that key to the file, that line only: the comments and the rest of the file stay as they are.' },
+].map(k => ({ ...k, cut: true }));
+const SCALE = 440 / 600;
+// The slider of 'width' goes from 1 to 20 between x = 356 and x = 516 points of the tab, at y = 288
+const knob = width => 362 + (width - 1) / 19 * 148;
+Anim({
+  W: 800, H: 470, keys,
+  tween: (a, b) => b,
+  draw(el, s) {
+    el.insertAdjacentHTML('beforeend', `
+      <div class="term" style="position:absolute;left:24px;top:52px;width:296px;height:348px">
+        <div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay.toml</span></div>
+        <div class="toml mono" style="border:0;border-radius:0;background:none;font-size:11.5px;padding:14px 14px">${toml(file(s.file, s.hlFile))}</div>
+      </div>
+      <div style="position:absolute;left:336px;top:52px;width:440px;height:348px;overflow:hidden;border-radius:12px;box-shadow:0 0 0 1px #2a2c38">
+        <div style="width:600px;transform:scale(${SCALE});transform-origin:0 0;position:relative">
+          <img src="${img[s.shown]}" width="600" style="display:block">
+          ${s.hlRow ? '<div style="position:absolute;left:22px;top:269px;width:556px;height:37px;border-radius:9px;box-shadow:0 0 0 3px rgba(255,159,10,.75)"></div>' : ''}
+          ${s.pointer ? `<div class="cursor" style="left:${knob(s.shown)}px;top:292px"><svg width="20" height="29" viewBox="0 0 13 19"><path d="M1 1v15l4-3.6 2.6 5.8 2.3-1-2.6-5.7H12z" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round"/></svg></div>` : ''}
+        </div>
+      </div>`);
+    chrome(el, 'The file and the Settings window stay in sync', s.caption, 418);
+    el.querySelector('.illu').textContent = 'Illustration · the Settings pane is a real render';
+  },
+});
+</script></body></html>

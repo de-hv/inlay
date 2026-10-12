@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>startup-layout</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// Three screens of 800 x 500 points with the same 5 windows, one per value of the key.
+const W = 800, H = 500, BAR = 20, GAP = 14, SCALE = 0.3;
+const area = tilingArea(W, H, BAR, GAP);
+const ids = ['1', '2', '3', '4', '5'];
+const props = Object.fromEntries(ids.map(id => [id, { num: id, focus: id === '1' }]));
+
+// Before Inlay starts: wherever the windows were
+const before = [
+  { id: '1', x: 60, y: 50, w: 420, h: 300 }, { id: '2', x: 300, y: 110, w: 380, h: 250 }, { id: '3', x: 120, y: 210, w: 340, h: 240 },
+  { id: '4', x: 430, y: 60, w: 300, h: 220 }, { id: '5', x: 380, y: 250, w: 360, h: 220 },
+].map(w => ({ ...w, ...props[w.id] }));
+
+const grid = T.box('v', [T.box('h', ['1', '2', '3'].map(id => T.win(id))), T.box('h', ['4', '5'].map(id => T.win(id)))]);
+const row = T.box('h', ids.map(id => T.win(id)));
+// 'dwindle': no arrangement, the windows enter one after another like new windows
+const dwindle = T.box('h', [T.win('1')]);
+for (let i = 1; i < ids.length; i++) T.split(dwindle, ids[i - 1], ids[i], T.layout(dwindle, area, GAP));
+
+const panels = [
+  { x: 24, label: "<code>startup-layout = 'grid'</code><br>the default: a balanced grid,<br>5 windows are 3 on top of 2", tree: grid },
+  { x: 280, label: "<code>startup-layout = 'row'</code><br>one row, all the windows<br>with the same width", tree: row },
+  { x: 536, label: "<code>startup-layout = 'dwindle'</code><br>one after another, like new<br>windows: the last ones are small", tree: dwindle },
+];
+const keys = [
+  { cut: true, hold: 1600, wins: panels.map(() => before), caption: 'The windows that are already open when Inlay starts (or when <code>inlay enable on</code> resumes it)…' },
+  { hold: 3200, wins: panels.map(p => tiled(p.tree, area, GAP, props)), caption: '…are arranged at once, workspace by workspace. The windows opened later follow <code>new-window-placement</code>.' },
+];
+Anim({
+  W: 800, H: 356, keys, steps: 7,
+  tween: (a, b, t) => ({ ...b, wins: b.wins.map((w, i) => tweenWins(a.wins[i], w, t)) }),
+  draw(el, s) {
+    panels.forEach((p, i) => {
+      drawScreen(el, p.x, 52, SCALE, W, H, s.wins[i], { bar: BAR, bw: 6, noLights: true });
+      el.insertAdjacentHTML('beforeend', `<div class="plabel" style="left:${p.x}px;top:212px;width:240px">${p.label}</div>`);
+    });
+    chrome(el, '<code>[tiling] startup-layout</code>', s.caption, 300);
+  },
+});
+</script></body></html>

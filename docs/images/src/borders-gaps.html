@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Borders and gaps</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 310px; }
+  .grid { grid-template-columns: repeat(3, 1fr); }
+  /* The part of every scene around the gap between the windows, at its real size */
+  .crop { position: relative; height: 136px; overflow: hidden; border-radius: 8px; }
+  .crop img { position: absolute; width: 608px; left: -172.7px; top: -14px; border-radius: 0; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real render</span>
+  <h1>Borders and gaps</h1>
+  <div class="sub">The border takes a part of the gap between two windows. Keep the gaps at least twice as big as <code class="key">borders.width</code>. Detail of the scenes, at their real size.</div>
+  <div class="grid"><div class="cell"><div class="crop"><img src="render/borders/borders-gaps-8-width-4.png"></div><div class="cap">Gaps of 8, <code>width = 4</code> (the shipped config): the borders of two neighbors touch</div></div><div class="cell"><div class="crop"><img src="render/borders/borders-gaps-8-width-2.png"></div><div class="cap">Gaps of 8, <code>width = 2</code>: 4 points of air</div></div><div class="cell"><div class="crop"><img src="render/borders/borders-active-inactive.png"></div><div class="cap">Gaps of 14, <code>width = 4</code>: 6 points of air</div></div></div>
+</div>
+<script>fillToml();</script>
+</body></html>

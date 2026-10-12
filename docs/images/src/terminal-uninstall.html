@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>inlay uninstall</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 412px; }
+  .note { margin-top: 12px; font-size: 12px; color: #8f91a0; }
+  .term pre { font-size: 11.5px; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real output</span>
+  <h1>inlay uninstall</h1>
+  <div class="sub">It lists what it removes and asks first. Your config stays unless you add <code class="key">--purge</code>.</div>
+  <div style="margin-top:16px"><div class="term"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay — zsh</span></div>
+<pre class="mono"><span class="p">❯</span> <span class="cmd">inlay uninstall</span>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">This removes Inlay:</b>
+    - /Applications/Inlay.app (and its login item)
+    - ~/.local/bin/inlay
+    Your config is kept (use --purge to remove it too).
+Remove Inlay? [y/N] <span class="in">y</span>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">Quitting the running Inlay</b>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">/Applications/Inlay.app is not in the login items any more</b>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">Removing /Applications/Inlay.app</b>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">Removed ~/.local/bin/inlay</b>
+<span class="ok">==&gt;</span> <b style="color:#fff;font-weight:600">Done</b>
+    To go back to AeroSpace: open AeroSpace and AeroMenu, and run 'brew services start borders'.</pre></div></div>
+  <div class="note">The output of <code>inlay uninstall</code> in an isolated test run (another <code>HOME</code> and install folder), with the paths of that sandbox written as the default ones.</div>
+</div>
+<script>fillToml();</script>
+</body></html>

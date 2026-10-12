@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The colors of the menu bar item</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 500px; }
+  .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 18px; }
+  .bars { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; align-items: flex-start; }
+  .box { border-radius: 8px; overflow: hidden; height: 33px; } .box.d { background: #383d5c; } .box.l { background: #e6e6e6; } .box img { display: block; }
+  .toml { font-size: 11.5px; height: 126px; padding: 11px 12px; }
+  .box img { height: 30px !important; } .box { height: 30px; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real render</span>
+  <h1>[menu-bar.colors]</h1>
+  <div class="sub">Each color is <code class="key">'#RRGGBB'</code>, <code class="key">'#RRGGBBAA'</code>, <code class="key">'system-accent'</code> or <code class="key">'auto'</code>: the color of the menu bar text, white on a dark bar and black on a light one. Shown in the <code class="key">resize</code> mode with <code class="key">show-mode = true</code>, so the accent is visible.</div>
+  <div class="cols">
+    <div><div class="toml mono">
+# The defaults
+[menu-bar.colors]
+    accent = 'system-accent'
+    focused = 'auto'
+    occupied = 'auto'
+    empty = 'auto'
+</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-light.png" style="height:33px"></div></div><div class="cap"><small>The accent is the one of this Mac (System Settings › Appearance)</small></div></div>
+    <div><div class="toml mono">
+[menu-bar.colors]
+    accent = '#E06C75'
+    focused = '#D19A66'
+    occupied = '#ABB2BF'
+    empty = '#6B7280'
+</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-custom-light.png" style="height:33px"></div></div><div class="bars" style="margin-top:6px"><div class="box d"><img class="item" src="render/menu-bar-6x/square-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/square-mode-custom-light.png" style="height:33px"></div></div><div class="cap"><small><code>accent</code>: the mode badge · <code>focused</code>: the focused workspace · <code>occupied</code>: with windows (the name, and its background at 16%) · <code>empty</code>: without windows. A fixed color does not adapt to the menu bar</small></div></div>
+    <div><div class="toml mono">
+[menu-bar.colors]
+    focused = 'system-accent'
+</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-accent-focused-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-accent-focused-light.png" style="height:33px"></div></div><div class="cap"><small><code>'system-accent'</code> also works for <code>focused</code>, <code>occupied</code> and <code>empty</code></small></div></div>
+  </div>
+</div>
+<script>fillToml();</script>
+</body></html>

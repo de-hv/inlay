@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>new-window-placement = 'dwindle'</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
+<body><script>
+// A screen of 1280 x 800 points. Gaps of 16 points, borders of 4.
+const W = 1280, H = 800, BAR = 24, GAP = 16;
+const area = tilingArea(W, H, BAR, GAP);
+const apps = { 1: 'ghostty', 2: 'zed', 3: 'safari', 4: 'notes', 5: 'music' };
+const root = T.box('h', []);
+const keys = [];
+function key(focus, caption, hold = 1700) {
+  const props = {};
+  for (const id in apps) props[id] = { app: apps[id], focus: id == focus };
+  keys.push({ wins: tiled(root, area, GAP, props), caption, hold });
+}
+function open(id, caption) {
+  const rects = T.layout(root, area, GAP);
+  if (root.kids.length === 0) root.kids.push(T.win(String(id))); else T.split(root, String(id - 1), String(id), rects);
+  key(id, caption);
+}
+function close(id, caption) { T.remove(root, String(id)); key(id - 1, caption, 1100); }
+
+open(1, 'The first window takes the whole workspace.');
+open(2, '<b>Ghostty</b> is wider than tall: it is split <b>side by side</b>. The new window goes to the right.');
+open(3, '<b>Zed</b> is taller than wide: it is split in two <b>stacked</b> halves. The new window goes below.');
+open(4, '<b>Safari</b> is wider than tall: side by side again.');
+open(5, '<b>Notes</b> is taller than wide: stacked. Every new window splits the focused one.');
+close(5, 'A window is closed: <b>its neighbor gets the space back</b>.');
+close(4, 'A window is closed: <b>its neighbor gets the space back</b>.');
+close(3, 'A window is closed: <b>its neighbor gets the space back</b>.');
+
+Anim({
+  W: 800, H: 548, keys, steps: 5,
+  tween: (a, b, t) => ({ ...b, wins: tweenWins(a.wins, b.wins, t) }),
+  draw(el, s) {
+    drawScreen(el, 48, 50, 0.55, W, H, s.wins, { bar: BAR, chips: { n: 6, foc: 1, occ: [1, 3, 4] } });
+    chrome(el, "<code>[tiling] new-window-placement = 'dwindle'</code>", s.caption, 506);
+  },
+});
+</script></body></html>

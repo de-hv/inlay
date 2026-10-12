@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Inlay: a tiled desktop</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  /* A screen of 1280 x 800 points. Gaps of 14 points, borders of 4, the glow on. An illustration, not a screenshot:
+     the menu bar item is the real render of the app (render/menu-bar-6x), the rest is drawn here. */
+  body { width: 1280px; height: 800px; background:
+    radial-gradient(1100px 640px at 78% 6%, #5a4a8f 0%, transparent 60%),
+    radial-gradient(800px 640px at 10% 94%, #1e5a78 0%, transparent 62%),
+    radial-gradient(640px 460px at 55% 60%, #7a3f6d 0%, transparent 65%),
+    linear-gradient(160deg, #23254a 0%, #1a1c33 100%); }
+  .mb { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: rgba(20, 20, 40, .35); display: flex; align-items: center; padding: 0 16px;
+    color: #fff; font-size: 13.5px; }
+  .mb b { font-weight: 700; margin-right: 18px; } .mb span { margin-right: 18px; } .mb .sp { flex: 1; }
+  .mb img { height: 24px; filter: invert(1); margin-right: 8px; } .mb .clock { font-weight: 500; margin: 0; }
+  .win { position: absolute; border-radius: 16px; background: #1e1e22; color: #e6e6ea; box-shadow: 0 14px 40px rgba(0, 0, 0, .4); }
+  .win .ring { position: absolute; inset: -4px; border-radius: 20px; border: 4px solid rgba(142, 142, 147, .45); }
+  .win.active .ring { border-color: #ff9f0a; box-shadow: 0 0 12px #ff9f0a; }
+  .win .clip { position: absolute; inset: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+  .tbar { height: 36px; flex: none; display: flex; align-items: center; padding: 0 14px; position: relative; }
+  .tbar .title { position: absolute; left: 0; right: 0; text-align: center; font-weight: 600; font-size: 12.5px; color: #c9c9d1; }
+  .lights { display: flex; gap: 8px; } .lights i { width: 12px; height: 12px; border-radius: 50%; background: #4a4a50; display: block; }
+  .active .lights i:nth-child(1) { background: #ff5f57; } .active .lights i:nth-child(2) { background: #febc2e; } .active .lights i:nth-child(3) { background: #28c840; }
+
+  .zed { background: #1d2027; }
+  .zed .main { flex: 1; display: flex; min-height: 0; }
+  .zed .side { width: 150px; background: #191b21; border-right: 1px solid #2a2d36; padding: 8px 0; font-size: 12px; color: #9aa1b0; }
+  .zed .side div { padding: 3px 14px; white-space: nowrap; } .zed .side .sel { background: #2a2f3b; color: #e6e9f0; }
+  .zed .ed { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .zed .tabs { height: 30px; display: flex; border-bottom: 1px solid #2a2d36; font-size: 12px; color: #8c93a3; flex: none; }
+  .zed .tabs span { padding: 0 14px; display: flex; align-items: center; border-right: 1px solid #2a2d36; }
+  .zed .tabs .sel { color: #e6e9f0; box-shadow: inset 0 -2px 0 #ff9f0a; }
+  .zed .toml { flex: 1; border: 0; border-radius: 0; background: none; font-size: 11.5px; line-height: 18px; padding: 10px 16px; overflow: hidden; }
+
+  .web { background: #23222b; }
+  .web .url { position: absolute; left: 120px; right: 120px; top: 6px; height: 24px; border-radius: 7px; background: rgba(255, 255, 255, .08); text-align: center; line-height: 24px; font-size: 12px; color: #b9b9c6; }
+  .web .page { flex: 1; margin: 0 8px 8px; border-radius: 9px; background: #f7f6f3; color: #26262b; padding: 20px 30px; overflow: hidden; display: flex; gap: 28px; }
+  .web h4 { font-size: 21px; font-weight: 700; } .web .crumb { font-size: 11px; color: #8a8a94; margin-bottom: 6px; }
+  .web p { font-size: 13px; line-height: 1.55; color: #45454d; margin-top: 9px; }
+  .web code { background: #e9e6df; border-radius: 4px; padding: 1px 5px; font-size: 11.5px; }
+  .web .fig { width: 180px; height: 118px; flex: none; margin-top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .web .fig i { background: #d9d6ce; border-radius: 5px; } .web .fig div { display: grid; gap: 5px; } .web .fig .r { grid-template-rows: 1fr 1fr; } .web .fig .rr { grid-template-columns: 1fr 1fr; }
+  .web .fig .hot { background: #ffb84d; }
+
+  .tty { background: #16161d; }
+  .tty pre { flex: 1; padding: 6px 14px; font-size: 11.5px; line-height: 1.5; color: #d5d8e0; overflow: hidden; }
+  .tty .p { color: #7ee2a8; font-weight: 600; } .tty .cmd { color: #fff; font-weight: 600; } .tty .c { color: #70748a; } .tty .k { color: #8cc4ff; } .tty .n { color: #ff9f6b; } .tty .t { color: #c9a5ff; }
+
+  .notes { background: #1f1f1f; }
+  .notes .body { flex: 1; padding: 8px 22px; font-size: 13px; line-height: 1.6; color: #dcdcd8; }
+  .notes h5 { font-size: 19px; font-weight: 700; color: #f5f5f0; margin-bottom: 6px; }
+  .notes .body div { display: flex; gap: 8px; align-items: baseline; } .notes .body i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #8a8a84; flex: none; position: relative; top: 2px; }
+  .notes .body i.on { background: #ffd60a; border-color: #ffd60a; }
+  .mark { position: absolute; right: 12px; bottom: 5px; font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: rgba(255, 255, 255, .5); }
+</style></head>
+<body class="png">
+<div class="mb"><b>Notes</b><span>File</span><span>Edit</span><span>Format</span><span>View</span><span>Window</span><span>Help</span><span class="sp"></span>
+  <img src="render/menu-bar-6x/chips-default-template.png"><span class="clock">Mon 12 Oct&nbsp;&nbsp;9:41</span></div>
+
+<div class="win" style="left:14px;top:44px;width:619px;height:742px"><div class="ring"></div><div class="clip zed">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="title">inlay.toml</div></div>
+  <div class="main">
+    <div class="side"><div>▾ dotfiles</div><div style="padding-left:28px">▾ inlay</div><div class="sel" style="padding-left:42px">inlay.toml</div><div style="padding-left:28px">▸ zsh</div><div style="padding-left:28px">▸ git</div><div style="padding-left:28px">README.md</div></div>
+    <div class="ed"><div class="tabs"><span class="sel">inlay.toml</span><span>README.md</span></div>
+<div class="toml mono">
+start-at-login = true
+auto-reload-config = true
+persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
+
+[gaps]
+    inner.horizontal = 14
+    inner.vertical =   14
+    outer.left =       14
+    outer.right =      14
+    outer.top =        14
+    outer.bottom =     14
+
+[tiling]
+    new-window-placement = 'dwindle'
+    split-ratio = 0.5
+    split-target = 'focused'
+    startup-layout = 'grid'
+    min-window-size = 100
+
+[menu-bar]
+    enabled = true
+    theme = 'chips'
+    dim-empty-workspaces = true
+    show-mode = false
+
+[borders]
+    enabled = true
+    width = 4
+    corner-radius = 16
+    active-color = 'system-accent'
+    inactive-color = '#8E8E9373'
+    floating-color = '#BF5AF2'
+    glow = true
+    glow-radius = 12
+</div></div>
+  </div></div></div>
+
+<div class="win" style="left:647px;top:44px;width:619px;height:364px"><div class="ring"></div><div class="clip web">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="url">example.org/tiling/dwindle</div></div>
+  <div class="page"><div><div class="crumb">Wiki › Layouts › Dwindle</div><h4>Dwindle</h4>
+    <p>Every new window splits the focused window in two. A window that is wider than tall is split side by side; otherwise the two halves are stacked.</p>
+    <p>The result is a spiral that dwindles towards a corner. <code>split-ratio</code> decides how much the window that is split keeps.</p></div>
+    <div class="fig"><i></i><div class="r"><i></i><div class="rr"><i></i><i class="hot"></i></div></div></div></div>
+</div></div>
+
+<div class="win" style="left:647px;top:422px;width:302px;height:364px"><div class="ring"></div><div class="clip tty">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="title">~</div></div>
+<pre class="mono"><span class="p">❯</span> <span class="cmd">inlay list-workspaces --all</span>
+1
+2
+3
+4
+5
+6
+
+<span class="p">❯</span> <span class="cmd">inlay config --explain \
+    tiling.split-ratio</span>
+<span class="t">[tiling]</span>
+
+    <span class="c"># Only for 'dwindle'. The fraction
+    # of its space that the split
+    # window keeps. […]</span>
+    <span class="k">split-ratio</span> = <span class="n">0.5</span>
+
+<span class="p">❯</span> <span style="background:#d5d8e0"> </span></pre>
+</div></div>
+
+<div class="win active" style="left:963px;top:422px;width:303px;height:364px"><div class="ring"></div><div class="clip notes">
+  <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="title">Notes</div></div>
+  <div class="body"><h5>Desk setup</h5>
+    <div><i class="on"></i><span>One config file for everything</span></div>
+    <div><i class="on"></i><span>Borders that follow the focus</span></div>
+    <div><i class="on"></i><span>Workspaces in the menu bar</span></div>
+    <div><i></i><span>Try <span class="mono" style="font-size:12px">split-target = 'cursor'</span></span></div>
+    <div><i></i><span>Pick a color for the resize mode</span></div>
+  </div>
+</div></div>
+<div class="mark">Illustration</div>
+<script>fillToml();</script>
+</body></html>

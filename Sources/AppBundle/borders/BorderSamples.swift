@@ -23,6 +23,8 @@ private struct BorderScene {
         var isFocused = false
         var isFloating = false
         var isFullscreen = false
+        /// What Inlay detects as a dialog floats on its own and has no border
+        var isDialog = false
     }
 
     var name: String
@@ -37,6 +39,15 @@ private struct BorderScene {
             Window(id: 1, title: "Zed", frame: CGRect(x: 14, y: 34, width: 283, height: 312), isFocused: focused == 1),
             Window(id: 2, title: "Zen", frame: CGRect(x: 311, y: 34, width: 283, height: 149), isFocused: focused == 2),
             Window(id: 3, title: "Ghostty", frame: CGRect(x: 311, y: 197, width: 283, height: 149), isFocused: focused == 3),
+        ]
+    }
+
+    /// The same windows with gaps of 8 points, the ones of the shipped config
+    static func tilesWithGaps8() -> [Window] {
+        [
+            Window(id: 1, title: "Zed", frame: CGRect(x: 8, y: 28, width: 292, height: 324), isFocused: true),
+            Window(id: 2, title: "Zen", frame: CGRect(x: 308, y: 28, width: 292, height: 158)),
+            Window(id: 3, title: "Ghostty", frame: CGRect(x: 308, y: 194, width: 292, height: 158)),
         ]
     }
 
@@ -62,6 +73,7 @@ private struct BorderScene {
         amberGlow.width = 2
         amberGlow.glowRadius = 8
         let music = Window(id: 4, title: "Music", frame: CGRect(x: 184, y: 96, width: 268, height: 176), isFocused: true, isFloating: true)
+        let dialog = Window(id: 5, title: "Save panel", frame: CGRect(x: 174, y: 110, width: 260, height: 150), isFocused: true, isFloating: true, isDialog: true)
         let fullscreen = Window(id: 2, title: "Zen", frame: CGRect(x: 0, y: 20, width: 608, height: 340), isFocused: true, isFullscreen: true)
         return [
             BorderScene(name: "active-inactive", windows: tiles()),
@@ -78,12 +90,23 @@ private struct BorderScene {
             BorderScene(name: "glow-24-mode-resize", windows: tiles(focused: 3), mode: "resize", config: wideGlow),
             BorderScene(name: "glow-8-only-active", windows: tiles(focused: 2), config: amberGlow),
             BorderScene(name: "glow-square-corners", windows: tiles(), config: glow.copy(\.cornerRadius, 0)),
+            // One scene per value of a key, for the images of the README
+            BorderScene(name: "width-2", windows: tiles(), config: BordersConfig().copy(\.width, 2)),
+            BorderScene(name: "width-8", windows: tiles(), config: BordersConfig().copy(\.width, 8)),
+            BorderScene(name: "radius-0", windows: tiles(), config: BordersConfig().copy(\.cornerRadius, 0)),
+            BorderScene(name: "radius-8", windows: tiles(), config: BordersConfig().copy(\.cornerRadius, 8)),
+            BorderScene(name: "radius-24", windows: tiles(), config: BordersConfig().copy(\.cornerRadius, 24)),
+            BorderScene(name: "glow-6", windows: tiles(), config: glow.copy(\.glowRadius, 6)),
+            BorderScene(name: "glow-24", windows: tiles(), config: glow.copy(\.glowRadius, 24)),
+            BorderScene(name: "dialog", windows: tiles(focused: 0) + [dialog]),
+            BorderScene(name: "gaps-8-width-4", windows: tilesWithGaps8()),
+            BorderScene(name: "gaps-8-width-2", windows: tilesWithGaps8(), config: BordersConfig().copy(\.width, 2)),
         ]
     }
 
     /// The borders of the scene, decided by the same code that decides them for the real windows
     func snapshot(systemAccent: Rgba) -> BordersSnapshot {
-        let candidates = windows.filter { !$0.isFullscreen }
+        let candidates = windows.filter { !$0.isFullscreen && !$0.isDialog }
             .map { BorderCandidate(windowId: $0.id, frame: $0.frame, isFocused: $0.isFocused, isFloating: $0.isFloating) }
         return BordersSnapshot.resolve(candidates, config, mode: mode, systemAccent: systemAccent)
     }

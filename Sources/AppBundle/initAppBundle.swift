@@ -69,9 +69,15 @@ private let serverHelp = """
                               Useful if you want to use only debug-windows or other query commands.
       --unregister-login-item Remove Inlay from the login items and exit. Used by 'inlay uninstall'
       --check-config <path>   Print the errors and the warnings of a config file and exit. Inlay doesn't start
-      --render-menu-bar <dir> Draw the menu bar item to PNG files (every theme, dark and light menu bar,
-                              default and custom colors) and exit. Inlay doesn't start
+      --render-menu-bar <dir> [<scale>]
+                              Draw the menu bar item to PNG files (every theme, dark and light menu bar,
+                              default and custom colors) and exit. Inlay doesn't start.
+                              <scale> is the number of pixels per point (2 by default, 1 ... 8)
       --render-borders <dir>  Draw the window borders in every state to PNG files and exit. Inlay doesn't start
+      --render-settings <dir> [<config>]
+                              Draw the tabs of the Settings window to PNG files and exit, as they are with
+                              the shipped config or with the <config> file. Inlay doesn't start, and the
+                              config of the user is neither read nor written
       --debug-borders [<sec>] Show the borders around the windows that are on the screen for a few seconds
                               (4 by default), print how they are stacked, and exit. It needs no permission,
                               and no window is moved

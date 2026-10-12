@@ -10,8 +10,9 @@ public func runInlayApp() -> Never {
         guard let directory = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
             exit(EXIT_CODE_TWO, err: "Missing <dir> in \(renderMenuBarFlag) flag")
         }
+        let scale = CommandLine.arguments.getOrNil(atIndex: index + 2).flatMap(Double.init).map { min(max($0, 1), 8) } ?? 2
         do {
-            try renderMenuBarSamples(to: URL(filePath: directory))
+            try renderMenuBarSamples(to: URL(filePath: directory), scale: scale)
         } catch {
             exit(EXIT_CODE_TWO, err: "Can't render the menu bar item: \(error.localizedDescription)")
         }
@@ -27,6 +28,18 @@ public func runInlayApp() -> Never {
             exit(EXIT_CODE_TWO, err: "Can't render the borders: \(error.localizedDescription)")
         }
         exit(EXIT_CODE_ZERO, out: "The borders were rendered to \(directory)")
+    }
+    if let index = CommandLine.arguments.firstIndex(of: renderSettingsFlag) {
+        guard let directory = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
+            exit(EXIT_CODE_TWO, err: "Missing <dir> in \(renderSettingsFlag) flag")
+        }
+        do {
+            let config = CommandLine.arguments.getOrNil(atIndex: index + 2).map { URL(filePath: $0) }
+            try renderSettingsSamples(to: URL(filePath: directory), config: config)
+        } catch {
+            exit(EXIT_CODE_TWO, err: "Can't render the settings: \(error.localizedDescription)")
+        }
+        exit(EXIT_CODE_ZERO, out: "The settings were rendered to \(directory)")
     }
     if let index = CommandLine.arguments.firstIndex(of: checkConfigFlag) {
         guard let path = CommandLine.arguments.getOrNil(atIndex: index + 1) else {

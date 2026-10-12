@@ -44,8 +44,10 @@ enum MenuBarSamples {
 
 /// `Inlay --render-menu-bar <dir>`: draws the menu bar item off screen, for every theme, in a dark and in a light menu bar,
 /// with the default colors and with custom ones. A way to look at the item without running Inlay
+///
+/// - Parameter scale: pixels per point. 2 is what a Retina display gets; more than that gives an enlarged item
 @MainActor
-func renderMenuBarSamples(to directory: URL) throws {
+func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let icons = AppIconCache()
     let custom = MenuBarColors(
@@ -74,11 +76,11 @@ func renderMenuBarSamples(to directory: URL) throws {
     variants.append(("chips-no-dim", MenuBarConfig(dimEmptyWorkspaces: false), MenuBarSamples.snapshot))
     variants.append(("chips-accent-focused", MenuBarConfig(colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot))
     variants.append(("square-icons", MenuBarConfig(theme: .square, showAppIcons: true), MenuBarSamples.snapshot))
+    variants.append(("minimal-icons", MenuBarConfig(theme: .minimal, showAppIcons: true), MenuBarSamples.snapshot))
     variants.append(("paused", MenuBarConfig(), paused))
     variants.append(("needs-accessibility", MenuBarConfig(), needsAccessibility))
 
     let padding: CGFloat = 8
-    let scale: CGFloat = 2
     var rendered: [(name: String, bitmap: NSBitmapImageRep)] = []
     defer { _ = try? contactSheet(rendered)?.write(to: directory.appending(path: "_sheet.png")) }
     for (name, config, snapshot) in variants {

@@ -36,9 +36,14 @@ final class MenuBarController: NSObject {
             button.imagePosition = .imageOnly
             button.target = self
             button.action = #selector(pressed)
-            // No menu is attached to the item: the left button must not open it. The left button still sends the action,
-            // because a ctrl-click is a click of the left button
+            // No menu is attached to the item: the left button must not open it. The action is what a press without
+            // the mouse runs (VoiceOver), and what a click runs if it ever gets to the button
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            // The mouse never reaches the button: a plain click must not even highlight it. See: MenuBarClickShield
+            let shield = MenuBarClickShield(frame: button.bounds)
+            shield.autoresizingMask = [.width, .height]
+            shield.onClick = { [weak self] in self?.pressed() }
+            button.addSubview(shield)
             button.setAccessibilityHelp(Strings.Item.accessibilityHelp)
             // A fixed color isn't a template image, so it has to follow the menu bar by hand
             appearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
@@ -122,6 +127,7 @@ final class MenuBarController: NSObject {
 
     // MARK: - The menu
 
+    /// The item was pressed: with the mouse (MenuBarClickShield), or without it (the action of the button)
     @objc private func pressed() {
         let event = NSApp.currentEvent
         let opensMenu = Self.opensMenu(
@@ -158,6 +164,32 @@ final class MenuBarController: NSObject {
         statusItem.button?.performClick(nil)
         statusItem.menu = nil
     }
+}
+
+/// Covers the button of the menu bar item, and keeps the mouse away from it.
+///
+/// A button highlights itself while the mouse is held down on it, whatever its action does afterwards. The item only
+/// informs: a click that does nothing must not look like it did something. So the button never sees the mouse go down,
+/// and the click is reported once the mouse goes up. If that opens the menu (see MenuBarController.opensMenu),
+/// the menu highlights the item while it is open, like any menu of the menu bar.
+///
+/// VoiceOver and the other clients of the accessibility API don't come through here: they press the button itself.
+/// Neither does a cmd-drag, which is how the items of the menu bar are moved around
+final class MenuBarClickShield: NSView {
+    /// A button of the mouse was released over the item
+    var onClick: (() -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) { super.mouseDown(with: event) }
+    }
+
+    override func mouseUp(with event: NSEvent) { onClick?() }
+
+    override func rightMouseDown(with event: NSEvent) {}
+
+    override func rightMouseUp(with event: NSEvent) { onClick?() }
 }
 
 /// Runs a command the same way a key binding does

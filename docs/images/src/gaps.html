@@ -5,7 +5,7 @@
 // A screen of 1280 x 800 points with three windows and borders of 4 points, with different [gaps].
 const W = 1280, H = 800, BAR = 24;
 const tree = T.box('h', [T.win('1'), T.box('v', [T.win('2'), T.win('3')])]);
-const props = { 1: { app: 'zed', focus: true }, 2: { app: 'safari' }, 3: { app: 'ghostty' } };
+const props = { 1: { app: 'editor', focus: true }, 2: { app: 'browser' }, 3: { app: 'terminal' } };
 const states = [
   { g: { ih: 0, iv: 0, l: 0, b: 0, t: 0, r: 0 }, caption: 'No <code>[gaps]</code> table: 0 everywhere. The borders of neighbors overlap, and the screen cuts them.' },
   { g: { ih: 8, iv: 8, l: 8, b: 8, t: 8, r: 8 }, caption: 'The shipped <code>inlay.toml</code>: 8 points. With the default border of 4 points, the borders of two neighbors touch.' },

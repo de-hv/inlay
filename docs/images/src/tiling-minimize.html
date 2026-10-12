@@ -2,20 +2,20 @@
 <html lang="en"><head><meta charset="utf-8"><title>minimized window</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
 <body><script>
-// A screen of 1280 x 800 points. Safari is minimized and restored: it gets its place and its size back.
+// A screen of 1280 x 800 points. The browser is minimized and restored: it gets its place and its size back.
 const W = 1280, H = 800, BAR = 24, GAP = 16;
 const area = tilingArea(W, H, BAR, GAP);
-const apps = { 1: 'ghostty', 2: 'zed', 3: 'safari' };
+const apps = { 1: 'terminal', 2: 'editor', 3: 'browser' };
 const props = focus => Object.fromEntries(Object.keys(apps).map(id => [id, { app: apps[id], focus: id === focus }]));
 const full = T.box('h', [T.win('1', 0.45), T.box('v', [T.win('2', 0.62), T.win('3', 0.38)], 0.55)]);
 const without = T.clone(full);
 T.remove(without, '3');
 const dock = on => `<div style="position:absolute;left:${W / 2 - 150}px;top:${H - 104}px;width:300px;height:84px;border-radius:26px;background:rgba(60,62,84,.92);
   box-shadow:0 0 0 1.5px rgba(255,255,255,.18),0 10px 30px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;gap:16px;color:#e9e9f0;font:600 24px -apple-system,sans-serif">
-  <img src="icons/safari.png" width="56" height="56" style="opacity:${on ? 1 : 0.25}">${on ? 'minimized' : '<span style="opacity:.4">Dock</span>'}</div>`;
+  <span style="width:56px;height:56px;border-radius:14px;background:#1c1c21;box-shadow:0 0 0 2px rgba(142,142,147,.6) inset;opacity:${on ? 1 : 0.25}"></span>${on ? 'minimized' : '<span style="opacity:.4">Dock</span>'}</div>`;
 const keys = [
-  { cut: true, hold: 1700, wins: tiled(full, area, GAP, props('3')), dock: false, caption: 'Three tiled windows. Safari was resized: it is the smallest one.' },
-  { hold: 2200, wins: tiled(without, area, GAP, props('2')), dock: true, caption: 'Safari is <b>minimized</b> (the same goes for native fullscreen and for hiding its app): its neighbor takes the space.' },
+  { cut: true, hold: 1700, wins: tiled(full, area, GAP, props('3')), dock: false, caption: 'Three tiled windows. The browser was resized: it is the smallest one.' },
+  { hold: 2200, wins: tiled(without, area, GAP, props('2')), dock: true, caption: 'The browser is <b>minimized</b> (the same goes for native fullscreen and for hiding its app): its neighbor takes the space.' },
   { hold: 2800, wins: tiled(full, area, GAP, props('3')), dock: false, caption: 'It is restored: it gets <b>its place and its size back</b>, and the neighbor gives the space back.' },
 ];
 Anim({

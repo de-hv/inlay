@@ -50,7 +50,6 @@ body.png { border-radius: 14px; }
 .w .lights i { width: 12px; height: 12px; border-radius: 50%; background: #45454c; display: block; }
 .w.focus .lights i:nth-child(1) { background: #ff5f57; } .w.focus .lights i:nth-child(2) { background: #febc2e; } .w.focus .lights i:nth-child(3) { background: #28c840; }
 .w .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #c9c9d3; font-weight: 600; overflow: hidden; border-radius: 16px; }
-.w .mid img { display: block; }
 .w .mid .num { color: #e9e9f0; font-weight: 700; }
 .w .mid .dim { color: #8f91a0; font-weight: 500; }
 .cursor { position: absolute; width: 0; height: 0; }

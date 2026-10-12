@@ -10,7 +10,7 @@
 # Usage: scripts/make-docs-images.sh [--no-build] [name ...]     (without names: all the images)
 #
 # It needs Google Chrome and the Xcode Command Line Tools. Nothing is installed, and Inlay, its config and
-# /Applications are not touched. The renders show the accent color of this Mac and the icons of the apps it has.
+# /Applications are not touched. The renders show the accent color of this Mac.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR=/Library/Developer/CommandLineTools
@@ -64,11 +64,11 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 # --- PNG: name:width:height (in points; rendered at 2x) ---
 PAGES=(
   hero:1280:800
-  menu-bar-themes:880:404
+  menu-bar-themes:880:326
   menu-bar-states:880:330
-  menu-bar-options:880:532
+  menu-bar-options:880:372
   menu-bar-colors:880:500
-  menu:880:744
+  menu:880:452
   borders-states:880:586
   borders-width:880:290
   borders-corner-radius:880:310

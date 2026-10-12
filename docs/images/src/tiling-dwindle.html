@@ -5,7 +5,7 @@
 // A screen of 1280 x 800 points. Gaps of 16 points, borders of 4.
 const W = 1280, H = 800, BAR = 24, GAP = 16;
 const area = tilingArea(W, H, BAR, GAP);
-const apps = { 1: 'ghostty', 2: 'zed', 3: 'safari', 4: 'notes', 5: 'music' };
+const apps = { 1: 'terminal', 2: 'editor', 3: 'browser', 4: 'notes', 5: 'music' };
 const root = T.box('h', []);
 const keys = [];
 function key(focus, caption, hold = 1700) {
@@ -21,9 +21,9 @@ function open(id, caption) {
 function close(id, caption) { T.remove(root, String(id)); key(id - 1, caption, 1100); }
 
 open(1, 'The first window takes the whole workspace.');
-open(2, '<b>Ghostty</b> is wider than tall: it is split <b>side by side</b>. The new window goes to the right.');
-open(3, '<b>Zed</b> is taller than wide: it is split in two <b>stacked</b> halves. The new window goes below.');
-open(4, '<b>Safari</b> is wider than tall: side by side again.');
+open(2, 'The <b>terminal</b> is wider than tall: it is split <b>side by side</b>. The new window goes to the right.');
+open(3, 'The <b>editor</b> is taller than wide: it is split in two <b>stacked</b> halves. The new window goes below.');
+open(4, 'The <b>browser</b> is wider than tall: side by side again.');
 open(5, '<b>Notes</b> is taller than wide: stacked. Every new window splits the focused one.');
 close(5, 'A window is closed: <b>its neighbor gets the space back</b>.');
 close(4, 'A window is closed: <b>its neighbor gets the space back</b>.');

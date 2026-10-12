@@ -11,7 +11,7 @@ function key(width, caption, hold, more = {}) {
   const tree = T.box('h', [T.win('1', width + GAP / 2), T.win('2', area.w - width - GAP / 2)]);
   const wins = tiled(tree, area, GAP, {
     1: { app: 'notes', focus: true, text: `${Math.round(width)} pt` },
-    2: { app: 'zed' },
+    2: { app: 'editor' },
   });
   keys.push({ wins, caption, hold, ...more });
 }

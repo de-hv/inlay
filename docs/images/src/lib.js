@@ -108,8 +108,8 @@ const T = {
 
 // ---------- The desktop mock ----------
 
-const APP_NAMES = { ghostty: 'Ghostty', zed: 'Zed', safari: 'Safari', mail: 'Mail', messages: 'Messages', music: 'Music', notes: 'Notes',
-  finder: 'Finder', terminal: 'Terminal', calendar: 'Calendar', preview: 'Preview' };
+// The windows are generic ones: a kind of app, never a real one. No icons and no names of products
+const APP_NAMES = { terminal: 'Terminal', editor: 'Editor', browser: 'Browser', notes: 'Notes', music: 'Music' };
 
 /**
  * A screen of W x H points, drawn at `scale`, at (x, y) of `parent`.
@@ -141,12 +141,10 @@ function drawScreen(parent, x, y, scale, W, H, wins, opt = {}) {
     if (o <= 0.01) continue;
     const color = w.color ?? (w.focus ? (w.floating ? FLOATING : ACCENT) : INACTIVE);
     const m = Math.min(w.w, w.h);
-    const icon = Math.max(18, Math.min(72, m * 0.34));
     const font = Math.max(13, Math.min(34, m * 0.16));
     let mid = '';
-    if (w.app) mid += `<img src="icons/${w.app}.png" width="${icon}" height="${icon}">`;
     if (w.num !== undefined) mid += `<span class="num" style="font-size:${font * 1.5}px">${w.num}</span>`;
-    else if (w.app && w.w > 170 && w.h > 150) mid += `<span style="font-size:${font}px">${APP_NAMES[w.app] || w.app}</span>`;
+    else if (w.app && w.w > 110 && w.h > 60) mid += `<span style="font-size:${font * 1.25}px">${APP_NAMES[w.app]}</span>`;
     if (w.text) mid += `<span class="dim" style="font-size:${font * 0.8}px">${w.text}</span>`;
     const shadow = w.floating ? 'box-shadow:0 18px 50px rgba(0,0,0,.55);' : '';
     const glow = w.glow && w.focus ? `box-shadow:0 0 ${w.glow}px ${color};` : '';

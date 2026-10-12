@@ -6,16 +6,7 @@ enum Strings {
     enum Menu {
         static let workspaces = "Workspaces"
         static let empty = "Empty"
-        static let focusedWindow = "Focused Window"
-        static let moveTo = "Move to"
-        static let floating = "Floating"
-        static let fullscreen = "Fullscreen"
-        static let layout = "Layout"
-        static let horizontal = "Horizontal"
-        static let vertical = "Vertical"
-        static let balanceSizes = "Balance Sizes"
-        static let resetLayout = "Reset Layout"
-        static let bindingMode = "Binding Mode"
+        static let floating = "Float Focused Window"
         static let reloadConfig = "Reload Config"
         static let openConfig = "Open \(configFileName)…"
         static let pause = "Pause \(inlayAppName)"
@@ -34,8 +25,7 @@ enum Strings {
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
         static let paused = "\(inlayAppName) is paused"
         static let copyVersionToolTip = "Click to copy the version"
-        static func apps(_ count: Int) -> String { "\(count) apps" }
-        static var version: String { "\(inlayAppName) \(inlayAppVersion) (\(gitShortHash)) · based on AeroSpace" }
+        static var version: String { "\(inlayAppName) \(inlayAppVersion)" }
         static var versionToCopy: String { "\(inlayAppName) v\(inlayAppVersion) \(gitHash)" }
     }
 

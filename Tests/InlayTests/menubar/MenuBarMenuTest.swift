@@ -12,11 +12,6 @@ extension InlayTests {
             ServerState.shared.axPermissionStatus = .granted
         }
 
-        private func bind(_ modifiers: NSEvent.ModifierFlags, _ key: Key, _ command: String) {
-            let binding = HotkeyBinding(modifiers, key, parseCommand(command).cmdOrDie)
-            config.modes[mainModeId]?.bindings[binding.descriptionWithKeyCode] = binding
-        }
-
         /// All the items of the menu as it opens, the ones of the submenus included
         private func openMenu() -> [NSMenuItem] {
             let menu = MenuBarMenu()
@@ -25,72 +20,86 @@ extension InlayTests {
             return items(menu.menu)
         }
 
-        // MARK: - The key bindings of the main mode in the menu
-
-        @Test func testShortcutText() {
-            func text(_ modifiers: NSEvent.ModifierFlags, _ key: Key) -> String {
-                HotkeyBinding(modifiers, key, parseCommand("balance-sizes").cmdOrDie).menuText
-            }
-            assertEquals(text(.option, .one), "⌥1")
-            assertEquals(text([.command, .option], .comma), "⌥⌘,")
-            // The order of the menus of macOS, whatever the order of the config
-            assertEquals(text([.command, .shift, .option, .control], .k), "⌃⌥⇧⌘K")
-            assertEquals(text([.option, .shift], .tab), "⌥⇧⇥")
-            assertEquals(text(.option, .space), "⌥Space")
-            assertEquals(text([.control, .option], .leftArrow), "⌃⌥←")
-            assertEquals(text([], .f5), "F5")
-            assertEquals(text(.option, .slash), "⌥/")
+        /// The titles as they are read, with the spaces of the workspace rows collapsed
+        private func titles(_ items: [NSMenuItem]) -> [String] {
+            items.map { $0.isSeparatorItem ? "---" : $0.title.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
         }
 
-        @Test func testMainModeShortcut() {
-            bind(.option, .two, "workspace 2")
-            bind([.option, .shift], .f, "layout floating tiling")
-            bind(.option, .b, "balance-sizes; mode main")
-            assertEquals(mainModeShortcut(for: "workspace 2"), "⌥2")
-            assertEquals(mainModeShortcut(for: "layout floating tiling"), "⌥⇧F")
-            // Only a binding that runs exactly the command of the item
-            assertEquals(mainModeShortcut(for: "workspace 3"), nil)
-            assertEquals(mainModeShortcut(for: "balance-sizes"), nil)
-            assertEquals(mainModeShortcut(for: "not a command"), nil)
-            // The bindings of the other modes aren't shown: they don't work until the mode is entered
-            config.modes["service"] = Mode(bindings: [:])
-            let inService = HotkeyBinding([], .r, parseCommand("flatten-workspace-tree").cmdOrDie)
-            config.modes["service"]?.bindings[inService.descriptionWithKeyCode] = inService
-            assertEquals(mainModeShortcut(for: "flatten-workspace-tree"), nil)
-        }
+        // MARK: - The items
 
-        /// The bindings are shown next to the items, but they aren't key equivalents: with the menu open,
-        /// pressing one doesn't choose the item. A key equivalent is the only way a menu matches a key to an item
-        @Test func testShortcutsAreOnlyText() throws {
+        /// The menu is short: the workspaces, the one thing it changes of the focused window, the config and Inlay
+        /// itself. Moving windows, the layout and the binding modes are for the key bindings
+        @Test func testItems() throws {
             let workspace = focus.workspace
             assertEquals(TestWindow.new(id: 1, parent: workspace.rootTilingContainer).focusWindow(), true)
             _ = Workspace.get(byName: "2")
-            bind(.option, .two, "workspace 2")
-            bind([.option, .shift], .two, "move-node-to-workspace 2")
-            bind([.command, .option], .comma, "balance-sizes")
-            bind([.option, .shift], .f, "layout floating tiling")
+            config.modes["service"] = Mode(bindings: [:])
 
             let items = openMenu()
-            func item(_ command: String) throws -> NSMenuItem {
-                try #require(items.first { $0.representedObject as? String == command }, "\(command)")
-            }
-            assertEquals(try item("workspace 2").badge?.stringValue, "⌥2")
-            assertEquals(try item("move-node-to-workspace 2").badge?.stringValue, "⌥⇧2")
-            assertEquals(try item("balance-sizes").badge?.stringValue, "⌥⌘,")
-            assertEquals(try item("layout floating tiling").badge?.stringValue, "⌥⇧F")
-            // No binding, no badge
-            assertNil(try item("fullscreen").badge)
-            assertNil(try item("workspace \(workspace.name)").badge)
+            assertEquals(titles(items), [
+                "Workspaces", "2 Empty", "\(workspace.name) \(TestApp.shared.rawAppBundleId ?? "")",
+                "---",
+                "Float Focused Window",
+                "---",
+                "Reload Config", "Open inlay.toml…", "Pause Inlay-Debug", "Settings…",
+                "---",
+                "Inlay-Debug 0.0.0-dev", "Quit Inlay-Debug",
+            ])
+            // No submenu: the whole menu is what is seen when it opens
+            assertEquals(items.filter(\.hasSubmenu).map(\.title), [])
+            assertEquals(
+                items.compactMap { $0.representedObject as? String },
+                ["workspace 2", "workspace \(workspace.name)", "layout floating tiling"],
+            )
+            assertEquals(items.filter { $0.state == .on }.compactMap { $0.representedObject as? String }, ["workspace \(workspace.name)"])
+        }
 
+        /// The key bindings of the config aren't shown next to the items, even when one runs the command of the item
+        @Test func testNoKeyBindingsOfTheConfig() throws {
+            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
+            _ = Workspace.get(byName: "2")
+            for (modifiers, key, command) in [(NSEvent.ModifierFlags.option, Key.two, "workspace 2"), ([.option, .shift], .f, "layout floating tiling")] {
+                let binding = HotkeyBinding(modifiers, key, parseCommand(command).cmdOrDie)
+                config.modes[mainModeId]?.bindings[binding.descriptionWithKeyCode] = binding
+            }
+
+            let items = openMenu()
+            assertEquals(items.filter { $0.badge != nil }.map(\.title), [])
             // No item that runs a command can be chosen with a key
-            let commandItems = items.filter { $0.representedObject is String }
-            assertEquals(commandItems.count > 8, true)
-            assertEquals(commandItems.filter { !$0.keyEquivalent.isEmpty }.map(\.title), [])
-            // The shortcuts of the menu itself are still real: they only exist while the menu is open
+            assertEquals(items.filter { $0.representedObject is String && !$0.keyEquivalent.isEmpty }.map(\.title), [])
+            // The shortcuts of the menu itself are real: they only exist while the menu is open
             assertEquals(
                 items.filter { !$0.keyEquivalent.isEmpty }.map { "\($0.title) \($0.keyEquivalent)" },
                 ["Reload Config r", "Pause Inlay-Debug e", "Settings… ,", "Quit Inlay-Debug q"],
             )
+        }
+
+        /// Only the name and the version. The commit and the attribution are in the README and in NOTICE.md
+        @Test func testVersion() {
+            assertEquals(Strings.Menu.version, "\(inlayAppName) \(inlayAppVersion)")
+            assertEquals(Strings.Menu.version.contains(gitHash.prefix(7)), false)
+            assertEquals(Strings.Menu.version.lowercased().contains("aerospace"), false)
+            // What a click on it copies still tells the commit, for a bug report
+            assertEquals(Strings.Menu.versionToCopy, "\(inlayAppName) v\(inlayAppVersion) \(gitHash)")
+        }
+
+        @Test func testPausedAndWithoutThePermission() {
+            ServerState.shared.isEnabled = false
+            assertEquals(titles(openMenu()), [
+                "Inlay-Debug is paused",
+                "---",
+                "Reload Config", "Open inlay.toml…", "Resume Inlay-Debug", "Settings…",
+                "---",
+                "Inlay-Debug 0.0.0-dev", "Quit Inlay-Debug",
+            ])
+            ServerState.shared.isEnabled = true
+            ServerState.shared.axPermissionStatus = .waiting
+            defer { ServerState.shared.axPermissionStatus = .granted }
+            assertEquals(titles(openMenu()), [
+                "Inlay-Debug requires accessibility permission to move windows",
+                "---",
+                "Inlay-Debug 0.0.0-dev", "Quit Inlay-Debug",
+            ])
         }
 
         /// The button highlights itself while the mouse is down on it. The shield takes the mouse away from the button

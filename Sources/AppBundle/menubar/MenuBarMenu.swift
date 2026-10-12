@@ -1,6 +1,5 @@
 import AppKit
 import Common
-import HotKey
 
 /// The menu of the menu bar item. It is rebuilt from the model every time it opens
 @MainActor
@@ -37,10 +36,6 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                 menu.addItem(.separator())
                 addFocusedWindow(snapshot, to: menu)
                 menu.addItem(.separator())
-                addLayout(snapshot, to: menu)
-                menu.addItem(.separator())
-                addModes(snapshot, to: menu)
-                menu.addItem(.separator())
                 addConfigItems(snapshot, to: menu)
         }
         menu.addItem(.separator())
@@ -56,57 +51,18 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         menu.addItem(.sectionHeader(title: Strings.Menu.workspaces))
         for workspace in snapshot.workspaces {
             let item = commandItem(workspace.name, "workspace \(workspace.name)")
-            item.attributedTitle = workspaceTitle(workspace, namesApps: true)
+            item.attributedTitle = workspaceTitle(workspace)
             item.state = workspace.name == snapshot.focusedWorkspace ? .on : .off
             menu.addItem(item)
         }
     }
 
+    /// The only thing of the focused window that the menu changes. The rest is done with the key bindings
     private func addFocusedWindow(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        menu.addItem(.sectionHeader(title: Strings.Menu.focusedWindow))
         let window = snapshot.focusedWindow
-        let move = item(Strings.Menu.moveTo, nil, symbol: "arrow.right.square", isEnabled: window != nil)
-        let submenu = NSMenu()
-        submenu.autoenablesItems = false
-        for workspace in snapshot.workspaces {
-            let target = commandItem(workspace.name, "move-node-to-workspace \(workspace.name)", isEnabled: workspace.name != snapshot.focusedWorkspace)
-            target.attributedTitle = workspaceTitle(workspace, namesApps: false)
-            target.state = workspace.name == snapshot.focusedWorkspace ? .on : .off
-            submenu.addItem(target)
-        }
-        move.submenu = submenu
-        menu.addItem(move)
-
         let floating = commandItem(Strings.Menu.floating, "layout floating tiling", symbol: "macwindow.on.rectangle", isEnabled: window != nil)
         floating.state = window?.isFloating == true ? .on : .off
         menu.addItem(floating)
-        let fullscreen = commandItem(Strings.Menu.fullscreen, "fullscreen", symbol: "arrow.up.left.and.arrow.down.right", isEnabled: window != nil)
-        fullscreen.state = window?.isFullscreen == true ? .on : .off
-        menu.addItem(fullscreen)
-    }
-
-    private func addLayout(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        menu.addItem(.sectionHeader(title: Strings.Menu.layout))
-        // The orientation is the one of the container of the focused window, so it needs a tiling window
-        let isTiling = snapshot.focusedWindow?.isFloating == false
-        let horizontal = commandItem(Strings.Menu.horizontal, "layout horizontal", symbol: "rectangle.split.2x1", isEnabled: isTiling)
-        horizontal.state = isTiling && snapshot.orientation == .h ? .on : .off
-        menu.addItem(horizontal)
-        let vertical = commandItem(Strings.Menu.vertical, "layout vertical", symbol: "rectangle.split.1x2", isEnabled: isTiling)
-        vertical.state = isTiling && snapshot.orientation == .v ? .on : .off
-        menu.addItem(vertical)
-        menu.addItem(commandItem(Strings.Menu.balanceSizes, "balance-sizes", symbol: "equal.square"))
-        menu.addItem(commandItem(Strings.Menu.resetLayout, "flatten-workspace-tree", symbol: "arrow.counterclockwise"))
-    }
-
-    private func addModes(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        menu.addItem(.sectionHeader(title: Strings.Menu.bindingMode))
-        // 'main' first
-        for mode in [mainModeId] + config.modes.keys.filter({ $0 != mainModeId }).sorted() {
-            let item = commandItem(mode, "mode \(mode)")
-            item.state = mode == snapshot.mode ? .on : .off
-            menu.addItem(item)
-        }
     }
 
     private func addConfigItems(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
@@ -127,21 +83,15 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         return item
     }
 
-    /// An item that runs a command. It shows the key binding of the main mode that runs the same command, if there is one.
-    ///
-    /// The binding is shown as a badge, which is only text. It isn't the key equivalent of the item: the binding belongs
-    /// to the main mode, not to the menu, and pressing it while the menu is open must not choose the item
+    /// An item that runs a command. The key bindings of the config aren't shown: the menu doesn't repeat them
     private func commandItem(_ title: String, _ command: String, symbol: String? = nil, isEnabled: Bool = true) -> NSMenuItem {
         let item = item(title, #selector(runCommand(_:)), symbol: symbol, isEnabled: isEnabled)
         item.representedObject = command
-        if let shortcut = mainModeShortcut(for: command) {
-            item.badge = NSMenuItemBadge(string: shortcut)
-        }
         return item
     }
 
-    /// "4  [icon][icon] Telegram, WhatsApp", "4  [icon][icon] 2 apps" or "6  Empty"
-    private func workspaceTitle(_ workspace: MenuBarSnapshot.Workspace, namesApps: Bool) -> NSAttributedString {
+    /// "4  [icon][icon] Telegram, WhatsApp" or "6  Empty"
+    private func workspaceTitle(_ workspace: MenuBarSnapshot.Workspace) -> NSAttributedString {
         let size = NSFont.menuFont(ofSize: 0).pointSize
         // Monospaced digits keep the icons in one column
         let title = NSMutableAttributedString(
@@ -162,9 +112,7 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
             title.append(NSAttributedString(attachment: attachment))
             title.append(NSAttributedString(string: "\u{2009}"))
         }
-        let names = namesApps || workspace.apps.count == 1
-            ? workspace.apps.map(\.name).joinTruncating(separator: ", ", length: 40)
-            : Strings.Menu.apps(workspace.apps.count)
+        let names = workspace.apps.map(\.name).joinTruncating(separator: ", ", length: 40)
         title.append(NSAttributedString(string: " " + names, attributes: [.font: font]))
         return title
     }
@@ -209,27 +157,6 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
             terminationHandler?.beforeTermination()
             terminateApp()
         }
-    }
-}
-
-/// The key binding of the main mode that runs exactly this command, as text: "⌥⇧1"
-@MainActor
-func mainModeShortcut(for command: String) -> String? {
-    guard let target = parseCommand(command, allowExecAndForget: false, allowEval: false).cmdOrNil else { return nil }
-    return (config.modes[mainModeId]?.bindings ?? [:]).values
-        .filter { $0.commands.strictEquals(target) }
-        .min { $0.descriptionWithKeyCode < $1.descriptionWithKeyCode }?
-        .menuText
-}
-
-extension HotkeyBinding {
-    /// The binding the way the menus of macOS write a shortcut: the modifiers in their usual order, and then the key
-    var menuText: String {
-        let symbols: [(NSEvent.ModifierFlags, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
-        let modifiers = symbols.filter { self.modifiers.contains($0.0) }.map(\.1).joined()
-        // The names of some keys start with a private use character that only means something to a key equivalent: F5
-        let key = String(String.UnicodeScalarView(keyCode.description.unicodeScalars.filter { $0.properties.generalCategory != .privateUse }))
-        return modifiers + (keyCode == .space ? "Space" : key)
     }
 }
 

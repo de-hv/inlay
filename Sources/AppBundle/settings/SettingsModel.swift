@@ -34,12 +34,18 @@ final class SettingsModel {
     @ObservationIgnored private var commitTasks: [SettingsKey: Task<Void, Never>] = [:]
 
     @ObservationIgnored private let loadTarget: @MainActor () -> Result<ConfigEditor.Target, ConfigEditor.EditError>
+    @ObservationIgnored private let reloadsConfig: Bool
 
     private static let commitDelay: Duration = .milliseconds(400)
 
     /// - Parameter loadTarget: finds and reads the config file. The tests point it to a file of their own
-    init(loadTarget: @escaping @MainActor () -> Result<ConfigEditor.Target, ConfigEditor.EditError> = ConfigEditor.target) {
+    /// - Parameter reloadsConfig: false if there is no window manager to tell about the changes. See: runSettingsDebug
+    init(
+        loadTarget: @escaping @MainActor () -> Result<ConfigEditor.Target, ConfigEditor.EditError> = ConfigEditor.target,
+        reloadsConfig: Bool = !isUnitTest,
+    ) {
         self.loadTarget = loadTarget
+        self.reloadsConfig = reloadsConfig
     }
 
     /// Reads the config file and the state of the server again
@@ -199,7 +205,7 @@ final class SettingsModel {
 
     /// Unlike the "Reload config" of the menu, it also runs while Inlay is paused: the file has just been written by Inlay itself
     private func reloadConfigAfterEdit() {
-        if isUnitTest { return }
+        if !reloadsConfig { return }
         Task.startUnstructured { @MainActor in
             try await runLightSession(.menuBarButton, .forceRun) {
                 _ = await reloadConfig_nonCancellable()

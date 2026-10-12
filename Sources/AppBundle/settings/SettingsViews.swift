@@ -2,7 +2,23 @@ import AppKit
 import Common
 import SwiftUI
 
-private let settingsWidth: CGFloat = 600
+let settingsWidth: CGFloat = 600
+
+/// The content of a tab: a form as tall as its rows. The window shows all of it, or scrolls it when the screen
+/// is too small for that. See: SettingsPageController
+private struct SettingsPage<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Form(content: content)
+            .formStyle(.grouped)
+            // The form is a scroll view too, but it has nothing to scroll: it is as tall as its rows.
+            // The mouse wheel is for the scroll view of the tab
+            .scrollDisabled(true)
+            .frame(width: settingsWidth)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
 
 /// A row of the settings: the title, what the key does (or why it can't be changed), the name of the key
 /// in the config file, and the control
@@ -166,7 +182,7 @@ struct GeneralSettingsView: View {
     let model: SettingsModel
 
     var body: some View {
-        Form {
+        SettingsPage {
             ErrorBanner(model: model)
             Section(Strings.Settings.startup) {
                 ToggleRow(model: model, title: Strings.Settings.startAtLogin, detail: Strings.Settings.startAtLoginDetail, key: .startAtLogin)
@@ -254,9 +270,6 @@ struct GeneralSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .formStyle(.grouped)
-        .frame(width: settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// A key with a few possible values, as a segmented control
@@ -319,7 +332,7 @@ struct MenuBarSettingsView: View {
     let model: SettingsModel
 
     var body: some View {
-        Form {
+        SettingsPage {
             ErrorBanner(model: model)
             Section {
                 preview
@@ -354,9 +367,6 @@ struct MenuBarSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .formStyle(.grouped)
-        .frame(width: settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// The item as the window leaves it, in a dark and in a light menu bar: a fixed color doesn't adapt to the menu bar.
@@ -429,7 +439,7 @@ struct BordersSettingsView: View {
     let model: SettingsModel
 
     var body: some View {
-        Form {
+        SettingsPage {
             ErrorBanner(model: model)
             Section {
                 preview
@@ -472,9 +482,6 @@ struct BordersSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .formStyle(.grouped)
-        .frame(width: settingsWidth)
-        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var preview: some View {

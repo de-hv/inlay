@@ -49,6 +49,16 @@ public func runInlayApp() -> Never {
         if report.isOk { exit(EXIT_CODE_ZERO, out: report.text) }
         exit(EXIT_CODE_TWO, err: report.text)
     }
+    if let index = CommandLine.arguments.firstIndex(of: debugSettingsFlag) {
+        guard let path = CommandLine.arguments.getOrNil(atIndex: index + 1), FileManager.default.fileExists(atPath: path) else {
+            exit(EXIT_CODE_TWO, err: "Missing <config> in \(debugSettingsFlag) flag, or the file doesn't exist")
+        }
+        let screenHeight = CommandLine.arguments.firstIndex(of: "--screen-height")
+            .flatMap { CommandLine.arguments.getOrNil(atIndex: $0 + 1) }
+            .flatMap(Double.init)
+            .map { CGFloat(min(max($0, 300), 3000)) }
+        runSettingsDebug(config: URL(filePath: path), inspect: CommandLine.arguments.contains("--inspect"), screenHeight: screenHeight)
+    }
     if let index = CommandLine.arguments.firstIndex(of: debugBordersFlag) {
         let seconds = CommandLine.arguments.getOrNil(atIndex: index + 1).flatMap(Double.init) ?? 4
         runBordersDebug(seconds: min(max(seconds, 1), 60))

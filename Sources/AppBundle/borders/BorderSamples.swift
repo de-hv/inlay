@@ -127,8 +127,7 @@ func renderBorderSamples(to directory: URL) throws {
                 guard let border = borders.first(where: { $0.windowId == window.id }) else { continue }
                 let geometry = BorderGeometry(border, scale: scale)
                 let panel = BorderPanel()
-                panel.apply(geometry, mainScreenHeight: size.height)
-                panel.setColor(border.color)
+                panel.apply(geometry, color: border.color, mainScreenHeight: size.height)
                 context.saveGState()
                 context.translateBy(x: geometry.panelFrame.minX, y: geometry.panelFrame.minY)
                 panel.render(in: context)

@@ -83,19 +83,25 @@ final class BordersController {
         guard let mainScreenHeight = Self.mainScreenHeight() else { return }
         let screens = Self.screens()
         shown = target
+        var items: [UInt32: BorderItem] = [:]
+        for item in target { items[item.windowId] = item }
+        /// Makes the panel of the window show its border as it has to be now, color included
+        func apply(_ windowId: UInt32) {
+            guard let item = items[windowId] else { return }
+            let geometry = BorderGeometry(item, scale: BorderScreen.scale(for: item.frame, in: screens))
+            panels[windowId]?.apply(geometry, color: item.color, mainScreenHeight: mainScreenHeight)
+        }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for op in ops {
             switch op {
                 case .add(let item):
-                    let panel = BorderPanel()
-                    panels[item.windowId] = panel
-                    panel.apply(BorderGeometry(item, scale: BorderScreen.scale(for: item.frame, in: screens)), mainScreenHeight: mainScreenHeight)
-                    panel.setColor(item.color)
-                case .reshape(let item):
-                    panels[item.windowId]?.apply(BorderGeometry(item, scale: BorderScreen.scale(for: item.frame, in: screens)), mainScreenHeight: mainScreenHeight)
-                case .recolor(let windowId, let color):
-                    panels[windowId]?.setColor(color)
+                    panels[item.windowId] = BorderPanel()
+                    apply(item.windowId)
+                // A window that gets or loses the focus changes its color, and its shape if the focused window glows:
+                // the panel takes both at once, and the second of the two changes finds nothing left to do
+                case .reshape(let item): apply(item.windowId)
+                case .recolor(let windowId, _): apply(windowId)
                 case .remove(let windowId):
                     if let panel = panels.removeValue(forKey: windowId) {
                         panel.orderOut(nil)

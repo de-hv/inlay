@@ -34,7 +34,8 @@ final class BorderPanel: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
-    func apply(_ geometry: BorderGeometry, mainScreenHeight: CGFloat) {
+    /// Makes the panel show the border. Only what is different from what it shows already is changed
+    func apply(_ geometry: BorderGeometry, color: Rgba, mainScreenHeight: CGFloat) {
         let frame = geometry.appKitFrame(mainScreenHeight: mainScreenHeight)
         if self.frame != frame { setFrame(frame, display: false) }
         // The shape only depends on the size: moving the panel doesn't rebuild it
@@ -43,28 +44,19 @@ final class BorderPanel: NSPanel {
             previous?.innerRadius != geometry.innerRadius || previous?.glowMargin != geometry.glowMargin
         {
             borderView.shape.path = geometry.path()
+            borderView.glow.frame = CGRect(origin: .zero, size: geometry.panelFrame.size)
         }
+        if self.color != color { borderView.shape.fillColor = color.cgColor }
         self.geometry = geometry
-        updateGlow()
-    }
-
-    func setColor(_ color: Rgba) {
-        borderView.shape.fillColor = color.cgColor
         self.color = color
-        updateGlow()
-    }
 
-    /// Draws the image of the glow again only if it would be another one. See: BorderGlow
-    private func updateGlow() {
-        guard let geometry, let color else { return }
-        let layer = borderView.glow
-        layer.frame = CGRect(origin: .zero, size: geometry.panelFrame.size)
+        // The image of the glow is drawn again only if it would be another one. See: BorderGlow
         let glow = BorderGlow(geometry, color: color)
         if glow == self.glow { return }
         self.glow = glow
-        layer.contents = glow?.image()
-        layer.contentsCenter = glow?.center ?? CGRect(x: 0, y: 0, width: 1, height: 1)
-        layer.contentsScale = geometry.scale
+        borderView.glow.contents = glow?.image()
+        borderView.glow.contentsCenter = glow?.center ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        borderView.glow.contentsScale = geometry.scale
     }
 }
 

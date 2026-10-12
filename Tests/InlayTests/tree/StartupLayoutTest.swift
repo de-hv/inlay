@@ -191,7 +191,7 @@ extension InlayTests {
         @Test func testTheRulesRunForTheWindowsThatAreAlreadyOpen() async throws {
             config.onWindowDetected = rules([1: "term", 2: "code", 3: "term", 5: "code", 6: "code", 7: "code", 8: "code"])
             StartupArrangement.begin()
-            for id in 1 ... 9 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            for id in 1 ... 9 as ClosedRange<UInt32> { try await detectAndRunRules(id) }
             StartupArrangement.finish()
 
             assertEquals(Workspace.get(byName: "term").rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
@@ -209,7 +209,7 @@ extension InlayTests {
                 WindowDetectedCallback(matcher: .command(parseCommand("test %{window-id} = 2").cmdOrDie), rawRun: parseCommand("layout floating").cmdOrDie),
             ]
             StartupArrangement.begin()
-            for id in 1 ... 4 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            for id in 1 ... 4 as ClosedRange<UInt32> { try await detectAndRunRules(id) }
             StartupArrangement.finish()
             assertEquals(workspace.floatingWindows.map(\.windowId), [2])
             assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.h_tiles([.window(1), .window(3)]), .window(4)]))
@@ -220,7 +220,7 @@ extension InlayTests {
         @Test func testResume_theRulesOnlyRunForTheNewWindows() async throws {
             config.onWindowDetected = rules([1: "code", 2: "code", 3: "code"])
             StartupArrangement.begin()
-            for id in 1 ... 2 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            for id in 1 ... 2 as ClosedRange<UInt32> { try await detectAndRunRules(id) }
             StartupArrangement.finish()
             let code = Workspace.get(byName: "code")
             assertEquals(code.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
@@ -228,7 +228,7 @@ extension InlayTests {
             _ = window(2).bindAsFloatingWindow(to: workspace)
 
             StartupArrangement.begin() // enable on
-            await detectAndRunRules(3)
+            try await detectAndRunRules(3)
             StartupArrangement.finish()
             assertEquals(workspace.floatingWindows.map(\.windowId), [2])
             assertEquals(code.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
@@ -246,10 +246,12 @@ extension InlayTests {
             }
         }
 
-        /// The same as MacWindow.getOrRegister: the window is found in the focused workspace, and then its rules run
-        private func detectAndRunRules(_ id: UInt32) async {
-            detect(id, in: workspace)
-            await runOnWindowDetected(ifConventional: window(id))
+        /// The same as MacWindow.getOrRegister: the window is found in the focused workspace, and then it is registered,
+        /// which runs its rules
+        private func detectAndRunRules(_ id: UInt32) async throws {
+            let window = TestWindow.newTiling(id: id, workspace: workspace)
+            assertEquals(window.focusWindow(), true)
+            try await window.afterRegistration()
         }
 
         /// Inlay starts with `count` windows open in the workspace: 1, 2, ... They are found in one refresh session

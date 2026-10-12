@@ -23,9 +23,11 @@ func setUpWorkspacesForTests() {
     config.defaultRootContainerOrientation = .horizontal // Make default layout predictable
     config.gaps = .zero // The built-in config has gaps, to leave room for the borders. Make the frames predictable
 
-    // Don't create any bindings and workspaces for tests
+    // Don't create any bindings and workspaces for tests, and don't send their windows anywhere.
+    // The rules of the built-in config are tested in StartupRulesTest
     config.modes = [mainModeId: Mode(bindings: [:])]
     config.persistentWorkspaces = []
+    config.onWindowDetected = []
 
     for workspace in Workspace.all {
         for child in workspace.children {

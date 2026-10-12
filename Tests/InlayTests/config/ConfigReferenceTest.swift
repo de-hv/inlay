@@ -166,7 +166,7 @@ extension InlayTests {
             let modes = try reference.explain("mode").get()
             assertEquals(modes.contains("[mode.main.binding]") && modes.contains("[mode.service.binding]"), true)
             let rules = try reference.explain("on-window-detected").get()
-            assertEquals(rules.split(separator: "\n").filter { $0 == "[[on-window-detected]]" }.count, 2)
+            assertEquals(rules.split(separator: "\n").filter { $0 == "[[on-window-detected]]" }.count, 3)
             assertEquals(try reference.explain("on-window-detected.if.app-id").get().hasPrefix("[[on-window-detected]]\n"), true)
             assertEquals(try reference.explain(".borders.").get(), try reference.explain("borders").get())
         }

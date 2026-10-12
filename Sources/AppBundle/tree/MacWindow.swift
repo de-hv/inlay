@@ -31,12 +31,7 @@ final class MacWindow: Window {
         let window = MacWindow(windowId, macApp, lastFloatingSize: rect?.size, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
         window.detectedType = windowType
         allWindowsMap[windowId] = window
-        StartupArrangement.noteDetected(window)
-
-        try await debugWindowsIfRecording(window, .cancellable)
-        if try await !restoreClosedWindowsCacheIfNeeded(newlyDetectedWindow: window) {
-            await runOnWindowDetected(ifConventional: window)
-        }
+        try await window.afterRegistration()
         return window
     }
 
@@ -275,6 +270,23 @@ func getBindingDataForNewTilingWindow(_ workspace: Workspace, focused: Window?) 
             adaptiveWeight: WEIGHT_AUTO,
             index: INDEX_BIND_LAST,
         )
+    }
+}
+
+extension Window {
+    /// The window has just been registered: Inlay knows about it from now on, and no refresh session will find it
+    /// again. This is the only time its 'on-window-detected' rules run on their own, whatever found the window:
+    /// the session of the startup, the one that follows `enable on`, or any later one.
+    ///
+    /// The session can be cancelled at any moment, and the window stays registered. So nothing here may be skipped
+    /// by a cancellation, or the window would be left without its rules for good
+    @MainActor
+    func afterRegistration() async throws {
+        StartupArrangement.noteDetected(self)
+        try await debugWindowsIfRecording(self, .nonCancellable)
+        if try await !restoreClosedWindowsCacheIfNeeded(newlyDetectedWindow: self) {
+            await runOnWindowDetected(ifConventional: self)
+        }
     }
 }
 

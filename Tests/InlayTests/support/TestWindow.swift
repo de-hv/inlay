@@ -5,18 +5,29 @@ final class TestWindow: Window, CustomStringConvertible {
     private var _rect: Rect?
     var isMacosFullscreenForTest = false
     var isMacosMinimizedForTest = false
+    /// nil: the description of the window
+    var titleForTest: String? = nil
+    /// Asking for the title waits for it, like the real request to the app waits for the app to answer
+    var titleGateForTest: AwaitableOneTimeBroadcastLatch? = nil
 
     @MainActor
-    private init(_ id: UInt32, _ parent: NonLeafTreeNodeObject, _ adaptiveWeight: CGFloat, _ rect: Rect?, index: Int) {
+    private init(_ id: UInt32, _ app: any AbstractApp, _ parent: NonLeafTreeNodeObject, _ adaptiveWeight: CGFloat, _ rect: Rect?, index: Int) {
         _rect = rect
-        super.init(id: id, TestApp.shared, lastFloatingSize: nil, parent: parent, adaptiveWeight: adaptiveWeight, index: index)
+        super.init(id: id, app, lastFloatingSize: nil, parent: parent, adaptiveWeight: adaptiveWeight, index: index)
     }
 
     /// Binds the window to the given place of the tree
     @discardableResult
     @MainActor
-    static func new(id: UInt32, parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat = 1, rect: Rect? = nil, index: Int = INDEX_BIND_LAST) -> TestWindow {
-        let wi = TestWindow(id, parent, adaptiveWeight, rect, index: index)
+    static func new(
+        id: UInt32,
+        parent: NonLeafTreeNodeObject,
+        adaptiveWeight: CGFloat = 1,
+        rect: Rect? = nil,
+        index: Int = INDEX_BIND_LAST,
+        app: any AbstractApp = TestApp.shared,
+    ) -> TestWindow {
+        let wi = TestWindow(id, app, parent, adaptiveWeight, rect, index: index)
         TestApp.shared._windows.append(wi)
         return wi
     }
@@ -25,9 +36,9 @@ final class TestWindow: Window, CustomStringConvertible {
     /// See: 'tiling.new-window-placement' config option
     @discardableResult
     @MainActor
-    static func newTiling(id: UInt32, workspace: Workspace) -> TestWindow {
+    static func newTiling(id: UInt32, workspace: Workspace, app: any AbstractApp = TestApp.shared) -> TestWindow {
         let data = getBindingDataForNewTilingWindow(workspace, focused: focus.windowOrNil)
-        return new(id: id, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+        return new(id: id, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index, app: app)
     }
 
     /// The frame set by the last layout pass. See: Workspace.layoutWorkspace
@@ -56,7 +67,10 @@ final class TestWindow: Window, CustomStringConvertible {
         )
     }
 
-    override func getTitle(_ cm: CancellationMode) async throws -> String { description }
+    override func getTitle(_ cm: CancellationMode) async throws -> String {
+        try await titleGateForTest?.await()
+        return titleForTest ?? description
+    }
 
     @MainActor override func getAxRect(_ cm: CancellationMode) async throws -> Rect? { // todo change to not Optional
         _rect

@@ -471,6 +471,14 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     check-further-callbacks = true
     run = []
 
+# A catch-all rule, as the last one: the tiling windows that no rule above matched go to a workspace.
+# '%{window-layout}' is 'h_tiles' or 'v_tiles' for a tiling window and 'floating' for a floating one, so the
+# dialogs, which Inlay makes floating before the rules run, stay where they open. inlay.toml, the config that
+# Inlay ships with, ends with this rule
+[[on-window-detected]]
+    if = 'test %{window-layout} ~= _tiles'
+    run = 'move-node-to-workspace 6'
+
 # Force a workspace to a monitor: the name of the workspace = a monitor pattern, or a list of patterns
 # (the first one that matches a connected monitor wins).
 # Possible patterns:

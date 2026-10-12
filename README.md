@@ -16,17 +16,19 @@ las ventanas nuevas (*dwindle*), sin el layout *accordion*, con una barra de men
 |---|---|---|
 | Build, instalación y desinstalación sin Xcode | Hecho | Build limpio desde cero con las Command Line Tools; `install.sh` y `uninstall.sh` ejecutados enteros en un entorno aislado (otro `HOME`, otra carpeta de instalación) |
 | Gestor de ventanas (árbol, workspaces, comandos, CLI) | El de AeroSpace `74a1bf1`, con otro nombre | Tests (ventanas simuladas) |
-| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) | Tests (ventanas simuladas), incluida una sesión pseudoaleatoria de 600 pasos |
+| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) | Tests (ventanas simuladas), incluida una sesión pseudoaleatoria de 800 pasos |
 | Barra de menús con *chips*, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) | Tests e imágenes renderizadas |
 | Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) | Tests, imágenes renderizadas y `--debug-borders` sobre ventanas reales |
-| Tests | 588 tests de Swift Testing (`scripts/test.sh`): toda la suite original de AeroSpace migrada, más los de Inlay | Pasan con las Command Line Tools |
+| Tests | 620 tests de Swift Testing (`scripts/test.sh`): toda la suite original de AeroSpace migrada, más los de Inlay | Pasan con las Command Line Tools |
 
 La columna «Cómo está comprobado» dice lo que se ha verificado de forma automática. Además, Inlay ya se ha
-instalado y usado con el permiso de Accesibilidad (primera prueba, 2026-10-11). De esa prueba salieron los
-cambios de esta revisión, que **aún no se han probado en uso real**, solo con tests e imágenes renderizadas:
-firma estable por defecto, reparto en rejilla al arrancar (`startup-layout`), recuperar el sitio al volver de
-minimizar o de pantalla completa nativa, *glow* opcional en el borde, item de la barra solo informativo y
-colores por modo en Ajustes.
+instalado y usado con el permiso de Accesibilidad en dos rondas (2026-10-11). En la segunda, con la versión
+que ya tenía la firma estable, la rejilla al arrancar, la recuperación del sitio, el *glow*, el item solo
+informativo y los colores por modo, no se notó ningún problema con los bordes (ni desfase, ni orden incorrecto,
+ni bordes huérfanos). De esa segunda ronda salieron los cambios de esta revisión, que **aún no se han probado
+en uso real**, solo con tests: `split-target` y `min-window-size`, diálogos sin borde, 6 workspaces en la config
+incluida, el item de la barra sin resaltado al clic izquierdo, los atajos del menú como texto, y la ventana
+minimizada que vuelve a su workspace.
 
 Limitaciones conocidas de esta versión:
 
@@ -121,8 +123,28 @@ su vecina recupera el espacio.
 [tiling]
     new-window-placement = 'dwindle'   # o 'after-focused': el comportamiento de AeroSpace
     split-ratio = 0.5                  # 0.1 – 0.9: fracción que conserva la ventana que se divide
+    split-target = 'focused'           # o 'cursor': la nueva divide la ventana que está bajo el cursor
     startup-layout = 'grid'            # 'grid' | 'row' | 'dwindle': las ventanas que ya estaban abiertas
+    min-window-size = 100              # 20 – 500 pt: hasta dónde encogen `resize` y el ratón
 ```
+
+**Qué ventana se divide** (`split-target`, solo con `dwindle`): con `'focused'` (por defecto), la enfocada; si
+la enfocada no está en mosaico en ese workspace, la más reciente en mosaico. Con `'cursor'`, la ventana en
+mosaico que está bajo el cursor del ratón, como en Hyprland; si no hay ninguna (el cursor está en un hueco, en
+otro monitor o sobre una ventana a pantalla completa, o el workspace de destino no está visible), se aplica
+`'focused'`. Las ventanas flotantes no cuentan: bajo una flotante se mira la ventana en mosaico que hay detrás.
+
+**Tamaño mínimo** (`min-window-size`, 100 pt por defecto): el comando `resize` y el arrastre de un borde con el
+ratón dejan de encoger una ventana al llegar a ese ancho o alto, y tampoco encogen por debajo de él a las
+vecinas cuando la que crece es la otra (las vecinas que aún tienen margen ceden el resto). Con el ratón, el
+borde que se arrastró más allá vuelve al límite al soltar. Llegar al límite no es un error: `resize` sale con
+código 0 y sin mensaje, igual que antes (no tiene `--fail-if-noop`), porque en un modo de redimensionado con la
+tecla mantenida el límite se alcanza continuamente. Solo limita el redimensionado: si las ventanas de un
+workspace no caben con ese tamaño (muchas ventanas en un monitor pequeño, o una ventana dividida varias veces),
+el reparto les da menos, hasta el suelo de seguridad del layout (el hueco interior más 1 pt), y `resize`
+simplemente no las encoge más. `resize` trabaja siempre en puntos de pantalla.
+
+Las dos claves están también en **Ajustes › General › Tiling** («Window to split» y «Minimum window size»).
 
 Las ventanas que **ya están abiertas cuando Inlay arranca** (o cuando se reanuda con `inlay enable on`) no se
 colocan una a una: se reparten, workspace por workspace, según `startup-layout`.
@@ -144,8 +166,13 @@ recupera al volver:
 
 - Si su contenedor sigue existiendo, vuelve a su posición y la vecina le devuelve el espacio.
 - Si el contenedor desapareció (tenía solo dos ventanas y se aplanó), se vuelve a dividir a la vecina igual que antes.
-- Si ya no queda ni contenedor ni vecina, o vuelve en otro workspace (una ventana minimizada reaparece en el
-  workspace enfocado), entra como una ventana nueva.
+- Si ya no queda ni contenedor ni vecina, entra como una ventana nueva.
+
+Una ventana **minimizada** recuerda además su workspace (una ventana minimizada no pertenece a ninguno). Si se
+restaura mientras estás en otro workspace, vuelve al suyo y a su sitio, y **el foco la sigue**: Inlay cambia a
+ese workspace. Si el sitio ya no es recuperable, entra en su workspace como una ventana nueva. Solo si su
+workspace ya no existe (no era persistente y se quedó sin ventanas) entra como ventana nueva en el workspace
+enfocado.
 
 Inlay **no tiene layout *accordion***. Para poder usar tal cual un `aerospace.toml`, sus formas se aceptan con
 un aviso (no con un error) y se tratan como `tiles`:
@@ -182,7 +209,15 @@ a la de Aeromenu; un color fijo no se adapta a la barra.
 - El item es **solo informativo**: el clic izquierdo no hace nada (no cambia de workspace ni abre el menú).
   El **clic derecho** (o ctrl-clic) abre el menú: workspaces, ventana enfocada, layout, modo, config, pausar y
   Ajustes. Con VoiceOver, «pulsar» el item (VO-espacio) abre el menú. Para cambiar de workspace: los atajos, la
-  CLI o la sección *Workspaces* del menú.
+  CLI o la sección *Workspaces* del menú. El clic izquierdo tampoco resalta el item: el botón no llega a ver
+  el ratón (lo recoge una vista transparente que tiene encima). Con el menú abierto, el item se resalta como
+  cualquier menú de la barra. Un ⌘-arrastre sigue moviendo el item por la barra.
+- El menú muestra a la derecha de cada item, en una insignia, **el atajo del modo `main`** que ejecuta ese mismo
+  comando. Es solo texto de referencia: con el menú abierto, pulsar esa combinación no elige el item. Los
+  atajos propios del menú (⌘R, ⌘E, ⌘, y ⌘Q) sí son atajos de verdad mientras está abierto.
+- La config incluida define **6 workspaces persistentes** (1–6), que son los que el item muestra siempre. Los
+  atajos de 7–9 y de A–Z se conservan: esos workspaces existen (y aparecen en el item) mientras tienen ventanas
+  o son el visible.
 - **Ajustes…** (⌘, en el menú, o abrir Inlay otra vez desde Aplicaciones) edita esas claves **en tu fichero de
   config**, línea a línea y sin tocar comentarios ni el resto del fichero, y recarga la config. Si la config es
   un enlace simbólico, se escribe en su destino. Si aún no tienes config, el primer cambio crea
@@ -215,7 +250,13 @@ o en la pestaña **Borders** de Ajustes.
   `inactive-color = '#00000000'` solo lleva borde la ventana activa.
 - **Sin borde**: ventanas en pantalla completa (la de Inlay y la nativa de macOS) y las ventanas en mosaico que
   tapan, minimizadas, de apps ocultas, popups, las de workspaces no visibles, y la ventana que estás arrastrando
-  o redimensionando con el ratón (el borde vuelve al soltar). Los diálogos son ventanas flotantes y sí llevan.
+  o redimensionando con el ratón (el borde vuelve al soltar).
+- **Diálogos y hojas, sin borde**: solo llevan borde las ventanas normales, en mosaico o flotantes. Lo que
+  Inlay detecta como diálogo (las mismas heurísticas de AeroSpace que deciden qué ventana se pone flotante
+  sola: paneles de abrir y guardar, hojas, ventanas sin botón de pantalla completa…) no lleva borde. Una
+  ventana normal que tú pasas a flotante (`layout floating`, o una regla `on-window-detected`) sí lo lleva. Si
+  conviertes un diálogo en mosaico lleva borde mientras esté en mosaico. Con un diálogo enfocado, ninguna
+  ventana lleva el color de la activa.
 - El borde va **por fuera** del marco de la ventana, en el hueco entre ventanas: no tapa contenido y no recibe
   clics. Conviene que los `gaps` sean al menos el doble de `width` (la config incluida usa 14 con el borde de 4);
   con gaps más pequeños los bordes de dos ventanas vecinas se tocan o se solapan.

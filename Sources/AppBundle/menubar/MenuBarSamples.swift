@@ -22,7 +22,14 @@ enum MenuBarSamples {
     static func image(_ config: MenuBarConfig, snapshot: MenuBarSnapshot = snapshot, isDarkBar: Bool, scale: CGFloat) -> NSImage? {
         let layout = MenuBarLayout.make(snapshot, config, measure: MenuBarFont.size)
         // Never a template: nobody is going to pick black or white for it
-        let palette = MenuBarPalette.resolve(config, style: layout.style, isDarkBar: isDarkBar, systemAccent: .systemAccent, needsColor: true)
+        let palette = MenuBarPalette.resolve(
+            config,
+            style: layout.style,
+            isDarkBar: isDarkBar,
+            systemAccent: .systemAccent,
+            needsColor: layout.needsColor,
+            allowsTemplate: false,
+        )
         return MenuBarRenderer.image(layout, palette, scale: scale)
     }
 }
@@ -44,6 +51,8 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     resize.mode = "resize"
     var fullscreen = MenuBarSamples.snapshot
     fullscreen.isFocusedWorkspaceFullscreen = true
+    var resizeFullscreen = resize
+    resizeFullscreen.isFocusedWorkspaceFullscreen = true
     var paused = MenuBarSamples.snapshot
     paused.status = .paused
     var needsAccessibility = MenuBarSamples.snapshot
@@ -54,7 +63,9 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
         variants.append(("\(theme.rawValue)-default", MenuBarConfig(theme: theme), MenuBarSamples.snapshot))
         variants.append(("\(theme.rawValue)-custom", MenuBarConfig(theme: theme, colors: custom), MenuBarSamples.snapshot))
         variants.append(("\(theme.rawValue)-mode", MenuBarConfig(theme: theme, showMode: true), resize))
+        variants.append(("\(theme.rawValue)-mode-accent", MenuBarConfig(theme: theme, showMode: true, colors: MenuBarColors(accent: .systemAccent)), resize))
         variants.append(("\(theme.rawValue)-mode-custom", MenuBarConfig(theme: theme, showMode: true, colors: custom), resize))
+        variants.append(("\(theme.rawValue)-mode-fullscreen", MenuBarConfig(theme: theme, showMode: true), resizeFullscreen))
         variants.append(("\(theme.rawValue)-fullscreen", MenuBarConfig(theme: theme), fullscreen))
     }
     variants.append(("chips-no-dim", MenuBarConfig(dimEmptyWorkspaces: false), MenuBarSamples.snapshot))

@@ -48,7 +48,7 @@ extension InlayTests {
             assertEquals(model.int(.minWindowSize), 100)
             assertEquals(model.string(.menuBarTheme), "chips")
             assertEquals(model.bool(.menuBarEnabled), true)
-            assertEquals(model.color(.menuBarAccent), .systemAccent)
+            assertEquals(model.color(.menuBarAccent), .auto)
             assertEquals(model.color(.menuBarFocused), .auto)
             assertEquals(model.int(.bordersWidth), 4)
             assertEquals(model.isSet(.menuBarTheme), false)

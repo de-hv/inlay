@@ -14,20 +14,27 @@ struct MenuBarPalette: Equatable, Sendable {
     var occupiedName: Rgba
     var occupiedBackground: Rgba
     var emptyName: Rgba
-    var accent: Rgba
-    var accentName: Rgba
+    /// The focus marker while it shows the initial of the binding mode: 'accent', or the same as 'focused' if it is 'auto'
+    var modeMarker: Rgba
+    /// The initial of the binding mode. nil: it is cut out of the marker
+    var modeInitial: Rgba?
 
-    /// - Parameter needsColor: something in the item can't be a template: the mode badge
+    /// - Parameter needsColor: the marker shows the initial of the binding mode. See: MenuBarLayout.needsColor
+    /// - Parameter allowsTemplate: false to get the colors of the menu bar text baked in, for an image that isn't
+    ///   going to a menu bar
     static func resolve(
         _ config: MenuBarConfig,
         style: MenuBarLayout.Style,
         isDarkBar: Bool,
         systemAccent: Rgba,
         needsColor: Bool = false,
+        allowsTemplate: Bool = true,
     ) -> MenuBarPalette {
         typealias M = MenuBarMetrics
         let colors = config.colors
-        let isTemplate = !needsColor && colors.focused == .auto && colors.occupied == .auto && colors.empty == .auto
+        // The marker of a binding mode only has a color of its own if 'accent' gives it one
+        let isTemplate = allowsTemplate && !(needsColor && colors.accent != .auto)
+            && colors.focused == .auto && colors.occupied == .auto && colors.empty == .auto
         // A template image is drawn in black: only its alpha channel matters
         let base: Rgba = isTemplate || !isDarkBar ? .black : .white
         func fixed(_ color: ConfigColor) -> Rgba? { color == .auto ? nil : color.resolve(auto: base, systemAccent: systemAccent) }
@@ -35,19 +42,21 @@ struct MenuBarPalette: Equatable, Sendable {
         // The names of the square style have no background to stand out from, so they aren't faded
         let nameOpacity = style == .square ? 1 : M.chipNameOpacity
         let occupiedName = fixed(colors.occupied) ?? base.opacity(nameOpacity)
-        let accent = colors.accent.resolve(auto: systemAccent, systemAccent: systemAccent)
+        let accent = fixed(colors.accent)
+        let focused = fixed(colors.focused) ?? base
+        let focusedName = fixed(colors.focused)?.contrastingBlackOrWhite
         return MenuBarPalette(
             isTemplate: isTemplate,
             base: base,
-            focused: fixed(colors.focused) ?? base,
-            focusedName: fixed(colors.focused)?.contrastingBlackOrWhite,
+            focused: focused,
+            focusedName: focusedName,
             occupiedName: occupiedName,
             occupiedBackground: fixed(colors.occupied)?.opacity(M.chipColorOpacity) ?? base.opacity(M.chipOpacity),
             // Without dimming, an empty workspace only differs from an occupied one in its missing background
             emptyName: config.dimEmptyWorkspaces ? fixed(colors.empty) ?? base.opacity(M.emptyWorkspaceOpacity) : occupiedName,
-            accent: accent,
+            modeMarker: accent ?? focused,
             // White, like the system does over the accent color, unless the accent is too light for it
-            accentName: accent.luminance > 0.6 ? .black : .white,
+            modeInitial: accent.map { $0.luminance > 0.6 ? .black : .white } ?? focusedName,
         )
     }
 
@@ -55,6 +64,6 @@ struct MenuBarPalette: Equatable, Sendable {
 }
 
 extension MenuBarLayout {
-    /// The mode badge has a color of its own. See: MenuBarPalette.isTemplate
-    var needsColor: Bool { modeBadge != nil }
+    /// The marker shows the initial of the binding mode, so it is drawn in the 'accent' color. See: MenuBarPalette.isTemplate
+    var needsColor: Bool { marker?.initial != nil }
 }

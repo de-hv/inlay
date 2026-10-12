@@ -26,8 +26,8 @@ private let obsoleteChipsIconsTheme = "chips-icons"
 
 /// [menu-bar.colors] table of the config
 struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
-    /// The mode badge
-    var accent: ConfigColor = .systemAccent
+    /// The focus marker while it shows the initial of the binding mode ('show-mode'). 'auto': the same as 'focused'
+    var accent: ConfigColor = .auto
     /// The background of the focused workspace
     var focused: ConfigColor = .auto
     /// The workspaces with windows
@@ -46,7 +46,7 @@ let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
 ]
 
 let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
-    "accent": Parser(\.accent, parseConfigColor(allowAuto: false)),
+    "accent": Parser(\.accent, parseConfigColor(allowAuto: true)),
     "focused": Parser(\.focused, parseConfigColor(allowAuto: true)),
     "occupied": Parser(\.occupied, parseConfigColor(allowAuto: true)),
     "empty": Parser(\.empty, parseConfigColor(allowAuto: true)),

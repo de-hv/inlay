@@ -33,7 +33,7 @@ extension SettingsKey {
     static let menuBarTheme = SettingsKey(["menu-bar"], "theme", default: .string(MenuBarTheme.chips.rawValue))
     static let menuBarDimEmpty = SettingsKey(["menu-bar"], "dim-empty-workspaces", default: .bool(true))
     static let menuBarShowMode = SettingsKey(["menu-bar"], "show-mode", default: .bool(false))
-    static let menuBarAccent = SettingsKey(["menu-bar", "colors"], "accent", default: .string(ConfigColor.systemAccentLiteral))
+    static let menuBarAccent = SettingsKey(["menu-bar", "colors"], "accent", default: .string(ConfigColor.autoLiteral))
     static let menuBarFocused = SettingsKey(["menu-bar", "colors"], "focused", default: .string(ConfigColor.autoLiteral))
     static let menuBarOccupied = SettingsKey(["menu-bar", "colors"], "occupied", default: .string(ConfigColor.autoLiteral))
     static let menuBarEmpty = SettingsKey(["menu-bar", "colors"], "empty", default: .string(ConfigColor.autoLiteral))

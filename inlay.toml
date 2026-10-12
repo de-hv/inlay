@@ -108,9 +108,9 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     dim-empty-workspaces = true
     show-mode = false
 
-    # '#RRGGBB', '#RRGGBBAA', 'system-accent' or (not for 'accent') 'auto'
+    # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto'
     [menu-bar.colors]
-        accent = 'system-accent'
+        accent = 'auto'
         focused = 'auto'
         occupied = 'auto'
         empty = 'auto'

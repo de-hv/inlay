@@ -14,7 +14,7 @@ extension InlayTests {
             assertEquals(menuBar.theme, .chips)
             assertEquals(menuBar.dimEmptyWorkspaces, true)
             assertEquals(menuBar.showMode, false)
-            assertEquals(menuBar.colors, MenuBarColors(accent: .systemAccent, focused: .auto, occupied: .auto, empty: .auto))
+            assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.menuBar, MenuBarConfig())
         }
@@ -113,11 +113,11 @@ extension InlayTests {
                 parseConfig("menu-bar.colors.focused = 'red'").strErrors,
                 ["[ERROR] menu-bar.colors.focused: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent', 'auto'"],
             )
-            // 'auto' has no meaning for the accent
-            assertEquals(
-                parseConfig("menu-bar.colors.accent = 'auto'").strErrors,
-                ["[ERROR] menu-bar.colors.accent: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'"],
-            )
+            // 'auto' for the accent: the marker of a binding mode is the one of the focused workspace
+            let auto = parseConfig("config-version = 2\nmenu-bar.colors.accent = 'auto'")
+            assertEquals(auto.strErrors, [])
+            assertEquals(auto.config.menuBar.colors.accent, .auto)
+            assertEquals(parseConfig("config-version = 2\nmenu-bar.colors.accent = 'system-accent'").config.menuBar.colors.accent, .systemAccent)
             assertEquals(
                 parseConfig("menu-bar.colors.empty = 0xFF0000").strErrors,
                 ["[ERROR] menu-bar.colors.empty: Expected type is 'String'. But actual type is 'Int'"],

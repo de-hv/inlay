@@ -354,7 +354,7 @@ struct MenuBarSettingsView: View {
                 ToggleRow(model: model, title: Strings.Settings.showMode, detail: Strings.Settings.showModeDetail, key: .menuBarShowMode)
             }
             Section {
-                ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: false)
+                ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: true)
                 ColorRow(model: model, title: Strings.Settings.focused, key: .menuBarFocused, allowsAuto: true)
                 ColorRow(model: model, title: Strings.Settings.occupied, key: .menuBarOccupied, allowsAuto: true)
                 ColorRow(model: model, title: Strings.Settings.emptyColor, key: .menuBarEmpty, allowsAuto: true)
@@ -370,7 +370,7 @@ struct MenuBarSettingsView: View {
     }
 
     /// The item as the window leaves it, in a dark and in a light menu bar: a fixed color doesn't adapt to the menu bar.
-    /// The sample is in the 'resize' mode when the mode is shown, so the badge can be seen
+    /// The sample is in the 'resize' mode when the mode is shown, so its initial can be seen in the marker
     private var preview: some View {
         let config = model.menuBarConfig
         var snapshot = MenuBarSamples.snapshot

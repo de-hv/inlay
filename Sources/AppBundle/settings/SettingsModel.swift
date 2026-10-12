@@ -109,19 +109,16 @@ final class SettingsModel {
 
     /// The [menu-bar] table as the window has it, for the preview
     var menuBarConfig: MenuBarConfig {
-        func color(_ key: SettingsKey, allowAuto: Bool, _ fallback: ConfigColor) -> ConfigColor {
-            (try? ConfigColor.parse(string(key), allowAuto: allowAuto).get()) ?? fallback
-        }
-        return MenuBarConfig(
+        MenuBarConfig(
             enabled: bool(.menuBarEnabled),
             theme: menuBarTheme,
             dimEmptyWorkspaces: bool(.menuBarDimEmpty),
             showMode: bool(.menuBarShowMode),
             colors: MenuBarColors(
-                accent: color(.menuBarAccent, allowAuto: false, .systemAccent),
-                focused: color(.menuBarFocused, allowAuto: true, .auto),
-                occupied: color(.menuBarOccupied, allowAuto: true, .auto),
-                empty: color(.menuBarEmpty, allowAuto: true, .auto),
+                accent: color(.menuBarAccent),
+                focused: color(.menuBarFocused),
+                occupied: color(.menuBarOccupied),
+                empty: color(.menuBarEmpty),
             ),
         )
     }

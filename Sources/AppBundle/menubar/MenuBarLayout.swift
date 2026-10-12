@@ -27,10 +27,12 @@ enum MenuBarMetrics {
     static let focusSquareCornerRadius: CGFloat = 2
     static let markerClearance: CGFloat = 1.5
 
-    static let modeBadge: CGFloat = 14
-    static let modeBadgeCornerRadius: CGFloat = 3.5
-    static let modeBadgeFontSize: CGFloat = 10.5
-    static let chipsToModeBadge: CGFloat = 6
+    /// The square of the square style while it shows the initial of the binding mode
+    static let modeSquare: CGFloat = 14
+    static let modeSquareCornerRadius: CGFloat = 3.5
+    static let modeSquareFontSize: CGFloat = 10.5
+    /// The initial of the binding mode in a chip. The size it had in the Chips style of Aeromenu
+    static let chipModeFontSize: CGFloat = 11
 
     static let glyphSide: CGFloat = 6
     static let glyphGap: CGFloat = 1.5
@@ -50,8 +52,10 @@ enum MenuBarFont: Equatable, Sendable {
     case chipName
     /// SF 13.5 pt medium, monospaced digits
     case squareName
-    /// SF 10.5 pt heavy
+    /// SF 10.5 pt heavy: the initial of the binding mode in the square
     case modeInitial
+    /// SF 11 pt heavy: the initial of the binding mode in a chip
+    case chipModeInitial
 }
 
 /// The focus marker on its way from the previously focused workspace to the focused one: one frame of the slide
@@ -96,13 +100,10 @@ struct MenuBarLayout: Equatable, Sendable {
         var cornerRadius: CGFloat
         /// Outlined instead of filled: one of the windows of the workspace is fullscreen
         var isOutlined: Bool
-        /// Square style, outside of the main mode: the initial of the mode inside of the marker
+        /// With 'show-mode', outside of the main mode: the initial of the binding mode inside of the marker.
+        /// A chip shows it instead of the name of the workspace, and the square grows to make room for it.
+        /// Either way the item is as wide as in the main mode, like in Aeromenu
         var initial: Text? = nil
-    }
-
-    struct ModeBadge: Equatable, Sendable {
-        var frame: CGRect
-        var initial: Text
     }
 
     struct LayoutIcon: Equatable, Sendable {
@@ -126,7 +127,6 @@ struct MenuBarLayout: Equatable, Sendable {
     var layoutIcon: LayoutIcon? = nil
     var cells: [Cell] = []
     var marker: Marker? = nil
-    var modeBadge: ModeBadge? = nil
     var placeholder: Placeholder? = nil
 }
 
@@ -156,7 +156,7 @@ extension MenuBarLayout {
             case .minimal: chips(snapshot, config, snapshot.workspaces.filter { $0.name == snapshot.focusedWorkspace }, focusAmount, measure)
             case .square: square(snapshot, config, focusAmount, measure)
         }
-        layout.placeMarker(snapshot, from: from, progress: from == nil ? 1 : progress, measure)
+        layout.placeMarker(snapshot, mode: config.showMode ? snapshot.nonMainMode : nil, from: from, progress: from == nil ? 1 : progress, measure)
         return layout
     }
 
@@ -187,14 +187,7 @@ extension MenuBarLayout {
             ))
             x = frame.maxX + M.chipSpacing
         }
-        var width = max(0, x - M.chipSpacing)
-        var badge: ModeBadge? = nil
-        if config.showMode, let mode = snapshot.nonMainMode {
-            let frame = CGRect(x: width + M.chipsToModeBadge, y: (M.height - M.modeBadge) / 2, width: M.modeBadge, height: M.modeBadge)
-            badge = ModeBadge(frame: frame, initial: initial(of: mode, in: frame, measure))
-            width = frame.maxX
-        }
-        return MenuBarLayout(style: .chips, size: CGSize(width: width, height: M.height), cells: cells, modeBadge: badge)
+        return MenuBarLayout(style: .chips, size: CGSize(width: max(0, x - M.chipSpacing), height: M.height), cells: cells)
     }
 
     // MARK: - Square
@@ -212,7 +205,8 @@ extension MenuBarLayout {
         for workspace in snapshot.workspaces {
             let focus = focusAmount(workspace.name)
             let nameSize = measure(workspace.name, .squareName)
-            // The slot is wide enough for the mode badge while focused, in every mode, so nothing shifts when the mode changes
+            // The slot is wide enough for the square of a binding mode while focused, in every mode, so nothing shifts
+            // when the mode changes
             let slot = CGRect(
                 x: x,
                 y: 0,
@@ -234,7 +228,8 @@ extension MenuBarLayout {
 
     // MARK: - Shared
 
-    private mutating func placeMarker(_ snapshot: MenuBarSnapshot, from: String?, progress: Double, _ measure: Measure) {
+    /// - Parameter mode: the binding mode to show in the marker, if any
+    private mutating func placeMarker(_ snapshot: MenuBarSnapshot, mode: String?, from: String?, progress: Double, _ measure: Measure) {
         typealias M = MenuBarMetrics
         guard let end = cells.first(where: { $0.workspace == snapshot.focusedWorkspace })?.frame else { return }
         let start = from.flatMap { from in cells.first { $0.workspace == from } }?.frame ?? end
@@ -242,27 +237,29 @@ extension MenuBarLayout {
         switch style {
             case .chips:
                 let width = start.width + (end.width - start.width) * progress
+                let frame = CGRect(x: midX - width / 2, y: end.minY, width: width, height: end.height)
                 marker = Marker(
-                    frame: CGRect(x: midX - width / 2, y: end.minY, width: width, height: end.height),
+                    frame: frame,
                     cornerRadius: M.chipCornerRadius,
                     isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    // The chip is at least as wide as it is tall, so one character always fits
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },
                 )
             case .square:
-                let mode = snapshot.nonMainMode
-                let side = mode == nil ? M.focusSquare : M.modeBadge
+                let side = mode == nil ? M.focusSquare : M.modeSquare
                 let frame = CGRect(x: midX - side / 2, y: end.midY - side / 2, width: side, height: side)
                 marker = Marker(
                     frame: frame,
-                    cornerRadius: mode == nil ? M.focusSquareCornerRadius : M.modeBadgeCornerRadius,
+                    cornerRadius: mode == nil ? M.focusSquareCornerRadius : M.modeSquareCornerRadius,
                     isOutlined: snapshot.isFocusedWorkspaceFullscreen,
-                    initial: mode.map { MenuBarLayout.initial(of: $0, in: frame, measure) },
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
                 )
         }
     }
 
-    private static func initial(of mode: String, in frame: CGRect, _ measure: Measure) -> Text {
+    private static func initial(of mode: String, _ font: MenuBarFont, in frame: CGRect, _ measure: Measure) -> Text {
         let string = modeInitial(mode)
-        return Text(string: string, font: .modeInitial, frame: measure(string, .modeInitial).centered(in: frame))
+        return Text(string: string, font: font, frame: measure(string, font).centered(in: frame))
     }
 
     /// 'resize' -> 'R'. A mode named in another script keeps its own first character

@@ -118,15 +118,15 @@ theme = 'chips'                                               # defecto: 'chips'
 # Dibujar más tenues los workspaces sin ventanas.             (defecto: true)
 dim-empty-workspaces = true
 
-# Mostrar el modo de atajos cuando no es 'main': una insignia con su inicial
-# en los temas de chips. En 'square' el cuadrado del enfocado ya lo hace
-# siempre.                                                    (defecto: false)
+# Mostrar el modo de atajos cuando no es 'main': su inicial en el marcador del
+# workspace enfocado (el chip, o el cuadrado de 'square'), sin cambiar el ancho
+# del item.                                                   (defecto: false)
 show-mode = false
 
 [menu-bar.colors]
 # Los cuatro son opcionales. Con los valores por defecto el item es monocromo
 # y se adapta a la barra, igual que Aeromenu.
-accent   = 'system-accent'   # insignia de modo                (defecto: 'system-accent')
+accent   = 'auto'            # marcador con el modo de atajos  (defecto: 'auto' = como 'focused')
 focused  = 'auto'            # fondo del workspace enfocado    (defecto: 'auto')
 occupied = 'auto'            # workspaces con ventanas         (defecto: 'auto')
 empty    = 'auto'            # workspaces vacíos               (defecto: 'auto')

@@ -8,7 +8,8 @@ extension MenuBarFont {
         return switch self {
             case .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold)
             case .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium)
-            case .modeInitial: .systemFont(ofSize: M.modeBadgeFontSize, weight: .heavy)
+            case .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy)
+            case .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy)
         }
     }
 
@@ -55,8 +56,12 @@ enum MenuBarRenderer {
         for index in layout.cells.indices where layout.style == .chips {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
-        if let frame = layout.marker?.frame { layout.marker?.frame = snap(frame) }
-        if let frame = layout.modeBadge?.frame { layout.modeBadge?.frame = snap(frame) }
+        if let marker = layout.marker {
+            let frame = snap(marker.frame)
+            layout.marker?.frame = frame
+            // The initial of the binding mode goes with its marker
+            layout.marker?.initial?.frame = marker.initial?.frame.offsetBy(dx: frame.minX - marker.frame.minX, dy: frame.minY - marker.frame.minY) ?? .zero
+        }
         pixel = 1 / scale
         if let placeholder = layout.placeholder {
             draw(placeholder, palette, in: cg)
@@ -65,10 +70,6 @@ enum MenuBarRenderer {
         switch layout.style {
             case .chips: drawChips(layout, palette, in: cg)
             case .square: drawSquare(layout, palette, in: cg)
-        }
-        if let badge = layout.modeBadge {
-            cg.fill(roundedRect(badge.frame, MenuBarMetrics.modeBadgeCornerRadius), palette.accent)
-            draw(badge.initial, palette.accentName)
         }
     }
 
@@ -88,6 +89,11 @@ enum MenuBarRenderer {
         let path = roundedRect(marker.frame, marker.cornerRadius)
         // Clears the faint chip under the marker
         cg.fill(path, .black, blendMode: .destinationOut)
+        if let initial = marker.initial {
+            // A binding mode: its initial instead of the name of the workspace
+            draw(marker, initial, palette, in: cg)
+            return
+        }
         if marker.isOutlined {
             cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
         } else {
@@ -126,17 +132,29 @@ enum MenuBarRenderer {
         // Clears what is under the marker first: mid-slide it passes over the names in between
         let clearance = marker.frame.insetBy(dx: -M.markerClearance, dy: -M.markerClearance)
         cg.fill(roundedRect(clearance, marker.cornerRadius + M.markerClearance), .black, blendMode: .destinationOut)
-        if marker.isOutlined {
+        if let initial = marker.initial {
+            draw(marker, initial, palette, in: cg)
+        } else if marker.isOutlined {
             cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
-            if let initial = marker.initial { draw(initial, palette.focused) }
         } else {
             cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.focused)
-            if let initial = marker.initial {
-                switch palette.focusedName {
-                    case let color?: draw(initial, color)
-                    case nil: draw(initial, .black, blendMode: .destinationOut)
-                }
-            }
+        }
+    }
+
+    // MARK: - Binding mode
+
+    /// The marker of a binding mode, the same in every theme: the initial of the mode cut out of a filled marker
+    /// (or in black or white, over a fixed color), or drawn inside of an outlined one while a window is fullscreen
+    private static func draw(_ marker: MenuBarLayout.Marker, _ initial: MenuBarLayout.Text, _ palette: MenuBarPalette, in cg: CGContext) {
+        if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: MenuBarMetrics.outlineWidth, palette.modeMarker)
+            draw(initial, palette.modeMarker)
+            return
+        }
+        cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker)
+        switch palette.modeInitial {
+            case let color?: draw(initial, color)
+            case nil: draw(initial, .black, blendMode: .destinationOut)
         }
     }
 

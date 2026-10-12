@@ -265,8 +265,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): dim-empty-workspaces = true
     dim-empty-workspaces = true
 
-    # Show a badge with the initial of the binding mode when the mode isn't 'main'.
-    # The 'square' theme always shows the mode in its square
+    # Show the binding mode when it isn't 'main': its initial ('R' for 'resize') on the marker of the focused
+    # workspace. In 'chips' and 'minimal' the initial takes the place of the name in the chip; in 'square' the
+    # square grows to hold it. The item keeps its width: nothing moves when the mode changes
     # Possible values: true|false
     # Fallback value (if you omit the key): show-mode = false
     show-mode = false
@@ -276,13 +277,14 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - '#RRGGBB' or '#RRGGBBAA'
     # - 'system-accent'. System Settings -> Appearance -> Accent color
     # - 'auto'.          The color of the menu bar text: white on a dark menu bar, black on a light one.
-    #                    Not available for 'accent'
+    #                    For 'accent': the same as 'focused'
     # With a fixed color in 'focused', the name of the workspace is drawn in black or white,
     # whichever has more contrast. A fixed color doesn't adapt to the menu bar
     [menu-bar.colors]
-        # The mode badge
-        # Fallback value (if you omit the key): accent = 'system-accent'
-        accent = 'system-accent'
+        # The marker of the focused workspace while it shows the binding mode (see 'show-mode').
+        # With a fixed color, the initial is drawn in white, or in black over a light color
+        # Fallback value (if you omit the key): accent = 'auto'
+        accent = 'auto'
 
         # The background of the focused workspace
         # Fallback value (if you omit the key): focused = 'auto'

@@ -15,36 +15,70 @@ extension InlayTests {
             return (result.config, result.strErrors, result.strWarnings)
         }
 
-        @Test func testDefaultConfig() throws {
-            let result = try parse("docs/config-examples/default-config.toml")
+        /// inlay.toml, at the root of the repo: the config that install.sh copies and that the app bundle carries
+        @Test func testBuiltInConfig() throws {
+            let result = try parse("inlay.toml")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
-            // The values that the config spells out are the defaults of the code
+            // The tables of Inlay are spelled out with the defaults of the code
             assertEquals(result.config.tiling, TilingConfig())
             assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders, BordersConfig())
-            // The same as a config that says nothing about them
-            let bare = parseConfig("config-version = 2\n").config
-            assertEquals(bare.tiling, result.config.tiling)
-            assertEquals(bare.menuBar, result.config.menuBar)
-            assertEquals(bare.borders, result.config.borders)
+            // Saving the file by hand reloads it, which is what keeps the settings window in sync with it
+            assertEquals(result.config.autoReloadConfig, true)
+            // It is the config that the app falls back to
+            assertEquals(defaultConfigUrl.lastPathComponent, "inlay.toml")
+            assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8))
         }
 
         /// What the built-in config gives to somebody who installs Inlay without a config of their own
-        @Test func testDefaultConfig_workspacesAndBindings() throws {
-            let config = try parse("docs/config-examples/default-config.toml").config
+        @Test func testBuiltInConfig_workspacesAndBindings() throws {
+            let config = try parse("inlay.toml").config
             assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6"])
-            func runs(_ binding: String, _ command: String) -> Bool {
-                let bound = config.modes[mainModeId]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
+            assertEquals(config.modes.keys.sorted(), ["main", "resize", "service"])
+            func runs(_ binding: String, _ command: String, mode: String = mainModeId) -> Bool {
+                let bound = config.modes[mode]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
                 return bound?.commands.strictEquals(parseCommand(command).cmdOrDie) == true
             }
-            // The workspaces that aren't persistent keep their bindings: they exist while they are in use
-            for name in ["1", "6", "7", "9", "A", "Z"] {
-                assertEquals(runs("alt-\(name.lowercased())", "workspace \(name)"), true, additionalMsg: name)
-                assertEquals(runs("alt-shift-\(name.lowercased())", "move-node-to-workspace \(name)"), true, additionalMsg: name)
+            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p"], 1 ... 6) {
+                assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
+                assertEquals(runs("cmd-alt-shift-\(key)", "move-node-to-workspace \(workspace)"), true, additionalMsg: key)
+            }
+            for direction in ["left", "down", "up", "right"] {
+                assertEquals(runs("cmd-alt-\(direction)", "focus \(direction)"), true, additionalMsg: direction)
+                assertEquals(runs("cmd-alt-ctrl-\(direction)", "move \(direction)"), true, additionalMsg: direction)
+                assertEquals(runs("cmd-alt-ctrl-\(direction)", "join-with \(direction); mode main", mode: "service"), true, additionalMsg: direction)
             }
             assertTrue(runs("cmd-alt-comma", "balance-sizes"))
-            assertTrue(runs("alt-slash", "layout tiles horizontal vertical"))
+            assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
+        }
+
+        /// Nothing of the accordion layout, which Inlay doesn't have, and nothing that talks to AeroSpace
+        @Test func testBuiltInConfig_noAccordionAndNoAeroSpaceCli() throws {
+            let text = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
+            let code = text.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("#") }.joined(separator: "\n")
+            assertEquals(text.lowercased().contains("accordion"), false)
+            assertEquals(code.lowercased().contains("aerospace"), false)
+            assertEquals(code.contains("exec-and-forget"), false)
+            assertEquals(code.contains("$HOME") || code.contains("/Users/"), false)
+        }
+
+        /// The rules that send the windows of an app to its workspace
+        @Test func testBuiltInConfig_windowRules() throws {
+            let config = try parse("inlay.toml").config
+            func workspace(of appId: String) -> String? {
+                config.onWindowDetected.lazy.compactMap { rule -> String? in
+                    guard case .legacy(let matcher) = rule.matcher, matcher.appId == appId else { return nil }
+                    return rule.run.flatten().filterIsInstance(of: MoveNodeToWorkspaceCommand.self).first?.args.target.val.workspaceNameOrNil()?.raw
+                }.first
+            }
+            assertEquals(workspace(of: "com.mitchellh.ghostty"), "1")
+            assertEquals(workspace(of: "dev.zed.Zed"), "2")
+            assertEquals(workspace(of: "com.google.Chrome"), "3")
+            assertEquals(workspace(of: "com.tinyspeck.slackmacgap"), "4")
+            assertEquals(workspace(of: "com.anthropic.claudefordesktop"), "5")
+            assertEquals(workspace(of: "com.apple.finder"), nil) // It only floats
+            assertEquals(config.workspaceToMonitorForceAssignment.keys.sorted(), ["1", "2", "3", "4", "5", "6"])
         }
 
         @Test func testI3LikeExample() throws {
@@ -62,23 +96,8 @@ extension InlayTests {
             assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders.copy(\.modeColors, [:]), BordersConfig())
             assertEquals(result.config.borders.modeColors.keys.sorted(), ["resize", "service"])
-            // The gaps are the ones of the built-in config: room for the borders of two neighbors
-            assertEquals(result.config.gaps, try parse("docs/config-examples/default-config.toml").config.gaps)
-            // And the persistent workspaces
-            assertEquals(result.config.persistentWorkspaces, try parse("docs/config-examples/default-config.toml").config.persistentWorkspaces)
-        }
-
-        /// One-off: INLAY_TEST_CONFIG=<path> scripts/test.sh --filter ShippedConfigsTest prints what Inlay says about a config
-        @Test func testConfigFromEnvironment() throws {
-            guard let path = ProcessInfo.processInfo.environment["INLAY_TEST_CONFIG"] else { return }
-            let result = parseConfig(try String(contentsOf: URL(filePath: path), encoding: .utf8))
-            print("INLAY_TEST_CONFIG \(path)")
-            print("  errors (\(result.errors.count)):")
-            result.strErrors.forEach { print("    \($0)") }
-            print("  warnings (\(result.warnings.count)):")
-            result.strWarnings.forEach { print("    \($0)") }
-            print("  allowReloadConfig: \(result.allowReloadConfig)")
-            print("  workspaces: \(result.config.persistentWorkspaces.sorted()) modes: \(result.config.modes.keys.sorted()) bindings(main): \(result.config.modes[mainModeId]?.bindings.count ?? 0)")
+            // The persistent workspaces are the ones of the built-in config
+            assertEquals(result.config.persistentWorkspaces, try parse("inlay.toml").config.persistentWorkspaces)
         }
     }
 }

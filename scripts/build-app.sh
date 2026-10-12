@@ -10,7 +10,9 @@
 # Result:
 #   build/Inlay.app/Contents/MacOS/Inlay                         the app
 #   build/Inlay.app/Contents/Resources/bin/inlay                 the CLI
-#   build/Inlay.app/Contents/Resources/default-config.toml       the built-in config
+#   build/Inlay.app/Contents/Resources/inlay.toml                the built-in config (the inlay.toml of the repo)
+#   build/Inlay.app/Contents/Resources/config-reference.toml     what 'inlay config --explain' prints
+#   build/Inlay.app/Contents/Resources/scripts/                  what 'inlay uninstall' runs
 #
 # The version comes from the VERSION file and the git hash from the repo. Both are sealed into the binaries
 # and into Info.plist.
@@ -27,7 +29,7 @@ cd "$(dirname "$0")/.."
 # shellcheck source=scripts/lib.sh
 . scripts/lib.sh
 
-usage() { sed -n '3,22s/^# \{0,1\}//p' "$0"; }
+usage() { sed -n '3,24s/^# \{0,1\}//p' "$0"; }
 
 # Always a release build: a debug build calls itself Inlay-Debug and uses another bundle id and socket, so it
 # doesn't fit this bundle. For debugging use 'swift build' and run .build/.../InlayApp directly
@@ -84,7 +86,9 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin" "$APP/Contents/Reso
 cp "$BIN_DIR/InlayApp" "$APP/Contents/MacOS/$APP_NAME"
 cp "$BIN_DIR/$CLI_NAME" "$CLI"
 cp Support/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-cp docs/config-examples/default-config.toml "$APP/Contents/Resources/default-config.toml"
+cp inlay.toml docs/config-reference.toml "$APP/Contents/Resources/"
+mkdir -p "$APP/Contents/Resources/scripts"
+cp scripts/uninstall.sh scripts/lib.sh "$APP/Contents/Resources/scripts/"
 cp LICENSE NOTICE.md "$APP/Contents/Resources/legal/"
 cp -R legal/third-party-license "$APP/Contents/Resources/legal/"
 printf 'APPL????' > "$APP/Contents/PkgInfo"

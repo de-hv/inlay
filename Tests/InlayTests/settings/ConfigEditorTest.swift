@@ -152,7 +152,8 @@ extension InlayTests {
             assertEquals(config.config.startAtLogin, true)
             // The comments are still there, and nothing else has changed
             assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count + 1)
-            assertEquals(patched.contains("focused = '#D19A66'      # The background of the focused workspace"), true)
+            assertEquals(patched.contains("    # chips|chips-icons|square|minimal\n    theme = 'square'\n"), true)
+            assertEquals(patched.contains("        focused = '#D19A66'\n"), true)
         }
 
         @Test func testApply() throws {

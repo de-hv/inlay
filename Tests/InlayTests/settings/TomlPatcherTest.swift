@@ -559,7 +559,7 @@ extension InlayTests {
 
         /// The built-in config and the example of the documentation: every key of the settings window, set and removed
         @Test func testRealConfigs() throws {
-            let defaultConfig = try String(contentsOf: projectRoot.appending(path: "docs/config-examples/default-config.toml"), encoding: .utf8)
+            let defaultConfig = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
             for key in [
                 SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .startupLayout, .splitTarget, .minWindowSize,
                 .menuBarEnabled, .menuBarTheme, .menuBarShowAppIcons,
@@ -568,7 +568,8 @@ extension InlayTests {
                 .bordersGlow, .bordersGlowRadius,
             ] {
                 let value: TomlValue = switch key.defaultValue {
-                    case .bool(let value): .bool(!value)
+                    // The opposite of what the file has, which isn't always the default
+                    case .bool(let value): .bool(!((TomlPatcher.decodedValue(defaultConfig, key.path) as? Bool) ?? value))
                     case .int(let value): .int(value + 3)
                     case .float(let value): .float(value + 0.25)
                     case .string: .string("#123456")

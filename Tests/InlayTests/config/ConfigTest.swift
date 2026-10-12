@@ -23,7 +23,7 @@ extension InlayTests {
         }
 
         @Test func testParseDefaultConfig() {
-            let toml = try! String(contentsOf: projectRoot.appending(component: "docs/config-examples/default-config.toml"), encoding: .utf8)
+            let toml = try! String(contentsOf: projectRoot.appending(component: "inlay.toml"), encoding: .utf8)
             let result = parseConfig(toml)
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
@@ -319,7 +319,7 @@ extension InlayTests {
                 "[ERROR] workspace-to-monitor-force-assignment.w7[0]: Empty string is an illegal monitor description",
                 "[ERROR] workspace-to-monitor-force-assignment.w8: Monitor sequence numbers uses 1-based indexing. Values less than 1 are illegal",
             ], result.strErrors)
-            assertEquals([:], defaultConfig.workspaceToMonitorForceAssignment)
+            assertEquals([:], Config().workspaceToMonitorForceAssignment)
         }
 
         @Test func testParseOnWindowDetected() {

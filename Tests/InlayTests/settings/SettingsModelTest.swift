@@ -172,9 +172,9 @@ extension InlayTests {
             let model = try model("borders.mode-colors = { resize = '#30D158' }\n[mode.main.binding]\n[mode.resize.binding]\n")
             assertEquals(model.disabledReason(.bordersModeColor("resize")), "Defined by hand in the config file")
             // In the table of the built-in config, with its examples commented out
-            let builtIn = try String(contentsOf: projectRoot.appending(path: "docs/config-examples/default-config.toml"), encoding: .utf8)
+            let builtIn = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
             let withTable = try self.model(builtIn)
-            assertEquals(withTable.colorableModes, ["service"])
+            assertEquals(withTable.colorableModes, ["resize", "service"])
             withTable.set(.bordersModeColor("service"), .string("#FF453A"))
             assertEquals(withTable.errorMessage, nil)
             assertEquals(text?.contains("    [borders.mode-colors]\n    service = '#FF453A'\n        # resize = '#30D158'\n"), true)

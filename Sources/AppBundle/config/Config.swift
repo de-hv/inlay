@@ -10,14 +10,14 @@ func getDefaultConfigUrlFromProject() -> URL {
         url.deleteLastPathComponent()
     }
     let projectRoot: URL = url
-    return projectRoot.appending(component: "docs/config-examples/default-config.toml")
+    return projectRoot.appending(component: configFileName)
 }
 
 var defaultConfigUrl: URL {
     if isUnitTest {
         return getDefaultConfigUrlFromProject()
     } else {
-        return Bundle.main.url(forResource: "default-config", withExtension: "toml")
+        return Bundle.main.url(forResource: "inlay", withExtension: "toml")
             // Useful for debug builds that are not app bundles
             ?? getDefaultConfigUrlFromProject()
     }

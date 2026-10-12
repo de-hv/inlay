@@ -114,6 +114,7 @@ enum ConfigEditor {
         if text == target.text && target.exists { return .success(()) }
         do {
             try AtomicFileWriter.write(text, to: target.url)
+            ConfigAutoReload.didWrite(text)
             return .success(())
         } catch {
             return .failure(.write(error))

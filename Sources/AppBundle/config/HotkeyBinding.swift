@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import Common
 import Foundation
 import HotKey
@@ -23,6 +24,30 @@ extension HotKey {
             }
         }
     }
+}
+
+/// HotKey registers a key binding with macOS and says nothing when macOS refuses it. So the binding is tried here
+/// first: registered, and unregistered right away. It must not be registered by Inlay at that moment
+@MainActor func canRegisterHotKey(_ binding: HotkeyBinding) -> Bool {
+    if isUnitTest { return true } // The tests don't take key combinations from the system
+    var reference: EventHotKeyRef? = nil
+    let id = EventHotKeyID(signature: 0x494E_4C59, id: 1) // 'INLY'
+    let status = unsafe RegisterEventHotKey(binding.keyCode.carbonKeyCode, binding.modifiers.carbonFlags, id, GetEventDispatcherTarget(), 0, &reference)
+    if let reference = unsafe reference { unsafe UnregisterEventHotKey(reference) }
+    return status == noErr
+}
+
+/// A warning for every key binding that macOS refuses to register, sorted by mode and by key.
+/// They are shown with the warnings of the config: by 'reload-config' and by the menu of the menu bar item
+@MainActor func hotkeyRegistrationWarnings(_ modes: [String: Mode], canRegister: @MainActor (HotkeyBinding) -> Bool) -> [ConfigParseDiagnostic] {
+    var result: [ConfigParseDiagnostic] = []
+    for (mode, bindings) in modes.sorted(by: { $0.key < $1.key }).map({ ($0.key, $0.value.bindings.values) }) {
+        for binding in bindings.sorted(by: { $0.descriptionWithKeyNotation < $1.descriptionWithKeyNotation }) where !canRegister(binding) {
+            let backtrace: ConfigBacktrace = .rootKey("mode") + .key(mode) + .key("binding") + .key(binding.descriptionWithKeyNotation)
+            result.append(.init(backtrace, "macOS refused to register this key binding, so it doesn't work. Another app may have taken the same keys"))
+        }
+    }
+    return result
 }
 
 @MainActor var activeMode: String? = mainModeId

@@ -29,8 +29,8 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                 menu.addItem(.separator())
                 addConfigItems(snapshot, to: menu)
             case .running:
-                if ServerState.shared.lastConfigLoad.map({ $0.warningCount > 0 }) == true {
-                    menu.addItem(item(Strings.Menu.configWarnings, #selector(showConfigWarnings), symbol: "exclamationmark.triangle.fill"))
+                if let title = Strings.Menu.configProblems(ServerState.shared.lastConfigLoad) {
+                    menu.addItem(item(title, #selector(showConfigWarnings), symbol: "exclamationmark.triangle.fill"))
                     menu.addItem(.separator())
                 }
                 addWorkspaces(snapshot, to: menu)

@@ -37,6 +37,8 @@ import ServiceManagement
     }
 }
 
+/// The built-in config is loaded first, so that Inlay has key bindings and a config of its own to fall back to
+/// when the config of the user can't be loaded
 @MainActor private func bootstrapConfig_nonCancellable() async {
     let result = await reloadConfig_nonCancellable(forceConfigUrl: defaultConfigUrl)
     let msg = """

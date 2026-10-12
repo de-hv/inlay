@@ -22,7 +22,15 @@ enum Strings {
         static let resume = "Resume \(inlayAppName)"
         static let settings = "Settings…"
         static let quit = "Quit \(inlayAppName)"
-        static let configWarnings = "Config contains warnings…"
+        /// The item that shows the errors and the warnings of the config, and the key bindings that macOS refused.
+        /// nil if the last load had none
+        static func configProblems(_ load: ConfigLoadStatus?) -> String? {
+            switch (load?.errorCount ?? 0, load?.warningCount ?? 0) {
+                case (0, 0): nil
+                case (0, _): "Config contains warnings…"
+                default: "Config contains errors…"
+            }
+        }
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
         static let paused = "\(inlayAppName) is paused"
         static let copyVersionToolTip = "Click to copy the version"

@@ -4,7 +4,8 @@ func normalizeLayoutReason() async throws {
         let windows: [Window] = workspace.allLeafWindowsRecursive
         try await _normalizeLayoutReason(workspace: workspace, windows: windows)
     }
-    try await _normalizeLayoutReason(workspace: focus.workspace, windows: macosMinimizedWindowsContainer.children.filterIsInstance(of: Window.self))
+    // A minimized window belongs to no workspace. It goes back to the one it was minimized in, if that is known
+    try await _normalizeLayoutReason(workspace: nil, windows: macosMinimizedWindowsContainer.children.filterIsInstance(of: Window.self))
     try await validateStillPopups()
 }
 
@@ -20,8 +21,9 @@ private func validateStillPopups() async throws {
     }
 }
 
+/// - Parameter workspace: the workspace of the windows. nil for the minimized windows, which have none
 @MainActor
-private func _normalizeLayoutReason(workspace: Workspace, windows: [Window]) async throws {
+private func _normalizeLayoutReason(workspace: Workspace?, windows: [Window]) async throws {
     // Last out, first in. The windows of an app are hidden and shown together: a window that left its place after
     // another one must take it back before the other one does, or their indexes don't match the tree
     for window in windows.reversed() {
@@ -32,6 +34,7 @@ private func _normalizeLayoutReason(workspace: Workspace, windows: [Window]) asy
         switch window.layoutReason {
             case .standard:
                 guard let parent = window.parent else { continue }
+                let workspace = workspace ?? focus.workspace
                 let container: NonLeafTreeNodeObject
                 switch true {
                     case isMacosFullscreen: container = workspace.macOsNativeFullscreenWindowsContainer
@@ -40,12 +43,18 @@ private func _normalizeLayoutReason(workspace: Workspace, windows: [Window]) asy
                     default: continue
                 }
                 window.layoutReason = .macos(prevParentKind: parent.kind)
-                window.rememberTilingSlot()
+                window.rememberPlace()
                 window.releaseTilingSpaceToNeighbor()
                 window.bind(to: container, adaptiveWeight: WEIGHT_DOESNT_MATTER, index: INDEX_BIND_LAST)
             case .macos(let prevParentKind):
                 if !isMacosFullscreen && !isMacosMinimized && !isMacosWindowOfHiddenApp {
-                    try await exitMacOsNativeUnconventionalState(window: window, prevParentKind: prevParentKind, workspace: workspace, .cancellable)
+                    let home = workspace ?? window.takeWorkspaceBeforeMinimize() ?? focus.workspace
+                    try await exitMacOsNativeUnconventionalState(window: window, prevParentKind: prevParentKind, workspace: home, .cancellable)
+                    // A minimized window went back to a workspace that isn't the focused one. The focus follows it there:
+                    // the user has just asked for the window, and it would be hidden with its workspace otherwise
+                    if workspace == nil && home != focus.workspace && window.focusWindow() {
+                        window.nativeFocus()
+                    }
                 }
         }
     }

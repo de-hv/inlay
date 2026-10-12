@@ -17,6 +17,9 @@ open class Window: TreeNode, Hashable {
     var detectedType: AxUiElementWindowType = .window
     /// The place in the tiling tree that the window left because of macOS. See: TilingSlot
     var tilingSlot: TilingSlot? = nil
+    /// The name of the workspace that the window was in before it left its place because of macOS.
+    /// A minimized window belongs to no workspace: this is where it goes back. See: normalizeLayoutReason
+    var workspaceBeforeMinimize: String? = nil
 
     @MainActor
     init(id: UInt32, _ app: any AbstractApp, lastFloatingSize: CGSize?, parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat, index: Int) {

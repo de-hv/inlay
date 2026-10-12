@@ -34,7 +34,7 @@ struct MacosNativeFullscreenCommand: Command {
             return .fail(io.err(windowIsntPartOfTree(window)))
         }
         if newState { // Enter fullscreen
-            window.rememberTilingSlot()
+            window.rememberPlace()
             window.releaseTilingSpaceToNeighbor()
             window.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
         } else { // Exit fullscreen

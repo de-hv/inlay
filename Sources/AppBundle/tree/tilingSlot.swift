@@ -104,17 +104,22 @@ final class TilingSlot {
 
 extension Window {
     /// Call it right before the window leaves its place because macOS made it fullscreen or minimized it, or
-    /// because its app was hidden
+    /// because its app was hidden. It remembers the workspace of the window and, for a tiling window, its place in the tree
     @MainActor
-    func rememberTilingSlot() {
+    func rememberPlace() {
         switch parent?.kind {
             case .tilingContainer:
                 tilingSlot = TilingSlot(of: self)
+                workspaceBeforeMinimize = nodeWorkspace?.name
+            case .floatingWindowsContainer:
+                tilingSlot = nil
+                workspaceBeforeMinimize = nodeWorkspace?.name
             case .macosFullscreenWindowsContainer, .macosMinimizedWindowsContainer, .macosHiddenAppsWindowsContainer:
                 // macos-native-fullscreen and macos-native-minimize have moved the window already, and remembered its place
                 break
-            case .floatingWindowsContainer, .macosPopupWindowsContainer, .workspace, nil:
+            case .macosPopupWindowsContainer, .workspace, nil:
                 tilingSlot = nil
+                workspaceBeforeMinimize = nil
         }
     }
 
@@ -122,5 +127,13 @@ extension Window {
     func takeTilingSlot() -> TilingSlot? {
         defer { tilingSlot = nil }
         return tilingSlot
+    }
+
+    /// The workspace to go back to after the window was minimized, which is forgotten like the place.
+    /// nil if it isn't known, or if the workspace doesn't exist anymore: it had no other window, and it isn't a persistent one
+    @MainActor
+    func takeWorkspaceBeforeMinimize() -> Workspace? {
+        defer { workspaceBeforeMinimize = nil }
+        return Workspace.all.first { $0.name == workspaceBeforeMinimize }
     }
 }

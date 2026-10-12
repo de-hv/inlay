@@ -619,19 +619,137 @@ extension InlayTests {
             )
         }
 
-        /// A minimized window belongs to no workspace. It comes back to the focused one
-        @Test func testComeBack_inAnotherWorkspace_theWindowIsPlacedLikeANewOne() async throws {
+        // MARK: - A minimized window comes back while another workspace is focused
+
+        /// A minimized window belongs to no workspace, but it remembers the one it was minimized in.
+        /// It goes back there, to its place, and the focus follows it
+        @Test func testComeBack_inAnotherWorkspace_theWindowGoesBackToItsWorkspaceAndItsPlace() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            let tree = workspace.rootTilingContainer.layoutDescription
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertRects([1: (0, 0, 960, 1079), 3: (960, 0, 960, 1079)])
+
+            let other = try await focusOtherWorkspace()
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10)]))
+            assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+            assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 539.5)])
+            // The focus follows the window: its workspace is the visible one again, and macOS is told
+            assertEquals(focus.windowOrNil?.windowId, 2)
+            assertEquals(focus.workspace, workspace)
+            assertEquals(workspace.isVisible, true)
+            assertEquals(other.isVisible, false)
+            assertEquals(TestApp.shared.focusedWindow?.windowId, 2)
+            assertNil(window(2).workspaceBeforeMinimize)
+        }
+
+        /// The window was minimized while its workspace wasn't the focused one. That is still its workspace
+        @Test func testComeBack_minimizedInAWorkspaceThatWasntFocused() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            let tree = workspace.rootTilingContainer.layoutDescription
+            let other = try await focusOtherWorkspace()
+            window(3).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(window(3).workspaceBeforeMinimize, workspace.name)
+            assertEquals(focus.workspace, other)
+
+            window(3).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+            assertEquals(focus.windowOrNil?.windowId, 3)
+            assertEquals(focus.workspace, workspace)
+        }
+
+        /// macos-native-minimize moves the window on its own, before the refresh session notices that it is minimized
+        @Test func testComeBack_inAnotherWorkspace_theCommandMinimizedTheWindow() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            let tree = workspace.rootTilingContainer.layoutDescription
+            let leaving = window(2)
+            // The same as MacosNativeMinimizeCommand
+            leaving.rememberPlace()
+            leaving.releaseTilingSpaceToNeighbor()
+            leaving.bind(to: macosMinimizedWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
+            let other = try await focusOtherWorkspace()
+            try await refresh() // macOS doesn't report the window as minimized yet
+            assertEquals(leaving.layoutReason, .standard)
+            leaving.isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(leaving.layoutReason, .macos(prevParentKind: .macosMinimizedWindowsContainer))
+
+            leaving.isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10)]))
+            assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+            assertEquals(focus.windowOrNil?.windowId, 2)
+        }
+
+        /// The place is gone, the workspace isn't: the window is placed like a new window of its workspace
+        @Test func testComeBack_inAnotherWorkspace_thePlaceIsGone() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            window(3).isMacosMinimizedForTest = true
+            try await refresh()
+            try await close(1)
+            try await close(2)
+            try await openWindow(4)
+            try await openWindow(5)
+            assertEquals(window(4).focusWindow(), true)
+
+            let other = try await focusOtherWorkspace()
+            window(3).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10)]))
+            // It splits the most recent window of its workspace
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.v_tiles([.window(4), .window(3)]), .window(5)]))
+            assertEquals(focus.windowOrNil?.windowId, 3)
+        }
+
+        /// The workspace was the only thing that the window had left, and it is gone: the workspace had no other window
+        /// and it isn't a persistent one. The window comes back to the focused workspace, like a new window
+        @Test func testComeBack_theWorkspaceIsGone_theWindowIsPlacedLikeANewOneInTheFocusedWorkspace() async throws {
+            try await openWindow(1)
+            window(1).isMacosMinimizedForTest = true
+            try await refresh()
+            let home = workspace.name
+            let other = try await focusOtherWorkspace()
+            Workspace.garbageCollectUnusedWorkspaces()
+            assertEquals(Workspace.all.map(\.name).contains(home), false)
+
+            window(1).isMacosMinimizedForTest = false
+            try await normalizeLayoutReason()
+            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10), .window(1)]))
+            assertEquals(focus.workspace, other)
+            assertEquals(Workspace.all.map(\.name).contains(home), false)
+        }
+
+        /// A floating window goes back to its workspace too, as a floating window
+        @Test func testComeBack_inAnotherWorkspace_floatingWindow() async throws {
+            try await openWindow(1)
+            try await openWindow(2)
+            try await run("layout floating")
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(window(2).workspaceBeforeMinimize, workspace.name)
+
+            let other = try await focusOtherWorkspace()
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.floatingWindows.map(\.windowId), [2])
+            assertEquals(other.floatingWindows.map(\.windowId), [])
+            assertEquals(focus.windowOrNil?.windowId, 2)
+            assertEquals(focus.workspace, workspace)
+        }
+
+        /// The window comes back while its own workspace is the focused one: nothing takes the focus away from where it is
+        @Test func testComeBack_inTheSameWorkspace_theFocusStaysWhereItIs() async throws {
             for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
             window(2).isMacosMinimizedForTest = true
             try await refresh()
-
-            let other = Workspace.get(byName: "other")
-            TestWindow.new(id: 10, parent: other.rootTilingContainer)
-            assertEquals(other.focusWorkspace(), true)
+            assertEquals(window(1).focusWindow(), true)
             window(2).isMacosMinimizedForTest = false
-            try await normalizeLayoutReason()
-            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10), .window(2)]))
-            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
+            try await refresh()
+            assertEquals(focus.windowOrNil?.windowId, 1)
         }
 
         /// The windows of an app are hidden and shown together
@@ -692,7 +810,7 @@ extension InlayTests {
             let tree = workspace.rootTilingContainer.layoutDescription
             let leaving = window(2)
             // The same as MacosNativeFullscreenCommand
-            leaving.rememberTilingSlot()
+            leaving.rememberPlace()
             leaving.releaseTilingSpaceToNeighbor()
             leaving.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
             try await refresh() // macOS doesn't report the fullscreen yet
@@ -766,19 +884,47 @@ extension InlayTests {
             unsafe Self.issues = 0
             var nextId: UInt32 = 1
             var log: [String] = []
-            for step in 0 ..< 600 {
+            // The session also leaves for another workspace, and the cursor wanders around the monitor
+            let other = Workspace.get(byName: "other")
+            TestWindow.new(id: 1000, parent: other.rootTilingContainer)
+            // Otherwise the workspace of the session is gone as soon as it is left without windows
+            config.persistentWorkspaces = [workspace.name, other.name]
+            config.tiling.splitTarget = .cursor
+            for step in 0 ..< 800 {
                 let tiling = workspace.rootTilingContainer.allLeafWindowsRecursive
                 let all = workspace.allLeafWindowsRecursive
                 let minimized = macosMinimizedWindowsContainer.children.filterIsInstance(of: TestWindow.self)
-                switch random(12) {
+                let cursor = CGPoint(x: random(2100) - 90, y: random(1200) - 60)
+                cursorLocation = { cursor }
+                switch random(14) {
+                    case 12, 13:
+                        // Another workspace gets the focus, or this one gets it back. What follows may happen while
+                        // the workspace of the session isn't the focused one, and isn't on the screen
+                        let target = focus.workspace == workspace ? other : workspace
+                        log.append("focus workspace \(target.name)")
+                        assertEquals(target.focusWorkspace(), true)
+                        try await workspace.layoutWorkspace()
                     case 10 where !all.isEmpty, 11 where !all.isEmpty:
                         // macOS minimizes a window or makes it fullscreen, or brings one back. The window may be floating
                         let away = minimized + workspace.macOsNativeFullscreenWindowsContainer.children.filterIsInstance(of: TestWindow.self)
                         if !away.isEmpty && random(2) == 0 {
                             let window = away[random(away.count)]
+                            let wasMinimized = window.parent is MacosMinimizedWindowsContainer
+                            let focusedBefore = focus
                             log.append("come back \(window.windowId)")
                             window.isMacosMinimizedForTest = false
                             window.isMacosFullscreenForTest = false
+                            try await refresh()
+                            // A minimized window goes back to the workspace it was minimized in, whatever the focused one is
+                            if window.nodeWorkspace != workspace { fail("\(window.windowId) came back to \(String(describing: window.nodeWorkspace))", step, log) }
+                            if other.allLeafWindowsRecursive.count != 1 { fail("A window ended up in the other workspace", step, log) }
+                            // And it takes the focus with it, if the focus was in another workspace. Nothing else moves the focus
+                            // to another workspace
+                            if wasMinimized && focusedBefore.workspace != workspace {
+                                if focus.windowOrNil != window { fail("The focus is on \(String(describing: focus.windowOrNil))", step, log) }
+                            } else if focus.workspace != focusedBefore.workspace {
+                                fail("The focus went to \(focus.workspace)", step, log)
+                            }
                         } else {
                             let window = all[random(all.count)] as! TestWindow
                             if random(2) == 0 {
@@ -788,8 +934,8 @@ extension InlayTests {
                                 log.append("native fullscreen \(window.windowId)")
                                 window.isMacosFullscreenForTest = true
                             }
+                            try await refresh()
                         }
-                        try await refresh()
                     case 0 ..< 4 where tiling.count < 9, _ where all.isEmpty && minimized.isEmpty:
                         log.append("open \(nextId)")
                         try await openWindow(nextId)
@@ -1014,6 +1160,14 @@ extension InlayTests {
             try await workspace.layoutWorkspace()
         }
 
+        /// Another workspace, with a window of its own, becomes the focused one
+        private func focusOtherWorkspace() async throws -> Workspace {
+            let other = Workspace.get(byName: "other")
+            if other.isEffectivelyEmpty { TestWindow.new(id: 10, parent: other.rootTilingContainer) }
+            assertEquals(other.focusWorkspace(), true)
+            return other
+        }
+
         /// What a refresh session does after macOS minimized a window, made it fullscreen, or brought it back
         private func refresh() async throws {
             // Otherwise normalizeLayoutReason asks the real app of the window whether it is hidden
@@ -1098,6 +1252,11 @@ extension InlayTests {
         }
 
         nonisolated(unsafe) private static var issues = 0
+
+        private func fail(_ message: String, _ step: Int, _ log: [String], sourceLocation: SourceLocation = #_sourceLocation) {
+            unsafe Self.issues += 1
+            Issue.record("\(message)\nstep \(step): \(log.suffix(12).joined(separator: " | "))", sourceLocation: sourceLocation)
+        }
 
         private func assertNormalized(_ container: TilingContainer, sourceLocation: SourceLocation = #_sourceLocation) {
             if !container.isRootContainer {

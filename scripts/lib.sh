@@ -112,7 +112,11 @@ CNF
   return 0
 }
 
-LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+# INLAY_LSREGISTER and INLAY_TMP_DIR exist so that the scripts can be tried without touching the Launch Services
+# database or the files of a running Inlay
+LSREGISTER="${INLAY_LSREGISTER:-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister}"
+# Where Inlay keeps its runtime files (/tmp/com.davidhiguita.inlay)
+RUNTIME_TMP_DIR="${INLAY_TMP_DIR:-/tmp}"
 
 inlay_is_running() { pgrep -x "$APP_NAME" >/dev/null 2>&1; }
 
@@ -144,3 +148,30 @@ dir_is_in_path() {
 }
 
 config_home() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}"; }
+
+# Somebody is at the keyboard to answer a question
+is_interactive() { [ -t 0 ]; }
+
+# ask_yes_no <question>. Asks on the terminal and returns 0 only for an explicit yes. The default is no
+ask_yes_no() {
+  local answer=""
+  printf '%s [y/N] ' "$1"
+  IFS= read -r answer || answer=""
+  case "$answer" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# absolute_path <path> [<base directory>]. Expands a leading ~ and makes the path absolute. Prints it
+absolute_path() {
+  local path="$1" base="${2:-$PWD}"
+  case "$path" in
+    "~") path="$HOME" ;;
+    "~/"*) path="$HOME/${path#"~/"}" ;;
+  esac
+  case "$path" in
+    /*) printf '%s\n' "$path" ;;
+    *) printf '%s\n' "$base/$path" ;;
+  esac
+}

@@ -28,6 +28,14 @@ public func runInlayApp() -> Never {
         }
         exit(EXIT_CODE_ZERO, out: "The borders were rendered to \(directory)")
     }
+    if let index = CommandLine.arguments.firstIndex(of: checkConfigFlag) {
+        guard let path = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
+            exit(EXIT_CODE_TWO, err: "Missing <path> in \(checkConfigFlag) flag")
+        }
+        let report = checkConfigFile(URL(filePath: path))
+        if report.isOk { exit(EXIT_CODE_ZERO, out: report.text) }
+        exit(EXIT_CODE_TWO, err: report.text)
+    }
     if let index = CommandLine.arguments.firstIndex(of: debugBordersFlag) {
         let seconds = CommandLine.arguments.getOrNil(atIndex: index + 1).flatMap(Double.init) ?? 4
         runBordersDebug(seconds: min(max(seconds, 1), 60))
@@ -41,6 +49,21 @@ public func runInlayApp() -> Never {
 }
 
 let renderMenuBarFlag = "--render-menu-bar"
+let checkConfigFlag = "--check-config"
+
+/// What the parser says about a config file: its errors and its warnings. See: scripts/install.sh
+@MainActor
+func checkConfigFile(_ url: URL) -> (isOk: Bool, text: String) {
+    let path = url.path.singleQuoted
+    guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+        return (false, "Can't read \(path) as a UTF-8 text file")
+    }
+    let result = parseConfig(text)
+    if result.errors.isEmpty && result.warnings.isEmpty { return (true, "\(path) has no errors or warnings") }
+    let lines = result.errors.map { $0.description(.error) } + result.warnings.map { $0.description(.warning) }
+    let header = "\(path): \(result.errors.count) error(s), \(result.warnings.count) warning(s)"
+    return (result.errors.isEmpty, ([header] + lines).joined(separator: "\n"))
+}
 
 @MainActor
 final class InlayAppDelegate: NSObject, NSApplicationDelegate {

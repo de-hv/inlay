@@ -1,34 +1,45 @@
 #!/usr/bin/env bash
 #
-# Builds Inlay and installs it. Needs only the Xcode Command Line Tools: no Xcode, no Apple ID.
+# Builds Inlay, installs it and opens it. Needs only the Xcode Command Line Tools: no Xcode, no Apple ID.
+# No option is needed:
 #
-#   scripts/install.sh                      build, install and open Inlay
-#   scripts/install.sh --no-open            build and install only
-#   scripts/install.sh --adhoc-signing      sign ad hoc instead of with the local identity (see below)
-#   scripts/install.sh --import-aerospace   start from your AeroSpace config instead of the default one
-#   INSTALL_DIR=~/Applications scripts/install.sh
-#   INLAY_BIN_DIR=~/bin scripts/install.sh  where to link the 'inlay' CLI
+#   ./install.sh
 #
 # What it does:
-#   - installs Inlay.app into /Applications (or ~/Applications if /Applications isn't writable);
+#   - builds Inlay.app and signs it with a local identity, so that macOS keeps the Accessibility permission
+#     across rebuilds (see "Signing" below);
+#   - installs it into /Applications (or ~/Applications if /Applications isn't writable);
 #   - links the 'inlay' CLI into ~/.local/bin, /opt/homebrew/bin or /usr/local/bin;
-#   - creates ~/.config/inlay/inlay.toml, only if you have no Inlay config yet. An existing config is never
-#     changed or deleted.
+#   - creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo, only if you have no Inlay config
+#     yet (an existing config, file or symbolic link, is never changed, replaced or deleted), and then asks
+#     whether you prefer a symbolic link to a config file of your own instead of that copy;
+#   - opens Inlay and tells you what to do the first time (the Accessibility permission).
 # Running it again updates the installed app: the running copy is quit first.
+#
+# Options (none of them is needed):
+#   --config-link <path>   make the config a symbolic link to <path> instead of asking. Only when you have no
+#                          Inlay config yet, and only if <path> exists: otherwise the copy is kept
+#   --no-prompt            don't ask anything: keep the copy of inlay.toml. It's what happens on its own
+#                          when there is no terminal to ask on
+#   --import-aerospace     start from your AeroSpace config (~/.aerospace.toml) instead of inlay.toml
+#   --no-open              don't open Inlay when done
+#   --adhoc-signing        sign ad hoc instead of with the local identity
+#   INSTALL_DIR=~/Applications ./install.sh    where to install the app
+#   INLAY_BIN_DIR=~/bin ./install.sh           where to link the 'inlay' CLI
 #
 # Signing: macOS ties the Accessibility permission to the signature of the app. So the app is signed with a
 # self-signed code signing identity ("Inlay Local Code Signing") that is created, once, in your login keychain:
 # the permission survives the rebuilds. macOS may ask for your keychain password the first time codesign uses
 # the key: choose "Always Allow". If the identity can't be created or used, the app is signed ad hoc, with a
-# warning. --adhoc-signing skips the identity: with an ad hoc signature the permission is lost on every rebuild.
-# (--stable-signing is still accepted: it's the default now.)
+# warning: with an ad hoc signature the permission is lost on every rebuild. --adhoc-signing skips the identity.
+# (--stable-signing is still accepted: it's the default.)
 #
 # AeroSpace, AeroMenu and borders (JankyBorders) do the same job as Inlay. This script never quits them: if one
 # is running it tells you, and leaves Inlay closed until you quit them yourself.
 
 set -euo pipefail
 
-usage() { sed -n '3,27s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,39s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
 check_requirements() {
   local macos swift
@@ -153,39 +164,106 @@ aerospace_config() {
   return 1
 }
 
+# ensure_config <import aerospace: true|false> <link: a path, or empty> <prompt: true|false>
 # Creates the config only when there is none. Never touches an existing one.
+# Sets CONFIG_PATH to the config that Inlay will read, or to nothing if it can't tell (two configs)
 ensure_config() {
-  local import="$1" xdg dotfile source
+  local import="$1" link="$2" prompt="$3" xdg dotfile source
   xdg="$(config_home)/inlay/inlay.toml"
   dotfile="$HOME/.inlay.toml"
+  CONFIG_PATH=""
   if [ -e "$xdg" ] || [ -L "$xdg" ] || [ -e "$dotfile" ] || [ -L "$dotfile" ]; then
     if { [ -e "$xdg" ] || [ -L "$xdg" ]; } && { [ -e "$dotfile" ] || [ -L "$dotfile" ]; }; then
       warn "both $xdg and $dotfile exist: Inlay will report an ambiguous config until you remove one."
     else
-      info "Keeping your config ($([ -e "$xdg" ] || [ -L "$xdg" ] && echo "$xdg" || echo "$dotfile"))"
+      if [ -e "$xdg" ] || [ -L "$xdg" ]; then CONFIG_PATH="$xdg"; else CONFIG_PATH="$dotfile"; fi
+      if [ -L "$CONFIG_PATH" ]; then
+        info "You already have a config: $CONFIG_PATH -> $(readlink "$CONFIG_PATH")"
+      else
+        info "You already have a config: $CONFIG_PATH"
+      fi
+      note "It was left as it is: nothing was copied, replaced or asked."
     fi
     if [ "$import" = true ]; then
       note "--import-aerospace was ignored: you already have an Inlay config."
+    fi
+    if [ -n "$link" ]; then
+      note "--config-link was ignored: you already have an Inlay config. To link another file, remove"
+      note "$xdg and run this script again."
     fi
     return 0
   fi
 
   mkdir -p "$(dirname "$xdg")"
-  if [ "$import" = true ]; then
-    if source="$(aerospace_config)"; then
-      # cp follows a symlink, so the result is a regular file of your own
-      cp "$source" "$xdg"
-      info "Created $xdg from $source"
-      review_imported_config "$xdg"
+  CONFIG_PATH="$xdg"
+  if [ "$import" = true ] && source="$(aerospace_config)"; then
+    # cp follows a symlink, so the result is a regular file of your own
+    cp "$source" "$xdg"
+    info "Created $xdg from $source"
+    review_imported_config "$xdg"
+  else
+    if [ "$import" = true ]; then
+      warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
+    fi
+    cp inlay.toml "$xdg"
+    info "Created $xdg (a copy of the inlay.toml of the repo)"
+  fi
+  if [ "${XDG_CONFIG_HOME:-$HOME/.config}" != "$HOME/.config" ]; then
+    note "XDG_CONFIG_HOME is set in this shell. Inlay only finds the config there if the variable is also set"
+    note "for the apps that macOS starts (launchctl setenv). Otherwise it reads ~/.config/inlay/inlay.toml."
+  fi
+
+  link_config "$xdg" "$link" "$prompt"
+}
+
+# link_config <config> <link: a path, or empty> <prompt: true|false>
+# Replaces the config that was just created by a symbolic link to a file of the user: the one of --config-link,
+# or the one that the user types. A file that doesn't exist is never linked: the copy stays
+link_config() {
+  local config="$1" target="$2" prompt="$3" answer=""
+  if [ -z "$target" ]; then
+    if [ "$prompt" != true ]; then
       return 0
     fi
-    warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
+    if ! is_interactive; then
+      note "No terminal to ask on: keeping the copy. (To link a config of your own: --config-link <path>)"
+      return 0
+    fi
+    note "If you keep your config somewhere else (a dotfiles repo), $config"
+    note "can be a symbolic link to it instead of this copy."
+    if ! ask_yes_no "    Replace the copy with a symbolic link to your own config file?"; then
+      note "Keeping the copy."
+      return 0
+    fi
+    printf '    Path of your config file: '
+    IFS= read -r answer || answer=""
+    if [ -z "$answer" ]; then
+      warn "no path was given. Keeping the copy of the default config."
+      return 0
+    fi
+    target="$answer"
   fi
-  cp docs/config-examples/default-config.toml "$xdg"
-  info "Created $xdg from the default config"
-  if [ "$import" != true ] && source="$(aerospace_config)"; then
-    note "You have an AeroSpace config at $source. To start from it instead, remove"
-    note "$xdg and run: scripts/install.sh --import-aerospace"
+
+  target="$(absolute_path "$target" "$START_DIR")"
+  if [ ! -f "$target" ]; then
+    warn "$target is not an existing file. Keeping the copy of the default config at $config"
+    return 0
+  fi
+  rm -f "$config"
+  ln -s "$target" "$config"
+  info "Linked the config: $config -> $target"
+}
+
+# Says what the parser of the app that was just installed thinks of the config. Never fails the installation
+check_config() {
+  local binary="$INSTALL_TARGET/Contents/MacOS/$APP_NAME" output status=0
+  [ -n "$CONFIG_PATH" ] && [ -x "$binary" ] || return 0
+  output="$("$binary" --check-config "$CONFIG_PATH" 2>&1)" || status=$?
+  info "Checking the config"
+  printf '%s\n' "$output" | sed 's/^/    /'
+  if [ "$status" -ne 0 ]; then
+    warn "the config has errors. Inlay starts anyway and shows them in a window. Fix them and run"
+    warn "'$CLI_NAME reload-config' (or just save the file, with 'auto-reload-config = true')."
   fi
 }
 
@@ -224,14 +302,48 @@ explain_accessibility() {
   fi
 }
 
+# The last thing the script does: open Inlay, or say why not
+open_or_explain() {
+  local open_app="$1"
+  find_conflicts
+  if [ -n "$CONFLICTS" ]; then
+    warn "these apps are running and do the same job as Inlay: $CONFLICTS"
+    warn "Two window managers at once fight over your windows, so Inlay was NOT opened, and this script"
+    warn "doesn't quit other apps for you. Quit them (AeroSpace and AeroMenu from their menu bar icons;"
+    warn "borders with 'brew services stop borders' or 'pkill borders'), and then open Inlay with:"
+    warn "  open \"$INSTALL_TARGET\""
+    info "Installed. Inlay was NOT opened (see the warning above)."
+  elif [ "$open_app" = true ]; then
+    info "Opening $APP_NAME now ($INSTALL_TARGET)"
+    if open "$INSTALL_TARGET"; then
+      note "Inlay is open: look for its item in the menu bar (it has no Dock icon and no window)."
+      note "The first time, macOS asks for the Accessibility permission (see above): until you grant it, the"
+      note "item shows a warning sign and no window is moved. Once it is granted, Inlay sends the open"
+      note "windows to their workspaces and arranges them. Right-click the item for the menu and the Settings."
+      note "The key bindings are in $([ -n "${CONFIG_PATH:-}" ] && echo "$CONFIG_PATH" || echo "your config") ('$CLI_NAME config --explain' documents every key)."
+    else
+      warn "could not open it. Open it by hand:  open \"$INSTALL_TARGET\""
+    fi
+    info "Done."
+  else
+    info "Done. Inlay was not opened (--no-open). Open it with:  open \"$INSTALL_TARGET\""
+  fi
+}
+
 main() {
-  local open_app=true signing=stable import=false
+  local open_app=true signing=stable import=false config_link="" prompt=true
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-open) open_app=false ;;
       --stable-signing) signing=stable ;;
       --adhoc-signing) signing=adhoc ;;
       --import-aerospace) import=true ;;
+      --no-prompt) prompt=false ;;
+      --config-link)
+        [ $# -ge 2 ] && [ -n "$2" ] || fail "--config-link needs a path."
+        config_link="$2"
+        shift
+        ;;
       -h|--help) usage; exit 0 ;;
       *) usage >&2; fail "unknown option: $1" ;;
     esac
@@ -243,25 +355,14 @@ main() {
   build_app "$signing"
   install_app
   link_cli
-  ensure_config "$import"
+  ensure_config "$import" "$config_link" "$prompt"
+  check_config
   explain_accessibility
-
-  find_conflicts
-  if [ -n "$CONFLICTS" ]; then
-    warn "these apps are running and do the same job as Inlay: $CONFLICTS"
-    warn "Two window managers at once fight over your windows. Quit them before opening Inlay"
-    warn "(AeroSpace and AeroMenu from their menu bar icons; borders with 'brew services stop borders'"
-    warn "or 'pkill borders'), then open it with:  open \"$INSTALL_TARGET\""
-    info "Installed. Inlay was NOT opened."
-  elif [ "$open_app" = true ]; then
-    info "Opening $APP_NAME"
-    open "$INSTALL_TARGET"
-    info "Done."
-  else
-    info "Done. Open it with:  open \"$INSTALL_TARGET\""
-  fi
+  open_or_explain "$open_app"
 }
 
+# Where the script was run from: a relative --config-link is relative to it
+START_DIR="$PWD"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 SCRIPT_PATH="scripts/install.sh"
 # shellcheck source=scripts/lib.sh

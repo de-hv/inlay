@@ -67,7 +67,8 @@ private let serverHelp = """
                               and ${XDG_CONFIG_HOME}/inlay/inlay.toml
       --read-only             Disable window management.
                               Useful if you want to use only debug-windows or other query commands.
-      --unregister-login-item Remove Inlay from the login items and exit. Used by scripts/uninstall.sh
+      --unregister-login-item Remove Inlay from the login items and exit. Used by 'inlay uninstall'
+      --check-config <path>   Print the errors and the warnings of a config file and exit. Inlay doesn't start
       --render-menu-bar <dir> Draw the menu bar item to PNG files (every theme, dark and light menu bar,
                               default and custom colors) and exit. Inlay doesn't start
       --render-borders <dir>  Draw the window borders in every state to PNG files and exit. Inlay doesn't start

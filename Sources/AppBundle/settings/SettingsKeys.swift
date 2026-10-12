@@ -25,6 +25,8 @@ extension SettingsKey {
     static let autoReloadConfig = SettingsKey([], "auto-reload-config", default: .bool(false))
     static let newWindowPlacement = SettingsKey(["tiling"], "new-window-placement", default: .string(NewWindowPlacement.dwindle.rawValue))
     static let startupLayout = SettingsKey(["tiling"], "startup-layout", default: .string(StartupLayout.grid.rawValue))
+    static let splitTarget = SettingsKey(["tiling"], "split-target", default: .string(SplitTarget.focused.rawValue))
+    static let minWindowSize = SettingsKey(["tiling"], "min-window-size", default: .int(100))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))

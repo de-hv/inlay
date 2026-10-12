@@ -40,7 +40,8 @@ extension InlayTests {
             }
         }
 
-        /// Regression: shrinking a small window used to give it a negative height
+        /// Regression: shrinking a small window used to give it a negative width. Now the resize command stops
+        /// at 'tiling.min-window-size', long before the floor of the layout
         @Test func testResizeBelowZero_theWindowKeepsAPositiveSize() async throws {
             workspace.rootTilingContainer.apply {
                 TestWindow.new(id: 1, parent: $0, adaptiveWeight: 1800)
@@ -48,6 +49,18 @@ extension InlayTests {
             }
             try await workspace.layoutWorkspace()
             _ = await parseCommand("resize smart -200").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            let rects = workspace.rootTilingContainer.allLeafWindowsRecursive.compactMap { ($0 as? TestWindow)?.rect }
+            assertEquals(rects.map(\.width), [1820, 100])
+            assertEquals(rects.map(\.topLeftX), [0, 1820])
+        }
+
+        /// The floor of the layout is still there for the weights that the resize command doesn't decide
+        @Test func testWeightBelowZero_theWindowKeepsAPositiveSize() async throws {
+            workspace.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0, adaptiveWeight: 2000)
+                TestWindow.new(id: 2, parent: $0, adaptiveWeight: -80)
+            }
             try await workspace.layoutWorkspace()
             let rects = workspace.rootTilingContainer.allLeafWindowsRecursive.compactMap { ($0 as? TestWindow)?.rect }
             assertEquals(rects.map(\.width), [1919, 1])

@@ -25,3 +25,7 @@ func isManipulatedWithMouse(_ window: Window) async throws -> Bool {
 
 /// Same motivation as in monitorFrameNormalized
 var mouseLocation: CGPoint { NSEvent.mouseLocation.withYAxisFlipped }
+
+/// Where the mouse cursor is, for the decisions about the tree that depend on it. See: 'tiling.split-target' config option.
+/// It's a variable so that the tests can put the cursor wherever they need
+@MainActor var cursorLocation: @MainActor () -> CGPoint = { mouseLocation }

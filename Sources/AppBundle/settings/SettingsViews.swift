@@ -51,6 +51,32 @@ private struct ToggleRow: View {
     }
 }
 
+/// A number of points. The slider shows its value while it is dragged, and writes it when it is released
+private struct SliderRow: View {
+    let model: SettingsModel
+    let title: String
+    var detail: String? = nil
+    let key: SettingsKey
+    let range: ClosedRange<Int>
+    var step: Int = 1
+
+    var body: some View {
+        SettingsRow(model: model, title: title, detail: detail, key: key) {
+            Slider(
+                value: Binding(get: { Double(model.int(key)) }, set: { model.preview(key, .int(Int($0.rounded()))) }),
+                in: Double(range.lowerBound) ... Double(range.upperBound),
+                step: Double(step),
+            ) { isEditing in
+                if !isEditing { model.commit(key) }
+            }
+            .frame(width: 160)
+            Text(Strings.Settings.points(model.int(key)))
+                .monospacedDigit()
+                .frame(width: 44, alignment: .trailing)
+        }
+    }
+}
+
 /// The value as text, a color well, the special values, and "Reset"
 private struct ColorRow: View {
     let model: SettingsModel
@@ -159,6 +185,16 @@ struct GeneralSettingsView: View {
                     ],
                 )
                 pickerRow(
+                    Strings.Settings.splitTarget,
+                    detail: splitTargetDetail(isDwindle: isDwindle),
+                    key: .splitTarget,
+                    options: [
+                        (SplitTarget.focused.rawValue, Strings.Settings.focusedWindow),
+                        (SplitTarget.cursor.rawValue, Strings.Settings.cursor),
+                    ],
+                )
+                .disabled(!isDwindle)
+                pickerRow(
                     Strings.Settings.startupLayout,
                     detail: startupLayoutDetail,
                     key: .startupLayout,
@@ -167,6 +203,14 @@ struct GeneralSettingsView: View {
                         (StartupLayout.row.rawValue, Strings.Settings.row),
                         (StartupLayout.dwindle.rawValue, Strings.Settings.dwindle),
                     ],
+                )
+                SliderRow(
+                    model: model,
+                    title: Strings.Settings.minWindowSize,
+                    detail: Strings.Settings.minWindowSizeDetail,
+                    key: .minWindowSize,
+                    range: TilingConfig.minWindowSizeRange,
+                    step: 10,
                 )
             }
             Section(Strings.Settings.configuration) {
@@ -228,6 +272,14 @@ struct GeneralSettingsView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
+        }
+    }
+
+    private func splitTargetDetail(isDwindle: Bool) -> String {
+        switch SplitTarget(rawValue: model.string(.splitTarget)) {
+            case _ where !isDwindle: Strings.Settings.splitTargetNotDwindleDetail
+            case .cursor: Strings.Settings.splitTargetCursorDetail
+            case .focused, nil: Strings.Settings.splitTargetFocusedDetail
         }
     }
 
@@ -394,10 +446,16 @@ struct BordersSettingsView: View {
             }
             Section(Strings.Settings.windowBorders) {
                 ToggleRow(model: model, title: Strings.Settings.showBorders, key: .bordersEnabled)
-                sliderRow(Strings.Settings.width, key: .bordersWidth, range: 1 ... 20)
-                sliderRow(Strings.Settings.cornerRadius, detail: Strings.Settings.cornerRadiusDetail, key: .bordersCornerRadius, range: 0 ... 40)
+                SliderRow(model: model, title: Strings.Settings.width, key: .bordersWidth, range: BordersConfig.widthRange)
+                SliderRow(
+                    model: model,
+                    title: Strings.Settings.cornerRadius,
+                    detail: Strings.Settings.cornerRadiusDetail,
+                    key: .bordersCornerRadius,
+                    range: BordersConfig.cornerRadiusRange,
+                )
                 ToggleRow(model: model, title: Strings.Settings.glow, detail: Strings.Settings.glowDetail, key: .bordersGlow)
-                sliderRow(Strings.Settings.glowRadius, key: .bordersGlowRadius, range: 1 ... 40)
+                SliderRow(model: model, title: Strings.Settings.glowRadius, key: .bordersGlowRadius, range: BordersConfig.glowRadiusRange)
                     .disabled(!model.bool(.bordersGlow))
             }
             Section {
@@ -427,23 +485,6 @@ struct BordersSettingsView: View {
         .formStyle(.grouped)
         .frame(width: settingsWidth)
         .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// The slider shows its value while it is dragged, and writes it when it is released
-    private func sliderRow(_ title: String, detail: String? = nil, key: SettingsKey, range: ClosedRange<Double>) -> some View {
-        SettingsRow(model: model, title: title, detail: detail, key: key) {
-            Slider(
-                value: Binding(get: { Double(model.int(key)) }, set: { model.preview(key, .int(Int($0.rounded()))) }),
-                in: range,
-                step: 1,
-            ) { isEditing in
-                if !isEditing { model.commit(key) }
-            }
-            .frame(width: 160)
-            Text(Strings.Settings.points(model.int(key)))
-                .monospacedDigit()
-                .frame(width: 44, alignment: .trailing)
-        }
     }
 
     private var preview: some View {

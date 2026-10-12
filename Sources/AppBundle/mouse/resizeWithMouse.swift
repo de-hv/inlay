@@ -38,7 +38,7 @@ func resetManipulatedWithMouseIfPossible() async throws {
 private let adaptiveWeightBeforeResizeWithMouseKey = TreeNodeUserDataKey<CGFloat>(key: "adaptiveWeightBeforeResizeWithMouseKey")
 
 @MainActor
-private func resizeWithMouse(_ window: Window) async throws { // todo cover with tests
+private func resizeWithMouse(_ window: Window) async throws {
     resetClosedWindowsCache()
     switch window.windowParentCases {
         case .unbound: return
@@ -48,34 +48,54 @@ private func resizeWithMouse(_ window: Window) async throws { // todo cover with
         case .tilingContainer:
             guard let rect = try await window.getAxRect(.cancellable) else { return }
             guard let lastAppliedLayoutRect = window.lastAppliedLayoutPhysicalRect else { return }
-            let (lParent, lOwnIndex) = window.closestParent(hasChildrenInDirection: .left, withLayout: .tiles) ?? (nil, nil)
-            let (dParent, dOwnIndex) = window.closestParent(hasChildrenInDirection: .down, withLayout: .tiles) ?? (nil, nil)
-            let (uParent, uOwnIndex) = window.closestParent(hasChildrenInDirection: .up, withLayout: .tiles) ?? (nil, nil)
-            let (rParent, rOwnIndex) = window.closestParent(hasChildrenInDirection: .right, withLayout: .tiles) ?? (nil, nil)
-            let table: [(CGFloat, TilingContainer?, Int?, Int?)] = [
-                (lastAppliedLayoutRect.minX - rect.minX, lParent, 0,                        lOwnIndex),               // Horizontal, to the left of the window
-                (rect.maxY - lastAppliedLayoutRect.maxY, dParent, dOwnIndex.map { $0 + 1 }, dParent?.children.count), // Vertical, to the down of the window
-                (lastAppliedLayoutRect.minY - rect.minY, uParent, 0,                        uOwnIndex),               // Vertical, to the up of the window
-                (rect.maxX - lastAppliedLayoutRect.maxX, rParent, rOwnIndex.map { $0 + 1 }, rParent?.children.count), // Horizontal, to the right of the window
-            ]
-            for (diff, parent, startIndex, pastTheEndIndex) in table {
-                if let parent, let startIndex, let pastTheEndIndex, pastTheEndIndex - startIndex > 0 && abs(diff) > 5 { // 5 pixels should be enough to fight with accumulated floating precision error
-                    let siblingDiff = diff.div(pastTheEndIndex - startIndex).orDie()
-                    let orientation = parent.orientation
+            resizeTilingWindow(window, from: lastAppliedLayoutRect, to: rect)
+            currentlyManipulatedWithMouseWindowId = window.windowId
+    }
+}
 
-                    window.parentsWithSelf.lazy
-                        .prefix(while: { $0 != parent })
-                        .filter {
-                            let parent = $0.parent as? TilingContainer
-                            return parent?.orientation == orientation && parent?.layout == .tiles
-                        }
-                        .forEach { $0.setWeight(orientation, $0.getWeightBeforeResize(orientation) + diff) }
-                    for sibling in parent.children[startIndex ..< pastTheEndIndex] {
-                        sibling.setWeight(orientation, sibling.getWeightBeforeResize(orientation) - siblingDiff)
-                    }
+/// The user has dragged the edges of the tiling window with the mouse: its frame was `layoutRect`, and now it is `rect`.
+/// Changes the weights so that the next layout pass gives the window the new frame, and its neighbors the rest.
+///
+/// Nobody is shrunk under 'tiling.min-window-size': an edge that was dragged further goes back to the limit
+/// with the next layout pass, when the mouse button is released
+@MainActor
+func resizeTilingWindow(_ window: Window, from layoutRect: Rect, to rect: Rect) {
+    let (lParent, lOwnIndex) = window.closestParent(hasChildrenInDirection: .left, withLayout: .tiles) ?? (nil, nil)
+    let (dParent, dOwnIndex) = window.closestParent(hasChildrenInDirection: .down, withLayout: .tiles) ?? (nil, nil)
+    let (uParent, uOwnIndex) = window.closestParent(hasChildrenInDirection: .up, withLayout: .tiles) ?? (nil, nil)
+    let (rParent, rOwnIndex) = window.closestParent(hasChildrenInDirection: .right, withLayout: .tiles) ?? (nil, nil)
+    let table: [(CGFloat, TilingContainer?, Int?, Int?)] = [
+        (layoutRect.minX - rect.minX, lParent, 0,                        lOwnIndex),               // Horizontal, to the left of the window
+        (rect.maxY - layoutRect.maxY, dParent, dOwnIndex.map { $0 + 1 }, dParent?.children.count), // Vertical, to the down of the window
+        (layoutRect.minY - rect.minY, uParent, 0,                        uOwnIndex),               // Vertical, to the up of the window
+        (rect.maxX - layoutRect.maxX, rParent, rOwnIndex.map { $0 + 1 }, rParent?.children.count), // Horizontal, to the right of the window
+    ]
+    for (diff, parent, startIndex, pastTheEndIndex) in table {
+        if let parent, let startIndex, let pastTheEndIndex, pastTheEndIndex - startIndex > 0 && abs(diff) > 5 { // 5 pixels should be enough to fight with accumulated floating precision error
+            let orientation = parent.orientation
+            // The nodes that the edge belongs to: the window, and its parents on the way to the container of the siblings
+            let resized = window.parentsWithSelf
+                .prefix(while: { $0 != parent })
+                .filter {
+                    let parent = $0.parent as? TilingContainer
+                    return parent?.orientation == orientation && parent?.layout == .tiles
+                }
+            let siblings = Array(parent.children[startIndex ..< pastTheEndIndex])
+            let siblingWeights = siblings.map { $0.getWeightBeforeResize(orientation) }
+            if diff > 0 { // The window grows, the siblings on that side shrink
+                let shrunk = shrinkWeights(siblingWeights, by: diff, minimums: siblings.map(\.minimumResizeWeight))
+                let taken = siblingWeights.reduce(0, +) - shrunk.reduce(0, +)
+                for node in resized { node.setWeight(orientation, node.getWeightBeforeResize(orientation) + taken) }
+                for (sibling, weight) in zip(siblings, shrunk) { sibling.setWeight(orientation, weight) }
+            } else { // The window shrinks, the siblings on that side grow
+                let room = resized.map { max($0.getWeightBeforeResize(orientation) - $0.minimumResizeWeight, 0) }.min() ?? 0
+                let given = min(-diff, room)
+                for node in resized { node.setWeight(orientation, node.getWeightBeforeResize(orientation) - given) }
+                for (sibling, weight) in zip(siblings, siblingWeights) {
+                    sibling.setWeight(orientation, weight + given / CGFloat(siblings.count))
                 }
             }
-            currentlyManipulatedWithMouseWindowId = window.windowId
+        }
     }
 }
 

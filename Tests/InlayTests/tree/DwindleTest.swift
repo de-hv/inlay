@@ -112,6 +112,92 @@ extension InlayTests {
             assertRects([1: (0, 0, 960, 539.5), 3: (0, 539.5, 960, 539.5), 2: (960, 0, 960, 1079)])
         }
 
+        // MARK: - split-target = 'cursor'
+
+        /// h[1, v[2, 3]], with 3 focused. 1: (0, 0, 960, 1079), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 539.5)
+        private func openThreeWindowsAndPutTheCursor(at point: CGPoint) async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            config.tiling.splitTarget = .cursor
+            cursorLocation = { point }
+        }
+
+        @Test func testCursor_theWindowUnderTheCursorIsSplit_notTheFocusedOne() async throws {
+            try await openThreeWindowsAndPutTheCursor(at: CGPoint(x: 100, y: 900))
+            try await openWindow(4)
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.v_tiles([.window(1), .window(4)]), .v_tiles([.window(2), .window(3)])]))
+            assertRects([1: (0, 0, 960, 539.5), 4: (0, 539.5, 960, 539.5), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 539.5)])
+
+            // 4 is the focused one now, and the cursor is over 2
+            cursorLocation = { CGPoint(x: 1900, y: 10) }
+            try await openWindow(5)
+            assertEquals(
+                workspace.rootTilingContainer.layoutDescription,
+                .h_tiles([.v_tiles([.window(1), .window(4)]), .v_tiles([.h_tiles([.window(2), .window(5)]), .window(3)])]),
+            )
+        }
+
+        @Test func testCursor_noTilingWindowUnderTheCursor_theFocusedWindowIsSplit() async throws {
+            config.gaps = Gaps(inner: .init(vertical: 20, horizontal: 20), outer: .zero)
+            // In the gap between 1 and the other two, out of the monitor, and out of every monitor
+            for point in [CGPoint(x: 960, y: 300), CGPoint(x: 100, y: 1079.5), CGPoint(x: -500, y: -500)] {
+                for window in workspace.allLeafWindowsRecursive { window.unbindFromParent() }
+                try await openThreeWindowsAndPutTheCursor(at: point)
+                try await openWindow(4)
+                assertEquals(
+                    workspace.rootTilingContainer.layoutDescription,
+                    .h_tiles([.window(1), .v_tiles([.window(2), .h_tiles([.window(3), .window(4)])])]),
+                    additionalMsg: "\(point)",
+                )
+            }
+        }
+
+        /// The cursor says nothing about a workspace that isn't on the screen
+        @Test func testCursor_workspaceThatIsntVisible_theMostRecentWindowIsSplit() async throws {
+            try await openThreeWindowsAndPutTheCursor(at: CGPoint(x: 100, y: 100))
+            let other = Workspace.get(byName: "other")
+            assertEquals(TestWindow.new(id: 10, parent: other.rootTilingContainer).focusWindow(), true)
+            assertEquals(workspace.isVisible, false)
+
+            try await run("move-node-to-workspace \(workspace.name)")
+            assertEquals(
+                workspace.rootTilingContainer.layoutDescription,
+                .h_tiles([.window(1), .v_tiles([.window(2), .h_tiles([.window(3), .window(10)])])]),
+            )
+        }
+
+        /// The tiling windows are behind the fullscreen one: the user doesn't see what is under the cursor
+        @Test func testCursor_fullscreenWindow_theFocusedWindowIsSplit() async throws {
+            try await openThreeWindowsAndPutTheCursor(at: CGPoint(x: 100, y: 100))
+            try await run("fullscreen on")
+            try await openWindow(4)
+            assertEquals(
+                workspace.rootTilingContainer.layoutDescription,
+                .h_tiles([.window(1), .v_tiles([.window(2), .h_tiles([.window(3), .window(4)])])]),
+            )
+        }
+
+        /// A floating window that becomes a tiling one is placed like a new window
+        @Test func testCursor_floatingToTiling() async throws {
+            try await openThreeWindowsAndPutTheCursor(at: CGPoint(x: 100, y: 100))
+            try await run("layout floating") // 3
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
+            try await run("layout tiling")
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.v_tiles([.window(1), .window(3)]), .window(2)]))
+        }
+
+        /// The option is only for dwindle
+        @Test func testCursor_afterFocused_theCursorDoesntMatter() async throws {
+            config.tiling.newWindowPlacement = .afterFocused
+            workspace.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
+            }
+            config.tiling.splitTarget = .cursor
+            cursorLocation = { CGPoint(x: 100, y: 100) }
+            try await openWindow(3)
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2), .window(3)]))
+        }
+
         @Test func testSquareTargetIsSplitVertically() async throws {
             // 1079x1079
             TestWindow.new(id: 1, parent: workspace.rootTilingContainer, adaptiveWeight: 1079)

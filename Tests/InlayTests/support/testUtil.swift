@@ -48,6 +48,7 @@ func setUpWorkspacesForTests() {
     TestApp.shared.windows = []
 
     global_layoutForNextDetectedWindow = nil
+    cursorLocation = { mouseLocation }
     activeMode = mainModeId
     ServerState.shared.isEnabled = true
 }

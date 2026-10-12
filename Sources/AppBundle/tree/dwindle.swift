@@ -12,7 +12,8 @@ import Common
 /// Decides where a new tiling window goes when `new-window-placement = 'dwindle'`, and prepares the tree for it:
 /// the caller only has to bind the new window with the returned data.
 ///
-/// 1. Target. The focused window, if it's a tiling window of the workspace.
+/// 1. Target. With `split-target = 'cursor'`, the tiling window of the workspace under the mouse cursor, if there is one.
+///    Otherwise, the focused window, if it's a tiling window of the workspace.
 ///    Otherwise, the most recent tiling window of the workspace
 /// 2. Axis. Target wider than tall -> horizontal split (side by side). Otherwise, including a square -> vertical split
 /// 3. Placement. It depends on the container of the target:
@@ -35,12 +36,26 @@ func prepareDwindleBindingDataForNewTilingWindow(_ workspace: Workspace, focused
     workspace.normalizeContainers()
     // The most recent window isn't necessarily the focused one. Example: flatten-workspace-tree rebinds all the windows
     let focused = focused?.takeIf { $0.parent is TilingContainer && $0.nodeWorkspace == workspace }
-    guard let target = focused ?? workspace.rootTilingContainer.mostRecentWindowRecursive,
+    let underCursor = config.tiling.splitTarget == .cursor ? workspace.tilingWindow(at: cursorLocation()) : nil
+    guard let target = underCursor ?? focused ?? workspace.rootTilingContainer.mostRecentWindowRecursive,
           target.parent is TilingContainer,
           // Also normalizes the weights. From this point, the weights are in screen points
           let targetRect = target.predictLayoutRect() else { return nil }
     let axis: Orientation = targetRect.width > targetRect.height ? .h : .v
     return target.splitTilingPlace(axis, newShare: 1 - config.tiling.splitRatio, newIsAfter: true, rect: targetRect)
+}
+
+extension Workspace {
+    /// The tiling window that the layout puts under the point of the screen.
+    ///
+    /// nil if the point is in a gap, over another monitor, or if nothing of the tree is there to be seen:
+    /// the workspace isn't the visible one of its monitor, or a fullscreen window covers the tiling windows.
+    /// The floating windows aren't taken into account, not even one that covers the point
+    @MainActor
+    func tilingWindow(at point: CGPoint) -> Window? {
+        guard isVisible, rootTilingContainer.mostRecentWindowRecursive?.isFullscreen != true else { return nil }
+        return rootTilingContainer.allLeafWindowsRecursive.first { $0.predictLayoutRect()?.contains(point) == true }
+    }
 }
 
 extension TreeNode {

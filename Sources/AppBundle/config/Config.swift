@@ -76,8 +76,22 @@ struct TilingConfig: ConvenienceMutable, Equatable {
     var splitRatio: CGFloat = 0.5
     /// How the windows that are already open when Inlay starts are arranged
     var startupLayout: StartupLayout = .grid
+    /// Which window a new window splits, when newWindowPlacement is dwindle
+    var splitTarget: SplitTarget = .focused
+    /// The size, in points, under which the resize command and the mouse don't shrink a tiling window.
+    /// See: TilingContainer.minimumResizeWeights
+    var minWindowSize: CGFloat = 100
 
     static let splitRatioRange: ClosedRange<CGFloat> = 0.1 ... 0.9
+    static let minWindowSizeRange = 20 ... 500
+}
+
+/// The window that a new tiling window splits in two
+enum SplitTarget: String, CaseIterable {
+    /// The focused window. If it isn't a tiling window of the workspace, the most recent tiling window of the workspace
+    case focused
+    /// The tiling window under the mouse cursor, like Hyprland does. If there is none, the same as `focused`
+    case cursor
 }
 
 /// Where a new tiling window is placed

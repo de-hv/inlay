@@ -38,18 +38,36 @@ struct ResizeCommand: Command {
         }
         guard let orientation else { return .fail }
         guard let node else { return .fail }
+        // The weights become screen points. Before the first layout pass they may be anything: 1, 1, 1...
+        guard node.predictLayoutRect() != nil, let index = node.ownIndex else { return .fail }
         let diff: CGFloat = switch args.units.val {
             case .set(let unit): CGFloat(unit) - node.getWeight(orientation)
             case .add(let unit): CGFloat(unit)
             case .subtract(let unit): -CGFloat(unit)
         }
+        let siblingIndexes = parent.children.indices.filter { $0 != index }
+        if siblingIndexes.isEmpty { return .fail }
 
-        guard let childDiff = diff.div(parent.children.count - 1) else { return .fail }
-        parent.children.lazy
-            .filter { $0 != node }
-            .forEach { $0.setWeight(parent.orientation, $0.getWeight(parent.orientation) - childDiff) }
-
-        node.setWeight(orientation, node.getWeight(orientation) + diff)
+        // Nobody is shrunk under 'tiling.min-window-size': the resize stops there. It isn't an error, and the command
+        // doesn't tell about it: a key that is held down in a resize mode reaches the limit all the time
+        var weights = parent.children.map { $0.getWeight(orientation) }
+        let minimums = parent.children.map(\.minimumResizeWeight)
+        if diff > 0 {
+            let shrunk = shrinkWeights(siblingIndexes.map { weights[$0] }, by: diff, minimums: siblingIndexes.map { minimums[$0] })
+            for (siblingIndex, weight) in zip(siblingIndexes, shrunk) {
+                weights[index] += weights[siblingIndex] - weight
+                weights[siblingIndex] = weight
+            }
+        } else {
+            let given = weights[index] - shrinkWeights([weights[index]], by: -diff, minimums: [minimums[index]])[0]
+            weights[index] -= given
+            for siblingIndex in siblingIndexes {
+                weights[siblingIndex] += given / CGFloat(siblingIndexes.count)
+            }
+        }
+        for (child, weight) in zip(parent.children, weights) {
+            child.setWeight(orientation, weight)
+        }
         return .succ
     }
 }

@@ -105,6 +105,15 @@ gaps.outer.right =      14
     # Fallback value (if you omit the key): split-ratio = 0.5
     split-ratio = 0.5
 
+    # Only for 'dwindle'. Which window the new window splits.
+    # Possible values: focused|cursor
+    # - focused. The focused window. If it isn't a tiling window of the workspace (it floats, or the new window
+    #            goes to another workspace), the most recently used tiling window of the workspace.
+    # - cursor.  The tiling window under the mouse cursor, like Hyprland. If there is none (the cursor is in a gap,
+    #            on another monitor, over a fullscreen window, or the workspace isn't visible), the same as 'focused'.
+    # Fallback value (if you omit the key): split-target = 'focused'
+    split-target = 'focused'
+
     # How the windows that are already open when Inlay starts (or when 'enable on' resumes it) are arranged,
     # in every workspace. The windows that are opened later follow 'new-window-placement'
     # Possible values: grid|row|dwindle
@@ -115,6 +124,15 @@ gaps.outer.right =      14
     #            new-window-placement = 'dwindle' that is a spiral, and the last windows are small.
     # Fallback value (if you omit the key): startup-layout = 'grid'
     startup-layout = 'grid'
+
+    # The smallest width and height, in points, that resizing leaves to a tiling window. The 'resize' command and
+    # dragging an edge with the mouse stop there: the window isn't shrunk further, and its neighbors aren't either
+    # when it is the window that grows. Reaching the limit isn't an error: 'resize' still exits with 0.
+    # It only limits resizing. When the windows of a workspace don't fit with this size (many windows on a small
+    # monitor), the layout still gives every window its part, however small
+    # Possible values: 20 ... 500
+    # Fallback value (if you omit the key): min-window-size = 100
+    min-window-size = 100
 
 # The menu bar item
 [menu-bar]

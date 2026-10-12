@@ -30,6 +30,23 @@ extension InlayTests {
             assertEquals(bare.borders, result.config.borders)
         }
 
+        /// What the built-in config gives to somebody who installs Inlay without a config of their own
+        @Test func testDefaultConfig_workspacesAndBindings() throws {
+            let config = try parse("docs/config-examples/default-config.toml").config
+            assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6"])
+            func runs(_ binding: String, _ command: String) -> Bool {
+                let bound = config.modes[mainModeId]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
+                return bound?.commands.strictEquals(parseCommand(command).cmdOrDie) == true
+            }
+            // The workspaces that aren't persistent keep their bindings: they exist while they are in use
+            for name in ["1", "6", "7", "9", "A", "Z"] {
+                assertEquals(runs("alt-\(name.lowercased())", "workspace \(name)"), true, additionalMsg: name)
+                assertEquals(runs("alt-shift-\(name.lowercased())", "move-node-to-workspace \(name)"), true, additionalMsg: name)
+            }
+            assertTrue(runs("cmd-alt-comma", "balance-sizes"))
+            assertTrue(runs("alt-slash", "layout tiles horizontal vertical"))
+        }
+
         @Test func testI3LikeExample() throws {
             let result = try parse("docs/config-examples/i3-like-config-example.toml")
             assertEquals(result.errors, [])
@@ -47,6 +64,8 @@ extension InlayTests {
             assertEquals(result.config.borders.modeColors.keys.sorted(), ["resize", "service"])
             // The gaps are the ones of the built-in config: room for the borders of two neighbors
             assertEquals(result.config.gaps, try parse("docs/config-examples/default-config.toml").config.gaps)
+            // And the persistent workspaces
+            assertEquals(result.config.persistentWorkspaces, try parse("docs/config-examples/default-config.toml").config.persistentWorkspaces)
         }
 
         /// One-off: INLAY_TEST_CONFIG=<path> scripts/test.sh --filter ShippedConfigsTest prints what Inlay says about a config

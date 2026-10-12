@@ -51,10 +51,10 @@ automatically-unhide-macos-hidden-apps = false
 # even when they are invisible.
 # This config option is only available since 'config-version = 2'
 # Fallback value (if you omit the key): persistent-workspaces = []
-# Only 1-9: every persistent workspace takes room in the menu bar item, and the item of a long list
-# doesn't fit next to the notch of a laptop. The letter workspaces (alt-a ... alt-z below) still work:
-# a workspace exists while it has windows or it is the visible one
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+# Only 1-6: every persistent workspace takes room in the menu bar item, and the item of a long list
+# doesn't fit next to the notch of a laptop. The other workspaces (alt-7 ... alt-9 and alt-a ... alt-z below)
+# still work: a workspace exists while it has windows or it is the visible one, and the item shows it then
+persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
 
 # A callback that runs every time binding mode changes
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -261,6 +261,11 @@ gaps.outer.right =      14
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#layout
     alt-slash = 'layout tiles horizontal vertical'
+
+    # See: https://nikitabobko.github.io/AeroSpace/commands#balance-sizes
+    # All the windows of the workspace get the same share of their containers again, after resizing them.
+    # In AeroSpace the comma key (alt-comma) switched to the accordion layout, which Inlay doesn't have
+    cmd-alt-comma = 'balance-sizes'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
     alt-h = 'focus left'

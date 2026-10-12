@@ -73,6 +73,15 @@ new-window-placement = 'dwindle'                              # defecto: 'dwindl
 # 0.5 = mitades iguales; 0.6 = la original se queda el 60 %. Rango 0.1 – 0.9.
 split-ratio = 0.5                                             # defecto: 0.5
 
+# Con dwindle: qué ventana divide la ventana nueva.
+#   'focused'  La enfocada. Si no está en mosaico en ese workspace (es flotante,
+#              o la ventana va a otro workspace), la más reciente en mosaico.
+#   'cursor'   La ventana en mosaico que está bajo el cursor del ratón, como en
+#              Hyprland. Si no hay ninguna (el cursor está en un gap, en otro
+#              monitor o sobre una ventana a pantalla completa, o el workspace
+#              no está visible), igual que 'focused'.
+split-target = 'focused'                                      # defecto: 'focused'
+
 # Cómo se reparten las ventanas que YA están abiertas cuando Inlay arranca (o
 # cuando se reanuda con `inlay enable on`), workspace por workspace. Las que se
 # abren después siguen `new-window-placement`.
@@ -83,6 +92,13 @@ split-ratio = 0.5                                             # defecto: 0.5
 #   'dwindle'  Sin reparto: entran una detrás de otra, como ventanas nuevas
 #              (con dwindle, una espiral con las últimas muy pequeñas).
 startup-layout = 'grid'                                       # defecto: 'grid'
+
+# Tamaño mínimo, en puntos, que `resize` y el arrastre de un borde con el ratón
+# dejan a una ventana en mosaico: al llegar ahí dejan de encoger, sin error
+# (`resize` sigue saliendo con 0). Solo limita el redimensionado: si las
+# ventanas de un workspace no caben con este tamaño, el reparto les da menos.
+# Rango 20 – 500.
+min-window-size = 100                                         # defecto: 100
 
 
 # ─── Barra de menús ──────────────────────────────────────────────────────────
@@ -129,6 +145,9 @@ empty    = 'auto'            # workspaces vacíos               (defecto: 'auto'
 
 # ─── Bordes de ventana ───────────────────────────────────────────────────────
 [borders]
+# Llevan borde las ventanas normales, en mosaico o flotantes. No lo llevan los
+# diálogos y hojas (lo que Inlay detecta como diálogo y pone flotante solo),
+# los popups ni las ventanas a pantalla completa.
 enabled = true                       # defecto: true
 
 # Grosor en puntos. El borde se dibuja por fuera del marco de la ventana, así
@@ -208,7 +227,12 @@ cmd-alt-ctrl-right = 'move right'
 
 # Girar la división del contenedor de la ventana enfocada (lado a lado ↔
 # apiladas). Es el «togglesplit» de Hyprland.
-cmd-alt-comma = 'layout horizontal vertical'
+cmd-alt-slash = 'layout horizontal vertical'
+
+# Igualar los tamaños de las ventanas del workspace después de redimensionar.
+# Es la tecla que en AeroSpace cambiaba a accordion, que Inlay no tiene.
+# También está en el modo service, en la tecla b.
+cmd-alt-comma = 'balance-sizes'
 
 cmd-alt-ctrl-enter = 'fullscreen'
 

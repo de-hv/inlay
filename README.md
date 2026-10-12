@@ -38,7 +38,9 @@ yet been tried in real use**, only with tests: `split-target` and `min-window-si
 the menu as text, and the minimized window that goes back to its workspace. The same goes for the third
 revision (installing without options, `inlay.toml` as the shipped config, the question about the symbolic link,
 `inlay uninstall`, `inlay config --explain` and the reload of a config saved by hand): tried in an isolated
-environment and with tests, not yet in real use.
+environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
+the focused workspace, the menu without icons, the Settings window that fits small screens, the config folder
+linked by `install.sh` and `inlay uninstall` removing the config.
 
 Known limitations of this version:
 
@@ -74,24 +76,24 @@ No option is needed. `install.sh`:
 3. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **if you
    have no Inlay config yet**. A config that already exists is yours: see
    [A config that you already have](#a-config-that-you-already-have);
-4. right after creating that copy, **asks whether you prefer a symbolic link to a config file of your own**
-   (one you keep in a dotfiles repo, for example). If you answer yes, it asks for the path (`~` is
-   expanded). If the file exists, the copy is replaced by a link to it; if it does not, the script warns
-   and keeps the copy. Without a terminal to ask on (stdin is not a TTY) it asks nothing and keeps the copy;
+4. **asks, every time, whether you want to use a config folder of your own through a symbolic link** (one
+   you keep in a dotfiles repo, for example). Enter means no and keeps what you have. See
+   [Your own config folder](#your-own-config-folder). Without a terminal to ask on (stdin is not a TTY) it
+   asks nothing;
 5. checks the config with the parser of the app it has just installed and prints its errors and warnings
    (they never stop the installation);
 6. **opens Inlay** and says so, with what to do the first time (see
    [Before opening Inlay](#before-opening-inlay)).
 
-<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it installs Inlay.app, links the CLI, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks 'Replace the copy with a symbolic link to your own config file? [y/N]', gets 'y' and the path ~/dotfiles/my.toml, links the config, checks it, explains the Accessibility permission and opens Inlay" width="880"></p>
+<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it installs Inlay.app, links the CLI, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks 'Use a config folder of your own through a symbolic link? [y/N]', gets 'y' and the path ~/dotfiles/inlay, links ~/.config/inlay to that folder, checks the config, explains the Accessibility permission and opens Inlay" width="880"></p>
 
 It can be run as many times as needed: it updates what is installed, quitting the running copy first.
 
 | Option | Effect |
 |---|---|
 | `--reset-config` | Replaces your config by the `inlay.toml` of the repo, whatever is in it, and keeps yours next to it as `inlay.toml.backup-<date>`. See [A config that you already have](#a-config-that-you-already-have) |
-| `--config-link PATH` | Makes the config a symbolic link to `PATH` instead of asking. Only when there is no Inlay config yet, and only if `PATH` exists (otherwise the copy is kept, with a warning) |
-| `--no-prompt` | Asks nothing and keeps the copy of `inlay.toml` |
+| `--config-link FOLDER` | Links `~/.config/inlay` to `FOLDER` instead of asking, with the rules of [Your own config folder](#your-own-config-folder). Also on a reinstall |
+| `--no-prompt` | Asks nothing and keeps the config as it is |
 | `--import-aerospace` | If you have no Inlay config, start from your `~/.aerospace.toml` instead of `inlay.toml` |
 | `--no-open` | Does not open Inlay when done |
 | `--adhoc-signing` | Ad hoc signature instead of the local identity (see [Signing](#signing)) |
@@ -103,6 +105,31 @@ is copied and the original is not touched). Check three things in the copy: `sta
 Inlay add itself to the login items the first time it starts; the key bindings or scripts that call the
 `aerospace` CLI keep talking to AeroSpace and must call `inlay`; and with `gaps` of 8 or less the borders of
 two neighboring windows touch.
+
+### Your own config folder
+
+On every run, also when you already have a config, `install.sh` asks:
+
+```
+Use a config folder of your own through a symbolic link? [y/N]
+```
+
+Enter (or `n`) keeps what you have. With `y` it asks for the path of a **folder** (`~` is expanded;
+`~/.dotfiles/inlay`, for example) and makes **`~/.config/inlay` a symbolic link to that folder**. Inlay reads
+and writes the `inlay.toml` in it; nothing else in the folder is touched.
+
+| What it finds | What it does |
+|---|---|
+| The folder does not exist | Warns and links nothing. Your config stays as it is: on a new install, the copy of `inlay.toml` in `~/.config/inlay/` |
+| The folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and nothing is linked |
+| You had a real `~/.config/inlay` | It is not deleted: it is renamed to `~/.config/inlay.backup-<date>`, and the script says so |
+| `~/.config/inlay` is already a link | The question says it (`currently linked to …`), and Enter changes nothing. Linking another folder replaces only the link: the folder it pointed to is not touched |
+| Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | It keeps working and Enter leaves it alone. With `y`, the folder that holds your file is offered as the path, and the old `~/.config/inlay` becomes the backup |
+| Your config is `~/.inlay.toml` | The question is skipped: Inlay reads one file or the other, never both |
+
+`--config-link FOLDER` does the same without asking (a folder without `inlay.toml` is only filled in when
+there is a terminal to ask on), and `--no-prompt` skips the question. To stop using your folder, remove the
+link (`rm ~/.config/inlay`) and run `./install.sh` again.
 
 ### A config that you already have
 
@@ -122,9 +149,14 @@ repo (key bindings, rules, options) is not in it. It also tells if the config ha
 rule, and prints the two commands that matter: `./install.sh --reset-config` to switch to the config of the
 repo, and a `diff` to compare them. A config changed from the Settings window counts as edited: it is kept.
 
-A config that is a **symbolic link** is always taken for your own, whatever the file it points to has in it.
-With `--reset-config` only the link is replaced: it is renamed to `inlay.toml.backup-<date>`, still pointing
-to your file, which is never written, moved or deleted.
+A config that is reached through a **symbolic link** (a linked folder, or a linked file) is always taken for
+your own, whatever is in it: it is never replaced on its own. `--reset-config` never writes, moves or deletes
+what a link points to either:
+
+- with a **linked folder**, the link itself is renamed to `~/.config/inlay.backup-<date>` (it still points to
+  your folder) and `~/.config/inlay` becomes a real folder with the `inlay.toml` of the repo. The script prints
+  the command that links your folder again;
+- with a **linked file**, the link is renamed to `inlay.toml.backup-<date>`, still pointing to your file.
 
 To go back to a backup: `mv ~/.config/inlay/inlay.toml.backup-<date> ~/.config/inlay/inlay.toml`.
 After changing `inlay.toml` in the repo, `scripts/update-default-config-hashes.sh` adds it to the list (a test
@@ -175,8 +207,8 @@ shell: `install.sh` warns when it sees it set.)
 `install.sh` copies, and a copy of it travels inside the app as the fallback for when there is no config at
 all. It is a real config rather than a neutral sample: 6 persistent workspaces, key bindings on
 `cmd-alt-ctrl-…` and `cmd-alt-shift-…`, the `service` and `resize` modes and `on-window-detected` rules that
-send each app to its workspace. Make it yours by editing your copy, or point the config to your own file
-with a symbolic link (the question of `install.sh`, or `--config-link`).
+send each app to its workspace. Make it yours by editing your copy, or keep your config in a folder of your
+own and link it (the question of `install.sh`, or `--config-link`).
 
 The rules are checked from top to bottom, and **the first one that matches a window is the only one that runs
 for it** (a rule with `check-further-callbacks = true` lets the next ones run too; the shipped config has
@@ -224,9 +256,9 @@ A test fails if the config parser accepts a key that the reference does not docu
 (see [Menu bar and settings](#menu-bar-and-settings)). In the other direction, with
 `auto-reload-config = true` (it is set in the shipped `inlay.toml`; the default of the key is `false`), Inlay
 reloads the config when the file is saved by hand, and the Settings window, if it is open, the menu bar item
-and the borders show the new values right away, without closing anything. It works when the config is a
-symbolic link to a file in another folder, with editors that save by writing a new file and renaming it over
-the old one, and when the link is pointed to another file. A save that leaves the file unreadable as TOML
+and the borders show the new values right away, without closing anything. It works when `~/.config/inlay` is
+a symbolic link to a folder of yours, when the file itself is a link, with editors that save by writing a new
+file and renaming it over the old one, and when a link is pointed somewhere else. A save that leaves the file unreadable as TOML
 is not applied (the previous config stays, and a window shows the error); the next save is picked up as usual.
 Without that key, reload by hand: `inlay reload-config` or *Reload Config* in the menu, which refresh
 Settings the same way. Settings writing the file does not cause a second reload.
@@ -401,8 +433,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | `theme` | `'chips'`, `'square'`, `'minimal'` | `'chips'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `false` |
-| `[menu-bar.colors]` `accent` | color | `'system-accent'` |
-| `[menu-bar.colors]` `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
+| `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
 
 **`theme`**: the shape of the item.
 
@@ -424,28 +455,37 @@ the theme is treated as `'chips'` and the key is ignored. Picking a theme in Set
 [menu-bar]
     enabled = true
     dim-empty-workspaces = true
-    show-mode = false             # a badge with the initial of the binding mode, when it is not 'main'
+    show-mode = false             # the initial of the binding mode on the marker of the focused workspace
 ```
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: no badge with false or in the main mode; an orange badge with an R in the resize mode, in 'chips' and in 'minimal'; and the 'square' theme, which always shows the R in its square" width="880"></p>
+With `show-mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
+focused workspace carries the initial of the mode**, the way Aeromenu did it. In `chips` and `minimal` the
+initial takes the place of the name in the chip; in `square` the square grows from 8.5 to 14 pt to hold it.
+Nothing is added next to the workspaces, so the item is exactly as wide in every mode and nothing in the menu
+bar moves. While a window of the workspace is fullscreen, the marker is an outline and the initial is drawn
+inside it. The key governs the three themes (`square` used to show the mode always).
+
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'square', the item as wide as before; and the same with a fullscreen window, the R inside of an outline" width="880"></p>
 
 **`[menu-bar.colors]`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
-the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'` and no mode badge, the
-item is a template image identical to the one of Aeromenu; a fixed color does not adapt to the bar.
+the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'`, the
+item is a template image identical to the one of Aeromenu, also while it shows a binding mode; a fixed color
+does not adapt to the bar. `accent` is the color of the marker while it shows the binding mode: `'auto'` is
+the same as `focused`, and over a fixed color the initial is white, or black if the color is light.
 
 ```toml
 [menu-bar.colors]
-    accent = 'system-accent'   # the mode badge. Not 'auto'
+    accent = 'auto'            # the marker of the focused workspace while it shows the binding mode
     focused = 'auto'           # the background of the focused workspace
     occupied = 'auto'          # the workspaces with windows: the name and, at 16%, its background
     empty = 'auto'             # the workspaces without windows
 ```
 
-<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their TOML, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, and the mode badge in the accent color of the system. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'square' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their TOML, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, the R of the resize mode cut out of the focused one. accent = 'system-accent': that chip in the accent color of the system, with a white R. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'square' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
 
 **The item and its menu**
 
-<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a right click on the item opens, from top to bottom: Workspaces (1 to 6 with their apps, drawn as generic ones, 2 checked, 6 'Empty'), Float Focused Window, then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
+<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a right click on the item opens, from top to bottom: Workspaces (1 to 6 with the names of their apps as text, without icons, 2 checked, 6 'Empty'), Float Focused Window, then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
 
 
 - The item is **informational only**: the left click does nothing (it does not switch workspace or open the
@@ -454,8 +494,8 @@ item is a template image identical to the one of Aeromenu; a fixed color does no
   key bindings, the CLI or the *Workspaces* section of the menu. The left click does not highlight the item
   either: the button never gets to see the mouse (a transparent view on top of it takes it). With the menu
   open, the item is highlighted like any menu of the menu bar. A ⌘-drag still moves the item along the bar.
-- The menu is short on purpose. It lists the workspaces with the apps that have windows in each one
-  (choosing one switches to it), toggles the focused window between floating and tiling, and has what concerns
+- The menu is short on purpose. It lists the workspaces with the names of the apps that have windows in each
+  one, as text and without icons (choosing one switches to it), toggles the focused window between floating and tiling, and has what concerns
   Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a click
   copies it, with the commit) and *Quit*. Moving a window to another workspace, fullscreen, the layout and the
   binding modes are not in it: they are done with the key bindings. **The menu does not show the key bindings
@@ -465,7 +505,7 @@ item is a template image identical to the one of Aeromenu; a fixed color does no
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
   file**, line by line and without touching comments or the rest of the file, and reloads the config. If the
-  config is a symbolic link, it is written to its target. If you have no config yet, the first change creates
+  config folder or the file is a symbolic link, the file is written where it really lives and the link stays. If you have no config yet, the first change creates
   `~/.config/inlay/inlay.toml` from the shipped one. A key written with dots (`menu-bar.theme = …`) or
   inside an inline table is not edited from Settings: its control appears disabled. A subtable that does not
   exist yet (`[menu-bar.colors]`, `[borders.mode-colors]`) is added right after its parent table.
@@ -486,6 +526,11 @@ tabs with the shipped config (click one to see it at full size):
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): only the content
 of each tab, without the title bar and the tab bar of the window.</sub>
+
+The window is never taller than the usable part of the screen and never leaves it. A tab that does not fit
+(on the screen of a small laptop, General is taller than what the menu bar and the Dock leave) scrolls, so
+every control can be reached. `Inlay --debug-settings <config> [--inspect] [--screen-height <points>]` opens
+the window alone, without the window manager, against a config file of your choice.
 
 How the window and the file follow each other is in [Configuration](#configuration).
 
@@ -602,11 +647,11 @@ there is no JankyBorders code and SkyLight is not used.
 ## Uninstallation
 
 ```sh
-inlay uninstall           # quits Inlay and removes the app, the CLI link and the login item
-inlay uninstall --purge   # also deletes your config and the preferences of the app
+inlay uninstall           # quits Inlay and removes the app, the CLI link, the login item and your config
+inlay uninstall --purge   # also the preferences of the app and the config backups of install.sh
 ```
 
-<p align="center"><img src="docs/images/terminal-uninstall.png" alt="Real output of 'inlay uninstall' in a terminal: it lists what it removes (/Applications/Inlay.app and its login item, and ~/.local/bin/inlay), says that the config is kept, asks 'Remove Inlay? [y/N]', gets 'y', quits the running Inlay, removes the app and the CLI link, and says how to go back to AeroSpace" width="880"></p>
+<p align="center"><img src="docs/images/terminal-uninstall.png" alt="Real output of 'inlay uninstall' in a terminal: it lists what it removes (/Applications/Inlay.app and its login item, ~/.local/bin/inlay and ~/.config/inlay, a symbolic link of which only the link is removed), says what is kept, asks 'Remove Inlay? [y/N]', gets 'y', removes the app, the CLI link and the link of the config, and says how to go back to AeroSpace" width="880"></p>
 
 It lists what it is going to remove and asks for confirmation; `--yes` skips the question (and is required
 when there is no terminal to answer on). It works whether Inlay is running or not: a running Inlay is quit
@@ -615,9 +660,21 @@ removes the app that contains it, so it runs from a temporary copy of the uninst
 itself at the end.
 
 It removes the app that the `inlay` you ran belongs to, and the copies in `/Applications` and in
-`~/Applications`; with `INSTALL_DIR=…` it looks in that folder instead of those two. Without `--purge` your
-config is kept. With `--purge`, if the config is a symbolic link to a file of yours, **only the link is
-removed**, never the file it points to.
+`~/Applications`; with `INSTALL_DIR=…` it looks in that folder instead of those two.
+
+**Your config is always removed**: `~/.config/inlay` and `~/.inlay.toml`. The list that you confirm says
+exactly what goes:
+
+- `~/.config/inlay` is a real folder: the folder and everything in it are deleted;
+- `~/.config/inlay` is a **symbolic link** to a folder of yours: **only the link is removed**. The folder it
+  points to and its `inlay.toml` are never touched, and the list names that folder as kept;
+- a link inside of a real `~/.config/inlay` (an `inlay.toml` linked by a previous version) goes with the
+  folder; the file it points to is never touched.
+
+`--purge` adds what is left behind: the preferences and the runtime files of the app, and the config backups
+that `install.sh` made outside of the config folder (`~/.config/inlay.backup-<date>`,
+`~/.inlay.toml.backup-<date>`; a backup that is a link is removed as a link). Without `--purge` they are kept,
+and the list names them.
 
 `./uninstall.sh` in the repo does the same (it is the same script, with the same options), for when the CLI
 is not at hand.
@@ -649,6 +706,19 @@ INLAY_RENDER_DIR=/tmp/inlay-item scripts/test.sh --filter SettingsModelTest   # 
 
 `--render-settings <dir> [<config>]` draws the tabs as they are with the shipped config, or with the config file
 given; it neither reads nor writes your config, and only shows the path a new config would get.
+
+The Settings window can also be opened for real, alone: `--debug-settings <config>` shows it without the
+window manager, the menu bar item, the key bindings or the Accessibility permission, editing the config file
+you give it (nothing is reloaded), and exits when the window is closed. With `--inspect` it does not wait: it
+shows every tab, prints where each control ended up and whether a click reaches it (scrolling to it if it takes
+that), and exits with an error if something can't be reached. `--screen-height <points>` makes the window
+behave as on a screen that leaves that much height.
+
+```sh
+cp inlay.toml /tmp/inlay-test.toml
+build/Inlay.app/Contents/MacOS/Inlay --debug-settings /tmp/inlay-test.toml
+build/Inlay.app/Contents/MacOS/Inlay --debug-settings /tmp/inlay-test.toml --inspect --screen-height 700
+```
 
 The same goes for the borders. `--render-borders` draws them off screen in each state, and `--debug-borders`
 shows them for real for a few seconds around the windows that are on screen (without moving anything and

@@ -12,23 +12,23 @@
 <body class="png">
 <div class="sheet"><span class="tag real">Real render</span>
   <h1>[menu-bar.colors]</h1>
-  <div class="sub">Each color is <code class="key">'#RRGGBB'</code>, <code class="key">'#RRGGBBAA'</code>, <code class="key">'system-accent'</code> or <code class="key">'auto'</code>: the color of the menu bar text, white on a dark bar and black on a light one. Shown in the <code class="key">resize</code> mode with <code class="key">show-mode = true</code>, so the accent is visible.</div>
+  <div class="sub">Each color is <code class="key">'#RRGGBB'</code>, <code class="key">'#RRGGBBAA'</code>, <code class="key">'system-accent'</code> or <code class="key">'auto'</code>: the color of the menu bar text, white on a dark bar and black on a light one. Shown in the <code class="key">resize</code> mode with <code class="key">show-mode = true</code>, so the marker of the mode is visible.</div>
   <div class="cols">
     <div><div class="toml mono">
 # The defaults
 [menu-bar.colors]
-    accent = 'system-accent'
+    accent = 'auto'
     focused = 'auto'
     occupied = 'auto'
     empty = 'auto'
-</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-light.png" style="height:33px"></div></div><div class="cap"><small>The accent is the one of this Mac (System Settings › Appearance)</small></div></div>
+</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-light.png" style="height:33px"></div></div><div class="cap"><small>One color that follows the menu bar. With <code>accent = 'system-accent'</code>, the marker of a binding mode has the accent color of this Mac:</small></div><div class="bars" style="margin-top:6px"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-accent-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-accent-light.png" style="height:33px"></div></div></div>
     <div><div class="toml mono">
 [menu-bar.colors]
     accent = '#E06C75'
     focused = '#D19A66'
     occupied = '#ABB2BF'
     empty = '#6B7280'
-</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-custom-light.png" style="height:33px"></div></div><div class="bars" style="margin-top:6px"><div class="box d"><img class="item" src="render/menu-bar-6x/square-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/square-mode-custom-light.png" style="height:33px"></div></div><div class="cap"><small><code>accent</code>: the mode badge · <code>focused</code>: the focused workspace · <code>occupied</code>: with windows (the name, and its background at 16%) · <code>empty</code>: without windows. A fixed color does not adapt to the menu bar</small></div></div>
+</div><div class="bars"><div class="box d"><img class="item" src="render/menu-bar-6x/chips-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/chips-mode-custom-light.png" style="height:33px"></div></div><div class="bars" style="margin-top:6px"><div class="box d"><img class="item" src="render/menu-bar-6x/square-mode-custom-dark.png" style="height:33px"></div><div class="box l"><img class="item" src="render/menu-bar-6x/square-mode-custom-light.png" style="height:33px"></div></div><div class="cap"><small><code>accent</code>: the marker of a binding mode · <code>focused</code>: the focused workspace · <code>occupied</code>: with windows (the name, and its background at 16%) · <code>empty</code>: without windows. A fixed color does not adapt to the menu bar</small></div></div>
     <div><div class="toml mono">
 [menu-bar.colors]
     focused = 'system-accent'

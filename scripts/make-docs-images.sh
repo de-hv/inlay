@@ -66,7 +66,7 @@ PAGES=(
   hero:1280:800
   menu-bar-themes:880:326
   menu-bar-states:880:330
-  menu-bar-options:880:372
+  menu-bar-options:880:476
   menu-bar-colors:880:500
   menu:880:452
   borders-states:880:586
@@ -74,9 +74,9 @@ PAGES=(
   borders-corner-radius:880:310
   borders-glow:880:310
   borders-gaps:880:310
-  terminal-install:880:708
+  terminal-install:880:724
   terminal-cli:880:486
-  terminal-uninstall:880:412
+  terminal-uninstall:880:462
 )
 for page in "${PAGES[@]}"; do
   IFS=: read -r name width height <<<"$page"

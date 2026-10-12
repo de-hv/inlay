@@ -363,20 +363,22 @@ extension TomlPatcher {
         mutating func insert(_ path: TomlKeyPath, _ literal: String) {
             let key = TomlPatcher.keyLiteral(path.key)
             let newline = lines.first { !$0.terminator.isEmpty }?.terminator ?? "\n"
-            // The last line break of the document may be missing
-            func terminateLastLine() {
+            // The last line break of the document may be missing. It is added only if the new line goes after
+            // the last one: a line that is added in the middle leaves the end of the document as it is
+            func terminateLastLine(ifInsertingAt index: Int? = nil) {
+                if let index, index < lines.count { return }
                 if let last = lines.indices.last, lines[last].terminator.isEmpty { lines[last].terminator = newline }
             }
             let sectionEntries = entries.filter { $0.table == path.table }
             if let last = sectionEntries.last {
                 // After the last key of the table, with its indentation
                 let indent = lines[last.firstLine].content.prefix { $0 == " " || $0 == "\t" }
-                terminateLastLine()
+                terminateLastLine(ifInsertingAt: last.lastLine + 1)
                 lines.insert(Line(content: "\(indent)\(key) = \(literal)", terminator: newline), at: last.lastLine + 1)
             } else if let header = headers.first(where: { $0.path == path.table }) {
                 // An empty table: right after its header
                 let indent = lines[header.line].content.prefix { $0 == " " || $0 == "\t" }
-                terminateLastLine()
+                terminateLastLine(ifInsertingAt: header.line + 1)
                 lines.insert(Line(content: "\(indent)\(key) = \(literal)", terminator: newline), at: header.line + 1)
             } else if path.table.isEmpty, let firstHeader = headers.first {
                 // No top level keys: before the first table and the comments attached to it

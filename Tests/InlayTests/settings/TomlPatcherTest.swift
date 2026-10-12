@@ -1,5 +1,6 @@
 @testable import AppBundle
 import Common
+import Foundation
 import Testing
 
 extension InlayTests {
@@ -258,6 +259,95 @@ extension InlayTests {
             assertEquals(set(text, TomlKeyPath(["menu-bar"], "enabled"), .bool(true)), "[menu-bar]\r\ntheme = 'chips' # comment\r\nenabled = true\r\n\r\n[x]\r\na = 1\r\n")
             assertEquals(set(text, focused, .string("auto")), text + "\r\n[menu-bar.colors]\r\nfocused = 'auto'\r\n")
             assertEquals(remove(text, theme), "[menu-bar]\r\n\r\n[x]\r\na = 1\r\n")
+        }
+
+        @Test func testMissingLastLineBreak() {
+            // A value is replaced: the end of the document stays as it is
+            assertEquals(set("[menu-bar]\ntheme = 'chips'", theme, .string("square")), "[menu-bar]\ntheme = 'square'")
+            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[x]\na = 1", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n[x]\na = 1")
+            // A key is added in the middle: the same
+            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[x]\na = 1", TomlKeyPath(["menu-bar"], "enabled"), .bool(false)), "[menu-bar]\ntheme = 'chips'\nenabled = false\n[x]\na = 1")
+            assertEquals(set("[menu-bar]\n[x]\na = 1", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n[x]\na = 1")
+            assertEquals(set("[x]\na = 1", startAtLogin, .bool(true)), "start-at-login = true\n\n[x]\na = 1")
+            // A key is added after the last line: the line gets its line break
+            assertEquals(set("[menu-bar]\ntheme = 'chips'", TomlKeyPath(["menu-bar"], "enabled"), .bool(false)), "[menu-bar]\ntheme = 'chips'\nenabled = false\n")
+            assertEquals(set("[menu-bar]", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n")
+            assertEquals(set("[x]\r\na = 1", theme, .string("square")), "[x]\r\na = 1\r\n\r\n[menu-bar]\r\ntheme = 'square'\r\n")
+        }
+
+        /// The config file belongs to the user. Whatever the document looks like, an edit touches one line of it
+        /// (plus the header of a new table and the empty line before it) and leaves every other byte alone
+        @Test func testNothingElseChanges() {
+            let documents: [String] = [
+                "",
+                "\n\n\n",
+                "# only a comment",
+                "a = 1 # no line break at the end",
+                "[menu-bar]",
+                "[menu-bar] # comment\n\n\n[borders]# comment\n",
+                "\t[menu-bar]\n\t\ttheme\t=\t'chips'\t# tabs\n\t[borders]\n\t\twidth=4# no spaces\n",
+                "[menu-bar.colors]\nfocused = 'auto'\n[menu-bar]\ntheme = \"chips\"\n[borders]\nwidth = 0x04\n",
+                "start-at-login = false\r\n[menu-bar]\r\ntheme = 'chips'\r\n\r\n[borders]\r\nwidth = 4",
+                // Mixed line endings
+                "start-at-login = false\n[menu-bar]\r\ntheme = 'chips'\n[borders]\r\nwidth = 4\n",
+                "after-startup-command = [\n  'exec-and-forget echo [menu-bar]',\n  \"\"\"exec-and-forget echo '\ntheme = 1\n[borders]\n'\"\"\",\n]\n[menu-bar]\n  enabled = true\n",
+                "[mode.main.binding]\nalt-h = 'focus left' # theme = 'x'\n'theme' = 'mode main'\n[[on-window-detected]]\nif.app-id = 'a'\nrun = 'layout floating'\n[menu-bar]\n[[on-window-detected]]\nrun = ['layout tiling']\n",
+                "# ñandú 日本語 🪟\n[menu-bar]\ntheme = 'chips' # tema «fichas» 🪟\n[gaps]\ninner.horizontal = 8\nouter.top = [{ monitor.'built-in' = 4 }, 8]\n",
+                "[tiling]\nsplit-ratio = 0.5\n\n\n\n[borders.mode-colors]\nresize = '#30D158'\n\n# trailing comment\n",
+            ]
+            let edits: [(TomlKeyPath, TomlValue)] = [
+                (startAtLogin, .bool(true)), (theme, .string("square")), (focused, .string("#D19A66")),
+                (TomlKeyPath(["borders"], "width"), .int(7)), (TomlKeyPath(["tiling"], "new-window-placement"), .string("after-focused")),
+            ]
+            func lines(_ text: String) -> [String] { TomlPatcher.Document(text).lines.map { $0.content + $0.terminator } }
+            for document in documents {
+                for (path, value) in edits {
+                    guard let patched = try? TomlPatcher.set(document, path, value) else {
+                        Issue.record("Can't set \(path) in \(document.debugDescription)")
+                        continue
+                    }
+                    assertEquals(value.matches(TomlPatcher.decodedValue(patched, path)), true, additionalMsg: "\(path) in \(document.debugDescription)")
+                    let before = lines(document), after = lines(patched)
+                    let difference = after.difference(from: before)
+                    // A line break that was missing at the end counts as a change of the last line
+                    let removed = difference.removals.count, added = difference.insertions.count
+                    assertEquals(removed <= 1 && added <= 3 + removed, true, additionalMsg: "\(path) in \(document.debugDescription) -> \(patched.debugDescription)")
+                    // Every other value of the document is the same
+                    var expected = (try? TomlPatcher.decode(document)) ?? [:]
+                    var actual = (try? TomlPatcher.decode(patched)) ?? [:]
+                    Self.removeValue(&expected, path.full)
+                    Self.removeValue(&actual, path.full)
+                    assertEquals(NSDictionary(dictionary: actual), NSDictionary(dictionary: expected), additionalMsg: "\(path) in \(document.debugDescription)")
+
+                    // Setting it again changes nothing, and removing it leaves no trace of the value
+                    assertEquals(try? TomlPatcher.set(patched, path, value), patched)
+                    let cleared = try? TomlPatcher.remove(patched, path)
+                    assertNotNil(cleared)
+                    assertTrue(cleared.map { TomlPatcher.decodedValue($0, path) == nil } == true)
+                }
+            }
+        }
+
+        private static func removeValue(_ root: inout [String: Any], _ path: [String]) {
+            guard let first = path.first else { return }
+            if path.count == 1 {
+                root.removeValue(forKey: first)
+            } else if var child = root[first] as? [String: Any] {
+                removeValue(&child, Array(path.dropFirst()))
+                if child.isEmpty { root.removeValue(forKey: first) } else { root[first] = child }
+            }
+        }
+
+        @Test func testByteOrderMarkAndOldMacLineEndings() {
+            // A byte order mark hides the first line from the patcher: the key is added again, and the check of
+            // the result refuses the duplicate. Nothing is written
+            let withMark = "\u{FEFF}start-at-login = false\n[menu-bar]\ntheme = 'chips'\n"
+            assertNotNil(setError(withMark, startAtLogin, .bool(true)))
+            // Lone carriage returns aren't line breaks for the patcher. Either the edit is right, or it is refused
+            let oldMac = "[menu-bar]\rtheme = 'chips'\r"
+            if let patched = try? TomlPatcher.set(oldMac, theme, .string("square")) {
+                assertTrue(TomlValue.string("square").matches(TomlPatcher.decodedValue(patched, theme)))
+            }
         }
 
         // MARK: - Remove

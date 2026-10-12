@@ -74,7 +74,13 @@ struct Main {
             case .customError(let msg):
                 exit(failExitCode, err: msg)
             case .nwError(let e):
-                exit(failExitCode, err: "Can't connect to Inlay server. Is Inlay.app running?\n\(e.localizedDescription)")
+                // The server opens its socket once it has the Accessibility permission
+                exit(
+                    failExitCode,
+                    err: "Can't connect to Inlay server. Is Inlay.app running?\n" +
+                        "If it is, it may be waiting for the Accessibility permission: " +
+                        "System Settings > Privacy & Security > Accessibility\n\(e.localizedDescription)",
+                )
         }
 
         var stdin = ""

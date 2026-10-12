@@ -23,20 +23,6 @@ let buildInfoDefines: [CSetting] = [
     return .define(define, to: value)
 }
 
-// XCTest doesn't ship with the Command Line Tools, so the upstream XCTest suite only builds with a full Xcode.
-// It is opt-in until it is migrated to Swift Testing (Tests/InlayTests): INLAY_XCTEST=1 swift test
-let xcTestTargets: [Target] = Context.environment["INLAY_XCTEST"] == "1"
-    ? [
-        .testTarget(
-            name: "AppBundleTests",
-            dependencies: [
-                .target(name: "AppBundle"),
-            ],
-            swiftSettings: swiftSettings,
-        ),
-    ]
-    : []
-
 // With the Command Line Tools, an incremental build of the test target that follows a change in the app sources
 // (or a plain 'swift build') fails with "plugin for module 'TestingMacros' not found": the compiler isn't told
 // where the macros of Swift Testing are. Only a build of the test target from scratch gets it right.
@@ -128,5 +114,5 @@ let package = Package(
             ],
             swiftSettings: swiftSettings + testingMacrosSettings,
         ),
-    ] + xcTestTargets,
+    ],
 )

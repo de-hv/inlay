@@ -88,9 +88,9 @@ extension InlayTests {
             let main = layout(MenuBarConfig(showMode: true))
             assertEquals(main.marker?.initial, nil)
             snapshot.mode = "resize"
-            // Off by default
-            assertEquals(layout().marker?.initial, nil)
-            assertEquals(layout().needsColor, false)
+            // Off with show-mode = false
+            assertEquals(layout(MenuBarConfig(showMode: false)).marker?.initial, nil)
+            assertEquals(layout(MenuBarConfig(showMode: false)).needsColor, false)
             let layout = layout(MenuBarConfig(showMode: true))
             // The same chip, with the initial in the middle of it
             assertEquals(layout.marker, .init(
@@ -180,7 +180,7 @@ extension InlayTests {
         @Test func testSquareMode() {
             snapshot.mode = "resize"
             // Without 'show-mode' the square is the one of the main mode
-            let main = layout(MenuBarConfig(theme: .square))
+            let main = layout(MenuBarConfig(theme: .square, showMode: false))
             assertEquals(main.marker, .init(frame: CGRect(x: 45.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
             let layout = layout(MenuBarConfig(theme: .square, showMode: true))

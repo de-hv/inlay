@@ -5,7 +5,7 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
     var theme: MenuBarTheme = .chips
     var dimEmptyWorkspaces: Bool = true
-    var showMode: Bool = false
+    var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
 
     /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons

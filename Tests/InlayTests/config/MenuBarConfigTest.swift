@@ -13,7 +13,7 @@ extension InlayTests {
             assertEquals(menuBar.enabled, true)
             assertEquals(menuBar.theme, .chips)
             assertEquals(menuBar.dimEmptyWorkspaces, true)
-            assertEquals(menuBar.showMode, false)
+            assertEquals(menuBar.showMode, true)
             assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.menuBar, MenuBarConfig())

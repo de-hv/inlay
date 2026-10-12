@@ -432,7 +432,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | `enabled` | `true`, `false` | `true` |
 | `theme` | `'chips'`, `'square'`, `'minimal'` | `'chips'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
-| `show-mode` | `true`, `false` | `false` |
+| `show-mode` | `true`, `false` | `true` |
 | `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
 
 **`theme`**: the shape of the item.
@@ -455,7 +455,7 @@ the theme is treated as `'chips'` and the key is ignored. Picking a theme in Set
 [menu-bar]
     enabled = true
     dim-empty-workspaces = true
-    show-mode = false             # the initial of the binding mode on the marker of the focused workspace
+    show-mode = true              # the initial of the binding mode on the marker of the focused workspace
 ```
 
 With `show-mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the

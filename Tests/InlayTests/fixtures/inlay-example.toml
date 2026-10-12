@@ -121,7 +121,7 @@ dim-empty-workspaces = true
 # Mostrar el modo de atajos cuando no es 'main': su inicial en el marcador del
 # workspace enfocado (el chip, o el cuadrado de 'square'), sin cambiar el ancho
 # del item.                                                   (defecto: false)
-show-mode = false
+show-mode = true
 
 [menu-bar.colors]
 # Los cuatro son opcionales. Con los valores por defecto el item es monocromo

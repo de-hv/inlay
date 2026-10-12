@@ -269,8 +269,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # workspace. In 'chips' and 'minimal' the initial takes the place of the name in the chip; in 'square' the
     # square grows to hold it. The item keeps its width: nothing moves when the mode changes
     # Possible values: true|false
-    # Fallback value (if you omit the key): show-mode = false
-    show-mode = false
+    # Fallback value (if you omit the key): show-mode = true
+    show-mode = true
 
     # Colors of the item.
     # Possible values:

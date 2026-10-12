@@ -6,6 +6,8 @@ import OrderedCollections
 
 struct ReadConfigResult {
     let configUrl: URL
+    /// The contents of the file. nil if it wasn't read
+    var text: String? = nil
     let parseConfigResult: ParseConfigResult
 
     @MainActor static func fatal(configUrl: URL, message: String) -> Self {
@@ -44,7 +46,7 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
         let msg = "Can't read contents of \(configUrl.path.singleQuoted) as a utf8 string: \(error.localizedDescription)"
         return .fatal(configUrl: configUrl, message: msg)
     }
-    return ReadConfigResult(configUrl: configUrl, parseConfigResult: parseConfig(configStr))
+    return ReadConfigResult(configUrl: configUrl, text: configStr, parseConfigResult: parseConfig(configStr))
 }
 
 struct ConfigParseDiagnostic: Error, Equatable {
@@ -125,7 +127,8 @@ private let persistentWorkspacesKey = "persistent-workspaces"
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
 // 2. Prefer commands and commands flags over toml options if possible
-private let configParser: [String: any ParserProtocol<Config>] = [
+// 3. Document it in docs/config-reference.toml. ConfigReferenceTest fails until every key of the parser tables is there
+let configParser: [String: any ParserProtocol<Config>] = [
     configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
 
     "after-login-command": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),

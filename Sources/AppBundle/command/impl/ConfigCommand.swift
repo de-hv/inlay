@@ -23,6 +23,12 @@ struct ConfigCommand: Command {
                 return .succ(io.out(allKeys.joined(separator: "\n")))
             case .configPath:
                 return .succ(io.out(configUrl.absoluteURL.path))
+            case .explain(let key):
+                // The CLI answers it on its own, without the server. This is for 'config --explain' run by a binding
+                return switch ConfigReference.load().flatMap({ $0.explain(key) }) {
+                    case .success(let text): .succ(io.out(text))
+                    case .failure(let message): .fail(io.err(message))
+                }
         }
     }
 }

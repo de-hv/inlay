@@ -6,7 +6,7 @@ private var env: [String: String] {
     isUnitTest ? testEnv : ProcessInfo.processInfo.environment
 }
 
-private let rawExecConfigParser: [String: any ParserProtocol<RawExecConfig>] = [
+let rawExecConfigParser: [String: any ParserProtocol<RawExecConfig>] = [
     "inherit-env-vars": Parser(\.inheritEnvVariables, parseBool),
     "env-vars": Parser(\.overriddenVars, parseEnvVariables),
 ]

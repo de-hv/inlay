@@ -15,6 +15,7 @@ let config_help_generated = """
        OR: config [-h|--help] --major-keys
        OR: config [-h|--help] --all-keys
        OR: config [-h|--help] --config-path
+       OR: config [-h|--help] --explain [<key>]
     """
 let debug_windows_help_generated = """
     USAGE: debug-windows [-h|--help] [--window-id <window-id>]

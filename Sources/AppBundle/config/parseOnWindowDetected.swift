@@ -67,13 +67,13 @@ enum WindowDetectedCallbackMatcher: Equatable {
     }
 }
 
-private let windowDetectedParser: [String: any ParserProtocol<WindowDetectedCallback>] = [
+let windowDetectedParser: [String: any ParserProtocol<WindowDetectedCallback>] = [
     "if": Parser(\.matcher, parseMatcher),
     "check-further-callbacks": Parser(\.checkFurtherCallbacks, parseBool),
     "run": Parser(\.rawRun, parseShellOfCommandsForConfig),
 ]
 
-private let matcherParsers: [String: any ParserProtocol<LegacyWindowDetectedCallbackMatcher>] = [
+let windowDetectedMatcherParser: [String: any ParserProtocol<LegacyWindowDetectedCallbackMatcher>] = [
     "app-id": Parser(\.appId, upcast(parseString)),
     "workspace": Parser(\.workspace, upcast(parseString)),
     "app-name-regex-substring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
@@ -104,7 +104,7 @@ private func parseCasInsensitiveRegex(_ raw: OrderedJson, _ backtrace: ConfigBac
 private func parseMatcher(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> WindowDetectedCallbackMatcher {
     switch raw {
         case .dict(let raw):
-            return .legacy(raw.parseTable(LegacyWindowDetectedCallbackMatcher(), matcherParsers, backtrace, &c))
+            return .legacy(raw.parseTable(LegacyWindowDetectedCallbackMatcher(), windowDetectedMatcherParser, backtrace, &c))
         case .string(let raw):
             return .command(parseCommandForConfig(raw, backtrace, &c, allowExecAndForget: false))
         default:

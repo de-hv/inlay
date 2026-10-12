@@ -67,6 +67,14 @@ struct Main {
 
         let failExitCode = parsedArgs.failExitCode
 
+        // Documentation: answered from the reference that ships with Inlay, so it works without the server
+        if let configArgs = parsedArgs as? ConfigCmdArgs, case .explain(let key) = configArgs.mode {
+            switch ConfigReference.load().flatMap({ $0.explain(key) }) {
+                case .success(let text): exit(EXIT_CODE_ZERO, out: text)
+                case .failure(let message): exit(failExitCode, err: message)
+            }
+        }
+
         let connection = NWConnection(to: NWEndpoint.unix(path: socketPath), using: .tcp)
 
         switch await connection.initConnection().error {

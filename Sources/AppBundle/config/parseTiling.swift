@@ -1,7 +1,7 @@
 import Common
 import Foundation
 
-private let tilingParserTable: [String: any ParserProtocol<TilingConfig>] = [
+let tilingParserTable: [String: any ParserProtocol<TilingConfig>] = [
     "new-window-placement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
     "split-ratio": Parser(\.splitRatio, parseSplitRatio),
     "startup-layout": Parser(\.startupLayout, parseStartupLayout),

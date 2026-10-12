@@ -38,7 +38,7 @@ struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
     var empty: ConfigColor = .auto
 }
 
-private let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
+let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "theme": Parser(\.theme, parseMenuBarTheme),
     "show-app-icons": Parser(\.showAppIcons) { raw, backtrace in parseBool(raw, backtrace).map { $0 } },
@@ -47,7 +47,7 @@ private let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "colors": Parser(\.colors, parseMenuBarColors),
 ]
 
-private let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
+let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
     "accent": Parser(\.accent, parseConfigColor(allowAuto: false)),
     "focused": Parser(\.focused, parseConfigColor(allowAuto: true)),
     "occupied": Parser(\.occupied, parseConfigColor(allowAuto: true)),

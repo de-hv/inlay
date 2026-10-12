@@ -26,7 +26,7 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     static let glowRadiusRange = 1 ... 40
 }
 
-private let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
+let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "width": Parser(\.width, parsePoints("width", BordersConfig.widthRange)),
     "corner-radius": Parser(\.cornerRadius, parsePoints("corner-radius", BordersConfig.cornerRadiusRange)),

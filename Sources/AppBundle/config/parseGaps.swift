@@ -82,17 +82,17 @@ struct ResolvedGaps {
     }
 }
 
-private let gapsParser: [String: any ParserProtocol<Gaps>] = [
+let gapsParser: [String: any ParserProtocol<Gaps>] = [
     "inner": Parser(\.inner, parseInner),
     "outer": Parser(\.outer, parseOuter),
 ]
 
-private let innerParser: [String: any ParserProtocol<Gaps.Inner>] = [
+let gapsInnerParser: [String: any ParserProtocol<Gaps.Inner>] = [
     "vertical": Parser(\.vertical, parseIntDynamicValue),
     "horizontal": Parser(\.horizontal, parseIntDynamicValue),
 ]
 
-private let outerParser: [String: any ParserProtocol<Gaps.Outer>] = [
+let gapsOuterParser: [String: any ParserProtocol<Gaps.Outer>] = [
     "left": Parser(\.left, parseIntDynamicValue),
     "bottom": Parser(\.bottom, parseIntDynamicValue),
     "top": Parser(\.top, parseIntDynamicValue),
@@ -108,9 +108,9 @@ func parseGaps(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout Conf
 }
 
 func parseInner(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> Gaps.Inner {
-    parseTable(raw, Gaps.Inner.zero, innerParser, backtrace, &c)
+    parseTable(raw, Gaps.Inner.zero, gapsInnerParser, backtrace, &c)
 }
 
 func parseOuter(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> Gaps.Outer {
-    parseTable(raw, Gaps.Outer.zero, outerParser, backtrace, &c)
+    parseTable(raw, Gaps.Outer.zero, gapsOuterParser, backtrace, &c)
 }

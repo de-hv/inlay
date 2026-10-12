@@ -19,17 +19,17 @@ extension InlayTests {
 
             assertEquals(
                 parseCommand("config").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain)",
             )
             // --keys/--json alone still trigger the mandatory-flag check first because they don't
             // contribute to the mandatory-flag set.
             assertEquals(
                 parseCommand("config --keys").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain)",
             )
             assertEquals(
                 parseCommand("config --json").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain)",
             )
             assertEquals(parseCommand("config --major-keys --keys").errorOrNil, "--keys flag requires --get flag")
             assertEquals(parseCommand("config --major-keys --json").errorOrNil, "--json flag requires --get flag")

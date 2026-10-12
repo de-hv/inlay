@@ -6,7 +6,7 @@ with the workspaces, all with a single config file (`inlay.toml`).
 
 It builds and installs **with the Xcode Command Line Tools alone**: no Xcode, no Apple account.
 
-<p align="center"><img src="docs/images/hero.png" alt="Illustration of a desktop managed by Inlay: four tiled windows (an editor with inlay.toml, a browser, a terminal and a notes app) with a border around each one, an orange border with a glow around the focused one, and the workspaces 1 to 6 as chips in the menu bar, with 2 marked as the focused one" width="880"></p>
+<p align="center"><img src="docs/images/hero.png" alt="Illustration of a desktop managed by Inlay: four tiled windows (an editor with inlay.toml, a browser, a terminal and a notes app) with the defaults of the shipped config: gaps of 8 points, a border of 4 points around each window, gray for the inactive ones and orange for the focused one, and the workspaces 1 to 6 as chips in the menu bar, with 2 marked as the focused one" width="880"></p>
 
 <sub>About the images of this page: the ones marked **Real render** are drawn by Inlay itself, off screen, with the
 same code that draws the menu bar item, the borders and the Settings window (see [Development](#development)); the
@@ -71,9 +71,9 @@ No option is needed. `install.sh`:
    across rebuilds (see [Signing](#signing));
 2. installs it in `/Applications` (or in `~/Applications` if there are no permissions) and links the `inlay`
    CLI in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`;
-3. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **only if
-   you have no Inlay config yet**. A config that already exists, be it a file or a symbolic link, is never
-   overwritten, replaced or deleted, and nothing is asked about it: the script just says that it was kept;
+3. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **if you
+   have no Inlay config yet**. A config that already exists is yours: see
+   [A config that you already have](#a-config-that-you-already-have);
 4. right after creating that copy, **asks whether you prefer a symbolic link to a config file of your own**
    (one you keep in a dotfiles repo, for example). If you answer yes, it asks for the path (`~` is
    expanded). If the file exists, the copy is replaced by a link to it; if it does not, the script warns
@@ -89,6 +89,7 @@ It can be run as many times as needed: it updates what is installed, quitting th
 
 | Option | Effect |
 |---|---|
+| `--reset-config` | Replaces your config by the `inlay.toml` of the repo, whatever is in it, and keeps yours next to it as `inlay.toml.backup-<date>`. See [A config that you already have](#a-config-that-you-already-have) |
 | `--config-link PATH` | Makes the config a symbolic link to `PATH` instead of asking. Only when there is no Inlay config yet, and only if `PATH` exists (otherwise the copy is kept, with a warning) |
 | `--no-prompt` | Asks nothing and keeps the copy of `inlay.toml` |
 | `--import-aerospace` | If you have no Inlay config, start from your `~/.aerospace.toml` instead of `inlay.toml` |
@@ -102,6 +103,32 @@ is copied and the original is not touched). Check three things in the copy: `sta
 Inlay add itself to the login items the first time it starts; the key bindings or scripts that call the
 `aerospace` CLI keep talking to AeroSpace and must call `inlay`; and with `gaps` of 8 or less the borders of
 two neighboring windows touch.
+
+### A config that you already have
+
+`install.sh` never edits or deletes a config, and it replaces one only in two cases, always keeping the old
+one next to the new one as `inlay.toml.backup-<date>` (`inlay.toml.backup-20261012-153000`):
+
+- **It is a default config of a previous version of Inlay, exactly as it was installed.** The script
+  compares it, byte for byte (SHA-256), with every default config that Inlay has shipped
+  ([`scripts/default-config-hashes.txt`](./scripts/default-config-hashes.txt)). If it is one of them, nobody
+  has edited it, so it is replaced by the current `inlay.toml` and the script says so. This is what updates a
+  Mac that was installed when the default config was still the one of AeroSpace: `alt-…` key bindings and
+  no rule that sends a window to a workspace, so every window stayed in the workspace on the screen.
+- **You pass `--reset-config`.** Whatever the config is, it is replaced by the `inlay.toml` of the repo.
+
+Any other config is **kept as it is**, and the script warns about it: what is new in the `inlay.toml` of the
+repo (key bindings, rules, options) is not in it. It also tells if the config has no `on-window-detected`
+rule, and prints the two commands that matter: `./install.sh --reset-config` to switch to the config of the
+repo, and a `diff` to compare them. A config changed from the Settings window counts as edited: it is kept.
+
+A config that is a **symbolic link** is always taken for your own, whatever the file it points to has in it.
+With `--reset-config` only the link is replaced: it is renamed to `inlay.toml.backup-<date>`, still pointing
+to your file, which is never written, moved or deleted.
+
+To go back to a backup: `mv ~/.config/inlay/inlay.toml.backup-<date> ~/.config/inlay/inlay.toml`.
+After changing `inlay.toml` in the repo, `scripts/update-default-config-hashes.sh` adds it to the list (a test
+fails until it is there).
 
 ### Before opening Inlay
 
@@ -150,6 +177,33 @@ all. It is a real config rather than a neutral sample: 6 persistent workspaces, 
 `cmd-alt-ctrl-…` and `cmd-alt-shift-…`, the `service` and `resize` modes and `on-window-detected` rules that
 send each app to its workspace. Make it yours by editing your copy, or point the config to your own file
 with a symbolic link (the question of `install.sh`, or `--config-link`).
+
+The rules are checked from top to bottom, and **the first one that matches a window is the only one that runs
+for it** (a rule with `check-further-callbacks = true` lets the next ones run too; the shipped config has
+none). In `inlay.toml` they come in this order:
+
+1. the panels to open or save a file float where they open;
+2. the apps with a workspace go to it: terminals to 1, editors to 2, browsers to 3, chats to 4, AI to 5;
+3. the quick apps (Finder, System Settings, Calculator…) and the settings window of any app float where they
+   open;
+4. **every other tiling window goes to workspace 6**, the one of the secondary display when there are two.
+
+The last rule is a catch-all one:
+
+```toml
+[[on-window-detected]]
+if = 'test %{window-layout} ~= _tiles'   # h_tiles or v_tiles: a tiling window
+run = 'move-node-to-workspace 6'
+```
+
+It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About"
+window) is already floating when the rules run, so it does not match and stays where it opens; popups never
+get to the rules. As with the apps that have a workspace, the window goes to 6 and the focus stays where it
+was: with a single display the window of an app without a rule leaves the screen as it opens, and
+`cmd-alt-ctrl-p` goes to it. To keep an app out of workspace 6, give it a rule above (a workspace of its own,
+or `layout floating`); to have every other window stay in the workspace where it opens, as AeroSpace does,
+delete the rule. Like every rule it runs once per window: a window that you move out of workspace 6 stays where
+you put it, until you run the rules again by hand (`w` in the `service` mode).
 
 **Every key is documented in [`docs/config-reference.toml`](./docs/config-reference.toml)**: what it does,
 its possible values and its default, for the keys inherited from AeroSpace and for the ones of Inlay. The
@@ -281,8 +335,9 @@ The windows that **are already open when Inlay starts** (or when it is resumed w
 placed one by one. First the `on-window-detected` rules of the config run for each of them, exactly as for a
 new window, so every window goes to the workspace of its rule (or becomes floating, or whatever the rule
 says). Then the windows are distributed, workspace by workspace, according to `startup-layout`. With the
-shipped config, the terminals end up in workspace 1, the editors in 2, the browsers in 3, and so on, each
-workspace with its own grid. The rules run once per window: later refreshes do not evaluate them again, so a
+shipped config, the terminals end up in workspace 1, the editors in 2, the browsers in 3, and so on, the
+windows of the apps without a workspace in 6, each workspace with its own grid. The workspaces are arranged
+once the rules of every window are over, also when macOS reports another event in the middle of the startup. The rules run once per window: later refreshes do not evaluate them again, so a
 window that you move somewhere else stays there. On resume, they only run for the windows that appeared
 while Inlay was paused. To run them again for all the open windows, use
 `inlay run-callback on-window-detected --for-every-window` (`w` in the `service` mode of the shipped config).
@@ -313,7 +368,7 @@ back when it returns:
 - If the container is gone (it had only two windows and was flattened), the neighbor is split again the same way as before.
 - If neither the container nor the neighbor is left, it enters as a new window.
 
-![Illustration, animated: three tiled windows, with a small Safari window at the bottom right. Safari is minimized to the Dock and the window above it, Zed, takes its space; when Safari is restored it gets its place and its size back, and Zed gives the space back](docs/images/tiling-minimize.gif)
+![Illustration, animated: three tiled windows, with a small browser window at the bottom right. The browser is minimized to the Dock and the window above it, the editor, takes its space; when the browser is restored it gets its place and its size back, and the editor gives the space back](docs/images/tiling-minimize.gif)
 
 A **minimized** window also remembers its workspace (a minimized window does not belong to any). If it is
 restored while you are in another workspace, it goes back to its own and to its place, and **the focus follows
@@ -343,8 +398,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'chips'`, `'chips-icons'`, `'square'`, `'minimal'` | `'chips'` |
-| `show-app-icons` | `true`, `false` | decided by the theme (`true` in `chips-icons`) |
+| `theme` | `'chips'`, `'square'`, `'minimal'` | `'chips'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `false` |
 | `[menu-bar.colors]` `accent` | color | `'system-accent'` |
@@ -354,26 +408,29 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 
 ```toml
 [menu-bar]
-    theme = 'chips'   # 'chips' | 'chips-icons' | 'square' | 'minimal'
+    theme = 'chips'   # 'chips' | 'square' | 'minimal'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the four themes of the menu bar item, each on a dark and on a light menu bar. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'chips-icons': the same chips with the icons of the apps of every workspace, and '+2' in the workspace that has five apps. 'square': a layout icon, the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the three themes of the menu bar item, each on a dark and on a light menu bar. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': a layout icon, the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
 
-**`show-app-icons`, `dim-empty-workspaces`, `show-mode`**: what the item shows besides the names. With
+The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
+still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,
+the theme is treated as `'chips'` and the key is ignored. Picking a theme in Settings removes both.
+
+**`dim-empty-workspaces`, `show-mode`**: what the item shows besides the names. With
 `enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI.
 
 ```toml
 [menu-bar]
     enabled = true
-    show-app-icons = true         # if omitted, the theme decides: true in 'chips-icons'
     dim-empty-workspaces = true
     show-mode = false             # a badge with the initial of the binding mode, when it is not 'main'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. show-app-icons: without icons in 'chips', with icons in 'chips' (the same as 'chips-icons'), in 'square' and in 'minimal'. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: no badge with false or in the main mode; an orange badge with an R in the resize mode, in 'chips' and in 'minimal'; and the 'square' theme, which always shows the R in its square" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: no badge with false or in the main mode; an orange badge with an R in the resize mode, in 'chips' and in 'minimal'; and the 'square' theme, which always shows the R in its square" width="880"></p>
 
 **`[menu-bar.colors]`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
-the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'` and no icons, the
+the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'` and no mode badge, the
 item is a template image identical to the one of Aeromenu; a fixed color does not adapt to the bar.
 
 ```toml
@@ -388,18 +445,22 @@ item is a template image identical to the one of Aeromenu; a fixed color does no
 
 **The item and its menu**
 
-<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a right click on the item opens, with its sections: Workspaces (1 to 6 with the icons and names of their apps, 2 checked, 6 'Empty'), Focused Window (Move to, Floating, Fullscreen), Layout (Horizontal checked, Vertical, Balance Sizes, Reset Layout), Binding Mode (main checked, resize, service, with the key bindings of the main mode as badges), then Reload Config, Open inlay.toml, Pause Inlay and Settings with their shortcuts, the version and Quit Inlay" width="720"></p>
+<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a right click on the item opens, from top to bottom: Workspaces (1 to 6 with their apps, drawn as generic ones, 2 checked, 6 'Empty'), Float Focused Window, then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
 
 
 - The item is **informational only**: the left click does nothing (it does not switch workspace or open the
-  menu). The **right click** (or ctrl-click) opens the menu: workspaces, focused window, layout, mode, config,
-  pause and Settings. With VoiceOver, "pressing" the item (VO-space) opens the menu. To switch workspace: the
+  menu). The **right click** (or ctrl-click) opens the menu: the workspaces, *Float Focused Window*, the
+  config, pause and Settings. With VoiceOver, "pressing" the item (VO-space) opens the menu. To switch workspace: the
   key bindings, the CLI or the *Workspaces* section of the menu. The left click does not highlight the item
   either: the button never gets to see the mouse (a transparent view on top of it takes it). With the menu
   open, the item is highlighted like any menu of the menu bar. A ⌘-drag still moves the item along the bar.
-- The menu shows to the right of each item, in a badge, **the key binding of the `main` mode** that runs that
-  same command. It is reference text only: with the menu open, pressing that combination does not choose the
-  item. The menu's own shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) are real shortcuts while it is open.
+- The menu is short on purpose. It lists the workspaces with the apps that have windows in each one
+  (choosing one switches to it), toggles the focused window between floating and tiling, and has what concerns
+  Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a click
+  copies it, with the commit) and *Quit*. Moving a window to another workspace, fullscreen, the layout and the
+  binding modes are not in it: they are done with the key bindings. **The menu does not show the key bindings
+  of your config** next to its items. Its own shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open.
+  When the last load of the config had errors or warnings, an item at the top says so and shows them.
 - The shipped config defines **6 persistent workspaces** (1–6), which are the ones the item always shows. Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
@@ -417,7 +478,7 @@ tabs with the shipped config (click one to see it at full size):
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the four themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Show app icons, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Borders</sub></td></tr>
@@ -615,7 +676,7 @@ which is `.serialized`: the tests share the global model and cannot run in paral
 sheets that gather them and the illustrations are HTML pages that a headless Google Chrome turns into PNG files;
 and the animations are HTML pages too, whose frames `docs/images/src/gif.swift` (built with the Command Line
 Tools) assembles into GIF files. Nothing is installed, and Inlay is not started. The renders show the accent
-color of the Mac they are made on and the icons of the apps it has. `scripts/make-docs-images.sh hero gaps`
+color of the Mac they are made on, and the illustrations use generic windows: no icons and no names of real apps. `scripts/make-docs-images.sh hero gaps`
 regenerates only those images, and `--no-build` skips the build of `build/Inlay.app`.
 
 To find out what Inlay would say about any config file without installing or starting anything (errors and

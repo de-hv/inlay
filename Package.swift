@@ -112,6 +112,8 @@ let package = Package(
             dependencies: [
                 .target(name: "AppBundle"),
             ],
+            // Config files that the tests read from the source tree
+            exclude: ["fixtures"],
             swiftSettings: swiftSettings + testingMacrosSettings,
         ),
     ],

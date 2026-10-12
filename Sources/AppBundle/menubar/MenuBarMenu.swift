@@ -127,13 +127,15 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         return item
     }
 
-    /// An item that runs a command. It shows the key binding of the main mode that runs the same command, if there is one
+    /// An item that runs a command. It shows the key binding of the main mode that runs the same command, if there is one.
+    ///
+    /// The binding is shown as a badge, which is only text. It isn't the key equivalent of the item: the binding belongs
+    /// to the main mode, not to the menu, and pressing it while the menu is open must not choose the item
     private func commandItem(_ title: String, _ command: String, symbol: String? = nil, isEnabled: Bool = true) -> NSMenuItem {
         let item = item(title, #selector(runCommand(_:)), symbol: symbol, isEnabled: isEnabled)
         item.representedObject = command
         if let shortcut = mainModeShortcut(for: command) {
-            item.keyEquivalent = shortcut.key
-            item.keyEquivalentModifierMask = shortcut.modifiers
+            item.badge = NSMenuItemBadge(string: shortcut)
         }
         return item
     }
@@ -210,39 +212,24 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
     }
 }
 
-/// A key binding as a menu shows it
-struct MenuShortcut: Equatable {
-    var key: String
-    var modifiers: NSEvent.ModifierFlags
-}
-
-/// The key binding of the main mode that runs exactly this command
+/// The key binding of the main mode that runs exactly this command, as text: "⌥⇧1"
 @MainActor
-func mainModeShortcut(for command: String) -> MenuShortcut? {
+func mainModeShortcut(for command: String) -> String? {
     guard let target = parseCommand(command, allowExecAndForget: false, allowEval: false).cmdOrNil else { return nil }
     return (config.modes[mainModeId]?.bindings ?? [:]).values
         .filter { $0.commands.strictEquals(target) }
-        .min { $0.descriptionWithKeyCode < $1.descriptionWithKeyCode }
-        .flatMap { binding in binding.keyCode.menuKeyEquivalent.map { MenuShortcut(key: $0, modifiers: binding.modifiers) } }
+        .min { $0.descriptionWithKeyCode < $1.descriptionWithKeyCode }?
+        .menuText
 }
 
-extension Key {
-    /// The key as NSMenuItem.keyEquivalent wants it. nil for the keys a menu can't show
-    var menuKeyEquivalent: String? {
-        func functionKey(_ code: Int) -> String? { UnicodeScalar(code).map { String(Character($0)) } }
-        return switch self {
-            case .return, .keypadEnter: "\r"
-            case .tab: "\t"
-            case .space: " "
-            case .delete: "\u{8}"
-            case .forwardDelete: "\u{7F}"
-            case .escape: "\u{1B}"
-            case .upArrow: functionKey(NSUpArrowFunctionKey)
-            case .downArrow: functionKey(NSDownArrowFunctionKey)
-            case .leftArrow: functionKey(NSLeftArrowFunctionKey)
-            case .rightArrow: functionKey(NSRightArrowFunctionKey)
-            default: description.count == 1 && description.unicodeScalars.allSatisfy(\.isASCII) ? description.lowercased() : nil
-        }
+extension HotkeyBinding {
+    /// The binding the way the menus of macOS write a shortcut: the modifiers in their usual order, and then the key
+    var menuText: String {
+        let symbols: [(NSEvent.ModifierFlags, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
+        let modifiers = symbols.filter { self.modifiers.contains($0.0) }.map(\.1).joined()
+        // The names of some keys start with a private use character that only means something to a key equivalent: F5
+        let key = String(String.UnicodeScalarView(keyCode.description.unicodeScalars.filter { $0.properties.generalCategory != .privateUse }))
+        return modifiers + (keyCode == .space ? "Space" : key)
     }
 }
 

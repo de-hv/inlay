@@ -133,7 +133,17 @@ struct Main {
             exit(EXIT_CODE_ZERO) // Should not reach here
         }
 
-        let ans = await run(connection, args, stdin: stdin, windowId: windowId, workspace: workspace, failExitCode: failExitCode)
+        var ans = await run(connection, args, stdin: stdin, windowId: windowId, workspace: workspace, failExitCode: failExitCode)
+
+        // The server only knows how to answer once. Until interrupted (ctrl-c), or until the server is gone
+        if let seconds = (parsedArgs as? DebugStatsCmdArgs)?.watch {
+            while ans.exitCode == EXIT_CODE_ZERO {
+                print(ans.stdout + "\n")
+                unsafe fflush(stdout)
+                try? await Task.sleep(for: .seconds(Int(seconds)))
+                ans = await run(connection, args, stdin: stdin, windowId: windowId, workspace: workspace, failExitCode: failExitCode)
+            }
+        }
 
         if !ans.stdout.isEmpty { print(ans.stdout) }
         if !ans.stderr.isEmpty { eprint(ans.stderr) }

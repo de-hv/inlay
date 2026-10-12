@@ -8,6 +8,7 @@
 /// so it's cheap to call it more often than needed. Never poll the model, add a consumer here instead
 @MainActor
 func publishUiState() {
+    DebugStats.count("ui.publish")
     MenuBarStore.shared.refresh()
     BordersController.shared.refresh()
     SettingsWindowController.shared.modelDidChange()

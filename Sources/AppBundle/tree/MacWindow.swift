@@ -31,6 +31,7 @@ final class MacWindow: Window {
         let window = MacWindow(windowId, macApp, lastFloatingSize: rect?.size, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
         window.detectedType = windowType
         allWindowsMap[windowId] = window
+        DebugStats.count("window.registered")
         try await window.afterRegistration()
         return window
     }
@@ -74,6 +75,7 @@ final class MacWindow: Window {
         if MacWindow.allWindowsMap.removeValue(forKey: windowId) == nil {
             return
         }
+        DebugStats.count("window.removed")
         if !skipClosedWindowsCache { cacheClosedWindowIfNeeded() }
         releaseTilingSpaceToNeighbor()
         let parent = unbindFromParent().parent
@@ -117,6 +119,7 @@ final class MacWindow: Window {
     @MainActor
     func hideInCorner(_ corner: OptimalHideCorner) async throws {
         guard let nodeMonitor else { return }
+        DebugStats.count("layout.hide-in-corner")
         // Don't accidentally override prevUnhiddenEmulationPosition in case of subsequent `hideInCorner` calls
         if !isHiddenInCorner {
             guard let windowRect = try await getAxRect(.cancellable) else { return }

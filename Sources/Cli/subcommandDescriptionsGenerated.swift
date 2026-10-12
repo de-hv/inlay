@@ -6,6 +6,7 @@ let subcommandDescriptions = [
     ["  close-all-windows-but-current", "On the focused workspace, close all windows but current"],
     ["  close", "Close the focused window"],
     ["  config", "Query Inlay config options, and explain them (--explain)"],
+    ["  debug-stats", "Print the counters of what Inlay does: totals, and rates since the previous call (--watch: keep printing)"],
     ["  debug-windows", "Interactive command to record Accessibility API debug information to create bug reports"],
     ["  echo", "Print arguments and interpolation variables to stdout"],
     ["  enable", "Temporarily disable window management"],

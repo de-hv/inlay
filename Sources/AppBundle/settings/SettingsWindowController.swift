@@ -47,6 +47,7 @@ final class SettingsWindowController: NSObject {
 
     private func refresh() {
         lastSeenState = serverState
+        DebugStats.count("settings.refresh")
         model.refresh()
     }
 

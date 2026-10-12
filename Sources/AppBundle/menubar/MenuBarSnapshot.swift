@@ -97,7 +97,11 @@ final class MenuBarStore {
 
     func refresh() {
         let new = MenuBarState(snapshot: .fromModel(), config: config.menuBar)
-        if new == state { return }
+        if new == state {
+            DebugStats.count("menu-bar.snapshot.same")
+            return
+        }
+        DebugStats.count("menu-bar.snapshot.changed")
         state = new
         onChange?(new)
     }

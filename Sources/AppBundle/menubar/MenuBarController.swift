@@ -94,6 +94,8 @@ final class MenuBarController: NSObject {
     // MARK: - Drawing
 
     private func drawKey() -> MenuBarDrawKey? {
+        // Asked first: it is also what ends the slide, whether there is something to draw or not
+        let transition = currentTransition()
         guard let state, let button = statusItem?.button else { return nil }
         // A template image is the same over any menu bar, so the appearance of the button is left out of its key:
         // whatever AppKit does to the appearance, it can't ask for a new image. `mayShowMode` is true at least
@@ -102,7 +104,7 @@ final class MenuBarController: NSObject {
         let followsBar = !MenuBarPalette.isTemplate(state.config.colors, needsColor: mayShowMode)
         return MenuBarDrawKey(
             state: state,
-            transition: currentTransition(),
+            transition: transition,
             isDarkBar: followsBar && button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua,
             systemAccent: .systemAccent,
             scale: NSScreen.screens.map(\.backingScaleFactor).max() ?? 2,

@@ -78,6 +78,7 @@ extension TreeNode {
                     } else {
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
+                        DebugStats.count("layout.tiling-window-frame")
                         window.setAxFrame(point, CGSize(width: width, height: height))
                     }
                 }

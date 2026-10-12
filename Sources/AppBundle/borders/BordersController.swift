@@ -26,6 +26,8 @@ final class BordersController {
     private var panels: [UInt32: BorderPanel] = [:]
     /// The real frames of the windows whose frame differs from the wanted one, and the wanted frame they were measured for
     private var measured: [UInt32: (wanted: CGRect, real: CGRect)] = [:]
+    /// The screens as they were when the panels were last placed all over again. See: screensDidChange
+    private var placedScreens: [BorderScreen] = []
     private var settleTasks: [Task<Void, Never>] = []
     private var observers: [any NSObjectProtocol] = []
 
@@ -38,6 +40,7 @@ final class BordersController {
 
     func start() {
         if !observers.isEmpty { return }
+        placedScreens = Self.screens()
         let center = NotificationCenter.default
         // The pixel density or the height of the main screen has changed: every panel must be placed again
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
@@ -45,7 +48,7 @@ final class BordersController {
         })
         // 'system-accent'
         observers.append(center.addObserver(forName: NSColor.systemColorsDidChangeNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { BordersController.shared.refresh() }
+            MainActor.assumeIsolated { BordersController.shared.systemColorsDidChange() }
         })
     }
 
@@ -55,8 +58,21 @@ final class BordersController {
         show(.fromModel())
     }
 
+    /// The notification comes for more than the accent color, and in bursts: nothing is done unless a border changes
+    private func systemColorsDidChange() {
+        if isUnitTest { return }
+        let snapshot = BordersSnapshot.fromModel()
+        if snapshot.items == wanted {
+            DebugStats.count("borders.system-colors.same")
+            return
+        }
+        DebugStats.count("borders.system-colors.changed")
+        show(snapshot)
+    }
+
     /// Makes the borders on the screen match the snapshot
     func show(_ snapshot: BordersSnapshot) {
+        DebugStats.count(snapshot.items == wanted ? "borders.snapshot.same" : "borders.snapshot.changed")
         wanted = snapshot.items
         let ids = Set(wanted.map(\.windowId))
         measured = measured.filter { ids.contains($0.key) }
@@ -94,6 +110,7 @@ final class BordersController {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         for op in ops {
+            DebugStats.count("borders.op.\(op.statName)")
             switch op {
                 case .add(let item):
                     panels[item.windowId] = BorderPanel()
@@ -115,12 +132,17 @@ final class BordersController {
     /// Glues every panel to its window. See: BorderStacking
     private func restack() {
         if panels.isEmpty { return }
+        DebugStats.count("borders.restack.check")
         let order = (NSWindow.windowNumbers(options: [.allApplications]) ?? []).map(\.intValue)
         let state = panels.map { BorderStacking.Panel(windowId: $0.key, panelNumber: $0.value.windowNumber, isVisible: $0.value.isVisible) }
         for op in BorderStacking.plan(order: order, panels: state) {
             switch op {
-                case .orderAbove(let windowId): panels[windowId]?.order(.above, relativeTo: Int(windowId))
-                case .hide(let windowId): panels[windowId]?.orderOut(nil)
+                case .orderAbove(let windowId):
+                    DebugStats.count("borders.restack.order-above")
+                    panels[windowId]?.order(.above, relativeTo: Int(windowId))
+                case .hide(let windowId):
+                    DebugStats.count("borders.restack.hide")
+                    panels[windowId]?.orderOut(nil)
             }
         }
     }
@@ -145,6 +167,7 @@ final class BordersController {
     /// Looks at the real windows once: where they are, and how they are stacked
     private func settle() {
         if panels.isEmpty { return }
+        DebugStats.count("borders.settle")
         let real = Self.realFrames()
         measured = [:]
         for item in wanted {
@@ -155,6 +178,15 @@ final class BordersController {
     }
 
     private func screensDidChange() {
+        // The notification also comes when the Dock or the menu bar change the usable part of a screen, and in bursts.
+        // The panels only depend on the frames and on the pixel density of the screens
+        let screens = Self.screens()
+        if screens == placedScreens {
+            DebugStats.count("borders.screens.same")
+            return
+        }
+        DebugStats.count("borders.screens.changed")
+        placedScreens = screens
         // Forget what is on the screen: every panel is placed and shaped again
         let items = shown
         shown = []

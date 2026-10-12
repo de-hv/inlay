@@ -9,6 +9,8 @@ func scheduleCancellableCompleteRefreshSession(
     _ event: RefreshSessionEvent,
     optimisticallyPreLayoutWorkspaces: Bool = false,
 ) {
+    DebugStats.count("session.complete.scheduled")
+    DebugStats.count("session.trigger.\(event.statName)")
     activeRefreshTask?.cancel()
     activeRefreshTask = Task.startUnstructured { @MainActor in
         try checkCancellation()
@@ -30,6 +32,7 @@ func runHeavyCompleteRefreshSession(
     let state = signposter.beginInterval(#function, "event: \(event) axTaskLocalAppThreadToken: \(axTaskLocalAppThreadToken?.idForDebug)")
     defer { signposter.endInterval(#function, state) }
     if !ServerState.shared.isEnabled { return }
+    DebugStats.count("session.complete.started")
     let res = await Result {
         try await $refreshSessionEvent.withValue(event) {
             let nativeFocused = try await getNativeFocusedWindow(.cancellable)
@@ -50,8 +53,10 @@ func runHeavyCompleteRefreshSession(
         }
     }
     switch res {
-        case .success(()): break
-        case .failure(let err as CancellationError): check(assumeCancellable, "Non cancellable refresh session was canceled: \(err) (\(type(of: err)))")
+        case .success(()): DebugStats.count("session.complete.finished")
+        case .failure(let err as CancellationError):
+            DebugStats.count("session.complete.cancelled")
+            check(assumeCancellable, "Non cancellable refresh session was canceled: \(err) (\(type(of: err)))")
         case .failure(let err): die("Illegal error: \(err)")
     }
 }
@@ -66,6 +71,9 @@ func runLightSession<T>(
     defer { signposter.endInterval(#function, state) }
     activeRefreshTask?.cancel() // Give priority to runSession
     activeRefreshTask = nil
+    DebugStats.count("session.light.started")
+    DebugStats.count("session.trigger.\(event.statName)")
+    defer { DebugStats.count("session.light.ended") }
     return try await $refreshSessionEvent.withValue(event) {
         let nativeFocused = try await getNativeFocusedWindow(.cancellable)
         if let nativeFocused { try await debugWindowsIfRecording(nativeFocused, .cancellable) }

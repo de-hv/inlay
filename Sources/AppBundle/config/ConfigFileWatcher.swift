@@ -98,11 +98,14 @@ enum ConfigAutoReload {
         debounceTask?.cancel()
         if !config.autoReloadConfig { return }
         watcher = FileWatcher(url: url) {
+            DebugStats.count("config.watcher.event")
             debounceTask?.cancel()
             debounceTask = Task.startUnstructured {
                 try await Task.sleep(for: debounceDelay)
                 watcher?.arm() // The file may have been replaced by a new one
+                DebugStats.count("config.watcher.check")
                 guard needsReload(currentText: try? String(contentsOf: url, encoding: .utf8)) else { return }
+                DebugStats.count("config.watcher.reload")
                 if let token: RunSessionGuard = .isServerEnabled {
                     try await runLightSession(.configAutoReload, token) {
                         _ = await reloadConfig_nonCancellable()

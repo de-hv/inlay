@@ -13,6 +13,7 @@ func movedObs(_: AXObserver, ax: AXUIElement, notif: CFString, _: UnsafeMutableR
             scheduleCancellableCompleteRefreshSession(.ax(notif))
             return
         }
+        DebugStats.count("ax.frame-change-by-mouse")
         hideBorderWhileManipulatedWithMouse(window)
         moveWithMouseTask?.cancel()
         moveWithMouseTask = Task.startUnstructured {

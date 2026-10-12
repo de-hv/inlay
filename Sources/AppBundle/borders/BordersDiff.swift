@@ -12,6 +12,18 @@ enum BorderOp: Equatable, Sendable {
     case remove(windowId: UInt32)
 }
 
+extension BorderOp {
+    /// See: DebugStats
+    var statName: String {
+        switch self {
+            case .add: "add"
+            case .reshape: "reshape"
+            case .recolor: "recolor"
+            case .remove: "remove"
+        }
+    }
+}
+
 enum BordersDiff {
     /// Pure. Removals first, then the changes in the order of `new`. Nothing for the borders that stay the same
     static func ops(from old: [BorderItem], to new: [BorderItem]) -> [BorderOp] {

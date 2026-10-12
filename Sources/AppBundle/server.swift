@@ -69,6 +69,12 @@ private func newConnection(_ connection: NWConnection) async { // todo add exit 
             continue
         }
         let parsedCmd = parseCommand(request.args)
+        // Answered without a refresh session, also while Inlay is paused: asking for the counters must not count as work
+        if case .cmd(let command as DebugStatsCommand) = parsedCmd {
+            let result = await command.run(.defaultEnv, .emptyStdin)
+            await answerToClient(exitCode: result.exitCode.rawValue, stdout: result.stdout.joined(separator: "\n"))
+            continue
+        }
         guard let token: RunSessionGuard = await .isServerEnabled(orIsEnableCommand: parsedCmd.cmdOrNil) else {
             await answerToClient(
                 exitCode: EXIT_CODE_TWO,

@@ -58,6 +58,7 @@ enum GlobalObserver {
             //  resetManipulatedWithMouseIfPossible might call its own refreshSession
             //  The end of the callback calls refreshSession
             Task.startUnstructured { @MainActor in
+                DebugStats.count("mouse.left-up")
                 windowIdWithBorderHiddenByMouse = nil // Every branch below ends up in a refresh session, that shows the border again
                 guard let token: RunSessionGuard = .isServerEnabled else { return }
                 try await resetManipulatedWithMouseIfPossible()

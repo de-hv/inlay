@@ -64,6 +64,7 @@ struct ReloadConfigResult {
         }
     }
     if !args.dryRun {
+        DebugStats.count("config.load")
         ServerState.shared.lastConfigLoad = ConfigLoadStatus(
             date: .now,
             url: result.configUrl,

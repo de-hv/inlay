@@ -44,6 +44,7 @@ func runHeavyCompleteRefreshSession(
 
             SecureInputPanel.shared.refresh()
             try await normalizeLayoutReason()
+            StartupArrangement.finish()
             if shouldLayoutWorkspaces { try await layoutWorkspaces() }
             publishUiState()
         }

@@ -27,7 +27,6 @@ cierra con `pkill`, sin tocar ninguna ventana).
 
 Limitaciones conocidas de esta versión:
 
-- Al arrancar con muchas ventanas en un workspace, *dwindle* las coloca en espiral y las últimas quedan pequeñas.
 - Una ventana que vuelve de minimizada, de pantalla completa nativa o de una app oculta no recupera su sitio:
   divide la ventana enfocada, como una ventana nueva.
 - Los bordes se colocan con una API pública que no los ata a su ventana: entre que una ventana cambia y llega
@@ -121,7 +120,22 @@ su vecina recupera el espacio.
 [tiling]
     new-window-placement = 'dwindle'   # o 'after-focused': el comportamiento de AeroSpace
     split-ratio = 0.5                  # 0.1 – 0.9: fracción que conserva la ventana que se divide
+    startup-layout = 'grid'            # 'grid' | 'row' | 'dwindle': las ventanas que ya estaban abiertas
 ```
+
+Las ventanas que **ya están abiertas cuando Inlay arranca** (o cuando se reanuda con `inlay enable on`) no se
+colocan una a una: se reparten, workspace por workspace, según `startup-layout`.
+
+| `startup-layout` | Resultado |
+|---|---|
+| `'grid'` (por defecto) | Rejilla equilibrada: `ceil(√n)` columnas y las filas que hagan falta, todas las filas con la misma altura. La última fila reparte su ancho entre las ventanas que tenga: 5 ventanas son 3 arriba y 2 abajo; 3 son 2 arriba y 1 abajo |
+| `'row'` | Una sola fila con todas las ventanas al mismo ancho |
+| `'dwindle'` | Sin reparto: cada ventana entra como una ventana nueva, una detrás de otra (con `new-window-placement = 'dwindle'`, una espiral con las últimas muy pequeñas) |
+
+Solo afecta a ese momento. Las ventanas que abras después siguen `new-window-placement`, y la rejilla es un
+árbol normal: se puede mover, redimensionar y reorganizar con los comandos de siempre. Al reanudar tras una
+pausa solo se recolocan los workspaces en los que apareció alguna ventana mientras Inlay estaba en pausa; los
+demás conservan su disposición. También está en **Ajustes › General › Tiling**.
 
 Inlay **no tiene layout *accordion***. Para poder usar tal cual un `aerospace.toml`, sus formas se aceptan con
 un aviso (no con un error) y se tratan como `tiles`:

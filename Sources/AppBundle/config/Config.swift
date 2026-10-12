@@ -74,6 +74,8 @@ struct TilingConfig: ConvenienceMutable, Equatable {
     var newWindowPlacement: NewWindowPlacement = .dwindle
     /// The fraction of its space that the split window keeps, when newWindowPlacement is dwindle
     var splitRatio: CGFloat = 0.5
+    /// How the windows that are already open when Inlay starts are arranged
+    var startupLayout: StartupLayout = .grid
 
     static let splitRatioRange: ClosedRange<CGFloat> = 0.1 ... 0.9
 }
@@ -85,6 +87,17 @@ enum NewWindowPlacement: String, CaseIterable {
     /// AeroSpace behavior. The new window becomes the next sibling of the most recent window,
     /// and all the siblings share the space
     case afterFocused = "after-focused"
+}
+
+/// How the tiling windows that already exist when Inlay starts to manage the windows are arranged, in every workspace.
+/// See: StartupArrangement
+enum StartupLayout: String, CaseIterable {
+    /// A balanced grid: ceil(sqrt(n)) columns, and the windows of the last row share its width
+    case grid
+    /// One row. All the windows get the same width
+    case row
+    /// No arrangement of their own: the windows are placed one after another, like new windows (newWindowPlacement)
+    case dwindle
 }
 
 enum ConfigVersion: Int, Comparable, CaseIterable, Sendable, CustomStringConvertible {

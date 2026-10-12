@@ -24,6 +24,7 @@ extension SettingsKey {
     static let startAtLogin = SettingsKey([], "start-at-login", default: .bool(false))
     static let autoReloadConfig = SettingsKey([], "auto-reload-config", default: .bool(false))
     static let newWindowPlacement = SettingsKey(["tiling"], "new-window-placement", default: .string(NewWindowPlacement.dwindle.rawValue))
+    static let startupLayout = SettingsKey(["tiling"], "startup-layout", default: .string(StartupLayout.grid.rawValue))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))

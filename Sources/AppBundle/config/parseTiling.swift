@@ -4,6 +4,7 @@ import Foundation
 private let tilingParserTable: [String: any ParserProtocol<TilingConfig>] = [
     "new-window-placement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
     "split-ratio": Parser(\.splitRatio, parseSplitRatio),
+    "startup-layout": Parser(\.startupLayout, parseStartupLayout),
 ]
 
 func parseTiling(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> TilingConfig {
@@ -14,6 +15,13 @@ private func parseNewWindowPlacement(_ raw: OrderedJson, _ backtrace: ConfigBack
     parseString(raw, backtrace).flatMap {
         NewWindowPlacement(rawValue: $0)
             .toResult(.init(backtrace, "Can't parse new window placement '\($0)'. Possible values: \(NewWindowPlacement.unionLiteral)"))
+    }
+}
+
+private func parseStartupLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<StartupLayout> {
+    parseString(raw, backtrace).flatMap {
+        StartupLayout(rawValue: $0)
+            .toResult(.init(backtrace, "Can't parse startup layout '\($0)'. Possible values: \(StartupLayout.unionLiteral)"))
     }
 }
 

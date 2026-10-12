@@ -30,6 +30,8 @@ struct EnableCommand: Command {
                     window.lastFloatingSize = (try? await window.getAxSize(.nonCancellable)) ?? window.lastFloatingSize
                 }
             }
+            // The complete refresh session that follows the command finds the windows that were opened in the meantime
+            StartupArrangement.begin()
             await activateMode_nonCancellable(mainModeId)
         } else {
             await activateMode_nonCancellable(nil)

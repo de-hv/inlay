@@ -43,6 +43,7 @@ extension InlayTests {
             assertEquals(model.unavailableReason, nil)
             assertEquals(model.bool(.startAtLogin), false)
             assertEquals(model.string(.newWindowPlacement), "dwindle")
+            assertEquals(model.string(.startupLayout), "grid")
             assertEquals(model.string(.menuBarTheme), "chips")
             assertEquals(model.bool(.menuBarEnabled), true)
             assertEquals(model.color(.menuBarAccent), .systemAccent)

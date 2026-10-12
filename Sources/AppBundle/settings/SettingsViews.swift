@@ -141,22 +141,27 @@ struct GeneralSettingsView: View {
             Section(Strings.Settings.startup) {
                 ToggleRow(model: model, title: Strings.Settings.startAtLogin, detail: Strings.Settings.startAtLoginDetail, key: .startAtLogin)
             }
-            Section(Strings.Settings.newWindows) {
+            Section(Strings.Settings.tiling) {
                 let isDwindle = model.string(.newWindowPlacement) == NewWindowPlacement.dwindle.rawValue
-                SettingsRow(
-                    model: model,
-                    title: Strings.Settings.placement,
+                pickerRow(
+                    Strings.Settings.placement,
                     detail: isDwindle ? Strings.Settings.placementDwindleDetail : Strings.Settings.placementAfterFocusedDetail,
                     key: .newWindowPlacement,
-                ) {
-                    Picker("", selection: Binding(get: { model.string(.newWindowPlacement) }, set: { model.set(.newWindowPlacement, .string($0)) })) {
-                        Text(Strings.Settings.dwindle).tag(NewWindowPlacement.dwindle.rawValue)
-                        Text(Strings.Settings.afterFocused).tag(NewWindowPlacement.afterFocused.rawValue)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
+                    options: [
+                        (NewWindowPlacement.dwindle.rawValue, Strings.Settings.dwindle),
+                        (NewWindowPlacement.afterFocused.rawValue, Strings.Settings.afterFocused),
+                    ],
+                )
+                pickerRow(
+                    Strings.Settings.startupLayout,
+                    detail: startupLayoutDetail,
+                    key: .startupLayout,
+                    options: [
+                        (StartupLayout.grid.rawValue, Strings.Settings.grid),
+                        (StartupLayout.row.rawValue, Strings.Settings.row),
+                        (StartupLayout.dwindle.rawValue, Strings.Settings.dwindle),
+                    ],
+                )
             }
             Section(Strings.Settings.configuration) {
                 LabeledContent {
@@ -204,6 +209,28 @@ struct GeneralSettingsView: View {
         .formStyle(.grouped)
         .frame(width: settingsWidth)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// A key with a few possible values, as a segmented control
+    private func pickerRow(_ title: String, detail: String, key: SettingsKey, options: [(value: String, title: String)]) -> some View {
+        SettingsRow(model: model, title: title, detail: detail, key: key) {
+            Picker("", selection: Binding(get: { model.string(key) }, set: { model.set(key, .string($0)) })) {
+                ForEach(options, id: \.value) { option in
+                    Text(option.title).tag(option.value)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+
+    private var startupLayoutDetail: String {
+        switch StartupLayout(rawValue: model.string(.startupLayout)) {
+            case .row: Strings.Settings.startupRowDetail
+            case .dwindle: Strings.Settings.startupDwindleDetail
+            case .grid, nil: Strings.Settings.startupGridDetail
+        }
     }
 
     private var filePath: String {

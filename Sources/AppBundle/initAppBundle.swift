@@ -23,6 +23,7 @@ import ServiceManagement
         GlobalObserver.initObserver()
         Workspace.garbageCollectUnusedWorkspaces() // init workspaces
         _ = Workspace.all.first?.focusWorkspace()
+        StartupArrangement.begin()
         await runHeavyCompleteRefreshSession(
             .startup,
             // It's important for the first initialization to be non cancellable

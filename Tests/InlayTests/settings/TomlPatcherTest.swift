@@ -497,7 +497,7 @@ extension InlayTests {
         @Test func testRealConfigs() throws {
             let defaultConfig = try String(contentsOf: projectRoot.appending(path: "docs/config-examples/default-config.toml"), encoding: .utf8)
             for key in [
-                SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .menuBarEnabled, .menuBarTheme, .menuBarShowAppIcons,
+                SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .startupLayout, .menuBarEnabled, .menuBarTheme, .menuBarShowAppIcons,
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
             ] {

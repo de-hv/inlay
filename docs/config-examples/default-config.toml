@@ -87,7 +87,7 @@ gaps.outer.bottom =     14
 gaps.outer.top =        14
 gaps.outer.right =      14
 
-# Where a new tiling window is placed
+# Where the tiling windows are placed
 [tiling]
     # Possible values: dwindle|after-focused
     # - dwindle.       The new window splits the focused window in two (inspired by the dwindle layout of Hyprland).
@@ -104,6 +104,17 @@ gaps.outer.right =      14
     # Possible values: 0.1 ... 0.9
     # Fallback value (if you omit the key): split-ratio = 0.5
     split-ratio = 0.5
+
+    # How the windows that are already open when Inlay starts (or when 'enable on' resumes it) are arranged,
+    # in every workspace. The windows that are opened later follow 'new-window-placement'
+    # Possible values: grid|row|dwindle
+    # - grid.    A balanced grid: ceil(sqrt(n)) columns for n windows, and as many rows as needed.
+    #            The windows of the last row share its width: 5 windows are 3 on top of 2.
+    # - row.     One row. All the windows get the same width.
+    # - dwindle. No arrangement: the windows are placed one after another, like new windows. With
+    #            new-window-placement = 'dwindle' that is a spiral, and the last windows are small.
+    # Fallback value (if you omit the key): startup-layout = 'grid'
+    startup-layout = 'grid'
 
 # The menu bar item
 [menu-bar]

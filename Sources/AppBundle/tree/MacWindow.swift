@@ -282,10 +282,11 @@ extension Window {
     /// by a cancellation, or the window would be left without its rules for good
     @MainActor
     func afterRegistration() async throws {
-        StartupArrangement.noteDetected(self)
-        try await debugWindowsIfRecording(self, .nonCancellable)
-        if try await !restoreClosedWindowsCacheIfNeeded(newlyDetectedWindow: self) {
-            await runOnWindowDetected(ifConventional: self)
+        try await StartupArrangement.whileDetecting(self) {
+            try await debugWindowsIfRecording(self, .nonCancellable)
+            if try await !restoreClosedWindowsCacheIfNeeded(newlyDetectedWindow: self) {
+                await runOnWindowDetected(ifConventional: self)
+            }
         }
     }
 }

@@ -13,6 +13,8 @@ enum StartupArrangement {
     private static var isPending = false
     /// The windows registered since `begin`
     private static var detectedWindowIds: Set<UInt32> = []
+    /// The windows whose 'on-window-detected' rules are running right now. See: whileDetecting
+    private static var detectionsInFlight = 0
 
     /// Inlay is about to look for the windows that already exist
     static func begin() {
@@ -25,10 +27,24 @@ enum StartupArrangement {
         if isPending { detectedWindowIds.insert(window.windowId) }
     }
 
-    /// The refresh session that found the windows is over, and every window is in the workspace and in the container
-    /// (tiling, floating, minimized...) it belongs to. Does nothing unless `begin` was called since the last `finish`
+    /// Notes the window, and runs what places it for good: its 'on-window-detected' rules. See: Window.afterRegistration
+    ///
+    /// The rules suspend (they ask the app for the title of the window), and the refresh sessions interleave: a second
+    /// session, started by an app that got activated or by a window that got the focus while the first one is still
+    /// going through the windows, takes the registered windows for done and gets to `finish` first. Until the rules of
+    /// every window are over, the windows aren't in their workspaces yet, and there is nothing to arrange
+    static func whileDetecting<T>(_ window: Window, _ body: @MainActor () async throws -> T) async rethrows -> T {
+        noteDetected(window)
+        detectionsInFlight += 1
+        defer { detectionsInFlight -= 1 }
+        return try await body()
+    }
+
+    /// A refresh session that went through all the windows is over, and every window is in the workspace and in the
+    /// container (tiling, floating, minimized...) it belongs to. Does nothing unless `begin` was called since the last
+    /// `finish`, and nothing yet while another session is still placing a window: that session, or the next one, arranges
     static func finish() {
-        guard isPending else { return }
+        guard isPending, detectionsInFlight == 0 else { return }
         isPending = false
         let detected = detectedWindowIds
         detectedWindowIds = []

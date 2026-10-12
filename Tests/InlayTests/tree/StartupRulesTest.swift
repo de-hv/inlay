@@ -210,6 +210,33 @@ extension InlayTests {
 
         // MARK: - (d) startup-layout comes after the rules
 
+        /// A second refresh session gets to its end while the first one is still waiting for an app to answer, in the
+        /// middle of the rules of a window. The window is registered, so the second session has nothing to do with it:
+        /// it must not arrange the workspaces yet. The window isn't in its workspace
+        @Test func testStartupLayoutWaitsForTheRulesOfEveryWindow() async throws {
+            StartupArrangement.begin()
+            try await open(1, Self.chrome)
+            try await open(2, Self.chrome)
+            try await open(3, Self.ghostty)
+            // The first rule of inlay.toml asks for the title of the window, and the app takes its time
+            let slow = AwaitableOneTimeBroadcastLatch()
+            let fourth = Task.startUnstructured { @MainActor in try await open(4, Self.chrome, titleGate: slow) }
+            while window(4, orNil: true) == nil { await Task.yield() }
+            assertEquals(tiling("1"), [3, 4]) // Found in the workspace on the screen, its rules are running
+
+            try await restOfTheSession() // The second session
+            // Not arranged yet. The windows are where they were placed as they were found
+            assertEquals(Workspace.get(byName: "3").rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
+            assertEquals(tiling("1"), [3, 4])
+
+            await slow.signalToAll()
+            try await fourth.value
+            try await restOfTheSession() // The first session
+            assertEquals(tiling("1"), [3])
+            // ceil(sqrt(3)) = 2 columns: the grid, with the window that came last
+            assertEquals(Workspace.get(byName: "3").rootTilingContainer.layoutDescription, .v_tiles([.h_tiles([.window(1), .window(2)]), .window(4)]))
+        }
+
         /// The layout is 'row' in the config of the user: it is the one in effect when the windows are arranged
         @Test func testStartupLayoutOfTheUser() async throws {
             config.tiling.startupLayout = .row

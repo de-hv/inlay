@@ -1,10 +1,13 @@
 import AppKit
 
 /// The window of one border: transparent, click-through, never focused, never listed anywhere.
-/// It only holds a shape layer. Moving the panel doesn't redraw anything
+/// It only holds a shape layer, and the layer of the glow. Moving the panel doesn't redraw anything
 final class BorderPanel: NSPanel {
     private let borderView = BorderView()
     private(set) var geometry: BorderGeometry? = nil
+    private var color: Rgba? = nil
+    /// The glow that the layer of the glow shows
+    private var glow: BorderGlow? = nil
 
     init() {
         super.init(contentRect: NSRect(x: 0, y: 0, width: 8, height: 8), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
@@ -36,14 +39,32 @@ final class BorderPanel: NSPanel {
         if self.frame != frame { setFrame(frame, display: false) }
         // The shape only depends on the size: moving the panel doesn't rebuild it
         let previous = self.geometry
-        if previous?.panelFrame.size != geometry.panelFrame.size || previous?.width != geometry.width || previous?.innerRadius != geometry.innerRadius {
+        if previous?.panelFrame.size != geometry.panelFrame.size || previous?.width != geometry.width ||
+            previous?.innerRadius != geometry.innerRadius || previous?.glowMargin != geometry.glowMargin
+        {
             borderView.shape.path = geometry.path()
         }
         self.geometry = geometry
+        updateGlow()
     }
 
     func setColor(_ color: Rgba) {
         borderView.shape.fillColor = color.cgColor
+        self.color = color
+        updateGlow()
+    }
+
+    /// Draws the image of the glow again only if it would be another one. See: BorderGlow
+    private func updateGlow() {
+        guard let geometry, let color else { return }
+        let layer = borderView.glow
+        layer.frame = CGRect(origin: .zero, size: geometry.panelFrame.size)
+        let glow = BorderGlow(geometry, color: color)
+        if glow == self.glow { return }
+        self.glow = glow
+        layer.contents = glow?.image()
+        layer.contentsCenter = glow?.center ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+        layer.contentsScale = geometry.scale
     }
 }
 
@@ -60,6 +81,14 @@ final class BorderView: NSView {
 
     var shape: CAShapeLayer { layer as! CAShapeLayer }
 
+    /// The glow around the ring. It never overlaps the ring: its image is empty there. See: BorderGlow
+    let glow: CALayer = {
+        let glow = CALayer()
+        glow.contentsGravity = .resize
+        glow.actions = ["contents": NSNull(), "contentsCenter": NSNull(), "contentsScale": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        return glow
+    }()
+
     override func makeBackingLayer() -> CALayer {
         let shape = CAShapeLayer()
         shape.fillRule = .evenOdd
@@ -67,6 +96,7 @@ final class BorderView: NSView {
         shape.lineWidth = 0
         // No implicit animations: a border must never trail behind its window
         shape.actions = ["path": NSNull(), "fillColor": NSNull(), "bounds": NSNull(), "position": NSNull(), "contentsScale": NSNull()]
+        shape.addSublayer(glow)
         return shape
     }
 

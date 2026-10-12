@@ -199,6 +199,8 @@ o en la pestaña **Borders** de Ajustes.
 | `active-color` | color | `'system-accent'` |
 | `inactive-color` | color | `'#8E8E9373'` |
 | `floating-color` | color | `'#BF5AF2'` |
+| `glow` | `true`, `false` | `false` |
+| `glow-radius` | 1 … 40 (puntos) | `12` |
 | `[borders.mode-colors]` `<modo>` | color | tabla vacía |
 
 - **Color de la ventana enfocada**: el del modo de atajos activo si tiene entrada en `[borders.mode-colors]`; si
@@ -211,6 +213,11 @@ o en la pestaña **Borders** de Ajustes.
 - El borde va **por fuera** del marco de la ventana, en el hueco entre ventanas: no tapa contenido y no recibe
   clics. Conviene que los `gaps` sean al menos el doble de `width` (la config incluida usa 14 con el borde de 4);
   con gaps más pequeños los bordes de dos ventanas vecinas se tocan o se solapan.
+- **Glow** (`glow = true`): un resplandor del color del borde alrededor de la ventana **enfocada** (con el color
+  que le toque: activo, flotante o de modo), que se desvanece hacia fuera a lo largo de unos `glow-radius` puntos.
+  Las ventanas no enfocadas nunca lo llevan. Es exterior: no se dibuja bajo el borde ni sobre la ventana, pero sí
+  sobre lo que haya alrededor (el hueco y, si es más ancho que el hueco, el filo de las ventanas vecinas). No
+  recibe clics. Es una imagen pequeña que Core Animation estira, así que mover o redimensionar no redibuja nada.
 - El radio de las esquinas es fijo: macOS no deja leer el de las ventanas de otras apps. Ajústalo a ojo.
 - Los bordes desaparecen al pausar Inlay (`inlay enable off`), al salir y con `enabled = false`.
 - `[borders.mode-colors]` todavía no se edita desde Ajustes: escríbela en el fichero.

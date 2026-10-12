@@ -500,6 +500,7 @@ extension InlayTests {
                 SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .startupLayout, .menuBarEnabled, .menuBarTheme, .menuBarShowAppIcons,
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
+                .bordersGlow, .bordersGlowRadius,
             ] {
                 let value: TomlValue = switch key.defaultValue {
                     case .bool(let value): .bool(!value)

@@ -390,6 +390,9 @@ struct BordersSettingsView: View {
                 ToggleRow(model: model, title: Strings.Settings.showBorders, key: .bordersEnabled)
                 sliderRow(Strings.Settings.width, key: .bordersWidth, range: 1 ... 20)
                 sliderRow(Strings.Settings.cornerRadius, detail: Strings.Settings.cornerRadiusDetail, key: .bordersCornerRadius, range: 0 ... 40)
+                ToggleRow(model: model, title: Strings.Settings.glow, detail: Strings.Settings.glowDetail, key: .bordersGlow)
+                sliderRow(Strings.Settings.glowRadius, key: .bordersGlowRadius, range: 1 ... 40)
+                    .disabled(!model.bool(.bordersGlow))
             }
             Section {
                 ColorRow(model: model, title: Strings.Settings.activeWindow, key: .bordersActiveColor, allowsAuto: false)
@@ -424,7 +427,7 @@ struct BordersSettingsView: View {
     private var preview: some View {
         let isEnabled = model.bool(.bordersEnabled)
         return HStack(spacing: 14) {
-            window(Strings.Settings.active, isEnabled ? .bordersActiveColor : nil)
+            window(Strings.Settings.active, isEnabled ? .bordersActiveColor : nil, glows: model.bool(.bordersGlow))
             window(Strings.Settings.inactive, isEnabled ? .bordersInactiveColor : nil)
             window(Strings.Settings.floatingPreview, isEnabled ? .bordersFloatingColor : nil)
         }
@@ -437,7 +440,7 @@ struct BordersSettingsView: View {
     }
 
     /// A window with its border around it: the border is drawn outside of the frame of the window
-    private func window(_ title: String, _ colorKey: SettingsKey?) -> some View {
+    private func window(_ title: String, _ colorKey: SettingsKey?, glows: Bool = false) -> some View {
         let width = CGFloat(model.int(.bordersWidth))
         let radius = CGFloat(model.int(.bordersCornerRadius))
         let color = colorKey.map { Color(nsColor: model.color($0).resolve(auto: .white, systemAccent: .systemAccent).nsColor) } ?? .clear
@@ -447,5 +450,7 @@ struct BordersSettingsView: View {
             .overlay { Text(title).font(.caption).foregroundStyle(.secondary) }
             .padding(width)
             .background(color, in: RoundedRectangle(cornerRadius: radius + width, style: .continuous))
+            // The blur radius of a SwiftUI shadow is a standard deviation: half of the one of the config
+            .shadow(color: glows ? color : .clear, radius: CGFloat(model.int(.bordersGlowRadius)) / 2)
     }
 }

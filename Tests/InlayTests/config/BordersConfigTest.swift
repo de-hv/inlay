@@ -17,6 +17,8 @@ extension InlayTests {
             assertEquals(borders.inactiveColor.description, "#8E8E9373")
             assertEquals(borders.floatingColor.description, "#BF5AF2")
             assertEquals(borders.modeColors, [:])
+            assertEquals(borders.glow, false)
+            assertEquals(borders.glowRadius, 12)
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.borders, BordersConfig())
         }
@@ -31,6 +33,8 @@ extension InlayTests {
                     active-color = '#D19A66'
                     inactive-color = '#00000000'
                     floating-color = 'system-accent'
+                    glow = true
+                    glow-radius = 20
                 [borders.mode-colors]
                     resize = '#30D158'
                     service = '#FF453A80'
@@ -48,11 +52,13 @@ extension InlayTests {
                     "resize": .rgba(Rgba(hex: "#30D158").orDie()),
                     "service": .rgba(Rgba(hex: "#FF453A80").orDie()),
                 ],
+                glow: true,
+                glowRadius: 20,
             ))
         }
 
         @Test func testRanges() {
-            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("corner-radius", [0, 40], [-1, 41])] {
+            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("corner-radius", [0, 40], [-1, 41]), ("glow-radius", [1, 12, 40], [0, 41, -1])] {
                 for value in good {
                     assertEquals(parseConfig("borders.\(key) = \(value)").errors, [])
                 }
@@ -68,6 +74,12 @@ extension InlayTests {
                 parseConfig("borders.corner-radius = 41").strErrors,
                 ["[ERROR] borders.corner-radius: corner-radius must be in [0, 40] range"],
             )
+            assertEquals(
+                parseConfig("borders.glow-radius = 0").strErrors,
+                ["[ERROR] borders.glow-radius: glow-radius must be in [1, 40] range"],
+            )
+            // The value with an error is ignored
+            assertEquals(parseConfig("borders.glow-radius = 0").config.borders.glowRadius, 12)
         }
 
         @Test func testErrors() {
@@ -75,7 +87,9 @@ extension InlayTests {
                 parseConfig(
                     """
                     [borders]
-                        glow = true
+                        glow = 'soft'
+                        glow-radius = 1.5
+                        shadow = true
                         width = '4'
                         enabled = 1
                         active-color = 'auto'
@@ -89,10 +103,12 @@ extension InlayTests {
                     // 'auto' has no meaning for a border
                     "[ERROR] borders.active-color: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
                     "[ERROR] borders.enabled: Expected type is 'Bool'. But actual type is 'Int'",
-                    "[ERROR] borders.glow: Unknown key",
+                    "[ERROR] borders.glow: Expected type is 'Bool'. But actual type is 'String'",
+                    "[ERROR] borders.glow-radius: Expected type is 'Int'. But actual type is 'Float'",
                     "[ERROR] borders.inactive-color: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
                     "[ERROR] borders.mode-colors.resize: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
                     "[ERROR] borders.mode-colors.service: Expected type is 'String'. But actual type is 'Int'",
+                    "[ERROR] borders.shadow: Unknown key",
                     "[ERROR] borders.width: Expected type is 'Int'. But actual type is 'String'",
                 ],
             )
@@ -110,6 +126,8 @@ extension InlayTests {
             assertEquals(SettingsKey.bordersActiveColor.defaultValue, .string(defaults.activeColor.description))
             assertEquals(SettingsKey.bordersInactiveColor.defaultValue, .string(defaults.inactiveColor.description))
             assertEquals(SettingsKey.bordersFloatingColor.defaultValue, .string(defaults.floatingColor.description))
+            assertEquals(SettingsKey.bordersGlow.defaultValue, .bool(defaults.glow))
+            assertEquals(SettingsKey.bordersGlowRadius.defaultValue, .int(Int(defaults.glowRadius)))
             // Every key, written by the patcher into an empty config, is accepted by the parser
             var text = ""
             for (key, value) in [
@@ -119,6 +137,8 @@ extension InlayTests {
                 (.bordersActiveColor, .string("#D19A66")),
                 (.bordersInactiveColor, .string("#00000000")),
                 (.bordersFloatingColor, .string("system-accent")),
+                (.bordersGlow, .bool(true)),
+                (.bordersGlowRadius, .int(40)),
             ] {
                 text = (try? TomlPatcher.set(text, key.path, value)) ?? "<patch failed>"
             }
@@ -129,6 +149,8 @@ extension InlayTests {
             assertEquals(result.config.borders.cornerRadius, 0)
             assertEquals(result.config.borders.inactiveColor.description, "#00000000")
             assertEquals(result.config.borders.floatingColor, .systemAccent)
+            assertEquals(result.config.borders.glow, true)
+            assertEquals(result.config.borders.glowRadius, 40)
         }
     }
 }

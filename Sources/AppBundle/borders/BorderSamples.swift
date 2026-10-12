@@ -52,6 +52,15 @@ private struct BorderScene {
         var thin = BordersConfig()
         thin.width = 1
         thin.cornerRadius = 10
+        var glow = BordersConfig()
+        glow.glow = true
+        var wideGlow = modes
+        wideGlow.glow = true
+        wideGlow.glowRadius = 24
+        var amberGlow = onlyActive
+        amberGlow.glow = true
+        amberGlow.width = 2
+        amberGlow.glowRadius = 8
         let music = Window(id: 4, title: "Music", frame: CGRect(x: 184, y: 96, width: 268, height: 176), isFocused: true, isFloating: true)
         let fullscreen = Window(id: 2, title: "Zen", frame: CGRect(x: 0, y: 20, width: 608, height: 340), isFocused: true, isFullscreen: true)
         return [
@@ -64,6 +73,11 @@ private struct BorderScene {
             BorderScene(name: "width-8-radius-0", windows: tiles(), config: thick),
             BorderScene(name: "width-1-radius-10", windows: tiles(), config: thin),
             BorderScene(name: "disabled", windows: tiles(), config: thick.copy(\.enabled, false)),
+            BorderScene(name: "glow", windows: tiles(), config: glow),
+            BorderScene(name: "glow-floating", windows: tiles(focused: 0) + [music], config: glow),
+            BorderScene(name: "glow-24-mode-resize", windows: tiles(focused: 3), mode: "resize", config: wideGlow),
+            BorderScene(name: "glow-8-only-active", windows: tiles(focused: 2), config: amberGlow),
+            BorderScene(name: "glow-square-corners", windows: tiles(), config: glow.copy(\.cornerRadius, 0)),
         ]
     }
 

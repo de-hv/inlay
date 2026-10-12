@@ -4,7 +4,7 @@ import CoreGraphics
 enum BorderOp: Equatable, Sendable {
     /// A window got a border
     case add(BorderItem)
-    /// The frame of the window, the width or the corner radius changed: the panel is moved and its shape is rebuilt
+    /// The frame of the window, the width, the corner radius or the glow changed: the panel is moved and its shape is rebuilt
     case reshape(BorderItem)
     /// Only the color changed: the cheapest change, and the most frequent one (every focus change)
     case recolor(windowId: UInt32, Rgba)
@@ -24,7 +24,9 @@ enum BordersDiff {
                 result.append(.add(item))
                 continue
             }
-            if before.frame != item.frame || before.width != item.width || before.cornerRadius != item.cornerRadius {
+            if before.frame != item.frame || before.width != item.width || before.cornerRadius != item.cornerRadius ||
+                before.glowRadius != item.glowRadius
+            {
                 result.append(.reshape(item))
             }
             if before.color != item.color {

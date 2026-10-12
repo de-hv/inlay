@@ -192,6 +192,17 @@ gaps.outer.right =      14
     inactive-color = '#8E8E9373'   # The windows that aren't focused
     floating-color = '#BF5AF2'     # The focused window, if it is a floating one
 
+    # A glow around the focused window: a halo of the color of its border (the active, the floating or the mode
+    # color) that fades out outwards, outside of the border. The windows that aren't focused never glow
+    # Fallback value (if you omit the key): glow = false
+    glow = false
+
+    # The blur radius of the glow, in points: about how far from the border the glow reaches. It is drawn
+    # over whatever is around the window: the gaps and, if it is wide enough, the edges of the neighbor windows
+    # Possible values: 1 ... 40
+    # Fallback value (if you omit the key): glow-radius = 12
+    glow-radius = 12
+
     # The color of the border of the focused window while a binding mode is active.
     # It wins over active-color and floating-color. A mode without an entry keeps the normal color.
     # Empty by default

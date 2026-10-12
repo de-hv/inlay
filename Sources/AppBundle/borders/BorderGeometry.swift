@@ -24,34 +24,45 @@ struct BorderScreen: Equatable, Sendable {
 /// Where the panel of a border goes, and the shape that is drawn in it. Pure geometry
 ///
 /// The border is a ring: the hole is the frame of the window, with rounded corners,
-/// and the ring is `width` points thick all around
+/// and the ring is `width` points thick all around. A border that glows has a margin around the ring,
+/// where the glow fades out
 struct BorderGeometry: Equatable, Sendable {
     /// The frame of the panel: the frame of the window, snapped to the pixels of its screen and
-    /// grown by the width of the border. In the coordinates of the layout (Y grows downwards)
+    /// grown by the width of the border and by the margin of the glow. In the coordinates of the layout (Y grows downwards)
     var panelFrame: CGRect
     /// The thickness of the ring, snapped to pixels. At least one pixel
     var width: CGFloat
     /// The radius of the corners of the hole
     var innerRadius: CGFloat
+    /// The blur radius of the glow: twice the standard deviation of its gaussian falloff. 0: no glow
+    var glowRadius: CGFloat
+    /// The room around the ring for the glow, snapped to pixels: three standard deviations. The glow is gone
+    /// before that (at about two), so the edge of the panel never cuts it. 0 without glow
+    var glowMargin: CGFloat
+    /// Pixels per point
+    var scale: CGFloat
 
-    init(frame: CGRect, width: CGFloat, cornerRadius: CGFloat, scale: CGFloat) {
+    init(frame: CGRect, width: CGFloat, cornerRadius: CGFloat, glowRadius: CGFloat = 0, scale: CGFloat) {
         let scale = scale > 0 ? scale : 1
         func snap(_ value: CGFloat) -> CGFloat { (value * scale).rounded() / scale }
         let minX = snap(frame.minX), minY = snap(frame.minY)
         let hole = CGRect(x: minX, y: minY, width: max(snap(frame.maxX) - minX, 0), height: max(snap(frame.maxY) - minY, 0))
+        self.scale = scale
         self.width = max(snap(width), 1 / scale)
         self.innerRadius = min(max(cornerRadius, 0), hole.width / 2, hole.height / 2)
-        self.panelFrame = hole.insetBy(dx: -self.width, dy: -self.width)
+        self.glowRadius = max(glowRadius, 0)
+        self.glowMargin = (self.glowRadius * 1.5 * scale).rounded(.up) / scale
+        self.panelFrame = hole.insetBy(dx: -self.width - glowMargin, dy: -self.width - glowMargin)
     }
 
     init(_ item: BorderItem, scale: CGFloat) {
-        self.init(frame: item.frame, width: item.width, cornerRadius: item.cornerRadius, scale: scale)
+        self.init(frame: item.frame, width: item.width, cornerRadius: item.cornerRadius, glowRadius: item.glowRadius, scale: scale)
     }
 
     /// The hole, in the coordinates of the panel
     var innerRect: CGRect { outerRect.insetBy(dx: width, dy: width) }
-    /// The outer edge of the ring, in the coordinates of the panel: the whole panel
-    var outerRect: CGRect { CGRect(origin: .zero, size: panelFrame.size) }
+    /// The outer edge of the ring, in the coordinates of the panel: the whole panel, but for the margin of the glow
+    var outerRect: CGRect { CGRect(origin: .zero, size: panelFrame.size).insetBy(dx: glowMargin, dy: glowMargin) }
     /// The outer edge is parallel to the inner one. Square windows get a square border
     var outerRadius: CGFloat { innerRadius > 0 ? innerRadius + width : 0 }
 

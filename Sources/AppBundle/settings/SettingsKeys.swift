@@ -45,6 +45,8 @@ extension SettingsKey {
     static let bordersActiveColor = SettingsKey(["borders"], "active-color", default: .string(ConfigColor.systemAccentLiteral))
     static let bordersInactiveColor = SettingsKey(["borders"], "inactive-color", default: .string("#8E8E9373"))
     static let bordersFloatingColor = SettingsKey(["borders"], "floating-color", default: .string("#BF5AF2"))
+    static let bordersGlow = SettingsKey(["borders"], "glow", default: .bool(false))
+    static let bordersGlowRadius = SettingsKey(["borders"], "glow-radius", default: .int(12))
 }
 
 /// What the settings window can show

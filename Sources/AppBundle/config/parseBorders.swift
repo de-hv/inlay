@@ -16,9 +16,14 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var floatingColor: ConfigColor = .rgba(Rgba(red: 0xBF / 255, green: 0x5A / 255, blue: 0xF2 / 255))
     /// [borders.mode-colors]. Binding mode -> the color of the focused window while the mode is active
     var modeColors: [String: ConfigColor] = [:]
+    /// A soft halo of the color of the border around the focused window, outside of the border
+    var glow: Bool = false
+    /// The blur radius of the glow, in points: about how far from the border the glow reaches
+    var glowRadius: CGFloat = 12
 
     static let widthRange = 1 ... 20
     static let cornerRadiusRange = 0 ... 40
+    static let glowRadiusRange = 1 ... 40
 }
 
 private let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
@@ -29,6 +34,8 @@ private let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "inactive-color": Parser(\.inactiveColor, parseConfigColor(allowAuto: false)),
     "floating-color": Parser(\.floatingColor, parseConfigColor(allowAuto: false)),
     "mode-colors": Parser(\.modeColors, parseModeColors),
+    "glow": Parser(\.glow, parseBool),
+    "glow-radius": Parser(\.glowRadius, parsePoints("glow-radius", BordersConfig.glowRadiusRange)),
 ]
 
 func parseBorders(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> BordersConfig {

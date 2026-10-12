@@ -10,6 +10,8 @@ struct BorderItem: Equatable, Sendable {
     var color: Rgba
     var width: CGFloat
     var cornerRadius: CGFloat
+    /// The blur radius of the glow around the border. 0: no glow
+    var glowRadius: CGFloat = 0
 }
 
 /// What the model knows about a window that may get a border. See: BordersSnapshot.resolve
@@ -30,7 +32,8 @@ struct BordersSnapshot: Equatable, Sendable {
     ///
     /// The focused window takes the color of the binding mode if the mode has one, otherwise
     /// the floating color if it floats, otherwise the active color. The rest of the windows take the inactive color.
-    /// A fully transparent color means that the border isn't drawn at all
+    /// A fully transparent color means that the border isn't drawn at all.
+    /// Only the focused window glows, in the color of its border
     static func resolve(_ candidates: [BorderCandidate], _ config: BordersConfig, mode: String?, systemAccent: Rgba) -> BordersSnapshot {
         if !config.enabled { return .empty }
         var seen: Set<UInt32> = []
@@ -53,6 +56,7 @@ struct BordersSnapshot: Equatable, Sendable {
                 color: rgba,
                 width: config.width,
                 cornerRadius: config.cornerRadius,
+                glowRadius: candidate.isFocused && config.glow ? config.glowRadius : 0,
             ))
         }
         return BordersSnapshot(items: items)

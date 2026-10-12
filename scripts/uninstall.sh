@@ -3,8 +3,9 @@
 # Quits Inlay and removes it. 'inlay uninstall' runs this script (a copy of it: the script deletes the app
 # that contains it), and so does ./uninstall.sh in the repo.
 #
-#   inlay uninstall             remove the app, the 'inlay' CLI link and the login item
-#   inlay uninstall --purge     also remove your config and the app's preferences
+#   inlay uninstall             remove the app, the 'inlay' CLI link, the login item and your config
+#   inlay uninstall --purge     also remove what is left: the preferences and the runtime files of the app,
+#                               and the config backups that 'install.sh' made
 #   inlay uninstall --yes       don't ask for confirmation (needed when there is no terminal to ask on)
 #   INSTALL_DIR=~/Apps inlay uninstall      remove the copy in that directory only (the default is to
 #                                           look in /Applications and ~/Applications)
@@ -12,8 +13,17 @@
 #
 # It works whether Inlay is running or not. A running Inlay is quit first, and on quit it brings the windows
 # of the hidden workspaces back to the screen.
-# Without --purge your config (~/.config/inlay, ~/.inlay.toml) is kept. With --purge it is removed; if it is
-# a symbolic link to a file of yours, only the link is removed, never the file it points to.
+#
+# Your config is always removed: ~/.config/inlay and ~/.inlay.toml. What is listed before you confirm:
+#   - ~/.config/inlay is a real folder: the folder and everything in it are deleted;
+#   - ~/.config/inlay is a symbolic link to a folder of yours (a dotfiles repo): only the link is removed.
+#     The folder it points to, and its inlay.toml, are never touched;
+#   - a symbolic link inside of a real ~/.config/inlay (an inlay.toml linked by a previous version): the link
+#     goes with the folder, and the file it points to is never touched.
+# The backups that 'install.sh' made outside of that folder (~/.config/inlay.backup-<date>,
+# ~/.inlay.toml.backup-<date>) are kept, unless you pass --purge. A backup that is a symbolic link is removed
+# the same way: only the link.
+#
 # Never removed: the Accessibility entry (remove it in System Settings > Privacy & Security > Accessibility, or
 # run 'tccutil reset Accessibility com.davidhiguita.inlay') and the signing identity that
 # 'install.sh' created (delete "Inlay Local Code Signing" in Keychain Access).
@@ -23,7 +33,7 @@
 
 set -euo pipefail
 
-usage() { sed -n '3,23s/^# \{0,1\}//p' "$SCRIPT_DIR/uninstall.sh"; }
+usage() { sed -n '3,32s/^# \{0,1\}//p' "$SCRIPT_DIR/uninstall.sh"; }
 
 # Prints the installed copies of the app, one per line: the app that 'inlay uninstall' was run from, and the
 # ones in the standard places. With INSTALL_DIR only that directory is looked at instead of the standard places
@@ -92,40 +102,72 @@ config_paths() {
   done
 }
 
-# Prints, for a config path, the symbolic links that 'rm' removes without touching what they point to:
-# "<link> -> <target>" per line. The path itself, or the config file inside the config directory
-config_links() {
-  local path="$1" candidate
-  for candidate in "$path" "$path/inlay.toml"; do
-    if [ -L "$candidate" ]; then
-      printf '%s -> %s\n' "$candidate" "$(readlink "$candidate")"
+# Prints the config backups that 'install.sh' left outside of the config folder, one per line
+config_backups() {
+  local path
+  for path in "$(config_home)/inlay.backup-"* "$HOME/.inlay.toml.backup-"*; do
+    if [ -e "$path" ] || [ -L "$path" ]; then
+      printf '%s\n' "$path"
     fi
   done
 }
 
-purge() {
-  local path link
-  while IFS= read -r path; do
-    [ -n "$path" ] || continue
-    while IFS= read -r link; do
-      [ -n "$link" ] || continue
-      note "Symbolic link: only the link is removed, the file it points to is kept ($link)"
-    done <<LINKS
-$(config_links "$path")
-LINKS
-    # Without a trailing slash 'rm -rf' never follows a symbolic link
+# describe_config_path <path>. One line of the list of what is removed: what the path is and, for a symbolic
+# link, that what it points to is kept
+describe_config_path() {
+  local path="$1" what="${2:-your config}"
+  if [ -L "$path" ]; then
+    note "- $path ($what: a symbolic link. Only the link is removed:"
+    note "  what it points to, $(readlink "$path"), is kept)"
+  elif [ -d "$path" ]; then
+    note "- $path ($what: the folder and everything in it)"
+    if [ -L "$path/inlay.toml" ]; then
+      note "  Its inlay.toml is a symbolic link: the file it points to, $(readlink "$path/inlay.toml"), is kept"
+    fi
+  else
+    note "- $path ($what)"
+  fi
+}
+
+# remove_config_path <path>. A symbolic link is removed as a link: what it points to is never touched
+remove_config_path() {
+  local path="$1"
+  if [ -L "$path" ]; then
+    rm -f "$path"
+    info "Removed the link $path (what it pointed to was not touched)"
+  else
+    # Without a trailing slash 'rm -rf' never follows a symbolic link, and it removes the links inside of a
+    # folder as links
     rm -rf "$path"
     info "Removed $path"
+  fi
+}
+
+remove_config() {
+  local path
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    remove_config_path "$path"
   done <<LIST
 $(config_paths)
 LIST
+}
+
+purge() {
+  local path
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    remove_config_path "$path"
+  done <<LIST
+$(config_backups)
+LIST
   defaults delete "$BUNDLE_ID" >/dev/null 2>&1 || true
   rm -rf "$RUNTIME_TMP_DIR/$BUNDLE_ID"
-  info "Removed the preferences of $BUNDLE_ID"
+  info "Removed the preferences and the runtime files of $BUNDLE_ID"
 }
 
 main() {
-  local do_purge=false assume_yes=false app link apps links
+  local do_purge=false assume_yes=false app link path apps links configs backups
   while [ $# -gt 0 ]; do
     case "$1" in
       --purge) do_purge=true ;;
@@ -152,16 +194,29 @@ LIST
 $links
 LIST
   fi
-  if [ "$do_purge" = true ]; then
-    while IFS= read -r link; do
-      [ -n "$link" ] || continue
-      note "- $link (your config)"
-    done <<LIST
-$(config_paths)
+  configs="$(config_paths)"
+  if [ -n "$configs" ]; then
+    while IFS= read -r path; do describe_config_path "$path"; done <<LIST
+$configs
 LIST
-    note "- the preferences of $BUNDLE_ID"
   else
-    note "Your config is kept (use --purge to remove it too)."
+    note "- no config was found (~/.config/inlay, ~/.inlay.toml)"
+  fi
+  backups="$(config_backups)"
+  if [ "$do_purge" = true ]; then
+    if [ -n "$backups" ]; then
+      while IFS= read -r path; do describe_config_path "$path" "a config backup of install.sh"; done <<LIST
+$backups
+LIST
+    fi
+    note "- the preferences and the runtime files of $BUNDLE_ID"
+  elif [ -n "$backups" ]; then
+    note "Kept: the preferences of the app and the config backups of install.sh (--purge removes them too):"
+    while IFS= read -r path; do note "  $path"; done <<LIST
+$backups
+LIST
+  else
+    note "Kept: the preferences of the app (--purge removes them too)."
   fi
 
   if [ "$assume_yes" != true ]; then
@@ -193,6 +248,7 @@ $links
 LIST
   fi
 
+  remove_config
   if [ "$do_purge" = true ]; then
     purge
   fi

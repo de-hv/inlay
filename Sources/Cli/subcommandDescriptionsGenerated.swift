@@ -43,7 +43,7 @@ let subcommandDescriptions = [
     ["  test", "Condition evaluation utility"],
     ["  trigger-binding", "Trigger Inlay binding as if it was pressed by user"],
     ["  true", "Return true value"],
-    ["  uninstall", "Quit Inlay and remove it (--purge: also the config)"],
+    ["  uninstall", "Quit Inlay and remove it and its config (--purge: also preferences and backups)"],
     ["  volume", "Manipulate volume"],
     ["  workspace-back-and-forth", "Switch between the focused workspace and previously focused workspace back and forth"],
     ["  workspace", "Focus the specified workspace"],

@@ -112,6 +112,39 @@ extension InlayTests {
             assertEquals(model.target?.exists, true)
         }
 
+        /// Regression: the window used to patch the text it had read when it was opened
+        @Test func testChangesMadeOutsideOfTheWindowAreKept() throws {
+            let model = try model("# My config\n[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n")
+            // The user edits the file in an editor while the window is open. Nothing reloads the config
+            let edited = "# My config, edited\nstart-at-login = true\n[menu-bar]\ntheme = 'minimal'\n[mode.main.binding]\nalt-h = 'focus left'\n"
+            try edited.write(to: file, atomically: true, encoding: .utf8)
+            assertEquals(model.menuBarTheme, .chips) // The window still shows what it read
+
+            model.set(.menuBarShowMode, .bool(true))
+            assertEquals(model.errorMessage, nil)
+            assertEquals(text, "# My config, edited\nstart-at-login = true\n[menu-bar]\ntheme = 'minimal'\nshow-mode = true\n[mode.main.binding]\nalt-h = 'focus left'\n")
+            // And the window has caught up
+            assertEquals(model.menuBarTheme, .minimal)
+            assertEquals(model.bool(.startAtLogin), true)
+
+            // The same for a value that was being previewed
+            try "[menu-bar]\n# A new comment\ntheme = 'square'\n[mode.main.binding]\n".write(to: file, atomically: true, encoding: .utf8)
+            model.preview(.menuBarFocused, .string("#FF0000"))
+            model.commit(.menuBarFocused)
+            assertEquals(text, "[menu-bar]\n# A new comment\ntheme = 'square'\n[mode.main.binding]\n\n[menu-bar.colors]\nfocused = '#FF0000'\n")
+        }
+
+        @Test func testFileBrokenOutsideOfTheWindowIsNotWritten() throws {
+            let model = try model("[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n")
+            // Half-way through an edit in the editor: not valid TOML, and then a config with an error
+            for broken in ["[menu-bar\ntheme = 'chips'\n", "[menu-bar]\ntheme = 'chips'\nunknown-key = 1\n[mode.main.binding]\n"] {
+                try broken.write(to: file, atomically: true, encoding: .utf8)
+                model.set(.menuBarShowMode, .bool(true))
+                assertEquals(text, broken)
+                assertNotNil(model.errorMessage)
+            }
+        }
+
         @Test func testPreviewAndCommit() throws {
             let original = "[borders]\nwidth = 4\n"
             // The [borders] table isn't a part of the config yet: only the preview can be tested

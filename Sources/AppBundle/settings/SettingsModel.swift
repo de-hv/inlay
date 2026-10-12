@@ -166,8 +166,19 @@ final class SettingsModel {
             commitTasks.removeValue(forKey: key)?.cancel()
             pending[key] = nil
         }
-        guard unavailableReason == nil, let target else { return }
-        switch ConfigEditor.apply(edits, to: target) {
+        guard unavailableReason == nil, target != nil else { return }
+        // The file is read again right before it is patched. The text that the window holds may be old: the user
+        // edits the file in an editor while the window is open, and without 'auto-reload-config' nothing tells
+        // the window about it. Patching the old text would write the changes of the user away
+        let current: ConfigEditor.Target
+        switch loadTarget() {
+            case .success(let fresh): current = fresh
+            case .failure(let error):
+                errorMessage = error.message
+                refresh()
+                return
+        }
+        switch ConfigEditor.apply(edits, to: current) {
             case .success:
                 errorMessage = nil
                 refresh()

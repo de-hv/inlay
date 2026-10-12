@@ -361,9 +361,7 @@ extension InlayTests {
         }
 
         /// The refresh session notices that macOS made a window fullscreen or minimized it. See: normalizeLayoutReason
-        @Test func testMacosFullscreenAndMinimize_previousSiblingTakesTheSpace_andTheWindowComesBackAsNew() async throws {
-            // Otherwise normalizeLayoutReason asks the real app of the window whether it is hidden
-            config.automaticallyUnhideMacosHiddenApps = true
+        @Test func testMacosFullscreenAndMinimize_previousSiblingTakesTheSpace_andTheWindowGetsItsPlaceBack() async throws {
             for minimize in [false, true] {
                 for window in workspace.allLeafWindowsRecursive + macosMinimizedWindowsContainer.children.filterIsInstance(of: Window.self) {
                     window.unbindFromParent()
@@ -377,37 +375,272 @@ extension InlayTests {
                 let leaving = window(2)
 
                 if minimize { leaving.isMacosMinimizedForTest = true } else { leaving.isMacosFullscreenForTest = true }
-                try await normalizeLayoutReason()
-                workspace.normalizeContainers()
-                try await workspace.layoutWorkspace()
+                try await refresh()
                 assertTrue(minimize ? leaving.parent is MacosMinimizedWindowsContainer : leaving.parent is MacosFullscreenWindowsContainer)
                 assertRects([1: (0, 0, 1400, 1079), 3: (1400, 0, 520, 1079)])
 
-                // It comes back as a new window: it splits the focused one
+                // It doesn't split the focused window, like a new window would: it goes back to where it was
                 assertEquals(window(1).focusWindow(), true)
                 leaving.isMacosMinimizedForTest = false
                 leaving.isMacosFullscreenForTest = false
-                try await normalizeLayoutReason()
-                workspace.normalizeContainers()
-                try await workspace.layoutWorkspace()
+                try await refresh()
                 assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2), .window(3)]))
-                assertRects([1: (0, 0, 700, 1079), 2: (700, 0, 700, 1079), 3: (1400, 0, 520, 1079)])
+                assertRects([1: (0, 0, 800, 1079), 2: (800, 0, 600, 1079), 3: (1400, 0, 520, 1079)])
+                assertNil(leaving.tilingSlot)
             }
         }
 
         @Test func testMacosNativeMinimize_twoSiblingsInANestedContainer_containerIsFlattened() async throws {
-            config.automaticallyUnhideMacosHiddenApps = true
             try await openWindow(1)
             try await openWindow(2)
             try await openWindow(3)
             assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(2), .window(3)])]))
 
             window(3).isMacosMinimizedForTest = true
-            try await normalizeLayoutReason()
-            workspace.normalizeContainers()
-            try await workspace.layoutWorkspace()
+            try await refresh()
             assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
             assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 1079)])
+        }
+
+        // MARK: - Coming back from minimize, the macOS native fullscreen and a hidden app. See: TilingSlot
+
+        /// The container of the window was flattened when the window left. The neighbor is split again, the same way
+        @Test func testComeBack_theContainerIsGone_theNeighborIsSplitAgain() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            try await run("resize height +100") // 3 is focused: 439.5 for 2, 639.5 for 3
+            let rects: [UInt32: (CGFloat, CGFloat, CGFloat, CGFloat)] = [1: (0, 0, 960, 1079), 2: (960, 0, 960, 439.5), 3: (960, 439.5, 960, 639.5)]
+            assertRects(rects)
+
+            // The last child, and then the first one
+            for id in [3, 2] as [UInt32] {
+                window(id).isMacosMinimizedForTest = true
+                try await refresh()
+                assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(id == 3 ? 2 : 3)]))
+                // A new window would split window 1, the focused one
+                assertEquals(window(1).focusWindow(), true)
+                window(id).isMacosMinimizedForTest = false
+                try await refresh()
+                assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(2), .window(3)])]))
+                assertRects(rects)
+            }
+        }
+
+        @Test func testComeBack_rootContainer() async throws {
+            try await openWindow(1)
+            try await openWindow(2)
+            try await run("resize width -160") // 2 is focused
+            assertRects([1: (0, 0, 1120, 1079), 2: (1120, 0, 800, 1079)])
+
+            // One of two: the root container is never flattened, so the window goes back to its index
+            for id in [1, 2] as [UInt32] {
+                window(id).isMacosFullscreenForTest = true
+                try await refresh()
+                assertRects([(id == 1 ? 2 : 1): (0, 0, 1920, 1079)])
+                window(id).isMacosFullscreenForTest = false
+                try await refresh()
+                assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
+                assertRects([1: (0, 0, 1120, 1079), 2: (1120, 0, 800, 1079)])
+            }
+
+            // The only window
+            try await close(2)
+            window(1).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([]))
+            window(1).isMacosMinimizedForTest = false
+            try await refresh()
+            assertRects([1: (0, 0, 1920, 1079)])
+        }
+
+        /// The sibling of the window is a container. When the window leaves, the container takes the place of
+        /// the flattened one, and the normalization turns it around. The window joins it instead of wrapping it
+        @Test func testComeBack_theNeighborIsAContainerThatWasTurnedAround() async throws {
+            for id in 1 ... 4 as ClosedRange<UInt32> { try await openWindow(id) }
+            assertEquals(
+                workspace.rootTilingContainer.layoutDescription,
+                .h_tiles([.window(1), .v_tiles([.window(2), .h_tiles([.window(3), .window(4)])])]),
+            )
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(3), .window(4)])]))
+
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(2), .window(3), .window(4)])]))
+            // It was the upper half
+            assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 269.75), 4: (960, 809.25, 960, 269.75)])
+            assertNormalized(workspace.rootTilingContainer)
+        }
+
+        @Test func testComeBack_theTreeChangedInTheMeantime() async throws {
+            workspace.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0, adaptiveWeight: 800)
+                TestWindow.new(id: 2, parent: $0, adaptiveWeight: 600)
+                TestWindow.new(id: 3, parent: $0, adaptiveWeight: 520)
+            }
+            assertEquals(window(3).focusWindow(), true)
+
+            // The neighbor that took the space is smaller than that space now: the window takes the same fraction of it
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(window(1).focusWindow(), true)
+            try await run("resize width -1000") // 1: 1400 -> 400
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2), .window(3)]))
+            let share: CGFloat = 600 / 1400
+            assertRects([1: (0, 0, 400 * (1 - share), 1079), 2: (400 * (1 - share), 0, 400 * share, 1079), 3: (400, 0, 1520, 1079)])
+
+            // The neighbor is gone, and the container is still there: back to its index, with an average size
+            try await run("balance-sizes")
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            try await close(1)
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(2), .window(3)]))
+
+            // The container was turned around: the window still goes next to its neighbor
+            window(3).isMacosMinimizedForTest = true
+            try await refresh()
+            try await openWindow(4) // 2 is the only window: it is split side by side
+            assertEquals(window(2).focusWindow(), true)
+            try await run("layout vertical")
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.window(2), .window(4)]))
+            window(3).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.window(2), .window(3), .window(4)]))
+            assertSound("turned around")
+        }
+
+        /// Neither the container nor the neighbor are there anymore: the window is a new window
+        @Test func testComeBack_thePlaceIsGone_theWindowIsPlacedLikeANewOne() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            window(3).isMacosMinimizedForTest = true
+            try await refresh()
+            try await close(2)
+            try await openWindow(4)
+            try await openWindow(5)
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(4), .window(5)])]))
+
+            assertEquals(window(1).focusWindow(), true)
+            window(3).isMacosMinimizedForTest = false
+            try await refresh()
+            // It splits the focused window: 1 is taller than wide
+            assertEquals(
+                workspace.rootTilingContainer.layoutDescription,
+                .h_tiles([.v_tiles([.window(1), .window(3)]), .v_tiles([.window(4), .window(5)])]),
+            )
+        }
+
+        /// A minimized window belongs to no workspace. It comes back to the focused one
+        @Test func testComeBack_inAnotherWorkspace_theWindowIsPlacedLikeANewOne() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+
+            let other = Workspace.get(byName: "other")
+            TestWindow.new(id: 10, parent: other.rootTilingContainer)
+            assertEquals(other.focusWorkspace(), true)
+            window(2).isMacosMinimizedForTest = false
+            try await normalizeLayoutReason()
+            assertEquals(other.rootTilingContainer.layoutDescription, .h_tiles([.window(10), .window(2)]))
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
+        }
+
+        /// The windows of an app are hidden and shown together
+        @Test func testComeBack_severalWindowsAtOnce_everyWindowGetsItsPlace() async throws {
+            workspace.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0, adaptiveWeight: 500)
+                TestWindow.new(id: 2, parent: $0, adaptiveWeight: 400)
+                TestWindow.new(id: 3, parent: $0, adaptiveWeight: 300)
+                TilingContainer.newVTiles(parent: $0, adaptiveWeight: 720).apply {
+                    TestWindow.new(id: 4, parent: $0, adaptiveWeight: 400)
+                    TestWindow.new(id: 5, parent: $0, adaptiveWeight: 679)
+                }
+            }
+            assertEquals(window(1).focusWindow(), true)
+            try await workspace.layoutWorkspace()
+            let tree = workspace.rootTilingContainer.layoutDescription
+            let rects = workspace.rootTilingContainer.allLeafWindowsRecursive.map { ($0 as! TestWindow).rect }
+
+            for ids in [[2, 3], [1, 2], [2, 3, 5], [1, 2, 3, 4], [4, 5]] as [[UInt32]] {
+                for id in ids { window(id).isMacosFullscreenForTest = true }
+                try await refresh()
+                assertEquals(workspace.rootTilingContainer.allLeafWindowsRecursive.count, 5 - ids.count)
+                for id in ids { window(id).isMacosFullscreenForTest = false }
+                try await refresh()
+                assertEquals(workspace.rootTilingContainer.layoutDescription, tree, additionalMsg: "\(ids)")
+                let actual = workspace.rootTilingContainer.allLeafWindowsRecursive.map { ($0 as! TestWindow).rect }
+                for (actual, expected) in zip(actual, rects) {
+                    guard let actual, let expected else { continue }
+                    let difference = max(
+                        abs(actual.topLeftX - expected.topLeftX), abs(actual.topLeftY - expected.topLeftY),
+                        abs(actual.width - expected.width), abs(actual.height - expected.height),
+                    )
+                    assertTrue(difference < 0.001)
+                }
+            }
+        }
+
+        @Test func testComeBack_afterFocused_theSiblingsGiveTheSpaceBack() async throws {
+            config.tiling.newWindowPlacement = .afterFocused
+            workspace.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0, adaptiveWeight: 800)
+                TestWindow.new(id: 2, parent: $0, adaptiveWeight: 600)
+                TestWindow.new(id: 3, parent: $0, adaptiveWeight: 520)
+            }
+            assertEquals(window(1).focusWindow(), true)
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertRects([1: (0, 0, 1100, 1079), 3: (1100, 0, 820, 1079)])
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertRects([1: (0, 0, 800, 1079), 2: (800, 0, 600, 1079), 3: (1400, 0, 520, 1079)])
+        }
+
+        /// macos-native-fullscreen and macos-native-minimize move the window on their own, before the refresh session
+        /// notices the new state of the window
+        @Test func testComeBack_theCommandMovedTheWindowBeforeTheRefresh() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            let tree = workspace.rootTilingContainer.layoutDescription
+            let leaving = window(2)
+            // The same as MacosNativeFullscreenCommand
+            leaving.rememberTilingSlot()
+            leaving.releaseTilingSpaceToNeighbor()
+            leaving.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
+            try await refresh() // macOS doesn't report the fullscreen yet
+            assertEquals(leaving.layoutReason, .standard)
+            leaving.isMacosFullscreenForTest = true
+            try await refresh()
+            assertEquals(leaving.layoutReason, .macos(prevParentKind: .macosFullscreenWindowsContainer))
+            assertNotNil(leaving.tilingSlot)
+
+            assertEquals(window(1).focusWindow(), true)
+            leaving.isMacosFullscreenForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+            assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 539.5)])
+        }
+
+        /// A floating window comes back as a floating window, and it forgets a place it had as a tiling one
+        @Test func testComeBack_floatingWindow() async throws {
+            try await openWindow(1)
+            try await openWindow(2)
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(window(2).focusWindow(), true)
+            try await run("layout floating")
+
+            window(2).isMacosMinimizedForTest = true
+            try await refresh()
+            assertNil(window(2).tilingSlot)
+            window(2).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.floatingWindows.map(\.windowId), [2])
+            assertRects([1: (0, 0, 1920, 1079)])
         }
 
         // MARK: - The tree stays sound
@@ -430,7 +663,7 @@ extension InlayTests {
             }
         }
 
-        /// A long pseudo-random session of the things a user does. After every step the tree must be normalized
+        /// A long pseudo-random session of the things a user and macOS do. After every step the tree must be normalized
         /// (no empty container, no container with the orientation of its parent), every weight and every frame
         /// must be positive, and the frames must tile the workspace without holes or overlaps
         @Test func testRandomSession_theTreeStaysSound() async throws {
@@ -447,14 +680,36 @@ extension InlayTests {
             unsafe Self.issues = 0
             var nextId: UInt32 = 1
             var log: [String] = []
-            for step in 0 ..< 400 {
+            for step in 0 ..< 600 {
                 let tiling = workspace.rootTilingContainer.allLeafWindowsRecursive
                 let all = workspace.allLeafWindowsRecursive
-                switch random(10) {
-                    case 0 ..< 4 where tiling.count < 9, _ where all.isEmpty:
+                let minimized = macosMinimizedWindowsContainer.children.filterIsInstance(of: TestWindow.self)
+                switch random(12) {
+                    case 10 where !all.isEmpty, 11 where !all.isEmpty:
+                        // macOS minimizes a window or makes it fullscreen, or brings one back. The window may be floating
+                        let away = minimized + workspace.macOsNativeFullscreenWindowsContainer.children.filterIsInstance(of: TestWindow.self)
+                        if !away.isEmpty && random(2) == 0 {
+                            let window = away[random(away.count)]
+                            log.append("come back \(window.windowId)")
+                            window.isMacosMinimizedForTest = false
+                            window.isMacosFullscreenForTest = false
+                        } else {
+                            let window = all[random(all.count)] as! TestWindow
+                            if random(2) == 0 {
+                                log.append("minimize \(window.windowId)")
+                                window.isMacosMinimizedForTest = true
+                            } else {
+                                log.append("native fullscreen \(window.windowId)")
+                                window.isMacosFullscreenForTest = true
+                            }
+                        }
+                        try await refresh()
+                    case 0 ..< 4 where tiling.count < 9, _ where all.isEmpty && minimized.isEmpty:
                         log.append("open \(nextId)")
                         try await openWindow(nextId)
                         nextId += 1
+                    case _ where all.isEmpty:
+                        continue
                     case 4 ..< 6:
                         let id = all[random(all.count)].windowId
                         log.append("close \(id)")
@@ -673,6 +928,15 @@ extension InlayTests {
             try await workspace.layoutWorkspace()
         }
 
+        /// What a refresh session does after macOS minimized a window, made it fullscreen, or brought it back
+        private func refresh() async throws {
+            // Otherwise normalizeLayoutReason asks the real app of the window whether it is hidden
+            config.automaticallyUnhideMacosHiddenApps = true
+            try await normalizeLayoutReason()
+            workspace.normalizeContainers()
+            try await workspace.layoutWorkspace()
+        }
+
         private func close(_ id: UInt32) async throws {
             try await run("close --window-id \(id)")
         }
@@ -685,7 +949,9 @@ extension InlayTests {
         }
 
         private func window(_ id: UInt32) -> TestWindow {
-            Workspace.all.flatMap(\.allLeafWindowsRecursive).first { $0.windowId == id } as! TestWindow
+            // The minimized windows belong to no workspace
+            let windows = Workspace.all.flatMap(\.allLeafWindowsRecursive) + macosMinimizedWindowsContainer.children.filterIsInstance(of: Window.self)
+            return windows.first { $0.windowId == id } as! TestWindow
         }
 
         /// The frames of all the tiling windows of the workspace: id -> (x, y, width, height)

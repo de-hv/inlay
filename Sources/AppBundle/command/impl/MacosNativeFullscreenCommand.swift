@@ -34,6 +34,7 @@ struct MacosNativeFullscreenCommand: Command {
             return .fail(io.err(windowIsntPartOfTree(window)))
         }
         if newState { // Enter fullscreen
+            window.rememberTilingSlot()
             window.releaseTilingSpaceToNeighbor()
             window.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
         } else { // Exit fullscreen
@@ -50,10 +51,15 @@ struct MacosNativeFullscreenCommand: Command {
                         return .fail(io.err(bugPrompt()))
                     }
                 default:
-                    do {
-                        try await window.relayoutWindow(on: workspace, .nonCancellable)
-                    } catch {
-                        return .fail(io.err(bugPrompt()))
+                    // The refresh session hasn't noticed the fullscreen yet
+                    if let slot = window.takeTilingSlot() {
+                        window.rebindAsTilingWindow(on: workspace, restoring: slot)
+                    } else {
+                        do {
+                            try await window.relayoutWindow(on: workspace, .nonCancellable)
+                        } catch {
+                            return .fail(io.err(bugPrompt()))
+                        }
                     }
             }
         }

@@ -36,30 +36,63 @@ func prepareDwindleBindingDataForNewTilingWindow(_ workspace: Workspace, focused
     // The most recent window isn't necessarily the focused one. Example: flatten-workspace-tree rebinds all the windows
     let focused = focused?.takeIf { $0.parent is TilingContainer && $0.nodeWorkspace == workspace }
     guard let target = focused ?? workspace.rootTilingContainer.mostRecentWindowRecursive,
-          let parent = target.parent as? TilingContainer,
+          target.parent is TilingContainer,
           // Also normalizes the weights. From this point, the weights are in screen points
           let targetRect = target.predictLayoutRect() else { return nil }
     let axis: Orientation = targetRect.width > targetRect.height ? .h : .v
-    let ratio = config.tiling.splitRatio
-
-    if parent.orientation != axis && parent.isRootContainer && parent.children.count == 1 { // Case b
-        parent.changeOrientation(axis)
-        target.setWeight(axis, targetRect.getDimension(axis))
-    }
-    if parent.orientation == axis { // Case a
-        let weight = target.getWeight(axis)
-        target.setWeight(axis, weight * ratio)
-        return BindingData(parent: parent, adaptiveWeight: weight * (1 - ratio), index: target.ownIndex.orDie() + 1)
-    } else { // Case c
-        let targetBinding = target.unbindFromParent()
-        let container = TilingContainer(parent: parent, adaptiveWeight: targetBinding.adaptiveWeight, axis, .tiles, index: targetBinding.index)
-        let size = targetRect.getDimension(axis) // The container takes the place of the target
-        target.bind(to: container, adaptiveWeight: size * ratio, index: 0)
-        return BindingData(parent: container, adaptiveWeight: size * (1 - ratio), index: 1)
-    }
+    return target.splitTilingPlace(axis, newShare: 1 - config.tiling.splitRatio, newIsAfter: true, rect: targetRect)
 }
 
 extension TreeNode {
+    /// Splits the place of the node in the tiling tree in two along `axis`, and tells where to bind the node that
+    /// takes the new part. The node keeps the rest. The cases are the ones of
+    /// ``prepareDwindleBindingDataForNewTilingWindow(_:focused:)``, plus one for containers:
+    ///
+    /// a. The container of the node has the orientation of the axis -> the new node becomes a sibling of the node
+    /// b. The node is a window, and the only child of the root container -> the root container changes its orientation. Then (a)
+    /// c. Otherwise -> a new container with the orientation of the axis takes the place and the weight of the node.
+    ///    The node and the new node go inside
+    /// d. The node is a container with the orientation of the axis, and its parent has another one ->
+    ///    the new node becomes its first or its last child. Wrapping it (c) would nest two containers of the same orientation
+    ///
+    /// - Parameter newShare: the fraction of the place that the new node takes
+    /// - Parameter newIsAfter: the new node goes to the right/bottom of the node. Otherwise, to the left/top
+    /// - Parameter rect: `predictLayoutRect()` of the node, which also normalizes the weights that are changed here
+    @MainActor
+    func splitTilingPlace(_ axis: Orientation, newShare: CGFloat, newIsAfter: Bool, rect: Rect) -> BindingData {
+        let size = rect.getDimension(axis)
+        if let parent = parent as? TilingContainer {
+            if self is Window && parent.orientation != axis && parent.isRootContainer && parent.children.count == 1 { // Case b
+                parent.changeOrientation(axis)
+                setWeight(axis, size)
+            }
+            if parent.orientation == axis { // Case a
+                let weight = getWeight(axis)
+                setWeight(axis, weight * (1 - newShare))
+                return BindingData(parent: parent, adaptiveWeight: weight * newShare, index: ownIndex.orDie() + (newIsAfter ? 1 : 0))
+            }
+        }
+        if let container = self as? TilingContainer, container.orientation == axis { // Case d
+            _ = children.first?.predictLayoutRect() // Normalizes the weights of the children
+            for child in children {
+                child.setWeight(axis, child.getWeight(axis) * (1 - newShare))
+            }
+            return BindingData(parent: container, adaptiveWeight: size * newShare, index: newIsAfter ? INDEX_BIND_LAST : 0)
+        }
+        // Case c
+        let binding = unbindFromParent()
+        let container = TilingContainer(parent: binding.parent, adaptiveWeight: binding.adaptiveWeight, axis, .tiles, index: binding.index)
+        bind(to: container, adaptiveWeight: size * (1 - newShare), index: 0)
+        return BindingData(parent: container, adaptiveWeight: size * newShare, index: newIsAfter ? 1 : 0)
+    }
+
+    /// The sibling that gets the space of the node when the node leaves the tiling tree:
+    /// the previous one, or the next one if the node is the first child. nil for an only child
+    var siblingThatTakesTheSpace: TreeNode? {
+        guard let parent = parent as? TilingContainer, parent.children.count >= 2, let ownIndex else { return nil }
+        return parent.children[ownIndex > 0 ? ownIndex - 1 : 1]
+    }
+
     /// Call it right before the node leaves the tiling tree: the window is closed, becomes floating, is moved to
     /// a different workspace, is minimized, etc.
     ///
@@ -67,14 +100,16 @@ extension TreeNode {
     /// if the node is the first child), as if the split that created the node was undone.
     /// Without it, all the siblings share the space (AeroSpace behavior).
     ///
-    /// Nothing to do for a node with a single sibling: the sibling takes all the space, and the container gets flattened
+    /// Nothing to do for a node with a single sibling: the sibling takes all the space, and the container gets flattened.
+    /// An only child takes its container with it (an empty container is removed), so it's the container that releases its space
     @MainActor
     func releaseTilingSpaceToNeighbor() {
         guard config.tiling.newWindowPlacement == .dwindle else { return }
-        guard let parent = parent as? TilingContainer, parent.children.count >= 3, let ownIndex else { return }
+        guard let parent = parent as? TilingContainer else { return }
+        if parent.children.count == 1 && !parent.isRootContainer { return parent.releaseTilingSpaceToNeighbor() }
+        guard parent.children.count >= 3, let neighbor = siblingThatTakesTheSpace else { return }
         // Normalizes the weights. From this point, the weights are in screen points
         guard predictLayoutRect() != nil else { return }
-        let neighbor = parent.children[ownIndex > 0 ? ownIndex - 1 : 1]
         let orientation = parent.orientation
         neighbor.setWeight(orientation, neighbor.getWeight(orientation) + getWeight(orientation))
     }

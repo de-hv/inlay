@@ -213,6 +213,20 @@ extension Window {
     }
 }
 
+extension Window {
+    /// The window comes back to the tiling tree: it isn't minimized, in the macOS native fullscreen, or hidden with
+    /// its app anymore. It takes the place it had, if it is remembered and it's still there. See: TilingSlot.
+    /// Otherwise, the window is placed like a new one
+    @MainActor
+    func rebindAsTilingWindow(on workspace: Workspace, restoring slot: TilingSlot?) {
+        // Ask for the focus before unbinding. While the focused window is unbound, the focus falls back to an arbitrary window
+        let focused = focus.windowOrNil?.takeIf { $0 != self }
+        unbindFromParent()
+        let data = slot?.bindingData(in: workspace) ?? getBindingDataForNewTilingWindow(workspace, focused: focused)
+        bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+    }
+}
+
 // The function is private because it's unsafe. It leaves the window in unbound state
 // The window must be bound with the returned data right away, without suspension points in between
 @MainActor

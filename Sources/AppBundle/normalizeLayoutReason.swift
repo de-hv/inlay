@@ -22,7 +22,9 @@ private func validateStillPopups() async throws {
 
 @MainActor
 private func _normalizeLayoutReason(workspace: Workspace, windows: [Window]) async throws {
-    for window in windows {
+    // Last out, first in. The windows of an app are hidden and shown together: a window that left its place after
+    // another one must take it back before the other one does, or their indexes don't match the tree
+    for window in windows.reversed() {
         let isMacosFullscreen = try await window.isMacosFullscreen(.cancellable)
         let isMacosMinimized = try await (!isMacosFullscreen).andAsync { @MainActor @Sendable in try await window.isMacosMinimized(.cancellable) }
         let isMacosWindowOfHiddenApp = !isMacosFullscreen && !isMacosMinimized &&
@@ -30,21 +32,17 @@ private func _normalizeLayoutReason(workspace: Workspace, windows: [Window]) asy
         switch window.layoutReason {
             case .standard:
                 guard let parent = window.parent else { continue }
+                let container: NonLeafTreeNodeObject
                 switch true {
-                    case isMacosFullscreen:
-                        window.layoutReason = .macos(prevParentKind: parent.kind)
-                        window.releaseTilingSpaceToNeighbor()
-                        window.bind(to: workspace.macOsNativeFullscreenWindowsContainer, adaptiveWeight: WEIGHT_DOESNT_MATTER, index: INDEX_BIND_LAST)
-                    case isMacosMinimized:
-                        window.layoutReason = .macos(prevParentKind: parent.kind)
-                        window.releaseTilingSpaceToNeighbor()
-                        window.bind(to: macosMinimizedWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
-                    case isMacosWindowOfHiddenApp:
-                        window.layoutReason = .macos(prevParentKind: parent.kind)
-                        window.releaseTilingSpaceToNeighbor()
-                        window.bind(to: workspace.macOsNativeHiddenAppsWindowsContainer, adaptiveWeight: WEIGHT_DOESNT_MATTER, index: INDEX_BIND_LAST)
-                    default: break
+                    case isMacosFullscreen: container = workspace.macOsNativeFullscreenWindowsContainer
+                    case isMacosMinimized: container = macosMinimizedWindowsContainer
+                    case isMacosWindowOfHiddenApp: container = workspace.macOsNativeHiddenAppsWindowsContainer
+                    default: continue
                 }
+                window.layoutReason = .macos(prevParentKind: parent.kind)
+                window.rememberTilingSlot()
+                window.releaseTilingSpaceToNeighbor()
+                window.bind(to: container, adaptiveWeight: WEIGHT_DOESNT_MATTER, index: INDEX_BIND_LAST)
             case .macos(let prevParentKind):
                 if !isMacosFullscreen && !isMacosMinimized && !isMacosWindowOfHiddenApp {
                     try await exitMacOsNativeUnconventionalState(window: window, prevParentKind: prevParentKind, workspace: workspace, .cancellable)
@@ -61,16 +59,23 @@ func exitMacOsNativeUnconventionalState(
     _ cm: CancellationMode,
 ) async throws {
     window.layoutReason = .standard
+    let slot = window.takeTilingSlot()
     switch prevParentKind {
         case .floatingWindowsContainer:
             window.bindAsFloatingWindow(to: workspace)
         case .workspace:
             break // Not possible
         case .tilingContainer:
-            try await window.relayoutWindow(on: workspace, cm, forceTile: true)
+            window.rebindAsTilingWindow(on: workspace, restoring: slot)
         case .macosPopupWindowsContainer: // Since the window was minimized/fullscreened it was mistakenly detected as popup. Relayout the window
             try await window.relayoutWindow(on: workspace, cm)
-        case .macosMinimizedWindowsContainer, .macosFullscreenWindowsContainer, .macosHiddenAppsWindowsContainer: // wtf case, should never be possible. But If encounter it, let's just re-layout window
-            try await window.relayoutWindow(on: workspace, cm)
+        case .macosMinimizedWindowsContainer, .macosFullscreenWindowsContainer, .macosHiddenAppsWindowsContainer:
+            // macos-native-fullscreen and macos-native-minimize move the window before the refresh session notices its
+            // new state. If the window was a tiling one, its place is remembered. Otherwise, just re-layout the window
+            if let slot {
+                window.rebindAsTilingWindow(on: workspace, restoring: slot)
+            } else {
+                try await window.relayoutWindow(on: workspace, cm)
+            }
     }
 }

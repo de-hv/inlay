@@ -27,8 +27,6 @@ cierra con `pkill`, sin tocar ninguna ventana).
 
 Limitaciones conocidas de esta versión:
 
-- Una ventana que vuelve de minimizada, de pantalla completa nativa o de una app oculta no recupera su sitio:
-  divide la ventana enfocada, como una ventana nueva.
 - Los bordes se colocan con una API pública que no los ata a su ventana: entre que una ventana cambia y llega
   el siguiente refresco, su borde puede quedar un instante desfasado o por debajo de otra ventana.
 - Solo Apple Silicon (el binario es `arm64`) y una sola pantalla probada.
@@ -136,6 +134,15 @@ Solo afecta a ese momento. Las ventanas que abras después siguen `new-window-pl
 árbol normal: se puede mover, redimensionar y reorganizar con los comandos de siempre. Al reanudar tras una
 pausa solo se recolocan los workspaces en los que apareció alguna ventana mientras Inlay estaba en pausa; los
 demás conservan su disposición. También está en **Ajustes › General › Tiling**.
+
+Una ventana que sale del mosaico porque macOS la **minimiza**, la pone en **pantalla completa nativa** u
+**oculta su app** recuerda su sitio (contenedor, posición, tamaño y la vecina que se quedó con su espacio) y lo
+recupera al volver:
+
+- Si su contenedor sigue existiendo, vuelve a su posición y la vecina le devuelve el espacio.
+- Si el contenedor desapareció (tenía solo dos ventanas y se aplanó), se vuelve a dividir a la vecina igual que antes.
+- Si ya no queda ni contenedor ni vecina, o vuelve en otro workspace (una ventana minimizada reaparece en el
+  workspace enfocado), entra como una ventana nueva.
 
 Inlay **no tiene layout *accordion***. Para poder usar tal cual un `aerospace.toml`, sus formas se aceptan con
 un aviso (no con un error) y se tratan como `tiles`:

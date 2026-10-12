@@ -646,6 +646,32 @@ Each border is a window of Inlay's own, transparent, placed right above its wind
 a floating window of another app covers the borders of the windows behind it. All with public AppKit API;
 there is no JankyBorders code and SkyLight is not used.
 
+## Troubleshooting
+
+Inlay only works when something happens (a window appears, the focus changes, a key binding runs): at rest it
+uses about 0 % of the CPU. If it keeps using CPU with nothing going on, two commands tell what it is busy with:
+
+```sh
+inlay debug-stats --watch 5               # counters of what Inlay does, printed every 5 s (ctrl-c to stop)
+sample Inlay 5 -file ~/inlay-sample.txt   # where the CPU time goes (it comes with macOS)
+```
+
+`inlay debug-stats` prints, for every counter, the total since Inlay started and what was counted since the
+previous call (`new`, and `per-sec`). It only reads counters that Inlay keeps in memory, and the server answers
+it without refreshing anything, so asking does not change the numbers. Leave the Mac alone while it runs: at
+rest every `per-sec` should be 0. The one that is not tells what is going on:
+
+| Counter | What it counts |
+|---|---|
+| `session.complete.*`, `session.light.*` | Refresh sessions: Inlay asks every app for its windows and lays them out |
+| `session.trigger.*` | What started each session: `ax.AXMoved` (a window moved), `workspace.NSWorkspaceDidActivateApplicationNotification`, `hotkey`, `cli.<command>`... |
+| `ui.publish` | Times the menu bar, the borders and Settings were told that something may have changed |
+| `menu-bar.snapshot.changed` / `.same` | Whether that changed what the menu bar item shows |
+| `menu-bar.draw.request.*` | Who asked to draw the item: `appearance` (the menu bar behind it), `system-colors`, `screens` |
+| `menu-bar.draw.drawn` / `.skipped-same` | Images really drawn, and requests that needed none |
+| `borders.op.*`, `borders.restack.*`, `borders.settle` | Borders created, moved, recolored, removed and reordered, and the checks that follow a refresh |
+| `config.watcher.*`, `config.load` | Events of the config file watcher, and loads of the config |
+
 ## Uninstallation
 
 ```sh

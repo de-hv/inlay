@@ -31,6 +31,19 @@ extension InlayTests {
             assertEquals(report.text, "'\(url.path)' has no errors or warnings")
         }
 
+        /// install.sh checks ~/.config/inlay/inlay.toml, and ~/.config/inlay may be a link to a folder of the user
+        @Test func testConfigInALinkedFolder() throws {
+            let folder = directory.appending(path: "dotfiles")
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try "config-version = 2\n[mode.main.binding]\n".write(to: folder.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            let link = directory.appending(path: "inlay")
+            try FileManager.default.createSymbolicLink(at: link, withDestinationURL: folder)
+            let url = link.appending(path: "inlay.toml")
+            let report = checkConfigFile(url)
+            assertEquals(report.isOk, true)
+            assertEquals(report.text, "'\(url.path)' has no errors or warnings")
+        }
+
         @Test func testWarningsAreNotErrors() throws {
             let url = try file("warnings.toml", "config-version = 2\naccordion-padding = 30\n[mode.main.binding]\n")
             let report = checkConfigFile(url)

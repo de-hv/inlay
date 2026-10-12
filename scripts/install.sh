@@ -10,9 +10,10 @@
 #     across rebuilds (see "Signing" below);
 #   - installs it into /Applications (or ~/Applications if /Applications isn't writable);
 #   - links the 'inlay' CLI into ~/.local/bin, /opt/homebrew/bin or /usr/local/bin;
-#   - creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo if you have no Inlay config yet,
-#     and then asks whether you prefer a symbolic link to a config file of your own instead of that copy
+#   - creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo if you have no Inlay config yet
 #     (what happens to a config that you already have: see "Your config" below);
+#   - asks, every time, whether you want to use a config folder of your own through a symbolic link
+#     (see "Your own config folder" below). Enter keeps what you have;
 #   - opens Inlay and tells you what to do the first time (the Accessibility permission).
 # Running it again updates the installed app: the running copy is quit first.
 #
@@ -23,14 +24,30 @@
 # is, and the script says so: what is new in the inlay.toml of the repo is not in it. --reset-config is how
 # you switch to the config of the repo on purpose.
 #
+# Your own config folder: if you answer yes to the question, you give the path of a folder (~/.dotfiles/inlay,
+# for example) and ~/.config/inlay becomes a symbolic link to that folder. Inlay reads and writes the inlay.toml
+# in it; nothing else of the folder is touched.
+#   - The folder doesn't exist: nothing is linked, and your config stays as it is (the copy of inlay.toml).
+#   - The folder has no inlay.toml: the script asks whether to copy the inlay.toml of the repo into it. If you
+#     say no, nothing is linked.
+#   - You already had a real ~/.config/inlay: it is not deleted. It is renamed to ~/.config/inlay.backup-<date>.
+#   - ~/.config/inlay already is a link: the question says where it points, and Enter leaves it alone.
+#     Linking another folder only replaces the link: the folder it pointed to is not touched.
+#   - A previous version linked the file instead (~/.config/inlay/inlay.toml -> your file). It still works and
+#     it is left alone; answer yes to link the folder that holds that file instead.
+# A linked folder is yours: its inlay.toml is never replaced on its own, not even when it is identical to an
+# old default config.
+#
 # Options (none of them is needed):
+#   --config-link <folder> link ~/.config/inlay to <folder> without asking, with the same rules as above. A
+#                          folder without inlay.toml is only filled in if there is a terminal to ask on
+#   --no-prompt            don't ask anything: keep the config as it is. It's what happens on its own when
+#                          there is no terminal to ask on
 #   --reset-config         replace your config by the inlay.toml of the repo, whatever is in it. Your config is
-#                          kept next to it as inlay.toml.backup-<date>. If your config is a symbolic link, only
-#                          the link is replaced (it becomes the backup): the file it points to is not touched
-#   --config-link <path>   make the config a symbolic link to <path> instead of asking. Only when you have no
-#                          Inlay config yet, and only if <path> exists: otherwise the copy is kept
-#   --no-prompt            don't ask anything: keep the copy of inlay.toml. It's what happens on its own
-#                          when there is no terminal to ask on
+#                          kept next to it as inlay.toml.backup-<date>. Nothing that a symbolic link points to
+#                          is ever written, moved or deleted: with a linked folder, the link itself is renamed
+#                          to ~/.config/inlay.backup-<date> and ~/.config/inlay becomes a real folder with the
+#                          inlay.toml of the repo; with a linked file, the link becomes the backup
 #   --import-aerospace     start from your AeroSpace config (~/.aerospace.toml) instead of inlay.toml
 #   --no-open              don't open Inlay when done
 #   --adhoc-signing        sign ad hoc instead of with the local identity
@@ -49,7 +66,7 @@
 
 set -euo pipefail
 
-usage() { sed -n '3,49s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,65s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
 check_requirements() {
   local macos swift
@@ -186,6 +203,8 @@ backup_path() {
   printf '%s\n' "$candidate"
 }
 
+path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
+
 # replace_config <config>. Puts the inlay.toml of the repo in the place of the config. The config is renamed, not
 # copied: if it is a symbolic link, it is the link that becomes the backup, and the file it points to is never
 # written, moved or deleted. Sets CONFIG_BACKUP
@@ -196,7 +215,24 @@ replace_config() {
   cp inlay.toml "$config"
 }
 
-# existing_config <config> <reset: true|false>. What happens to a config that is already there. See "Your config"
+# kept_config_warning <config>. The config stays, and what is new in the repo is not in it
+kept_config_warning() {
+  local config="$1"
+  warn "your config was KEPT as it is: it is not a default config of Inlay, so it is yours."
+  warn "What is new in the inlay.toml of the repo (key bindings, rules, options) is NOT in it."
+  if [ ! -e "$config" ]; then
+    warn "It is a symbolic link to a file that doesn't exist: Inlay can't read it."
+  elif ! grep -Eq '^[[:space:]]*\[\[on-window-detected\]\]' "$config"; then
+    warn "It has no 'on-window-detected' rule: no window is sent to a workspace, they all stay in the"
+    warn "workspace where they open."
+  fi
+  warn "To switch to the config of the repo (yours is kept, as a backup-<date> next to it):"
+  warn "  ./install.sh --reset-config"
+  warn "To compare them:  diff \"$config\" \"$PWD/inlay.toml\""
+}
+
+# existing_config <config> <reset: true|false>. What happens to a config file that is already there, in a real
+# folder. See "Your config"
 existing_config() {
   local config="$1" reset="$2" target=""
   if [ -L "$config" ]; then target="$(readlink "$config")"; fi
@@ -233,115 +269,251 @@ existing_config() {
   else
     info "You already have a config: $config"
   fi
-  warn "your config was KEPT as it is: it is not a default config of Inlay, so it is yours."
-  warn "What is new in the inlay.toml of the repo (key bindings, rules, options) is NOT in it."
-  if [ ! -e "$config" ]; then
-    warn "It is a symbolic link to a file that doesn't exist: Inlay can't read it."
-  elif ! grep -Eq '^[[:space:]]*\[\[on-window-detected\]\]' "$config"; then
-    warn "It has no 'on-window-detected' rule: no window is sent to a workspace, they all stay in the"
-    warn "workspace where they open."
-  fi
-  warn "To switch to the config of the repo (yours is kept next to it, as inlay.toml.backup-<date>):"
-  warn "  ./install.sh --reset-config"
-  warn "To compare them:  diff \"$config\" \"$PWD/inlay.toml\""
+  kept_config_warning "$config"
 }
 
-# ensure_config <import aerospace: true|false> <link: a path, or empty> <prompt: true|false> <reset: true|false>
+# linked_config_folder <config folder> <reset: true|false>. The config folder is a symbolic link to a folder of
+# the user. Nothing in that folder is ever written, moved or deleted here: at most the link itself is renamed
+linked_config_folder() {
+  local dir="$1" reset="$2" target
+  target="$(readlink "$dir")"
+
+  if [ "$reset" = true ]; then
+    CONFIG_BACKUP="$(backup_path "$dir")"
+    mv "$dir" "$CONFIG_BACKUP"
+    mkdir -p "$dir"
+    cp inlay.toml "$dir/inlay.toml"
+    info "Replaced your config by the inlay.toml of the repo (--reset-config): $dir/inlay.toml"
+    note "$dir was a symbolic link to $target"
+    note "Only the link was replaced: that folder and its files were not touched. The link is kept as"
+    note "$CONFIG_BACKUP"
+    note "$dir is a real folder now. To link your folder again: ./install.sh --config-link \"$target\""
+    return 0
+  fi
+
+  info "You already have a config: $dir -> $target (a linked folder)"
+  if [ ! -d "$dir" ]; then
+    warn "the folder that $dir points to doesn't exist: Inlay can't read your config, and uses"
+    warn "its built-in one until the folder is back."
+  elif ! path_exists "$dir/inlay.toml"; then
+    warn "$target has no inlay.toml: Inlay uses its built-in config until there is one."
+  elif cmp -s "$dir/inlay.toml" inlay.toml; then
+    note "Its inlay.toml is the one of the repo, as it is now. Nothing to do."
+  else
+    kept_config_warning "$dir/inlay.toml"
+  fi
+}
+
+# ensure_config <import aerospace: true|false> <link: a folder, or empty> <prompt: true|false> <reset: true|false>
 # Creates the config when there is none. An existing one is only replaced when it is a default config of a
-# previous version, or when --reset-config asks for it, and it is always kept as a backup. See "Your config"
+# previous version, or when --reset-config asks for it, and it is always kept as a backup. See "Your config".
+# Then the config folder can become a symbolic link to a folder of the user. See "Your own config folder"
 # Sets CONFIG_PATH to the config that Inlay will read, or to nothing if it can't tell (two configs)
 ensure_config() {
-  local import="$1" link="$2" prompt="$3" reset="$4" xdg dotfile source
-  xdg="$(config_home)/inlay/inlay.toml"
+  local import="$1" link="$2" prompt="$3" reset="$4" dir xdg dotfile source
+  dir="$(config_home)/inlay"
+  xdg="$dir/inlay.toml"
   dotfile="$HOME/.inlay.toml"
   CONFIG_PATH=""
-  if [ -e "$xdg" ] || [ -L "$xdg" ] || [ -e "$dotfile" ] || [ -L "$dotfile" ]; then
-    if { [ -e "$xdg" ] || [ -L "$xdg" ]; } && { [ -e "$dotfile" ] || [ -L "$dotfile" ]; }; then
+  CONFIG_CREATED=false
+
+  if path_exists "$dotfile"; then
+    if path_exists "$xdg"; then
       warn "both $xdg and $dotfile exist: Inlay will report an ambiguous config until you remove one."
       if [ "$reset" = true ]; then
         warn "--reset-config was ignored: it can't tell which of the two is your config. Remove one and run it again."
       fi
     else
-      if [ -e "$xdg" ] || [ -L "$xdg" ]; then CONFIG_PATH="$xdg"; else CONFIG_PATH="$dotfile"; fi
-      existing_config "$CONFIG_PATH" "$reset"
+      CONFIG_PATH="$dotfile"
+      existing_config "$dotfile" "$reset"
     fi
     if [ "$import" = true ]; then
       note "--import-aerospace was ignored: you already have an Inlay config."
     fi
+    # Inlay reads either file, never both: a linked folder next to ~/.inlay.toml would be a second config
     if [ -n "$link" ]; then
-      note "--config-link was ignored: you already have an Inlay config. To link another file, remove"
-      note "$xdg and run this script again."
+      warn "--config-link was ignored: your config is $dotfile. To use a config folder, move that file"
+      warn "into the folder as inlay.toml and run this script again."
+    elif [ "$prompt" = true ] && is_interactive; then
+      note "Your config is $dotfile: the question about a config folder of your own is skipped."
+      note "(To use one, move that file into the folder as inlay.toml and run this script again.)"
     fi
     return 0
   fi
 
-  if [ "$reset" = true ]; then
-    note "--reset-config: you have no Inlay config to replace. Creating it."
-  fi
-  mkdir -p "$(dirname "$xdg")"
-  CONFIG_PATH="$xdg"
-  if [ "$import" = true ] && source="$(aerospace_config)"; then
-    # cp follows a symlink, so the result is a regular file of your own
-    cp "$source" "$xdg"
-    info "Created $xdg from $source"
-    review_imported_config "$xdg"
+  if [ -L "$dir" ]; then
+    CONFIG_PATH="$xdg"
+    linked_config_folder "$dir" "$reset"
+  elif path_exists "$xdg"; then
+    CONFIG_PATH="$xdg"
+    existing_config "$xdg" "$reset"
   else
-    if [ "$import" = true ]; then
-      warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
+    if [ "$reset" = true ]; then
+      note "--reset-config: you have no Inlay config to replace. Creating it."
     fi
-    cp inlay.toml "$xdg"
-    info "Created $xdg (a copy of the inlay.toml of the repo)"
+    # Remembered: a folder that this run has just created is not worth a backup when it gives way to a link
+    if [ ! -d "$dir" ]; then CONFIG_CREATED=true; fi
+    mkdir -p "$dir"
+    CONFIG_PATH="$xdg"
+    if [ "$import" = true ] && source="$(aerospace_config)"; then
+      # cp follows a symlink, so the result is a regular file of your own
+      cp "$source" "$xdg"
+      info "Created $xdg from $source"
+      review_imported_config "$xdg"
+    else
+      if [ "$import" = true ]; then
+        warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
+      fi
+      cp inlay.toml "$xdg"
+      info "Created $xdg (a copy of the inlay.toml of the repo)"
+    fi
+    import=false
+  fi
+  if [ "$import" = true ]; then
+    note "--import-aerospace was ignored: you already have an Inlay config."
   fi
   if [ "${XDG_CONFIG_HOME:-$HOME/.config}" != "$HOME/.config" ]; then
     note "XDG_CONFIG_HOME is set in this shell. Inlay only finds the config there if the variable is also set"
     note "for the apps that macOS starts (launchctl setenv). Otherwise it reads ~/.config/inlay/inlay.toml."
   fi
 
-  link_config "$xdg" "$link" "$prompt"
+  link_config_folder "$dir" "$link" "$prompt"
 }
 
-# link_config <config> <link: a path, or empty> <prompt: true|false>
-# Replaces the config that was just created by a symbolic link to a file of the user: the one of --config-link,
-# or the one that the user types. A file that doesn't exist is never linked: the copy stays
-link_config() {
-  local config="$1" target="$2" prompt="$3" answer=""
+# Says that nothing was linked, and which config is in effect
+nothing_was_linked() {
+  if [ "$CONFIG_CREATED" = true ]; then
+    warn "Nothing was linked. The default config stays: $CONFIG_PATH (a copy of the inlay.toml of the repo)."
+  else
+    warn "Nothing was linked. Your config stays as it is: $CONFIG_PATH"
+  fi
+}
+
+# link_config_folder <config folder> <link: a folder, or empty> <prompt: true|false>
+# Makes the config folder a symbolic link to a folder of the user: the one of --config-link, or the one that the
+# user types after answering yes. It is asked on every run. See "Your own config folder".
+# A real config folder is never deleted (it is renamed), and nothing is written to the folder of the user
+# without asking
+link_config_folder() {
+  local dir="$1" target="$2" prompt="$3" answer="" current="" legacy="" suggestion="" question backup
+  if [ -L "$dir" ]; then
+    current="$(readlink "$dir")"
+  elif [ -L "$dir/inlay.toml" ]; then
+    legacy="$(readlink "$dir/inlay.toml")"
+  fi
+
   if [ -z "$target" ]; then
     if [ "$prompt" != true ]; then
       return 0
     fi
     if ! is_interactive; then
-      note "No terminal to ask on: keeping the copy. (To link a config of your own: --config-link <path>)"
+      note "No terminal to ask on: the config stays as it is. (To use a config folder of your own:"
+      note "--config-link <folder>)"
       return 0
     fi
-    note "If you keep your config somewhere else (a dotfiles repo), $config"
-    note "can be a symbolic link to it instead of this copy."
-    if ! ask_yes_no "    Replace the copy with a symbolic link to your own config file?"; then
-      note "Keeping the copy."
+    note "Your config can live in a folder of your own (a dotfiles repo, for example): then"
+    note "$dir is a symbolic link to that folder, and Inlay uses the inlay.toml in it."
+    question="    Use a config folder of your own through a symbolic link?"
+    if [ -n "$current" ]; then
+      question="$question (currently linked to $current)"
+    elif [ -n "$legacy" ]; then
+      note "Right now only the file is linked, the way a previous version did it:"
+      note "$dir/inlay.toml -> $legacy"
+      # The folder that holds the linked file is the obvious one to link, if the file has the name Inlay looks for
+      if [ "$(basename "$legacy")" = inlay.toml ]; then
+        suggestion="$(dirname "$(absolute_path "$legacy" "$dir")")"
+      fi
+    fi
+    if ! ask_yes_no "$question"; then
+      if [ -n "$current" ]; then
+        note "Keeping the link to $current. Nothing was changed."
+      else
+        note "Keeping your config as it is: $CONFIG_PATH"
+      fi
       return 0
     fi
-    printf '    Path of your config file: '
+    if [ -n "$suggestion" ]; then
+      printf '    Path of your config folder [%s]: ' "$suggestion"
+    else
+      printf '    Path of your config folder (for example ~/.dotfiles/inlay): '
+    fi
     IFS= read -r answer || answer=""
+    if [ -z "$answer" ]; then answer="$suggestion"; fi
     if [ -z "$answer" ]; then
-      warn "no path was given. Keeping the copy of the default config."
+      warn "no path was given."
+      nothing_was_linked
       return 0
     fi
     target="$answer"
   fi
 
   target="$(absolute_path "$target" "$START_DIR")"
-  if [ ! -f "$target" ]; then
-    warn "$target is not an existing file. Keeping the copy of the default config at $config"
+  # Without the trailing slashes: the link is to the folder
+  while [ "$target" != / ] && [ "${target%/}" != "$target" ]; do target="${target%/}"; done
+
+  if [ -f "$target" ]; then
+    warn "$target is a file. The link is to the folder that holds your inlay.toml: $(dirname "$target")"
+    nothing_was_linked
     return 0
   fi
-  rm -f "$config"
-  ln -s "$target" "$config"
-  info "Linked the config: $config -> $target"
+  if [ ! -d "$target" ]; then
+    warn "$target is not an existing folder."
+    nothing_was_linked
+    return 0
+  fi
+  if [ -d "$dir" ] && [ "$target" -ef "$dir" ]; then
+    if [ -n "$current" ]; then
+      note "$dir is already linked to that folder. Nothing was changed."
+    else
+      warn "$target is the config folder itself: it can't be a link to itself."
+      nothing_was_linked
+    fi
+    return 0
+  fi
+  if ! path_exists "$target/inlay.toml"; then
+    warn "$target has no inlay.toml."
+    if [ "$prompt" = true ] && is_interactive; then
+      if ask_yes_no "    Copy the inlay.toml of the repo into $target?"; then
+        cp inlay.toml "$target/inlay.toml"
+        info "Copied the inlay.toml of the repo to $target/inlay.toml"
+      else
+        nothing_was_linked
+        return 0
+      fi
+    else
+      warn "Nothing was copied into it: there is no terminal to ask on. Put an inlay.toml in that folder and"
+      warn "run this script again."
+      nothing_was_linked
+      return 0
+    fi
+  fi
+
+  if [ -n "$current" ]; then
+    rm "$dir"
+    note "The previous link, to $current, was removed. That folder was not touched."
+  elif [ -d "$dir" ]; then
+    # The copy that this run has just made, alone in a folder that this run has just made: nothing to keep
+    if [ "$CONFIG_CREATED" = true ] && rm -f "$dir/inlay.toml" && rmdir "$dir" 2>/dev/null; then
+      :
+    else
+      backup="$(backup_path "$dir")"
+      mv "$dir" "$backup"
+      note "Your previous $dir was not deleted. It is now"
+      note "$backup"
+    fi
+  fi
+  ln -s "$target" "$dir"
+  CONFIG_PATH="$dir/inlay.toml"
+  info "Linked the config folder: $dir -> $target"
+  note "Inlay reads and writes $target/inlay.toml"
 }
 
 # Says what the parser of the app that was just installed thinks of the config. Never fails the installation
 check_config() {
   local binary="$INSTALL_TARGET/Contents/MacOS/$APP_NAME" output status=0
   [ -n "$CONFIG_PATH" ] && [ -x "$binary" ] || return 0
+  # A link that leads nowhere, or a linked folder without inlay.toml: there is nothing to check, and it was said
+  [ -e "$CONFIG_PATH" ] || return 0
   output="$("$binary" --check-config "$CONFIG_PATH" 2>&1)" || status=$?
   info "Checking the config"
   printf '%s\n' "$output" | sed 's/^/    /'
@@ -425,7 +597,7 @@ main() {
       --no-prompt) prompt=false ;;
       --reset-config) reset_config=true ;;
       --config-link)
-        [ $# -ge 2 ] && [ -n "$2" ] || fail "--config-link needs a path."
+        [ $# -ge 2 ] && [ -n "$2" ] || fail "--config-link needs the path of a folder."
         config_link="$2"
         shift
         ;;
@@ -446,7 +618,7 @@ main() {
   open_or_explain "$open_app"
 }
 
-# Where the script was run from: a relative --config-link is relative to it
+# Where the script was run from: a relative config folder is relative to it
 START_DIR="$PWD"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 SCRIPT_PATH="scripts/install.sh"

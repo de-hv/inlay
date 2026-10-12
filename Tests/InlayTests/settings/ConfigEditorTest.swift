@@ -62,6 +62,29 @@ extension InlayTests {
             assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
         }
 
+        /// ~/.config/inlay -> ~/.dotfiles/inlay, the way install.sh links a config folder: the settings window
+        /// patches the file inside of the folder of the user, and the link of the folder stays
+        @Test func testEditInALinkedFolder() throws {
+            let dotfiles = directory.appending(path: "dotfiles/inlay")
+            try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
+            let real = dotfiles.appending(path: "inlay.toml")
+            let before = "# Mine\n[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n"
+            try before.write(to: real, atomically: true, encoding: .utf8)
+            let folder = directory.appending(path: "inlay")
+            try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
+            let config = folder.appending(path: "inlay.toml")
+
+            let edit = ConfigEdit(path: TomlKeyPath(["menu-bar"], "theme"), value: .string("square"))
+            assertEquals(ConfigEditor.apply([edit], to: .init(url: config, text: before, exists: true)).errorOrNil, nil)
+            assertEquals(read(real), "# Mine\n[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n")
+            assertEquals(read(config), read(real))
+            assertEquals(isSymlink(folder), true)
+            assertEquals(isSymlink(config), false)
+            assertEquals(isSymlink(real), false)
+            // No temporary file is left in the folder of the user
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
+        }
+
         @Test func testWriteThroughRelativeSymlinkChain() throws {
             let dotfiles = directory.appending(path: "dotfiles/config")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)

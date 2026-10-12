@@ -7,7 +7,9 @@ import Foundation
 /// - deleted and created again.
 ///
 /// The file itself is watched, and also the directory of the file and of every link that leads to it: a new file
-/// that takes the place of the old one is only seen as a change of its directory.
+/// that takes the place of the old one is only seen as a change of its directory. A directory of the path can be
+/// a link too (~/.config/inlay -> ~/.dotfiles/inlay): then the directory that holds that link is watched as well,
+/// so pointing the link to another directory is seen.
 /// After an event the file may be a different one, so the watcher must be armed again. See: arm
 @MainActor
 final class FileWatcher {
@@ -27,7 +29,9 @@ final class FileWatcher {
         var paths: [String] = []
         var current = url.standardizedFileURL
         for _ in 0 ..< 32 { // The same limit as AtomicFileWriter.resolveSymlinks
+            // Opened through the links of the path: it is the real directory that is watched
             paths.append(current.deletingLastPathComponent().path)
+            paths += Self.directoriesOfLinkedAncestors(of: current)
             guard let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: current.path) else { break }
             current = URL(filePath: destination, relativeTo: current.deletingLastPathComponent()).standardizedFileURL
         }
@@ -46,6 +50,22 @@ final class FileWatcher {
             source.activate()
             sources.append(source)
         }
+    }
+
+    /// The directories that hold a symlink among the ancestors of the file: for
+    /// ~/.config/inlay/inlay.toml with ~/.config/inlay -> ~/.dotfiles/inlay, it is ~/.config
+    static func directoriesOfLinkedAncestors(of file: URL) -> [String] {
+        var result: [String] = []
+        var ancestor = file.standardizedFileURL.deletingLastPathComponent()
+        while ancestor.path != "/" {
+            let parent = ancestor.deletingLastPathComponent()
+            // Not the links of the system at the root (/var, /tmp, /etc): nobody points them somewhere else
+            if parent.path != "/", (try? FileManager.default.destinationOfSymbolicLink(atPath: ancestor.path)) != nil {
+                result.append(parent.path)
+            }
+            ancestor = parent
+        }
+        return result
     }
 
     func cancel() {

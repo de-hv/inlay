@@ -137,6 +137,57 @@ extension InlayTests {
             try await expectEvent(watcher, "the new target")
         }
 
+        /// ~/.config/inlay -> ~/.dotfiles/inlay: the whole directory is the link, which is how install.sh links
+        /// a config folder. The file is edited in the dotfiles directory
+        @Test func testSymlinkedDirectory() async throws {
+            let dotfiles = directory.appending(path: "dotfiles/inlay")
+            let config = directory.appending(path: "config")
+            try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: config, withIntermediateDirectories: true)
+            let real = dotfiles.appending(path: "inlay.toml")
+            let linkedDirectory = config.appending(path: "inlay")
+            try "a = 1\n".write(to: real, atomically: true, encoding: .utf8)
+            try FileManager.default.createSymbolicLink(at: linkedDirectory, withDestinationURL: dotfiles)
+            let file = linkedDirectory.appending(path: "inlay.toml")
+            assertEquals(FileWatcher.directoriesOfLinkedAncestors(of: file), [config.path])
+            assertEquals(FileWatcher.directoriesOfLinkedAncestors(of: real), [])
+            let watcher = watch(file)
+
+            try "a = 2\n".write(to: real, atomically: false, encoding: .utf8)
+            try await expectEvent(watcher, "write in place")
+            // Saved by renaming, in the real directory and through the link
+            try "a = 3\n".write(to: real, atomically: true, encoding: .utf8)
+            try await expectEvent(watcher, "atomic save in the real directory")
+            try "a = 4\n".write(to: file, atomically: true, encoding: .utf8)
+            try await expectEvent(watcher, "atomic save through the link")
+            try "a = [\n".write(to: real, atomically: true, encoding: .utf8)
+            for _ in 0 ..< 200 where events == 0 { try await Task.sleep(for: .milliseconds(10)) }
+            assertEquals(events > 0, true, additionalMsg: "a broken save")
+            try await Task.sleep(for: .milliseconds(50))
+            events = 0 // Not armed again: the config wasn't applied
+            try "a = 5\n".write(to: real, atomically: true, encoding: .utf8)
+            try await expectEvent(watcher, "the save after the broken one")
+            assertEquals(try String(contentsOf: file, encoding: .utf8), "a = 5\n")
+
+            // The settings window writes through the link: the file of the real directory changes, and the link stays
+            try AtomicFileWriter.write("a = 6\n", to: file)
+            try await expectEvent(watcher, "written by the settings window")
+            assertEquals(try String(contentsOf: real, encoding: .utf8), "a = 6\n")
+            assertEquals(try FileManager.default.destinationOfSymbolicLink(atPath: linkedDirectory.path), dotfiles.path)
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
+
+            // The link is pointed to another directory
+            let other = directory.appending(path: "dotfiles/other")
+            try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+            try "a = 7\n".write(to: other.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try FileManager.default.removeItem(at: linkedDirectory)
+            try FileManager.default.createSymbolicLink(at: linkedDirectory, withDestinationURL: other)
+            try await expectEvent(watcher, "the link of the directory changed")
+            assertEquals(try String(contentsOf: file, encoding: .utf8), "a = 7\n")
+            try "a = 8\n".write(to: other.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try await expectEvent(watcher, "a save in the new directory")
+        }
+
         /// The file is deleted and created again, and a file that doesn't exist yet is created
         @Test func testFileThatAppears() async throws {
             let file = directory.appending(path: "inlay.toml")

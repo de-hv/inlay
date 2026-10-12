@@ -57,8 +57,7 @@ extension InlayTests {
             assertEquals(result.strWarnings, [])
             // The values that it spells out are the defaults of the code
             assertEquals(result.config.tiling, TilingConfig())
-            assertEquals(result.config.menuBar.copy(\.showAppIcons, nil), MenuBarConfig())
-            assertEquals(result.config.menuBar.effectiveShowAppIcons, MenuBarConfig().effectiveShowAppIcons)
+            assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders.copy(\.modeColors, [:]), BordersConfig())
             assertEquals(result.config.gaps, Config().gaps)
             assertEquals(result.config.execConfig, Config().execConfig)

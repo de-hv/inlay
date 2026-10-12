@@ -113,7 +113,7 @@ extension InlayTests {
             let pills = ConfigEdit(path: theme.path, value: .string("pills"))
             assertEquals(
                 ConfigEditor.patch(text, [pills]).errorOrNil,
-                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'pills'. Possible values: (chips|chips-icons|square|minimal)"),
+                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'pills'. Possible values: (chips|square|minimal)"),
             )
             let color = ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#12345"))
             assertEquals(ConfigEditor.patch(text, [color]).okOrNil, nil)
@@ -140,19 +140,19 @@ extension InlayTests {
                 theme,
                 ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#D19A66")),
                 ConfigEdit(path: TomlKeyPath(["tiling"], "new-window-placement"), value: .string("after-focused")),
-                ConfigEdit(path: TomlKeyPath([], "start-at-login"), value: .bool(true)),
-                ConfigEdit(path: TomlKeyPath(["menu-bar"], "show-app-icons"), value: .bool(true)),
+                ConfigEdit(path: TomlKeyPath([], "start-at-login"), value: .bool(false)),
+                ConfigEdit(path: TomlKeyPath(["menu-bar"], "show-mode"), value: .bool(true)),
             ]).okOrNil ?? ""
             let config = parseConfig(patched)
             assertEquals(config.errors, [])
             assertEquals(config.config.menuBar.theme, .square)
-            assertEquals(config.config.menuBar.showAppIcons, true)
+            assertEquals(config.config.menuBar.showMode, true)
             assertEquals(config.config.menuBar.colors.focused, .rgba(Rgba(hex: "#D19A66").orDie()))
             assertEquals(config.config.tiling.newWindowPlacement, .afterFocused)
-            assertEquals(config.config.startAtLogin, true)
+            assertEquals(config.config.startAtLogin, false)
             // The comments are still there, and nothing else has changed
-            assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count + 1)
-            assertEquals(patched.contains("    # chips|chips-icons|square|minimal\n    theme = 'square'\n"), true)
+            assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count)
+            assertEquals(patched.contains("    # chips|square|minimal\n    theme = 'square'\n"), true)
             assertEquals(patched.contains("        focused = '#D19A66'\n"), true)
         }
 

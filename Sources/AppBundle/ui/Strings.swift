@@ -115,8 +115,6 @@ enum Strings {
         static let options = "Options"
         static let showItem = "Show the menu bar item"
         static let showItemDetail = "Without it, use the key bindings and the CLI. Open \(inlayAppName) again from Applications to get back here."
-        static let showAppIcons = "Show app icons"
-        static let showAppIconsDetail = "The icons of the apps of every workspace, next to its name."
         static let dimEmpty = "Dim empty workspaces"
         static let dimEmptyDetail = "Workspaces without windows are drawn fainter."
         static let showMode = "Show the binding mode"

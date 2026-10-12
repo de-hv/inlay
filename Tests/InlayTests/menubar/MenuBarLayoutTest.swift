@@ -5,26 +5,21 @@ import Testing
 
 extension InlayTests {
     @Suite final class MenuBarLayoutTest {
-        /// Every character is 7 pt wide (5 pt in '+2'), so the expected frames are easy to tell
+        /// Every character is 7 pt wide, so the expected frames are easy to tell
         private static func measure(_ string: String, _ font: MenuBarFont) -> CGSize {
             switch font {
                 case .chipName: CGSize(width: 7 * CGFloat(string.count), height: 15)
                 case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
-                case .overflow: CGSize(width: 5 * CGFloat(string.count), height: 11)
                 case .modeInitial: CGSize(width: 8, height: 12)
             }
         }
 
-        private static let ghostty = MenuBarSnapshot.App(bundleId: "com.mitchellh.ghostty", name: "Ghostty")
-        private static let zed = MenuBarSnapshot.App(bundleId: "dev.zed.Zed", name: "Zed")
-        private static let apps = (1 ... 5).map { MenuBarSnapshot.App(bundleId: "app\($0)", name: "App \($0)") }
-
-        /// 1: one app, 2: one app and the focus, 3: five apps, 4: empty
+        /// 1, 2 (the focus) and 3 have windows, 4 is empty
         private var snapshot = MenuBarSnapshot(
             workspaces: [
-                .init(name: "1", isOccupied: true, apps: [ghostty]),
-                .init(name: "2", isOccupied: true, apps: [zed]),
-                .init(name: "3", isOccupied: true, apps: apps),
+                .init(name: "1", isOccupied: true),
+                .init(name: "2", isOccupied: true),
+                .init(name: "3", isOccupied: true),
                 .init(name: "4", isOccupied: false),
             ],
             focusedWorkspace: "2",
@@ -53,7 +48,6 @@ extension InlayTests {
             assertEquals(layout.cells.map(\.isOccupied), [true, true, true, false])
             assertEquals(layout.cells.map(\.isDimmed), [false, false, false, true])
             assertEquals(layout.cells.map(\.focus), [0, 1, 0, 0])
-            assertEquals(layout.cells.flatMap(\.icons), [])
             assertEquals(layout.marker, .init(frame: CGRect(x: 19.5, y: 2.5, width: 17, height: 17), cornerRadius: 4.5, isOutlined: false))
             assertEquals(layout.modeBadge, nil)
             assertEquals(layout.layoutIcon, nil)
@@ -86,35 +80,6 @@ extension InlayTests {
             snapshot.isFocusedWorkspaceFullscreen = true
             assertEquals(layout().marker?.isOutlined, true)
             assertEquals(layout(MenuBarConfig(theme: .square)).marker?.isOutlined, true)
-        }
-
-        @Test func testChipsIcons() {
-            let layout = layout(MenuBarConfig(theme: .chipsIcons))
-            // 5 + name + (3 + icon) + 3
-            assertEquals(layout.cells[0].frame, CGRect(x: 0, y: 2.5, width: 5 + 7 + 3 + 13 + 3, height: 17))
-            assertEquals(layout.cells[0].name.frame, CGRect(x: 5, y: 3.5, width: 7, height: 15))
-            assertEquals(layout.cells[0].icons, [.init(app: Self.ghostty, frame: CGRect(x: 15, y: 4.5, width: 13, height: 13))])
-            assertEquals(layout.cells[1].frame.minX, 33.5)
-            // Up to 3 icons, and '+n' for the rest
-            let third = layout.cells[2]
-            assertEquals(third.icons.map(\.app), Array(Self.apps.prefix(3)))
-            assertEquals(third.icons.map(\.frame.minX), [82, 98, 114])
-            assertEquals(third.overflow, .init(string: "+2", font: .overflow, frame: CGRect(x: 130, y: 5.5, width: 10, height: 11)))
-            assertEquals(third.frame, CGRect(x: 67, y: 2.5, width: 76, height: 17))
-            // An empty workspace is a chip like any other
-            assertEquals(layout.cells[3].frame, CGRect(x: 145.5, y: 2.5, width: 17, height: 17))
-            assertEquals(layout.cells[3].icons, [])
-            assertEquals(layout.size.width, 162.5)
-            // The marker covers the whole chip
-            assertEquals(layout.marker?.frame, layout.cells[1].frame)
-            assertEquals(layout.needsColor, true)
-        }
-
-        @Test func testShowAppIconsIsIndependentOfTheTheme() {
-            assertEquals(layout(MenuBarConfig(theme: .chips, showAppIcons: true)), layout(MenuBarConfig(theme: .chipsIcons)))
-            assertEquals(layout(MenuBarConfig(theme: .chipsIcons, showAppIcons: false)), layout(MenuBarConfig(theme: .chips)))
-            assertEquals(layout(MenuBarConfig(theme: .minimal, showAppIcons: true)).cells.map(\.icons.count), [1])
-            assertEquals(layout(MenuBarConfig(theme: .square, showAppIcons: true)).cells.map(\.icons.count), [1, 1, 3, 0])
         }
 
         @Test func testModeBadge() {
@@ -291,7 +256,7 @@ extension InlayTests {
             assertEquals(palette.emptyName, Rgba.black.withAlpha(0.35))
         }
 
-        @Test func testIconsAndBadgeNeedColor() {
+        @Test func testTheBadgeNeedsColor() {
             // The same look, but with the color of the menu bar text baked in
             let dark = palette(dark: true, needsColor: true)
             assertEquals(dark.isTemplate, false)
@@ -405,7 +370,7 @@ extension InlayTests {
                     }
                 }
             }
-            // Only what is one color is a template: no icons, no mode badge, no fixed colors
+            // Only what is one color is a template: no mode badge, no fixed colors
             assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), [
                 "chips-default-template.png", "chips-fullscreen-template.png", "chips-no-dim-template.png",
                 "minimal-default-template.png", "minimal-fullscreen-template.png",

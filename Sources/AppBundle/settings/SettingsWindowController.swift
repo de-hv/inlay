@@ -10,7 +10,6 @@ final class SettingsWindowController: NSObject {
     static let shared = SettingsWindowController()
 
     let model = SettingsModel()
-    private let icons = AppIconCache()
     private var window: NSWindow?
     /// What the model was last refreshed for. See: modelDidChange
     private var lastSeenState: [AnyHashable] = []
@@ -45,7 +44,7 @@ final class SettingsWindowController: NSObject {
         let tabs = SettingsTabViewController()
         tabs.tabStyle = .toolbar
         tabs.addTab(Strings.Settings.general, symbol: "gearshape", GeneralSettingsView(model: model))
-        tabs.addTab(Strings.Settings.menuBar, symbol: "menubar.rectangle", MenuBarSettingsView(model: model, icons: icons))
+        tabs.addTab(Strings.Settings.menuBar, symbol: "menubar.rectangle", MenuBarSettingsView(model: model))
         if SettingsFeatures.borders {
             tabs.addTab(Strings.Settings.borders, symbol: "rectangle.dashed", BordersSettingsView(model: model))
         }

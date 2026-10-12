@@ -17,7 +17,7 @@ struct MenuBarPalette: Equatable, Sendable {
     var accent: Rgba
     var accentName: Rgba
 
-    /// - Parameter needsColor: something in the item can't be a template: app icons or the mode badge
+    /// - Parameter needsColor: something in the item can't be a template: the mode badge
     static func resolve(
         _ config: MenuBarConfig,
         style: MenuBarLayout.Style,
@@ -55,6 +55,6 @@ struct MenuBarPalette: Equatable, Sendable {
 }
 
 extension MenuBarLayout {
-    /// App icons and the mode badge have colors of their own. See: MenuBarPalette.isTemplate
-    var needsColor: Bool { hasIcons || modeBadge != nil }
+    /// The mode badge has a color of its own. See: MenuBarPalette.isTemplate
+    var needsColor: Bool { modeBadge != nil }
 }

@@ -39,12 +39,10 @@ private struct ToggleRow: View {
     let title: String
     var detail: String? = nil
     let key: SettingsKey
-    /// The value to show, when it isn't just the one of the key
-    var value: Bool? = nil
 
     var body: some View {
         SettingsRow(model: model, title: title, detail: detail, key: key) {
-            Toggle("", isOn: Binding(get: { value ?? model.bool(key) }, set: { model.set(key, .bool($0)) }))
+            Toggle("", isOn: Binding(get: { model.bool(key) }, set: { model.set(key, .bool($0)) }))
                 .labelsHidden()
                 .toggleStyle(.switch)
         }
@@ -319,7 +317,6 @@ struct GeneralSettingsView: View {
 
 struct MenuBarSettingsView: View {
     let model: SettingsModel
-    let icons: AppIconCache
 
     var body: some View {
         Form {
@@ -340,13 +337,6 @@ struct MenuBarSettingsView: View {
             }
             Section(Strings.Settings.options) {
                 ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
-                ToggleRow(
-                    model: model,
-                    title: Strings.Settings.showAppIcons,
-                    detail: Strings.Settings.showAppIconsDetail,
-                    key: .menuBarShowAppIcons,
-                    value: model.menuBarConfig.effectiveShowAppIcons,
-                )
                 ToggleRow(model: model, title: Strings.Settings.dimEmpty, detail: Strings.Settings.dimEmptyDetail, key: .menuBarDimEmpty)
                 ToggleRow(model: model, title: Strings.Settings.showMode, detail: Strings.Settings.showModeDetail, key: .menuBarShowMode)
             }
@@ -396,7 +386,7 @@ struct MenuBarSettingsView: View {
             model.setTheme(theme)
         } label: {
             VStack(spacing: 6) {
-                item(MenuBarConfig(theme: theme), MenuBarSamples.snapshot, isDarkBar: true, zoom: theme == .chipsIcons ? 0.5 : 0.8)
+                item(MenuBarConfig(theme: theme), MenuBarSamples.snapshot, isDarkBar: true, zoom: 0.8)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
                     .background(barBackground(true), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -416,7 +406,7 @@ struct MenuBarSettingsView: View {
 
     @ViewBuilder
     private func item(_ config: MenuBarConfig, _ snapshot: MenuBarSnapshot, isDarkBar: Bool, zoom: CGFloat) -> some View {
-        if let image = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: 2 * max(1, zoom), icons: icons.icon) {
+        if let image = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: 2 * max(1, zoom)) {
             Image(nsImage: image)
                 .resizable()
                 .interpolation(.high)

@@ -110,15 +110,10 @@ enabled = true
 # Forma del item:
 #   'chips'        Solo los workspaces: fondo tenue si tienen ventanas, sólido
 #                  el enfocado, atenuados los vacíos. El de Aeromenu.
-#   'chips-icons'  Chips con los iconos de las apps de cada workspace.
 #   'square'       Icono del layout, nombres sin fondo y un cuadrado en lugar
 #                  del enfocado (lleva la inicial del modo si no es main).
 #   'minimal'      Solo el workspace enfocado.
 theme = 'chips'                                               # defecto: 'chips'
-
-# Iconos de las apps junto al nombre de cada workspace (13 pt, hasta 3 y «+n»).
-# Si se omite, lo decide el tema: true en 'chips-icons', false en los demás.
-# show-app-icons = false
 
 # Dibujar más tenues los workspaces sin ventanas.             (defecto: true)
 dim-empty-workspaces = true

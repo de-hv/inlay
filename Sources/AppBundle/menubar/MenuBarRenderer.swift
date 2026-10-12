@@ -8,7 +8,6 @@ extension MenuBarFont {
         return switch self {
             case .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold)
             case .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium)
-            case .overflow: .monospacedDigitSystemFont(ofSize: M.overflowFontSize, weight: .semibold)
             case .modeInitial: .systemFont(ofSize: M.modeBadgeFontSize, weight: .heavy)
         }
     }
@@ -22,18 +21,16 @@ extension MenuBarFont {
 /// Draws a `MenuBarLayout` with a `MenuBarPalette`
 @MainActor
 enum MenuBarRenderer {
-    typealias IconProvider = (MenuBarSnapshot.App) -> NSImage?
-
     /// - Parameter scale: pixels per point
-    static func image(_ layout: MenuBarLayout, _ palette: MenuBarPalette, scale: CGFloat, icons: IconProvider = { _ in nil }) -> NSImage? {
-        guard let bitmap = bitmap(layout, palette, scale: scale, icons: icons) else { return nil }
+    static func image(_ layout: MenuBarLayout, _ palette: MenuBarPalette, scale: CGFloat) -> NSImage? {
+        guard let bitmap = bitmap(layout, palette, scale: scale) else { return nil }
         let image = NSImage(size: bitmap.size)
         image.addRepresentation(bitmap)
         image.isTemplate = palette.isTemplate
         return image
     }
 
-    static func bitmap(_ layout: MenuBarLayout, _ palette: MenuBarPalette, scale: CGFloat, icons: IconProvider = { _ in nil }) -> NSBitmapImageRep? {
+    static func bitmap(_ layout: MenuBarLayout, _ palette: MenuBarPalette, scale: CGFloat) -> NSBitmapImageRep? {
         let pixels = CGSize(width: max(1, (layout.size.width * scale).rounded(.up)), height: max(1, (layout.size.height * scale).rounded(.up)))
         guard let bitmap = NSBitmapImageRep.rgba(pixelsWide: Int(pixels.width), pixelsHigh: Int(pixels.height), scale: scale),
               let bitmapContext = NSGraphicsContext(bitmapImageRep: bitmap) else { return nil }
@@ -44,12 +41,12 @@ enum MenuBarRenderer {
         NSGraphicsContext.saveGraphicsState()
         defer { NSGraphicsContext.restoreGraphicsState() }
         NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
-        draw(layout, palette, in: cg, scale: scale, icons: icons)
+        draw(layout, palette, in: cg, scale: scale)
         return bitmap
     }
 
     /// Draws into a flipped context (top left origin) that is also the current NSGraphicsContext
-    static func draw(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext, scale: CGFloat, icons: IconProvider) {
+    static func draw(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext, scale: CGFloat) {
         var layout = layout
         // Shapes start at whole pixels, like SwiftUI places them in Aeromenu. Otherwise their straight edges are blurred
         func snap(_ rect: CGRect) -> CGRect {
@@ -69,11 +66,6 @@ enum MenuBarRenderer {
             case .chips: drawChips(layout, palette, in: cg)
             case .square: drawSquare(layout, palette, in: cg)
         }
-        for cell in layout.cells {
-            for icon in cell.icons {
-                icons(icon.app)?.draw(in: icon.frame, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high.rawValue])
-            }
-        }
         if let badge = layout.modeBadge {
             cg.fill(roundedRect(badge.frame, MenuBarMetrics.modeBadgeCornerRadius), palette.accent)
             draw(badge.initial, palette.accentName)
@@ -91,7 +83,6 @@ enum MenuBarRenderer {
                 cg.fill(roundedRect(cell.frame, M.chipCornerRadius), palette.occupiedBackground)
             }
             draw(cell.name, palette.nameColor(of: cell))
-            if let overflow = cell.overflow { draw(overflow, palette.nameColor(of: cell)) }
         }
         guard let marker = layout.marker else { return }
         let path = roundedRect(marker.frame, marker.cornerRadius)
@@ -108,13 +99,11 @@ enum MenuBarRenderer {
         cg.addPath(path)
         cg.clip()
         for cell in layout.cells {
-            for text in [cell.name, cell.overflow].filterNotNil() {
-                switch (marker.isOutlined, palette.focusedName) {
-                    case (true, _): draw(text, palette.focused)
-                    case (false, let color?): draw(text, color)
-                    // In negative: cut out of the marker
-                    case (false, nil): draw(text, .black, blendMode: .destinationOut)
-                }
+            switch (marker.isOutlined, palette.focusedName) {
+                case (true, _): draw(cell.name, palette.focused)
+                case (false, let color?): draw(cell.name, color)
+                // In negative: cut out of the marker
+                case (false, nil): draw(cell.name, .black, blendMode: .destinationOut)
             }
         }
         cg.restoreGState()
@@ -132,7 +121,6 @@ enum MenuBarRenderer {
             // The name gives way to the marker
             let color = palette.nameColor(of: cell).opacity(1 - cell.focus)
             draw(cell.name, color)
-            if let overflow = cell.overflow { draw(overflow, palette.nameColor(of: cell)) }
         }
         guard let marker = layout.marker else { return }
         // Clears what is under the marker first: mid-slide it passes over the names in between

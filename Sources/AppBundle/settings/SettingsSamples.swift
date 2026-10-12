@@ -23,7 +23,7 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     model.refresh()
     let tabs: [(String, AnyView)] = [
         ("general", AnyView(GeneralSettingsView(model: model))),
-        ("menu-bar", AnyView(MenuBarSettingsView(model: model, icons: AppIconCache()))),
+        ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
         ("borders", AnyView(BordersSettingsView(model: model))),
     ]
     for (name, view) in tabs {

@@ -562,7 +562,7 @@ extension InlayTests {
             let defaultConfig = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
             for key in [
                 SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .startupLayout, .splitTarget, .minWindowSize,
-                .menuBarEnabled, .menuBarTheme, .menuBarShowAppIcons,
+                .menuBarEnabled, .menuBarTheme,
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
                 .bordersGlow, .bordersGlowRadius,

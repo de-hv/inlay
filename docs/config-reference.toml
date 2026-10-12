@@ -246,20 +246,19 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     enabled = true
 
     # The shape of the item. All the existing workspaces are shown, and the focused one is marked
-    # Possible values: chips|chips-icons|square|minimal
-    # - chips.       The workspaces alone. The ones with windows have a faint background,
-    #                the focused one has a solid background, and the empty ones are dimmed.
-    # - chips-icons. chips + the icons of the apps of every workspace.
-    # - square.      The layout icon, the names of the workspaces, and a square in place of the focused workspace.
-    #                In a binding mode other than 'main' the square shows the initial of the mode.
-    # - minimal.     Only the focused workspace.
+    # Possible values: chips|square|minimal
+    # - chips.   The workspaces alone. The ones with windows have a faint background,
+    #            the focused one has a solid background, and the empty ones are dimmed.
+    # - square.  The layout icon, the names of the workspaces, and a square in place of the focused workspace.
+    #            In a binding mode other than 'main' the square shows the initial of the mode.
+    # - minimal. Only the focused workspace.
+    # ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')
     # Fallback value (if you omit the key): theme = 'chips'
     theme = 'chips'
 
-    # Show the icons of the apps next to the name of every workspace (up to 3 icons and '+n')
-    # Possible values: true|false
-    # Fallback value (if you omit the key): the theme decides. true in 'chips-icons', false in the other themes
-    show-app-icons = false
+    # Not a key of Inlay anymore: the menu bar item doesn't show the icons of the apps. The key is accepted
+    # with a warning and ignored, so that a config written for a previous version still loads. Drop it from your config
+    # show-app-icons = false
 
     # Draw the workspaces without windows fainter
     # Possible values: true|false

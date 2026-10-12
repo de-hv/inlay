@@ -4,27 +4,25 @@ import Common
 struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
     var theme: MenuBarTheme = .chips
-    /// nil means that the theme decides. See: effectiveShowAppIcons
-    var showAppIcons: Bool? = nil
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = false
     var colors: MenuBarColors = MenuBarColors()
 
-    var effectiveShowAppIcons: Bool { showAppIcons ?? theme.showsAppIconsByDefault }
+    /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
+    var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 }
 
 enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// The workspaces alone. The Chips style of Aeromenu
     case chips
-    /// chips + the icons of the apps of every workspace
-    case chipsIcons = "chips-icons"
     /// The Square style of Aeromenu: the layout icon, the names, and a square in place of the focused workspace
     case square
     /// Only the focused workspace
     case minimal
-
-    var showsAppIconsByDefault: Bool { self == .chipsIcons }
 }
+
+/// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore
+private let obsoleteChipsIconsTheme = "chips-icons"
 
 /// [menu-bar.colors] table of the config
 struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
@@ -41,7 +39,7 @@ struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
 let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "theme": Parser(\.theme, parseMenuBarTheme),
-    "show-app-icons": Parser(\.showAppIcons) { raw, backtrace in parseBool(raw, backtrace).map { $0 } },
+    "show-app-icons": Parser(\._showAppIcons, parseObsoleteShowAppIcons),
     "dim-empty-workspaces": Parser(\.dimEmptyWorkspaces, parseBool),
     "show-mode": Parser(\.showMode, parseBool),
     "colors": Parser(\.colors, parseMenuBarColors),
@@ -62,9 +60,24 @@ private func parseMenuBarColors(_ raw: OrderedJson, _ backtrace: ConfigBacktrace
     parseTable(raw, MenuBarColors(), menuBarColorsParserTable, backtrace, &c)
 }
 
-private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<MenuBarTheme> {
-    parseString(raw, backtrace).flatMap {
-        MenuBarTheme(rawValue: $0)
-            .toResult(.init(backtrace, "Can't parse menu bar theme '\($0)'. Possible values: \(MenuBarTheme.unionLiteral)"))
+private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarTheme {
+    let theme = parseString(raw, backtrace)
+        .flatMap { (raw: String) -> ResOrConfigParseDiagnostic<MenuBarTheme> in
+            // Accepted so that a config written for a previous version of Inlay still loads. The settings window wrote it too
+            if raw == obsoleteChipsIconsTheme {
+                c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: '\(raw)' is treated as 'chips'. Please change it in the config"))
+                return .success(.chips)
+            }
+            return MenuBarTheme(rawValue: raw)
+                .toResult(.init(backtrace, "Can't parse menu bar theme '\(raw)'. Possible values: \(MenuBarTheme.unionLiteral)"))
+        }
+        .getOrNil(appendErrorTo: &c.errors)
+    return theme ?? MenuBarConfig().theme
+}
+
+// Accepted so that a config written for a previous version of Inlay still loads. The settings window wrote the key too
+private func parseObsoleteShowAppIcons(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
+    if parseBool(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
+        c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: 'show-app-icons' is ignored. Please drop it from the config"))
     }
 }

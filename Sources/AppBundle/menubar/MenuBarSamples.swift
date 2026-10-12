@@ -6,20 +6,11 @@ enum MenuBarSamples {
     /// Six workspaces: the second one is focused, and the last one is empty
     static let snapshot = MenuBarSnapshot(
         workspaces: [
-            .init(name: "1", isOccupied: true, apps: [.init(bundleId: "com.mitchellh.ghostty", name: "Ghostty")]),
-            .init(name: "2", isOccupied: true, apps: [.init(bundleId: "dev.zed.Zed", name: "Zed")]),
-            .init(name: "3", isOccupied: true, apps: [.init(bundleId: "com.apple.Safari", name: "Safari")]),
-            .init(name: "4", isOccupied: true, apps: [
-                .init(bundleId: "com.apple.MobileSMS", name: "Messages"),
-                .init(bundleId: "com.apple.mail", name: "Mail"),
-            ]),
-            .init(name: "5", isOccupied: true, apps: [
-                .init(bundleId: "com.apple.Music", name: "Music"),
-                .init(bundleId: "com.apple.Notes", name: "Notes"),
-                .init(bundleId: "com.apple.finder", name: "Finder"),
-                .init(bundleId: "com.apple.TextEdit", name: "TextEdit"),
-                .init(bundleId: "com.apple.Preview", name: "Preview"),
-            ]),
+            .init(name: "1", isOccupied: true),
+            .init(name: "2", isOccupied: true),
+            .init(name: "3", isOccupied: true),
+            .init(name: "4", isOccupied: true),
+            .init(name: "5", isOccupied: true),
             .init(name: "6", isOccupied: false),
         ],
         focusedWorkspace: "2",
@@ -28,17 +19,11 @@ enum MenuBarSamples {
 
     /// The item drawn the way the menu bar draws it, but with the color of the menu bar text baked in
     @MainActor
-    static func image(
-        _ config: MenuBarConfig,
-        snapshot: MenuBarSnapshot = snapshot,
-        isDarkBar: Bool,
-        scale: CGFloat,
-        icons: MenuBarRenderer.IconProvider,
-    ) -> NSImage? {
+    static func image(_ config: MenuBarConfig, snapshot: MenuBarSnapshot = snapshot, isDarkBar: Bool, scale: CGFloat) -> NSImage? {
         let layout = MenuBarLayout.make(snapshot, config, measure: MenuBarFont.size)
         // Never a template: nobody is going to pick black or white for it
         let palette = MenuBarPalette.resolve(config, style: layout.style, isDarkBar: isDarkBar, systemAccent: .systemAccent, needsColor: true)
-        return MenuBarRenderer.image(layout, palette, scale: scale, icons: icons)
+        return MenuBarRenderer.image(layout, palette, scale: scale)
     }
 }
 
@@ -49,7 +34,6 @@ enum MenuBarSamples {
 @MainActor
 func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    let icons = AppIconCache()
     let custom = MenuBarColors(
         accent: .rgba(Rgba(hex: "#E06C75").orDie()),
         focused: .rgba(Rgba(hex: "#D19A66").orDie()),
@@ -75,8 +59,6 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     }
     variants.append(("chips-no-dim", MenuBarConfig(dimEmptyWorkspaces: false), MenuBarSamples.snapshot))
     variants.append(("chips-accent-focused", MenuBarConfig(colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot))
-    variants.append(("square-icons", MenuBarConfig(theme: .square, showAppIcons: true), MenuBarSamples.snapshot))
-    variants.append(("minimal-icons", MenuBarConfig(theme: .minimal, showAppIcons: true), MenuBarSamples.snapshot))
     variants.append(("paused", MenuBarConfig(), paused))
     variants.append(("needs-accessibility", MenuBarConfig(), needsAccessibility))
 
@@ -91,7 +73,7 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
             try template.write(to: directory.appending(path: "\(name)-template.png"))
         }
         for isDarkBar in [true, false] {
-            guard let item = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: scale, icons: icons.icon) else { continue }
+            guard let item = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: scale) else { continue }
             // Over something like a menu bar
             let size = CGSize(width: item.size.width + 2 * padding, height: item.size.height + 2)
             guard let bitmap = NSBitmapImageRep.rgba(pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale), scale: scale),

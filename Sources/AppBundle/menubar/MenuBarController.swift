@@ -11,7 +11,6 @@ final class MenuBarController: NSObject {
 
     private var statusItem: NSStatusItem?
     private let menu = MenuBarMenu()
-    private let icons = AppIconCache()
     private var state: MenuBarState?
     private var appearanceObservation: NSKeyValueObservation?
     private var notificationTokens: [any NSObjectProtocol] = []
@@ -96,7 +95,7 @@ final class MenuBarController: NSObject {
             needsColor: layout.needsColor,
         )
         let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
-        let image = MenuBarRenderer.image(layout, palette, scale: scale, icons: icons.icon)
+        let image = MenuBarRenderer.image(layout, palette, scale: scale)
         image?.accessibilityDescription = Strings.Item.accessibilityDescription(state.snapshot)
         button.image = image
     }
@@ -204,20 +203,5 @@ func runMenuBarCommand(_ raw: String, force: Bool = false) {
         try await runLightSession(.menuBarButton, token) {
             _ = await command.run(.defaultEnv, .emptyStdin)
         }
-    }
-}
-
-/// The icons of the apps, by bundle id
-@MainActor
-final class AppIconCache {
-    private var icons: [String: NSImage] = [:]
-
-    func icon(_ app: MenuBarSnapshot.App) -> NSImage? {
-        guard let bundleId = app.bundleId else { return nil }
-        if let cached = icons[bundleId] { return cached }
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
-        let icon = NSWorkspace.shared.icon(forFile: url.path)
-        icons[bundleId] = icon
-        return icon
     }
 }

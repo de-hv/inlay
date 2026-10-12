@@ -109,7 +109,6 @@ final class SettingsModel {
         return MenuBarConfig(
             enabled: bool(.menuBarEnabled),
             theme: menuBarTheme,
-            showAppIcons: isSet(.menuBarShowAppIcons) ? bool(.menuBarShowAppIcons) : nil,
             dimEmptyWorkspaces: bool(.menuBarDimEmpty),
             showMode: bool(.menuBarShowMode),
             colors: MenuBarColors(
@@ -135,14 +134,15 @@ final class SettingsModel {
         write([ConfigEdit(path: key.path, value: nil)], keys: [key])
     }
 
-    /// Picking a theme also drops 'show-app-icons', so that the theme decides about the icons again
+    /// Picking a theme also drops 'show-app-icons' from the file: the window of a previous version of Inlay wrote
+    /// that key, which is ignored with a warning now. See: parseMenuBar
     func setTheme(_ theme: MenuBarTheme) {
         write(
             [
                 ConfigEdit(path: SettingsKey.menuBarTheme.path, value: .string(theme.rawValue)),
-                ConfigEdit(path: SettingsKey.menuBarShowAppIcons.path, value: nil),
+                ConfigEdit(path: TomlKeyPath(["menu-bar"], "show-app-icons"), value: nil),
             ],
-            keys: [.menuBarTheme, .menuBarShowAppIcons],
+            keys: [.menuBarTheme],
         )
     }
 

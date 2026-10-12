@@ -17,14 +17,6 @@ enum MenuBarMetrics {
     static let emptyWorkspaceOpacity: Double = 0.35
     static let outlineWidth: CGFloat = 1.5
 
-    static let iconSide: CGFloat = 13
-    static let squareIconSide: CGFloat = 12
-    static let maxIcons = 3
-    static let iconSpacing: CGFloat = 3
-    static let chipWithIconsLeading: CGFloat = 5
-    static let chipWithIconsTrailing: CGFloat = 3
-    static let overflowFontSize: CGFloat = 9.5
-
     static let layoutWidth: CGFloat = 16
     static let layoutSize: CGFloat = 13
     static let layoutToWorkspaces: CGFloat = 10
@@ -58,8 +50,6 @@ enum MenuBarFont: Equatable, Sendable {
     case chipName
     /// SF 13.5 pt medium, monospaced digits
     case squareName
-    /// '+2' after the icons
-    case overflow
     /// SF 10.5 pt heavy
     case modeInitial
 }
@@ -76,14 +66,9 @@ struct MenuBarFocusTransition: Equatable, Sendable {
 /// The origin is the top left corner, and y grows down
 struct MenuBarLayout: Equatable, Sendable {
     enum Style: Equatable, Sendable {
-        /// 'chips', 'chips-icons' and 'minimal' themes
+        /// 'chips' and 'minimal' themes
         case chips
         case square
-    }
-
-    struct Icon: Equatable, Sendable {
-        var app: MenuBarSnapshot.App
-        var frame: CGRect
     }
 
     struct Text: Equatable, Sendable {
@@ -103,9 +88,6 @@ struct MenuBarLayout: Equatable, Sendable {
         var isDimmed: Bool
         /// 1 under the focus marker, 0 away from it, in between while the marker slides
         var focus: Double
-        var icons: [Icon] = []
-        /// '+2' when there are more apps than icons
-        var overflow: Text? = nil
     }
 
     /// Marks the focused workspace
@@ -146,8 +128,6 @@ struct MenuBarLayout: Equatable, Sendable {
     var marker: Marker? = nil
     var modeBadge: ModeBadge? = nil
     var placeholder: Placeholder? = nil
-
-    var hasIcons: Bool { cells.contains { !$0.icons.isEmpty } }
 }
 
 extension MenuBarLayout {
@@ -172,7 +152,7 @@ extension MenuBarLayout {
             }
         }
         var layout = switch config.theme {
-            case .chips, .chipsIcons: chips(snapshot, config, snapshot.workspaces, focusAmount, measure)
+            case .chips: chips(snapshot, config, snapshot.workspaces, focusAmount, measure)
             case .minimal: chips(snapshot, config, snapshot.workspaces.filter { $0.name == snapshot.focusedWorkspace }, focusAmount, measure)
             case .square: square(snapshot, config, focusAmount, measure)
         }
@@ -194,47 +174,18 @@ extension MenuBarLayout {
         var cells: [Cell] = []
         var x: CGFloat = 0
         for workspace in workspaces {
+            // The chip of Aeromenu: the name in the middle
             let nameSize = measure(workspace.name, .chipName)
-            let (icons, overflowCount) = config.effectiveShowAppIcons ? visibleApps(workspace) : ([], 0)
-            var cell = Cell(
+            let frame = CGRect(x: x, y: top, width: max(M.chipSide, nameSize.width + 2 * M.chipPadding), height: M.chipSide)
+            cells.append(Cell(
                 workspace: workspace.name,
-                frame: .zero,
-                name: Text(string: workspace.name, font: .chipName, frame: .zero),
+                frame: frame,
+                name: Text(string: workspace.name, font: .chipName, frame: nameSize.centered(in: frame)),
                 isOccupied: workspace.isOccupied,
                 isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
                 focus: focusAmount(workspace.name),
-            )
-            if icons.isEmpty {
-                // The chip of Aeromenu: the name in the middle
-                let width = max(M.chipSide, nameSize.width + 2 * M.chipPadding)
-                cell.frame = CGRect(x: x, y: top, width: width, height: M.chipSide)
-                cell.name.frame = nameSize.centered(in: cell.frame)
-            } else {
-                // The name, then the icons, then '+n'
-                var cursor = x + M.chipWithIconsLeading
-                cell.name.frame = CGRect(x: cursor, y: top + (M.chipSide - nameSize.height) / 2, width: nameSize.width, height: nameSize.height)
-                cursor += nameSize.width
-                for app in icons {
-                    cursor += M.iconSpacing
-                    cell.icons.append(Icon(app: app, frame: CGRect(x: cursor, y: top + (M.chipSide - M.iconSide) / 2, width: M.iconSide, height: M.iconSide)))
-                    cursor += M.iconSide
-                }
-                if overflowCount > 0 {
-                    let string = "+\(overflowCount)"
-                    let size = measure(string, .overflow)
-                    cursor += M.iconSpacing
-                    cell.overflow = Text(
-                        string: string,
-                        font: .overflow,
-                        frame: CGRect(x: cursor, y: top + (M.chipSide - size.height) / 2, width: size.width, height: size.height),
-                    )
-                    cursor += size.width
-                }
-                cursor += M.chipWithIconsTrailing
-                cell.frame = CGRect(x: x, y: top, width: cursor - x, height: M.chipSide)
-            }
-            cells.append(cell)
-            x = cell.frame.maxX + M.chipSpacing
+            ))
+            x = frame.maxX + M.chipSpacing
         }
         var width = max(0, x - M.chipSpacing)
         var badge: ModeBadge? = nil
@@ -268,38 +219,20 @@ extension MenuBarLayout {
                 width: max(nameSize.width, M.workspaceWidth + (M.focusedWorkspaceWidth - M.workspaceWidth) * focus),
                 height: M.height,
             )
-            var cell = Cell(
+            cells.append(Cell(
                 workspace: workspace.name,
                 frame: slot,
                 name: Text(string: workspace.name, font: .squareName, frame: nameSize.centered(in: slot)),
                 isOccupied: workspace.isOccupied,
                 isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
                 focus: focus,
-            )
+            ))
             x = slot.maxX
-            let (icons, overflowCount) = config.effectiveShowAppIcons ? visibleApps(workspace) : ([], 0)
-            for app in icons {
-                cell.icons.append(Icon(app: app, frame: CGRect(x: x, y: (M.height - M.squareIconSide) / 2, width: M.squareIconSide, height: M.squareIconSide)))
-                x += M.squareIconSide + M.iconSpacing
-            }
-            if overflowCount > 0 {
-                let string = "+\(overflowCount)"
-                let size = measure(string, .overflow)
-                cell.overflow = Text(string: string, font: .overflow, frame: CGRect(x: x, y: (M.height - size.height) / 2, width: size.width, height: size.height))
-                x += size.width + M.iconSpacing
-            }
-            cells.append(cell)
         }
         return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), layoutIcon: layoutIcon, cells: cells)
     }
 
     // MARK: - Shared
-
-    /// Up to 3 apps, and how many are left out
-    private static func visibleApps(_ workspace: MenuBarSnapshot.Workspace) -> (apps: [MenuBarSnapshot.App], overflow: Int) {
-        let apps = Array(workspace.apps.prefix(MenuBarMetrics.maxIcons))
-        return (apps, workspace.apps.count - apps.count)
-    }
 
     private mutating func placeMarker(_ snapshot: MenuBarSnapshot, from: String?, progress: Double, _ measure: Measure) {
         typealias M = MenuBarMetrics

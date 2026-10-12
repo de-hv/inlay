@@ -233,6 +233,21 @@ extension HotkeyBinding {
     }
 }
 
+/// The icons of the apps in the list of workspaces, by bundle id
+@MainActor
+private final class AppIconCache {
+    private var icons: [String: NSImage] = [:]
+
+    func icon(_ app: MenuBarSnapshot.App) -> NSImage? {
+        guard let bundleId = app.bundleId else { return nil }
+        if let cached = icons[bundleId] { return cached }
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        icons[bundleId] = icon
+        return icon
+    }
+}
+
 // MARK: - Shared with the message window
 
 @MainActor

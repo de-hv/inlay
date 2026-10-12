@@ -62,7 +62,7 @@ extension InlayTests {
                 """
                 start-at-login = true
                 [menu-bar]
-                theme = 'chips-icons'
+                theme = 'square'
                 show-mode = true
                 [menu-bar.colors]
                 focused = '#D19A66'
@@ -72,11 +72,27 @@ extension InlayTests {
             )
             assertEquals(model.bool(.startAtLogin), true)
             assertEquals(model.isSet(.menuBarTheme), true)
-            assertEquals(model.isSet(.menuBarShowAppIcons), false)
-            let expected = MenuBarConfig(theme: .chipsIcons, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())))
+            assertEquals(model.isSet(.menuBarDimEmpty), false)
+            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())))
             assertEquals(model.menuBarConfig, expected)
-            // The theme decides about the icons
-            assertEquals(model.menuBarConfig.effectiveShowAppIcons, true)
+        }
+
+        /// A config that the window of a previous version wrote: the theme and the key of the app icons, which are gone.
+        /// The window shows 'chips', every control works, and picking a theme leaves the file without them
+        @Test func testAConfigWithTheAppIconsOfThePast() throws {
+            let model = try model("config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\n[mode.main.binding]\n")
+            assertEquals(model.unavailableReason, nil)
+            assertEquals(model.menuBarTheme, .chips)
+            assertEquals(model.menuBarConfig, MenuBarConfig())
+            assertEquals(model.disabledReason(.menuBarTheme), nil)
+            // Another control: the file is edited as it is
+            model.set(.menuBarShowMode, .bool(true))
+            assertEquals(model.errorMessage, nil)
+            assertEquals(text, "config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\nshow-mode = true\n[mode.main.binding]\n")
+            model.setTheme(.chips)
+            assertEquals(model.errorMessage, nil)
+            assertEquals(text, "config-version = 2\n[menu-bar]\ntheme = 'chips'\nshow-mode = true\n[mode.main.binding]\n")
+            assertEquals(parseConfig(text ?? "").warnings, [])
         }
 
         @Test func testSetAndReset() throws {
@@ -181,11 +197,11 @@ extension InlayTests {
             assertEquals(parseConfig(text ?? "").config.borders.modeColors, ["service": .rgba(Rgba(hex: "#FF453A").orDie())])
         }
 
-        @Test func testSetThemeLetsTheThemeDecideAboutIcons() throws {
-            let model = try model("[menu-bar]\ntheme = 'chips'\nshow-app-icons = false\n[mode.main.binding]\n")
-            model.setTheme(.chipsIcons)
-            assertEquals(text, "[menu-bar]\ntheme = 'chips-icons'\n[mode.main.binding]\n")
-            assertEquals(model.menuBarConfig.effectiveShowAppIcons, true)
+        @Test func testSetTheme() throws {
+            let model = try model("[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n")
+            model.setTheme(.minimal)
+            assertEquals(text, "[menu-bar]\ntheme = 'minimal'\n[mode.main.binding]\n")
+            assertEquals(model.menuBarTheme, .minimal)
         }
 
         @Test func testFirstChangeCreatesTheFile() throws {
@@ -342,10 +358,9 @@ extension InlayTests {
             ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now.addingTimeInterval(-120), url: file, errorCount: 0, warningCount: 0, isApplied: true)
             defer { ServerState.shared.lastConfigLoad = nil }
             model.refresh()
-            let icons = AppIconCache()
             let tabs: [(String, AnyView)] = [
                 ("general", AnyView(GeneralSettingsView(model: model))),
-                ("menu-bar", AnyView(MenuBarSettingsView(model: model, icons: icons))),
+                ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
                 ("borders", AnyView(BordersSettingsView(model: model))),
             ]
             for (name, view) in tabs {

@@ -1,8 +1,8 @@
 import AppKit
 import Common
 
-/// Owns the menu bar item: draws the published `MenuBarState` into it, handles the clicks in the workspaces,
-/// and opens the menu.
+/// Owns the menu bar item: draws the published `MenuBarState` into it, and opens the menu.
+/// The item only informs: a click in a workspace doesn't switch to it. See: opensMenu
 ///
 /// It only reads the model through `MenuBarStore`. See: publishUiState
 @MainActor
@@ -13,8 +13,6 @@ final class MenuBarController: NSObject {
     private let menu = MenuBarMenu()
     private let icons = AppIconCache()
     private var state: MenuBarState?
-    /// What is drawn in the item right now. The clicks are resolved against it
-    private var layout: MenuBarLayout?
     private var appearanceObservation: NSKeyValueObservation?
     private var notificationTokens: [any NSObjectProtocol] = []
 
@@ -37,9 +35,11 @@ final class MenuBarController: NSObject {
         if let button = item.button {
             button.imagePosition = .imageOnly
             button.target = self
-            button.action = #selector(clicked)
-            // No menu is attached to the item: a click in a workspace must not open it
+            button.action = #selector(pressed)
+            // No menu is attached to the item: the left button must not open it. The left button still sends the action,
+            // because a ctrl-click is a click of the left button
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.setAccessibilityHelp(Strings.Item.accessibilityHelp)
             // A fixed color isn't a template image, so it has to follow the menu bar by hand
             appearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
                 Task { @MainActor in self?.draw() }
@@ -71,7 +71,7 @@ final class MenuBarController: NSObject {
         // Without the permission there is nothing but the item to tell what is going on, so it can't be hidden
         statusItem?.isVisible = state.config.enabled || state.snapshot.status == .needsAccessibility
         statusItem?.button?.toolTip = switch state.snapshot.status {
-            case .running: nil
+            case .running: Strings.Item.toolTip
             case .paused: Strings.Menu.paused
             case .needsAccessibility: Strings.Menu.needsAccessibility
         }
@@ -94,7 +94,6 @@ final class MenuBarController: NSObject {
         let image = MenuBarRenderer.image(layout, palette, scale: scale, icons: icons.icon)
         image?.accessibilityDescription = Strings.Item.accessibilityDescription(state.snapshot)
         button.image = image
-        self.layout = layout
     }
 
     private func startSlide(from workspace: String) {
@@ -121,36 +120,35 @@ final class MenuBarController: NSObject {
         return MenuBarFocusTransition(from: slide.from, progress: 1 - pow(1 - elapsed, 3))
     }
 
-    // MARK: - Clicks
+    // MARK: - The menu
 
-    @objc private func clicked() {
-        // Without a mouse event (the item was pressed through the accessibility API) there is no workspace to tell
-        guard let state, let layout, let button = statusItem?.button,
-              let event = NSApp.currentEvent, event.type == .leftMouseUp || event.type == .rightMouseUp else { return openMenu() }
-        let isRightButton = event.type == .rightMouseUp || event.modifierFlags.contains(.control)
-        let point = Self.layoutPoint(of: event, in: button, layoutSize: layout.size)
-        switch layout.clickAction(at: point, isRightButton: isRightButton, snapshot: state.snapshot) {
-            case .openMenu: openMenu()
-            case .focusWorkspace(let workspace): runMenuBarCommand("workspace \(workspace)")
-        }
+    @objc private func pressed() {
+        let event = NSApp.currentEvent
+        let opensMenu = Self.opensMenu(
+            eventType: event?.type,
+            isControlPressed: event?.modifierFlags.contains(.control) == true,
+            eventAge: event.map { ProcessInfo.processInfo.systemUptime - $0.timestamp },
+        )
+        if opensMenu { openMenu() }
     }
 
-    /// The point of the click in the coordinates of the layout: the image is centered in the button
-    private static func layoutPoint(of event: NSEvent, in button: NSStatusBarButton, layoutSize: CGSize) -> CGPoint {
-        let location = button.convert(event.locationInWindow, from: nil)
-        var imageRect = (button.cell as? NSButtonCell)?.imageRect(forBounds: button.bounds) ?? .zero
-        if imageRect.isEmpty {
-            imageRect = CGRect(
-                x: (button.bounds.width - layoutSize.width) / 2,
-                y: (button.bounds.height - layoutSize.height) / 2,
-                width: layoutSize.width,
-                height: layoutSize.height,
-            )
+    /// A mouse event older than this isn't what pressed the item
+    nonisolated private static let staleEventAge: TimeInterval = 1
+
+    /// The menu opens with the right button and with a ctrl-click. A plain click of the left button does nothing.
+    ///
+    /// The item can also be pressed without the mouse: by VoiceOver and by the other clients of the accessibility API.
+    /// That opens the menu, the only thing there is to do with the item. Such a press comes with no event of its own:
+    /// the current event of the app is then missing, or it is an old event that has nothing to do with the press
+    ///
+    /// - Parameter eventType: the type of the current event of the app, if there is one
+    /// - Parameter eventAge: how long ago the current event happened, in seconds
+    nonisolated static func opensMenu(eventType: NSEvent.EventType?, isControlPressed: Bool, eventAge: TimeInterval?) -> Bool {
+        guard let eventType, let eventAge, eventAge < staleEventAge else { return true }
+        return switch eventType {
+            case .leftMouseUp, .leftMouseDown: isControlPressed
+            default: true
         }
-        return CGPoint(
-            x: location.x - imageRect.minX,
-            y: button.isFlipped ? location.y - imageRect.minY : imageRect.maxY - location.y,
-        )
     }
 
     private func openMenu() {

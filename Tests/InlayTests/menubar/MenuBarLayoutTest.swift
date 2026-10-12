@@ -232,7 +232,6 @@ extension InlayTests {
             assertEquals(paused.placeholder?.glyphOpacity, 1)
             // The size of the item of Aeromenu while AeroSpace is disabled
             assertEquals(paused.size, CGSize(width: 33.5, height: 22))
-            assertEquals(paused.workspace(at: CGPoint(x: 10, y: 10)), nil)
 
             snapshot.status = .needsAccessibility
             let needsAccessibility = layout()
@@ -240,87 +239,23 @@ extension InlayTests {
             assertEquals(needsAccessibility.placeholder?.glyphOpacity, 0.5)
         }
 
-        // MARK: - Hit testing
+        // MARK: - Pressing the item
 
-        @Test func testHitTestingOfChips() {
-            let layout = layout()
-            assertEquals(layout.workspace(at: CGPoint(x: 0, y: 0)), "1")
-            assertEquals(layout.workspace(at: CGPoint(x: 8, y: 11)), "1")
-            // The gap between two chips is split in two halves
-            assertEquals(layout.workspace(at: CGPoint(x: 18, y: 11)), "1")
-            assertEquals(layout.workspace(at: CGPoint(x: 18.5, y: 11)), "2")
-            assertEquals(layout.workspace(at: CGPoint(x: 37.5, y: 11)), "2")
-            assertEquals(layout.workspace(at: CGPoint(x: 38, y: 11)), "3")
-            // Above and below the chip, inside of the menu bar
-            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 0.5)), "3")
-            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 21.5)), "3")
-            assertEquals(layout.workspace(at: CGPoint(x: 75, y: 11)), "4")
-            // Outside of the item
-            assertEquals(layout.workspace(at: CGPoint(x: 77, y: 11)), nil)
-            assertEquals(layout.workspace(at: CGPoint(x: -2, y: 11)), nil)
-            assertEquals(layout.workspace(at: CGPoint(x: 45, y: 23)), nil)
-            assertEquals(layout.workspace(at: CGPoint(x: 45, y: -1)), nil)
-        }
-
-        @Test func testHitFramesDoNotOverlap() {
-            for config in [MenuBarConfig(), MenuBarConfig(theme: .chipsIcons), MenuBarConfig(theme: .square), MenuBarConfig(theme: .square, showAppIcons: true)] {
-                let layout = layout(config)
-                for (left, right) in zip(layout.cells, layout.cells.dropFirst()) {
-                    assertEquals(left.hitFrame.maxX, right.hitFrame.minX, additionalMsg: config.theme.rawValue)
-                }
-                // Every point of the item between the first and the last workspace hits exactly one of them
-                var x = layout.cells[0].hitFrame.minX
-                while x < layout.cells[3].hitFrame.maxX {
-                    assertEquals(layout.cells.count { $0.hitFrame.contains(CGPoint(x: x, y: 11)) }, 1, additionalMsg: "\(config.theme.rawValue) \(x)")
-                    x += 0.25
-                }
+        /// The item only informs: the left button does nothing, wherever it clicks
+        @Test func testOnlyTheRightButtonAndCtrlClickOpenTheMenu() {
+            func opensMenu(_ type: NSEvent.EventType?, control: Bool = false, age: TimeInterval? = 0.01) -> Bool {
+                MenuBarController.opensMenu(eventType: type, isControlPressed: control, eventAge: age)
             }
-        }
-
-        @Test func testHitTestingWithIcons() {
-            let layout = layout(MenuBarConfig(theme: .chipsIcons))
-            // The icons and '+2' belong to their workspace
-            assertEquals(layout.workspace(at: CGPoint(x: 20, y: 11)), "1")
-            assertEquals(layout.workspace(at: CGPoint(x: 120, y: 11)), "3")
-            assertEquals(layout.workspace(at: CGPoint(x: 135, y: 11)), "3")
-            assertEquals(layout.workspace(at: CGPoint(x: 150, y: 11)), "4")
-        }
-
-        @Test func testHitTestingOfSquare() {
-            let layout = layout(MenuBarConfig(theme: .square))
-            // The layout icon and the space after it aren't workspaces
-            assertEquals(layout.workspace(at: CGPoint(x: 8, y: 11)), nil)
-            assertEquals(layout.workspace(at: CGPoint(x: 25, y: 11)), nil)
-            assertEquals(layout.workspace(at: CGPoint(x: 26, y: 11)), "1")
-            assertEquals(layout.workspace(at: CGPoint(x: 49, y: 11)), "2")
-            assertEquals(layout.workspace(at: CGPoint(x: 87, y: 21)), "4")
-            assertEquals(layout.workspace(at: CGPoint(x: 88, y: 11)), nil)
-        }
-
-        @Test func testClickActions() {
-            snapshot.mode = "resize"
-            let layout = layout(MenuBarConfig(showMode: true))
-            func action(_ x: CGFloat, right: Bool = false) -> MenuBarClickAction {
-                layout.clickAction(at: CGPoint(x: x, y: 11), isRightButton: right, snapshot: snapshot)
-            }
-            // A workspace that isn't focused: go there
-            assertEquals(action(8), .focusWorkspace("1"))
-            assertEquals(action(66), .focusWorkspace("4"))
-            // The focused workspace opens the menu
-            assertEquals(action(28), .openMenu)
-            // So do the mode badge and the right button
-            assertEquals(action(88), .openMenu)
-            assertEquals(action(8, right: true), .openMenu)
-            assertEquals(action(66, right: true), .openMenu)
-
-            // 'minimal' has nothing but the focused workspace
-            let minimal = self.layout(MenuBarConfig(theme: .minimal))
-            assertEquals(minimal.clickAction(at: CGPoint(x: 8, y: 11), isRightButton: false, snapshot: snapshot), .openMenu)
-
-            // While Inlay doesn't manage windows, there is nowhere to go
-            var paused = snapshot
-            paused.status = .paused
-            assertEquals(self.layout(MenuBarConfig(), paused).clickAction(at: CGPoint(x: 8, y: 11), isRightButton: false, snapshot: paused), .openMenu)
+            assertEquals(opensMenu(.leftMouseUp), false)
+            assertEquals(opensMenu(.leftMouseDown), false)
+            assertEquals(opensMenu(.rightMouseUp), true)
+            assertEquals(opensMenu(.rightMouseDown), true)
+            assertEquals(opensMenu(.leftMouseUp, control: true), true)
+            assertEquals(opensMenu(.rightMouseUp, control: true), true)
+            // Pressed through the accessibility API (VoiceOver): there is no event, or the current one is an old one
+            assertEquals(opensMenu(nil, age: nil), true)
+            assertEquals(opensMenu(.leftMouseUp, age: 30), true)
+            assertEquals(opensMenu(.keyDown), true)
         }
     }
 

@@ -176,8 +176,10 @@ Un color es `'#RRGGBB'`, `'#RRGGBBAA'` o `'system-accent'`. `'auto'` es el color
 en barra oscura, negro en clara). Con todo en `'auto'` y sin iconos, el item es una imagen plantilla idéntica
 a la de Aeromenu; un color fijo no se adapta a la barra.
 
-- **Clic** en un workspace: va a él. **Clic en el enfocado** o **clic derecho**: abre el menú (workspaces,
-  ventana enfocada, layout, modo, config, pausar y Ajustes).
+- El item es **solo informativo**: el clic izquierdo no hace nada (no cambia de workspace ni abre el menú).
+  El **clic derecho** (o ctrl-clic) abre el menú: workspaces, ventana enfocada, layout, modo, config, pausar y
+  Ajustes. Con VoiceOver, «pulsar» el item (VO-espacio) abre el menú. Para cambiar de workspace: los atajos, la
+  CLI o la sección *Workspaces* del menú.
 - **Ajustes…** (⌘, en el menú, o abrir Inlay otra vez desde Aplicaciones) edita esas claves **en tu fichero de
   config**, línea a línea y sin tocar comentarios ni el resto del fichero, y recarga la config. Si la config es
   un enlace simbólico, se escribe en su destino. Si aún no tienes config, el primer cambio crea

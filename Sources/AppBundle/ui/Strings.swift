@@ -32,6 +32,8 @@ enum Strings {
     }
 
     enum Item {
+        static let toolTip = "Right-click to open the \(inlayAppName) menu"
+        static let accessibilityHelp = "Opens the \(inlayAppName) menu"
         static func accessibilityDescription(_ snapshot: MenuBarSnapshot) -> String {
             switch snapshot.status {
                 case .running: "\(inlayAppName): workspace \(snapshot.focusedWorkspace)"

@@ -97,8 +97,6 @@ struct MenuBarLayout: Equatable, Sendable {
         var workspace: String
         /// The chip, or the slot of the name in the square style
         var frame: CGRect
-        /// Clicks in here are clicks in the workspace. The hit frames don't overlap and leave no gaps in between
-        var hitFrame: CGRect
         var name: Text
         var isOccupied: Bool
         /// The workspace is empty and 'dim-empty-workspaces' is on
@@ -149,28 +147,7 @@ struct MenuBarLayout: Equatable, Sendable {
     var modeBadge: ModeBadge? = nil
     var placeholder: Placeholder? = nil
 
-    /// The workspace under the point, if any. The marker doesn't count: it covers the cell of the focused workspace
-    func workspace(at point: CGPoint) -> String? {
-        cells.first { $0.hitFrame.contains(point) }?.workspace
-    }
-
     var hasIcons: Bool { cells.contains { !$0.icons.isEmpty } }
-}
-
-/// What a click in the menu bar item does
-enum MenuBarClickAction: Equatable, Sendable {
-    case focusWorkspace(String)
-    case openMenu
-}
-
-extension MenuBarLayout {
-    /// A left click in a workspace that isn't focused switches to it. Everything else opens the menu:
-    /// the focused workspace, the space around the workspaces, the right button, and every click while Inlay doesn't manage windows
-    func clickAction(at point: CGPoint, isRightButton: Bool, snapshot: MenuBarSnapshot) -> MenuBarClickAction {
-        if isRightButton || snapshot.status != .running { return .openMenu }
-        guard let workspace = workspace(at: point), workspace != snapshot.focusedWorkspace else { return .openMenu }
-        return .focusWorkspace(workspace)
-    }
 }
 
 extension MenuBarLayout {
@@ -222,7 +199,6 @@ extension MenuBarLayout {
             var cell = Cell(
                 workspace: workspace.name,
                 frame: .zero,
-                hitFrame: .zero,
                 name: Text(string: workspace.name, font: .chipName, frame: .zero),
                 isOccupied: workspace.isOccupied,
                 isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
@@ -257,7 +233,6 @@ extension MenuBarLayout {
                 cursor += M.chipWithIconsTrailing
                 cell.frame = CGRect(x: x, y: top, width: cursor - x, height: M.chipSide)
             }
-            cell.hitFrame = CGRect(x: cell.frame.minX - M.chipSpacing / 2, y: 0, width: cell.frame.width + M.chipSpacing, height: M.height)
             cells.append(cell)
             x = cell.frame.maxX + M.chipSpacing
         }
@@ -296,7 +271,6 @@ extension MenuBarLayout {
             var cell = Cell(
                 workspace: workspace.name,
                 frame: slot,
-                hitFrame: slot,
                 name: Text(string: workspace.name, font: .squareName, frame: nameSize.centered(in: slot)),
                 isOccupied: workspace.isOccupied,
                 isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
@@ -314,7 +288,6 @@ extension MenuBarLayout {
                 cell.overflow = Text(string: string, font: .overflow, frame: CGRect(x: x, y: (M.height - size.height) / 2, width: size.width, height: size.height))
                 x += size.width + M.iconSpacing
             }
-            cell.hitFrame = CGRect(x: slot.minX, y: 0, width: x - slot.minX, height: M.height)
             cells.append(cell)
         }
         return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), layoutIcon: layoutIcon, cells: cells)

@@ -94,6 +94,91 @@ extension InlayTests {
             assertEquals(model.isSet(.menuBarTheme), false)
         }
 
+        // MARK: - [borders.mode-colors]
+
+        @Test func testColorableModesAreTheModesOfTheConfigButMain() throws {
+            assertEquals(try model("[mode.main.binding]\n").colorableModes, [])
+            let model = try model(
+                """
+                [mode.service.binding]
+                esc = 'mode main'
+                [mode.main.binding]
+                alt-r = 'mode resize'
+                [mode.resize.binding]
+                esc = 'mode main'
+                [mode.'my mode'.binding]
+                esc = 'mode main'
+
+                """,
+            )
+            assertEquals(model.unavailableReason, nil)
+            assertEquals(model.colorableModes, ["my mode", "resize", "service"])
+            // A mode without a color: nothing to reset, and the row shows the active color
+            let resize = SettingsKey.bordersModeColor("resize")
+            assertEquals(resize.label, "[borders.mode-colors] resize")
+            assertEquals(model.isSet(resize), false)
+            assertEquals(model.string(resize), "")
+            assertEquals(model.disabledReason(resize), nil)
+        }
+
+        @Test func testSetAndResetAModeColor() throws {
+            let config = "[borders]\n    width = 6\n\n# The modes\n[mode.main.binding]\n[mode.resize.binding]\n[mode.'my mode'.binding]\n"
+            let model = try model(config)
+            let resize = SettingsKey.bordersModeColor("resize"), myMode = SettingsKey.bordersModeColor("my mode")
+
+            // The table doesn't exist: it is added after its parent
+            model.set(resize, .string("#30D158"))
+            assertEquals(model.errorMessage, nil)
+            assertEquals(
+                text,
+                "[borders]\n    width = 6\n\n    [borders.mode-colors]\n        resize = '#30D158'\n\n# The modes\n[mode.main.binding]\n[mode.resize.binding]\n[mode.'my mode'.binding]\n",
+            )
+            assertEquals(model.isSet(resize), true)
+            assertEquals(model.color(resize), .rgba(Rgba(hex: "#30D158").orDie()))
+            // The name of a mode is a key like any other: quoted if it has to be
+            model.set(myMode, .string("system-accent"))
+            assertEquals(text?.contains("        resize = '#30D158'\n        'my mode' = 'system-accent'\n\n# The modes"), true)
+            let parsed = parseConfig(text ?? "")
+            assertEquals(parsed.errors, [])
+            assertEquals(parsed.config.borders.modeColors, ["resize": .rgba(Rgba(hex: "#30D158").orDie()), "my mode": .systemAccent])
+            assertEquals(parsed.config.borders.width, 6)
+
+            // "Reset" removes the key. The mode keeps the normal colors again
+            model.reset(resize)
+            assertEquals(model.isSet(resize), false)
+            assertEquals(parseConfig(text ?? "").config.borders.modeColors, ["my mode": .systemAccent])
+            model.reset(myMode)
+            assertEquals(parseConfig(text ?? "").config.borders.modeColors, [:])
+            assertEquals(text, "[borders]\n    width = 6\n\n    [borders.mode-colors]\n\n# The modes\n[mode.main.binding]\n[mode.resize.binding]\n[mode.'my mode'.binding]\n")
+
+            // The color picker: shown right away, written once it stops changing
+            model.setDebounced(resize, .string("#FF453A"))
+            assertEquals(model.color(resize), .rgba(Rgba(hex: "#FF453A").orDie()))
+            assertEquals(model.isSet(resize), true)
+            assertEquals(text?.contains("FF453A"), false)
+            model.commit(resize)
+            assertEquals(text?.contains("    [borders.mode-colors]\n    resize = '#FF453A'\n"), true)
+
+            // Something that isn't a color is refused, and nothing is written
+            let before = text
+            model.set(resize, .string("green"))
+            assertEquals(model.errorMessage?.contains("Can't parse color 'green'"), true)
+            assertEquals(text, before)
+        }
+
+        @Test func testModeColorsDefinedByHand() throws {
+            let model = try model("borders.mode-colors = { resize = '#30D158' }\n[mode.main.binding]\n[mode.resize.binding]\n")
+            assertEquals(model.disabledReason(.bordersModeColor("resize")), "Defined by hand in the config file")
+            // In the table of the built-in config, with its examples commented out
+            let builtIn = try String(contentsOf: projectRoot.appending(path: "docs/config-examples/default-config.toml"), encoding: .utf8)
+            let withTable = try self.model(builtIn)
+            assertEquals(withTable.colorableModes, ["service"])
+            withTable.set(.bordersModeColor("service"), .string("#FF453A"))
+            assertEquals(withTable.errorMessage, nil)
+            assertEquals(text?.contains("    [borders.mode-colors]\n    service = '#FF453A'\n        # resize = '#30D158'\n"), true)
+            assertEquals(parseConfig(text ?? "").config.borders.modeColors, ["service": .rgba(Rgba(hex: "#FF453A").orDie())])
+        }
+
         @Test func testSetThemeLetsTheThemeDecideAboutIcons() throws {
             let model = try model("[menu-bar]\ntheme = 'chips'\nshow-app-icons = false\n[mode.main.binding]\n")
             model.setTheme(.chipsIcons)
@@ -132,7 +217,7 @@ extension InlayTests {
             try "[menu-bar]\n# A new comment\ntheme = 'square'\n[mode.main.binding]\n".write(to: file, atomically: true, encoding: .utf8)
             model.preview(.menuBarFocused, .string("#FF0000"))
             model.commit(.menuBarFocused)
-            assertEquals(text, "[menu-bar]\n# A new comment\ntheme = 'square'\n[mode.main.binding]\n\n[menu-bar.colors]\nfocused = '#FF0000'\n")
+            assertEquals(text, "[menu-bar]\n# A new comment\ntheme = 'square'\n\n[menu-bar.colors]\nfocused = '#FF0000'\n\n[mode.main.binding]\n")
         }
 
         @Test func testFileBrokenOutsideOfTheWindowIsNotWritten() throws {
@@ -242,7 +327,13 @@ extension InlayTests {
                 show-mode = true
                 [menu-bar.colors]
                 focused = '#D19A66'
+                [borders]
+                glow = true
+                [borders.mode-colors]
+                resize = '#30D158'
                 [mode.main.binding]
+                [mode.resize.binding]
+                [mode.service.binding]
 
                 """,
             )

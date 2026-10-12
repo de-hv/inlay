@@ -230,10 +230,73 @@ extension InlayTests {
             assertEquals(set("[x]\na = 1\n\n", theme, .string("square")), "[x]\na = 1\n\n[menu-bar]\ntheme = 'square'\n")
             // The parent table is added after its child. That's valid TOML
             assertEquals(set("[menu-bar.colors]\nfocused = 'auto'\n", theme, .string("square")), "[menu-bar.colors]\nfocused = 'auto'\n\n[menu-bar]\ntheme = 'square'\n")
-            // And a child after its parent
-            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[z]\n", focused, .string("auto")), "[menu-bar]\ntheme = 'chips'\n[z]\n\n[menu-bar.colors]\nfocused = 'auto'\n")
             // A key that needs quotes
             assertEquals(set("", TomlKeyPath(["a b", "c"], "d.e"), .int(1)), "['a b'.c]\n'd.e' = 1\n")
+        }
+
+        /// A sub-table that isn't in the document goes after its parent table, not to the end of the document
+        @Test func testAddSubtable() {
+            let resize = TomlKeyPath(["borders", "mode-colors"], "resize")
+            let green = TomlValue.string("#30D158")
+            // Right after the parent, with an empty line on both sides
+            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[z]\n", focused, .string("auto")), "[menu-bar]\ntheme = 'chips'\n\n[menu-bar.colors]\nfocused = 'auto'\n\n[z]\n")
+            // The empty lines and the comment above the next table belong to that table
+            assertEquals(
+                set("[borders]\nwidth = 4 # Thick\n\n\n# The main mode\n# It must exist\n[mode.main.binding]\nalt-h = 'focus left'\n", resize, green),
+                "[borders]\nwidth = 4 # Thick\n\n[borders.mode-colors]\nresize = '#30D158'\n\n\n# The main mode\n# It must exist\n[mode.main.binding]\nalt-h = 'focus left'\n",
+            )
+            // A comment at the end of the parent table, separated from the next table, stays in the parent table
+            assertEquals(
+                set("[borders]\nwidth = 4\n# glow = true\n\n[z]\n", resize, green),
+                "[borders]\nwidth = 4\n# glow = true\n\n[borders.mode-colors]\nresize = '#30D158'\n\n[z]\n",
+            )
+            // The parent is the last table of the document, with and without the last line break
+            assertEquals(set("[a]\n[borders]\nwidth = 4\n", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n")
+            assertEquals(set("[a]\n[borders]\nwidth = 4", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n")
+            assertEquals(set("[borders]", resize, green), "[borders]\n\n[borders.mode-colors]\nresize = '#30D158'\n")
+            assertEquals(set("[borders]\r\nwidth = 4\r\n[z]\r\n", resize, green), "[borders]\r\nwidth = 4\r\n\r\n[borders.mode-colors]\r\nresize = '#30D158'\r\n\r\n[z]\r\n")
+
+            // One level deeper than the keys of the parent
+            assertEquals(
+                set("[borders]\n    width = 4\n\n[z]\n", resize, green),
+                "[borders]\n    width = 4\n\n    [borders.mode-colors]\n        resize = '#30D158'\n\n[z]\n",
+            )
+            assertEquals(
+                set("\t[borders]\n\t\twidth = 4\n", resize, green),
+                "\t[borders]\n\t\twidth = 4\n\n\t\t[borders.mode-colors]\n\t\t\tresize = '#30D158'\n",
+            )
+            // After the sub-tables that the parent already has, and indented like the last one of them
+            assertEquals(
+                set("[menu-bar]\n  theme = 'chips'\n  [menu-bar.colors]\n      focused = 'auto'\n[z]\n", TomlKeyPath(["menu-bar", "extra"], "a"), .int(1)),
+                "[menu-bar]\n  theme = 'chips'\n  [menu-bar.colors]\n      focused = 'auto'\n\n  [menu-bar.extra]\n      a = 1\n\n[z]\n",
+            )
+            // Only a sibling, without the parent
+            assertEquals(
+                set("[menu-bar.colors]\nfocused = 'auto'\n[z]\n", TomlKeyPath(["menu-bar", "extra"], "a"), .int(1)),
+                "[menu-bar.colors]\nfocused = 'auto'\n\n[menu-bar.extra]\na = 1\n\n[z]\n",
+            )
+            // The parent ends with a value of several lines, whose last lines look like comments and empty lines
+            assertEquals(
+                set("[borders]\nnote = \"\"\"\n# not a comment\n\n\"\"\"\n[z]\n", resize, green),
+                "[borders]\nnote = \"\"\"\n# not a comment\n\n\"\"\"\n\n[borders.mode-colors]\nresize = '#30D158'\n\n[z]\n",
+            )
+            assertEquals(
+                set("[borders]\nlist = [\n  1,\n  # one\n\n]\n# next\n[z]\n", resize, green),
+                "[borders]\nlist = [\n  1,\n  # one\n\n]\n\n[borders.mode-colors]\nresize = '#30D158'\n\n# next\n[z]\n",
+            )
+
+            // The table is there: the usual rules. A second key, a quoted one, and the keys removed again
+            let one = set("[borders]\nwidth = 4\n\n[z]\n", resize, green)
+            let two = set(one, TomlKeyPath(["borders", "mode-colors"], "my mode"), .string("#FF453A"))
+            assertEquals(two, "[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n'my mode' = '#FF453A'\n\n[z]\n")
+            assertEquals(TomlPatcher.locate(two, TomlKeyPath(["borders", "mode-colors"], "my mode")), .line(5))
+            assertEquals(set(two, resize, green), two)
+            assertEquals(remove(remove(two, resize), TomlKeyPath(["borders", "mode-colors"], "my mode")), "[borders]\nwidth = 4\n\n[borders.mode-colors]\n\n[z]\n")
+
+            // No parent and no sibling: the end of the document, as before
+            assertEquals(set("[z]\na = 1\n", resize, green), "[z]\na = 1\n\n[borders.mode-colors]\nresize = '#30D158'\n")
+            // An array of tables is nobody's family
+            assertEquals(set("[[borders]]\nwidth = 4\n[z]\n", TomlKeyPath(["other", "sub"], "a"), .int(1)), "[[borders]]\nwidth = 4\n[z]\n\n[other.sub]\na = 1\n")
         }
 
         @Test func testAddTopLevelKey() {
@@ -257,7 +320,7 @@ extension InlayTests {
             let text = "[menu-bar]\r\ntheme = 'chips' # comment\r\n\r\n[x]\r\na = 1\r\n"
             assertEquals(set(text, theme, .string("square")), "[menu-bar]\r\ntheme = 'square' # comment\r\n\r\n[x]\r\na = 1\r\n")
             assertEquals(set(text, TomlKeyPath(["menu-bar"], "enabled"), .bool(true)), "[menu-bar]\r\ntheme = 'chips' # comment\r\nenabled = true\r\n\r\n[x]\r\na = 1\r\n")
-            assertEquals(set(text, focused, .string("auto")), text + "\r\n[menu-bar.colors]\r\nfocused = 'auto'\r\n")
+            assertEquals(set(text, focused, .string("auto")), "[menu-bar]\r\ntheme = 'chips' # comment\r\n\r\n[menu-bar.colors]\r\nfocused = 'auto'\r\n\r\n[x]\r\na = 1\r\n")
             assertEquals(remove(text, theme), "[menu-bar]\r\n\r\n[x]\r\na = 1\r\n")
         }
 
@@ -309,9 +372,10 @@ extension InlayTests {
                     assertEquals(value.matches(TomlPatcher.decodedValue(patched, path)), true, additionalMsg: "\(path) in \(document.debugDescription)")
                     let before = lines(document), after = lines(patched)
                     let difference = after.difference(from: before)
-                    // A line break that was missing at the end counts as a change of the last line
+                    // A line break that was missing at the end counts as a change of the last line.
+                    // A new sub-table is its header, its key, and an empty line on both sides
                     let removed = difference.removals.count, added = difference.insertions.count
-                    assertEquals(removed <= 1 && added <= 3 + removed, true, additionalMsg: "\(path) in \(document.debugDescription) -> \(patched.debugDescription)")
+                    assertEquals(removed <= 1 && added <= 4 + removed, true, additionalMsg: "\(path) in \(document.debugDescription) -> \(patched.debugDescription)")
                     // Every other value of the document is the same
                     var expected = (try? TomlPatcher.decode(document)) ?? [:]
                     var actual = (try? TomlPatcher.decode(patched)) ?? [:]

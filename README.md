@@ -184,7 +184,8 @@ a la de Aeromenu; un color fijo no se adapta a la barra.
   config**, línea a línea y sin tocar comentarios ni el resto del fichero, y recarga la config. Si la config es
   un enlace simbólico, se escribe en su destino. Si aún no tienes config, el primer cambio crea
   `~/.config/inlay/inlay.toml` a partir de la incluida. Una clave escrita con puntos (`menu-bar.theme = …`) o
-  dentro de una tabla en línea no se edita desde Ajustes: su control aparece desactivado.
+  dentro de una tabla en línea no se edita desde Ajustes: su control aparece desactivado. Una subtabla que aún
+  no existe (`[menu-bar.colors]`, `[borders.mode-colors]`) se añade a continuación de su tabla madre.
 
 ## Bordes de ventana
 
@@ -222,7 +223,11 @@ o en la pestaña **Borders** de Ajustes.
   recibe clics. Es una imagen pequeña que Core Animation estira, así que mover o redimensionar no redibuja nada.
 - El radio de las esquinas es fijo: macOS no deja leer el de las ventanas de otras apps. Ajústalo a ojo.
 - Los bordes desaparecen al pausar Inlay (`inlay enable off`), al salir y con `enabled = false`.
-- `[borders.mode-colors]` todavía no se edita desde Ajustes: escríbela en el fichero.
+- **Colores por modo en Ajustes**: la pestaña **Borders** tiene una fila por cada modo de atajos definido en tu
+  config (`[mode.<nombre>.binding]`), con selector de color y «Reset», que borra la clave de
+  `[borders.mode-colors]`. Si la tabla no existe se crea justo después de `[borders]`. El modo `main` no tiene
+  fila: es el modo que está activo siempre, y un color propio sustituiría para siempre a `active-color` y
+  `floating-color`, que existen para eso (a mano se puede seguir escribiendo `main = '…'`).
 
 Cada borde es una ventana propia de Inlay, transparente, colocada justo encima de su ventana en el orden de
 apilado, así que una ventana flotante de otra app tapa los bordes de las ventanas que tiene detrás. Todo con

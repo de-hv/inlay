@@ -88,6 +88,8 @@ enum TomlValue: Equatable, Sendable {
 /// - A key that is in its table: only its value is replaced. The comment after it stays
 /// - A key that isn't: it is added after the last key of the table
 /// - A table that isn't: it is added to the end of the document
+/// - A sub-table that isn't, of a table that is (`[borders.mode-colors]` when there is a `[borders]`): it is added
+///   after its parent table and the sub-tables that the parent already has, indented like them
 /// - A top level key that isn't: it is added after the last top level key, before the first table
 /// - `remove` drops the line of the key
 ///
@@ -385,6 +387,20 @@ extension TomlPatcher {
                 var index = firstHeader.line
                 while index > 0, lines[index - 1].content.trimmingCharacters(in: .whitespaces).hasPrefix("#") { index -= 1 }
                 lines.insert(contentsOf: [Line(content: "\(key) = \(literal)", terminator: newline), Line(content: "", terminator: newline)], at: index)
+            } else if let place = placeForSubtable(path.table) {
+                // A new sub-table: after the last table of its family
+                let header = path.table.map(TomlPatcher.keyLiteral).joined(separator: ".")
+                var block = [
+                    Line(content: "", terminator: newline),
+                    Line(content: "\(place.headerIndent)[\(header)]", terminator: newline),
+                    Line(content: "\(place.keyIndent)\(key) = \(literal)", terminator: newline),
+                ]
+                // Something follows right away, without an empty line in between: the comment or the header of the next table
+                if place.line < lines.count, !lines[place.line].content.trimmingCharacters(in: .whitespaces).isEmpty {
+                    block.append(Line(content: "", terminator: newline))
+                }
+                terminateLastLine(ifInsertingAt: place.line)
+                lines.insert(contentsOf: block, at: place.line)
             } else {
                 // A new table, or a top level key of a document without tables: at the end
                 terminateLastLine()
@@ -398,6 +414,34 @@ extension TomlPatcher {
                 lines.append(Line(content: "\(key) = \(literal)", terminator: newline))
             }
             scan()
+        }
+
+        /// Where the header of a new sub-table goes: after the last table of its family (its parent table, and
+        /// the sub-tables of the parent), before the empty lines and the comment that precede the next table.
+        /// nil if the table isn't a sub-table, or if nothing of its family is in the document
+        private func placeForSubtable(_ table: [String]) -> (line: Int, headerIndent: String, keyIndent: String)? {
+            let parent = Array(table.dropLast())
+            guard !parent.isEmpty, let last = headers.last(where: { !$0.isArrayOfTables && $0.path.starts(with: parent) }) else { return nil }
+            func indent(_ line: Int) -> String { String(lines[line].content.prefix { $0 == " " || $0 == "\t" }) }
+            let end = headers.first { $0.line > last.line }?.line ?? lines.count
+            // Never inside of the last value of the table, whatever its lines look like
+            let lowerBound = (entries.last { $0.firstLine > last.line && $0.firstLine < end }?.lastLine ?? last.line) + 1
+            var line = end
+            // The comment right above the next header is the comment of that table
+            while line > lowerBound, end < lines.count, lines[line - 1].content.trimmingCharacters(in: .whitespaces).hasPrefix("#") { line -= 1 }
+            while line > lowerBound, lines[line - 1].content.trimmingCharacters(in: .whitespaces).isEmpty { line -= 1 }
+
+            // Like a sibling, if there is one. Otherwise, one level deeper than the keys of the parent
+            if let sibling = headers.last(where: { !$0.isArrayOfTables && $0.path.count == table.count && $0.path.starts(with: parent) }) {
+                let headerIndent = indent(sibling.line)
+                let keyIndent = entries.first { $0.table == sibling.path }.map { indent($0.firstLine) }
+                return (line, headerIndent, keyIndent ?? headerIndent)
+            }
+            guard let parentHeader = headers.first(where: { $0.path == parent }) else { return (line, indent(last.line), indent(last.line)) }
+            let parentIndent = indent(parentHeader.line)
+            let headerIndent = entries.last { $0.table == parent }.map { indent($0.firstLine) } ?? parentIndent
+            let step = headerIndent.hasPrefix(parentIndent) ? String(headerIndent.dropFirst(parentIndent.count)) : ""
+            return (line, headerIndent, headerIndent + step)
         }
     }
 

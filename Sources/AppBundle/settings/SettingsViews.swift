@@ -58,10 +58,12 @@ private struct ColorRow: View {
     var detail: String? = nil
     let key: SettingsKey
     let allowsAuto: Bool
+    /// For a key without a default value: the key whose color is in effect while this one isn't set
+    var fallback: SettingsKey? = nil
 
     var body: some View {
         SettingsRow(model: model, title: title, detail: detail, key: key, showsTable: false) {
-            Text(model.string(key))
+            Text(isUnset ? Strings.Settings.notSet : model.string(key))
                 .font(.system(size: 12, design: .monospaced))
                 .lineLimit(1)
                 .fixedSize()
@@ -85,8 +87,12 @@ private struct ColorRow: View {
         }
     }
 
+    private var isUnset: Bool { fallback != nil && !model.isSet(key) }
+
     /// 'auto' is shown as the color of the text of a dark menu bar
-    private var rgba: Rgba { model.color(key).resolve(auto: .white, systemAccent: .systemAccent) }
+    private var rgba: Rgba {
+        model.color(isUnset ? fallback ?? key : key).resolve(auto: .white, systemAccent: .systemAccent)
+    }
 
     private var selection: Binding<Color> {
         Binding(
@@ -400,6 +406,22 @@ struct BordersSettingsView: View {
                 ColorRow(model: model, title: Strings.Settings.floatingWindow, key: .bordersFloatingColor, allowsAuto: false)
             } header: {
                 tableHeader(Strings.Settings.colors, SettingsKey.bordersActiveColor)
+            }
+            Section {
+                // One row per binding mode of the config file. See: SettingsModel.colorableModes
+                ForEach(model.colorableModes, id: \.self) { mode in
+                    ColorRow(model: model, title: mode, key: .bordersModeColor(mode), allowsAuto: false, fallback: .bordersActiveColor)
+                }
+                if model.colorableModes.isEmpty {
+                    Text(Strings.Settings.noModes).foregroundStyle(.secondary)
+                }
+            } header: {
+                tableHeader(Strings.Settings.modeColors, SettingsKey.bordersModeColor(""))
+            } footer: {
+                Text(Strings.Settings.modeColorsFooter)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .formStyle(.grouped)

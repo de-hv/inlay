@@ -47,6 +47,12 @@ extension SettingsKey {
     static let bordersFloatingColor = SettingsKey(["borders"], "floating-color", default: .string("#BF5AF2"))
     static let bordersGlow = SettingsKey(["borders"], "glow", default: .bool(false))
     static let bordersGlowRadius = SettingsKey(["borders"], "glow-radius", default: .int(12))
+
+    /// [borders.mode-colors]: the color of the border of the focused window while the binding mode is active.
+    /// No default: a mode without a color keeps the normal colors
+    static func bordersModeColor(_ mode: String) -> SettingsKey {
+        SettingsKey(["borders", "mode-colors"], mode, default: .string(""))
+    }
 }
 
 /// What the settings window can show

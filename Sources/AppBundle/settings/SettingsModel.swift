@@ -21,6 +21,11 @@ final class SettingsModel {
     private(set) var isPaused: Bool = false
     /// The last change that couldn't be written
     var errorMessage: String? = nil
+    /// The binding modes of the config file that can have a color of their own in [borders.mode-colors], sorted.
+    ///
+    /// Not 'main'. It is the mode that is active all the time: its color would take the place of the active and
+    /// the floating colors for good, which is what those two keys are for. (It can still be written by hand)
+    private(set) var colorableModes: [String] = []
 
     /// The values chosen in the window that aren't in the file yet: a slider being dragged, a color being picked
     private var pending: [SettingsKey: TomlValue] = [:]
@@ -48,16 +53,19 @@ final class SettingsModel {
                 self.target = target
                 root = (try? TomlPatcher.decode(target.text)) ?? [:]
                 document = TomlPatcher.Document(target.text)
+                let parsed = parseConfig(target.text)
+                colorableModes = parsed.config.modes.keys.filter { $0 != mainModeId }.sorted()
                 unavailableReason = switch true {
                     // The config is loaded once the permission is granted. Until then there is nothing to reload
                     case !isAccessibilityGranted: Strings.Settings.needsAccessibility
-                    case !parseConfig(target.text).errors.isEmpty: Strings.Settings.configHasErrors(target.url.lastPathComponent)
+                    case !parsed.errors.isEmpty: Strings.Settings.configHasErrors(target.url.lastPathComponent)
                     default: nil
                 }
             case .failure(let error):
                 target = nil
                 root = [:]
                 document = TomlPatcher.Document("")
+                colorableModes = []
                 unavailableReason = error.message
         }
     }

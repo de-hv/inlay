@@ -8,17 +8,34 @@ Se compila e instala **solo con las Command Line Tools de Xcode**: sin Xcode, si
 
 ## Estado del proyecto
 
-En desarrollo. Inlay es un *fork* de [AeroSpace](https://github.com/nikitabobko/AeroSpace) que se compila sin
-Xcode, con su propia forma de colocar las ventanas nuevas (*dwindle*) y sin el layout *accordion*.
+**Primera versión lista para probar (0.1.0), todavía sin usar en el día a día.** Inlay es un *fork* de
+[AeroSpace](https://github.com/nikitabobko/AeroSpace) que se compila sin Xcode, con su propia forma de colocar
+las ventanas nuevas (*dwindle*), sin el layout *accordion*, con una barra de menús propia y con bordes de ventana.
 
-| Parte | Estado |
-|---|---|
-| Gestor de ventanas (árbol, workspaces, comandos, CLI) | Funciona como AeroSpace `74a1bf1`, con otro nombre |
-| Build, instalación y desinstalación sin Xcode | Hecho |
-| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) |
-| Barra de menús con *chips* de workspaces, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) |
-| Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) |
-| Tests | Suite de Swift Testing (`scripts/test.sh`) para el árbol, la configuración, los comandos del árbol, la barra de menús, los bordes y el editor de la config. El resto de la suite original (XCTest) está por migrar |
+| Parte | Estado | Cómo está comprobado |
+|---|---|---|
+| Build, instalación y desinstalación sin Xcode | Hecho | Build limpio desde cero con las Command Line Tools; `install.sh` y `uninstall.sh` ejecutados enteros en un entorno aislado (otro `HOME`, otra carpeta de instalación) |
+| Gestor de ventanas (árbol, workspaces, comandos, CLI) | El de AeroSpace `74a1bf1`, con otro nombre | Tests (ventanas simuladas). **Sin probar con ventanas reales** |
+| Auto-tiling tipo *dwindle*, sin layout *accordion* | Hecho (ver [Mosaico](#mosaico)) | Tests, incluida una sesión pseudoaleatoria de 400 pasos. **Sin probar con ventanas reales** |
+| Barra de menús con *chips*, temas y ventana de Ajustes | Hecho (ver [Barra de menús y Ajustes](#barra-de-menús-y-ajustes)) | Tests, imágenes renderizadas y arranque real sin permiso. **Sin probar los clics, el menú ni Ajustes con permiso** |
+| Bordes de ventana | Hecho, con API pública (ver [Bordes de ventana](#bordes-de-ventana)) | Tests, imágenes renderizadas y `--debug-borders` sobre ventanas reales. **Sin probar sobre ventanas gestionadas** |
+| Tests | 562 tests de Swift Testing (`scripts/test.sh`): toda la suite original de AeroSpace migrada, más los de Inlay | Pasan con las Command Line Tools |
+
+Lo que falta es lo que solo puede hacer quien concede el permiso de Accesibilidad: usar Inlay de verdad. Hasta
+ahora Inlay solo se ha ejecutado **sin ese permiso** (arranca, muestra su item con el aviso, abre Ajustes y se
+cierra con `pkill`, sin tocar ninguna ventana).
+
+Limitaciones conocidas de esta versión:
+
+- Con firma ad hoc (la de por defecto) hay que volver a dar el permiso de Accesibilidad tras cada recompilación.
+  Ver [Firma estable](#firma-estable---stable-signing).
+- Al arrancar con muchas ventanas en un workspace, *dwindle* las coloca en espiral y las últimas quedan pequeñas.
+- Una ventana que vuelve de minimizada, de pantalla completa nativa o de una app oculta no recupera su sitio:
+  divide la ventana enfocada, como una ventana nueva.
+- Los bordes se colocan con una API pública que no los ata a su ventana: entre que una ventana cambia y llega
+  el siguiente refresco, su borde puede quedar un instante desfasado o por debajo de otra ventana.
+- Solo Apple Silicon (el binario es `arm64`) y una sola pantalla probada.
+- La interfaz (menú, Ajustes, mensajes) está en inglés.
 
 El formato de configuración y los comandos son los de AeroSpace con las diferencias de [Mosaico](#mosaico): su
 [guía](https://nikitabobko.github.io/AeroSpace/guide) y su
@@ -53,6 +70,12 @@ aún no tienes configuración y abre la app. Se puede ejecutar las veces que hag
 
 Tu configuración **nunca se sobrescribe ni se borra** al instalar.
 
+Con `--import-aerospace` se copia tu `aerospace.toml` tal cual (si es un enlace simbólico, se copia el fichero
+al que apunta y el original no se toca). Revisa tres cosas en la copia: `start-at-login = true` haría que Inlay
+se añadiese a los ítems de inicio la primera vez que arranca; los atajos o scripts que llaman a la CLI
+`aerospace` siguen hablando con AeroSpace y deben llamar a `inlay`; y con `gaps` de 8 o menos los bordes de
+dos ventanas vecinas se tocan (la config incluida usa 14).
+
 ### Antes de abrir Inlay
 
 - **Cierra AeroSpace, AeroMenu y `borders` (JankyBorders).** Hacen el mismo trabajo y dos gestores de ventanas a
@@ -60,7 +83,11 @@ Tu configuración **nunca se sobrescribe ni se borra** al instalar.
   Inlay puede estar *instalado* junto a AeroSpace sin problema: no comparten configuración, socket, preferencias
   ni identificador.
 - **Permiso de Accesibilidad.** Inlay mueve las ventanas con la API de Accesibilidad. La primera vez macOS pide el
-  permiso: actívalo en *Ajustes del Sistema › Privacidad y seguridad › Accesibilidad*.
+  permiso: actívalo en *Ajustes del Sistema › Privacidad y seguridad › Accesibilidad* (hace falta ser
+  administrador; en un equipo gestionado esa lista puede estar bloqueada). Mientras no lo tenga, Inlay no hace
+  nada: su item de la barra muestra un triángulo de aviso y la CLI responde «Can't connect to Inlay server».
+  Si Inlay aparece activado en la lista pero sigue pidiéndolo (pasa tras recompilar con firma ad hoc), quítalo
+  de la lista con el botón «−» y vuelve a abrir Inlay.
 
 ### Firma estable (`--stable-signing`)
 
@@ -154,9 +181,9 @@ o en la pestaña **Borders** de Ajustes.
   no, `floating-color` si es flotante; si no, `active-color`. Las demás ventanas usan `inactive-color`.
 - Un color **totalmente transparente** (`'#00000000'`) significa «sin borde»: con
   `inactive-color = '#00000000'` solo lleva borde la ventana activa.
-- **Sin borde**: ventanas en pantalla completa (la de Inlay y la nativa de macOS), minimizadas, de apps ocultas,
-  diálogos y popups, las de workspaces no visibles, y la ventana que estás arrastrando o redimensionando con el
-  ratón (el borde vuelve al soltar).
+- **Sin borde**: ventanas en pantalla completa (la de Inlay y la nativa de macOS) y las ventanas en mosaico que
+  tapan, minimizadas, de apps ocultas, popups, las de workspaces no visibles, y la ventana que estás arrastrando
+  o redimensionando con el ratón (el borde vuelve al soltar). Los diálogos son ventanas flotantes y sí llevan.
 - El borde va **por fuera** del marco de la ventana, en el hueco entre ventanas: no tapa contenido y no recibe
   clics. Conviene que los `gaps` sean al menos el doble de `width` (la config incluida usa 14 con el borde de 4);
   con gaps más pequeños los bordes de dos ventanas vecinas se tocan o se solapan.
@@ -171,9 +198,13 @@ API pública de AppKit; no hay código de JankyBorders ni se usa SkyLight.
 ## Desinstalación
 
 ```sh
-./uninstall.sh           # quita la app, el enlace de la CLI y el ítem de inicio
+./uninstall.sh           # cierra Inlay y quita la app, el enlace de la CLI y el ítem de inicio
 ./uninstall.sh --purge   # además borra tu configuración y las preferencias de la app
 ```
+
+Busca la app en `/Applications` y en `~/Applications`; con `INSTALL_DIR=…` solo mira en esa carpeta. Al cerrarse,
+Inlay devuelve a la pantalla las ventanas de los workspaces no visibles. No toca nada de AeroSpace, AeroMenu ni
+`borders`: para volver a ellos, abre AeroSpace y AeroMenu y ejecuta `brew services start borders`.
 
 No se eliminan la entrada de Accesibilidad (`tccutil reset Accessibility com.davidhiguita.inlay`) ni la
 identidad de firma (bórrala en *Acceso a Llaveros* si quieres).
@@ -211,9 +242,16 @@ DEVELOPER_DIR=/Library/Developer/CommandLineTools swift build
 DEVELOPER_DIR=/Library/Developer/CommandLineTools swift test
 ```
 
-Los tests usan Swift Testing (XCTest no viene en las Command Line Tools). Todas las suites van anidadas en
-`InlayTests` (`extension InlayTests { @Suite @MainActor struct FooTest { ... } }`), que es `.serialized`: los tests
-comparten el modelo global y no pueden ejecutarse en paralelo.
+Los tests usan Swift Testing (XCTest no viene en las Command Line Tools, y ya no queda ningún target XCTest).
+Todas las suites van anidadas en `InlayTests` (`extension InlayTests { @Suite @MainActor struct FooTest { ... } }`),
+que es `.serialized`: los tests comparten el modelo global y no pueden ejecutarse en paralelo.
+
+Para saber qué diría Inlay de un fichero de config cualquiera sin instalar nada (errores y avisos del parser
+real):
+
+```sh
+INLAY_TEST_CONFIG=~/.aerospace.toml scripts/test.sh --filter ShippedConfigsTest | grep -A8 INLAY_TEST_CONFIG
+```
 
 | Ruta | Contenido |
 |---|---|
@@ -223,8 +261,7 @@ comparten el modelo global y no pueden ejecutarse en paralelo.
 | `Sources/Common` | Código compartido por la app y la CLI |
 | `Sources/BuildInfo` | Versión y hash de git, que `build-app.sh` pasa por variables de entorno |
 | `Sources/PrivateApi` | Cabecera de `_AXUIElementGetWindow` |
-| `Tests/InlayTests` | Tests con Swift Testing. En `support/` están las ventanas falsas y demás utilidades |
-| `Sources/AppBundleTests` | Tests XCTest heredados que faltan por migrar (no se compilan por defecto: `INLAY_XCTEST=1`, requiere Xcode) |
+| `Tests/InlayTests` | Tests con Swift Testing. En `support/` están las ventanas falsas y demás utilidades; en `fixtures/`, configs de ejemplo |
 | `Support` | `Info.plist` e icono del bundle |
 | `scripts` | Build, tests, instalación, desinstalación e icono |
 | `axDumps` | Volcados de Accesibilidad de apps reales que usan los tests |

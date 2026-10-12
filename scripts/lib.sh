@@ -10,7 +10,7 @@ CLT_DIR="/Library/Developer/CommandLineTools"
 # system 'inlay' and 'Inlay' are the same file
 CLI_PATH_IN_APP="Contents/Resources/bin/$CLI_NAME"
 
-# Local self-signed identity that 'install.sh --stable-signing' creates and uses
+# Local self-signed identity that 'install.sh' creates and signs with
 SIGN_IDENTITY_NAME="${INLAY_SIGN_IDENTITY_NAME:-Inlay Local Code Signing}"
 # Keychain that holds it. Empty means the login keychain
 SIGN_KEYCHAIN="${INLAY_SIGN_KEYCHAIN:-}"

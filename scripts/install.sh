@@ -4,8 +4,7 @@
 #
 #   scripts/install.sh                      build, install and open Inlay
 #   scripts/install.sh --no-open            build and install only
-#   scripts/install.sh --stable-signing     sign with a local self-signed identity (see below)
-#   scripts/install.sh --adhoc-signing      sign ad hoc even if that identity exists
+#   scripts/install.sh --adhoc-signing      sign ad hoc instead of with the local identity (see below)
 #   scripts/install.sh --import-aerospace   start from your AeroSpace config instead of the default one
 #   INSTALL_DIR=~/Applications scripts/install.sh
 #   INLAY_BIN_DIR=~/bin scripts/install.sh  where to link the 'inlay' CLI
@@ -17,18 +16,19 @@
 #     changed or deleted.
 # Running it again updates the installed app: the running copy is quit first.
 #
-# --stable-signing: macOS ties the Accessibility permission to the signature of the app. With the default ad hoc
-# signature the permission is lost on every rebuild. This option creates, once, a self-signed code signing
-# identity ("Inlay Local Code Signing") in your login keychain and signs with it, so the permission survives.
-# macOS may ask for your keychain password the first time codesign uses the key: choose "Always Allow".
-# Once the identity exists, later runs use it without the option.
+# Signing: macOS ties the Accessibility permission to the signature of the app. So the app is signed with a
+# self-signed code signing identity ("Inlay Local Code Signing") that is created, once, in your login keychain:
+# the permission survives the rebuilds. macOS may ask for your keychain password the first time codesign uses
+# the key: choose "Always Allow". If the identity can't be created or used, the app is signed ad hoc, with a
+# warning. --adhoc-signing skips the identity: with an ad hoc signature the permission is lost on every rebuild.
+# (--stable-signing is still accepted: it's the default now.)
 #
 # AeroSpace, AeroMenu and borders (JankyBorders) do the same job as Inlay. This script never quits them: if one
 # is running it tells you, and leaves Inlay closed until you quit them yourself.
 
 set -euo pipefail
 
-usage() { sed -n '3,28s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,27s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
 check_requirements() {
   local macos swift
@@ -72,23 +72,27 @@ find_conflicts() {
   CONFLICTS="${CONFLICTS# }"
 }
 
-# Sets SIGNED_WITH to 'stable' or 'adhoc'
+# build_app <stable|adhoc>. Sets SIGNED_WITH to 'stable' or 'adhoc': the signature that the build really got
 build_app() {
   local mode="$1"
-  SIGNED_WITH=adhoc
-  if [ "$mode" = auto ]; then
-    if has_signing_identity; then mode=stable; else mode=adhoc; fi
-  fi
   if [ "$mode" = stable ]; then
     note "Signing with a stable identity. macOS may ask for your keychain password: choose \"Always Allow\"."
     if ensure_signing_identity; then
       scripts/build-app.sh --sign-identity "$SIGN_IDENTITY_NAME"
-      SIGNED_WITH=stable
-      return
+    else
+      warn "falling back to an ad hoc signature: the Accessibility permission will be lost on every rebuild."
+      mode=adhoc
     fi
-    warn "falling back to an ad hoc signature: the Accessibility permission will be lost on every rebuild."
   fi
-  scripts/build-app.sh --sign-identity -
+  if [ "$mode" = adhoc ]; then
+    scripts/build-app.sh --sign-identity -
+  fi
+  # build-app.sh falls back to an ad hoc signature on its own when codesign can't use the identity
+  if codesign --display --verbose "build/$APP_NAME.app" 2>&1 | grep -q '^Signature=adhoc$'; then
+    SIGNED_WITH=adhoc
+  else
+    SIGNED_WITH=stable
+  fi
 }
 
 install_app() {
@@ -212,14 +216,14 @@ explain_accessibility() {
   if [ "${SIGNED_WITH:-adhoc}" = adhoc ]; then
     note "This build has an ad hoc signature: macOS forgets the permission every time Inlay is rebuilt or"
     note "reinstalled, and it has to be removed from the list (-) and granted again. To keep it across"
-    note "rebuilds, run once:  scripts/install.sh --stable-signing"
+    note "rebuilds, run scripts/install.sh without --adhoc-signing."
   else
     note "This build is signed with \"$SIGN_IDENTITY_NAME\": the permission survives rebuilds."
   fi
 }
 
 main() {
-  local open_app=true signing=auto import=false
+  local open_app=true signing=stable import=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-open) open_app=false ;;

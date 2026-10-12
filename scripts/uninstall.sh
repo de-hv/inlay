@@ -11,7 +11,7 @@
 # Without --purge your config (~/.config/inlay, ~/.inlay.toml) is kept.
 # Never removed: the Accessibility entry (remove it in System Settings > Privacy & Security > Accessibility, or
 # run 'tccutil reset Accessibility com.davidhiguita.inlay') and the signing identity that
-# 'install.sh --stable-signing' created (delete "Inlay Local Code Signing" in Keychain Access).
+# 'install.sh' created (delete "Inlay Local Code Signing" in Keychain Access).
 #
 # Nothing of AeroSpace, AeroMenu or borders is touched. To go back to them, open AeroSpace and AeroMenu again
 # and run 'brew services start borders'.

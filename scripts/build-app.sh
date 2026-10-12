@@ -3,8 +3,9 @@
 # Builds Inlay.app (the window manager) and the 'inlay' CLI into ./build, using only the Xcode Command Line
 # Tools: swift build + a hand-made bundle + codesign. No Xcode, no Apple ID.
 #
-#   scripts/build-app.sh                          release build, ad hoc signature
+#   scripts/build-app.sh                          release build, signed with the local identity if it exists
 #   scripts/build-app.sh --sign-identity <name>   sign with a code signing identity from the keychain
+#   scripts/build-app.sh --sign-identity -        ad hoc signature
 #
 # Result:
 #   build/Inlay.app/Contents/MacOS/Inlay                         the app
@@ -16,7 +17,9 @@
 #
 # An ad hoc signature is enough to run on this Mac, but macOS identifies an ad hoc signed app by the hash of
 # its code, so after every rebuild the Accessibility permission has to be granted again. A signature made with
-# a stable identity (see 'scripts/install.sh --stable-signing') doesn't have that problem.
+# a stable identity doesn't have that problem: 'scripts/install.sh' creates one ("Inlay Local Code Signing"),
+# and this script signs with it by default once it exists. It never creates the identity: without it, or if
+# codesign can't use it, the signature is ad hoc.
 
 set -euo pipefail
 
@@ -24,12 +27,12 @@ cd "$(dirname "$0")/.."
 # shellcheck source=scripts/lib.sh
 . scripts/lib.sh
 
-usage() { sed -n '3,19s/^# \{0,1\}//p' "$0"; }
+usage() { sed -n '3,22s/^# \{0,1\}//p' "$0"; }
 
 # Always a release build: a debug build calls itself Inlay-Debug and uses another bundle id and socket, so it
 # doesn't fit this bundle. For debugging use 'swift build' and run .build/.../InlayApp directly
 CONFIGURATION="release"
-IDENTITY="${INLAY_SIGN_IDENTITY:--}"
+IDENTITY="${INLAY_SIGN_IDENTITY:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --sign-identity)
@@ -43,6 +46,10 @@ while [ $# -gt 0 ]; do
 done
 
 use_command_line_tools
+
+if [ -z "$IDENTITY" ]; then
+  if has_signing_identity; then IDENTITY="$SIGN_IDENTITY_NAME"; else IDENTITY="-"; fi
+fi
 
 VERSION="$(tr -d '[:space:]' < VERSION)"
 case "$VERSION" in

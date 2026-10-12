@@ -27,8 +27,6 @@ cierra con `pkill`, sin tocar ninguna ventana).
 
 Limitaciones conocidas de esta versión:
 
-- Con firma ad hoc (la de por defecto) hay que volver a dar el permiso de Accesibilidad tras cada recompilación.
-  Ver [Firma estable](#firma-estable---stable-signing).
 - Al arrancar con muchas ventanas en un workspace, *dwindle* las coloca en espiral y las últimas quedan pequeñas.
 - Una ventana que vuelve de minimizada, de pantalla completa nativa o de una app oculta no recupera su sitio:
   divide la ventana enfocada, como una ventana nueva.
@@ -62,8 +60,7 @@ aún no tienes configuración y abre la app. Se puede ejecutar las veces que hag
 | Opción | Efecto |
 |---|---|
 | `--no-open` | No abre Inlay al terminar |
-| `--stable-signing` | Firma con una identidad autofirmada local (ver más abajo) |
-| `--adhoc-signing` | Firma ad hoc aunque esa identidad exista |
+| `--adhoc-signing` | Firma ad hoc en vez de con la identidad local (ver [Firma](#firma)) |
 | `--import-aerospace` | Si no tienes configuración de Inlay, parte de tu `~/.aerospace.toml` en vez de la de por defecto |
 | `INSTALL_DIR=…` | Carpeta donde instalar la app |
 | `INLAY_BIN_DIR=…` | Carpeta donde enlazar la CLI |
@@ -89,14 +86,20 @@ dos ventanas vecinas se tocan (la config incluida usa 14).
   Si Inlay aparece activado en la lista pero sigue pidiéndolo (pasa tras recompilar con firma ad hoc), quítalo
   de la lista con el botón «−» y vuelve a abrir Inlay.
 
-### Firma estable (`--stable-signing`)
+### Firma
 
-macOS asocia el permiso de Accesibilidad a la firma de la app. Con la firma ad hoc por defecto, el permiso se
-pierde **cada vez que se recompila** y hay que volver a darlo. `./install.sh --stable-signing` crea, una sola
-vez, una identidad de firma autofirmada («Inlay Local Code Signing») en tu llavero de inicio de sesión y firma
-con ella, de modo que el permiso se conserva entre compilaciones. macOS puede pedir la contraseña del llavero la
-primera vez que `codesign` usa la clave: elige «Permitir siempre». Si algo falla, se firma ad hoc y se avisa.
-Una vez creada la identidad, las siguientes instalaciones la usan sin tener que repetir la opción.
+macOS asocia el permiso de Accesibilidad a la firma de la app. Por eso `install.sh` firma **por defecto con una
+identidad estable**: crea, una sola vez, una identidad autofirmada («Inlay Local Code Signing») en tu llavero de
+inicio de sesión y firma con ella, de modo que el permiso se conserva entre compilaciones. macOS puede pedir la
+contraseña del llavero la primera vez que `codesign` usa la clave: elige «Permitir siempre». Si la identidad no
+se puede crear o usar, se firma ad hoc y se avisa.
+
+Con `--adhoc-signing` no se usa la identidad: la firma ad hoc sirve para ejecutar Inlay en este Mac, pero el
+permiso se pierde **cada vez que se recompila** y hay que volver a darlo. (`--stable-signing` se sigue
+aceptando: ahora es lo que se hace por defecto.)
+
+`scripts/build-app.sh` firma con esa identidad si ya existe (nunca la crea) y ad hoc si no;
+`scripts/build-app.sh --sign-identity -` fuerza la firma ad hoc.
 
 ### Configuración
 

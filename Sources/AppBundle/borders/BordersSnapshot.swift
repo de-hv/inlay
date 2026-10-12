@@ -65,11 +65,12 @@ struct BordersSnapshot: Equatable, Sendable {
 
 extension BordersSnapshot {
     /// The windows of the visible workspaces that are on the screen where the layout has put them:
-    /// tiling and floating ones. No heuristics: everything comes from the tree.
+    /// the tiling ones, and the normal windows that float. No heuristics of its own: everything comes from the tree,
+    /// and from what the window was taken for when it was detected.
     ///
     /// Left out: the fullscreen window and the tiling windows that it covers, the windows in the macOS native fullscreen,
-    /// the minimized ones, the ones of hidden apps, popups, the windows of the invisible workspaces,
-    /// and the window that is being moved or resized with the mouse
+    /// the minimized ones, the ones of hidden apps, popups, the dialogs and sheets that float on their own,
+    /// the windows of the invisible workspaces, and the window that is being moved or resized with the mouse
     @MainActor
     static func candidatesFromModel() -> [BorderCandidate] {
         let focused = focus.windowOrNil
@@ -94,7 +95,9 @@ extension BordersSnapshot {
             }
             let area = monitor.visibleRectPaddedByOuterGaps
             for window in workspace.floatingWindowsContainer.children.filterIsInstance(of: Window.self) {
-                guard let rect = window.lastKnownFloatingRect else { continue }
+                // A dialog comes and goes with the window it belongs to. Only the windows that the user sees as windows
+                // are decorated. A dialog that the user made a tiling window is in the tiling tree, and it has a border there
+                guard window.detectedType != .dialog, let rect = window.lastKnownFloatingRect else { continue }
                 // A floating window that was made fullscreen
                 let coversMonitor = rect.minX <= area.minX && rect.minY <= area.minY && rect.maxX >= area.maxX && rect.maxY >= area.maxY
                 if !coversMonitor { add(window, rect, isFloating: true) }

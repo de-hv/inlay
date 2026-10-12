@@ -11,6 +11,10 @@ open class Window: TreeNode, Hashable {
     var isFullscreen: Bool = false
     var noOuterGapsInFullscreen: Bool = false
     var layoutReason: LayoutReason = .standard
+    /// What the heuristics took the window for, the last time they decided where it goes. See: AxUiElementWindowType.
+    /// A dialog floats on its own. A normal window floats because the user or the config said so, and it is still
+    /// a normal window: the tree alone can't tell them apart
+    var detectedType: AxUiElementWindowType = .window
     /// The place in the tiling tree that the window left because of macOS. See: TilingSlot
     var tilingSlot: TilingSlot? = nil
 

@@ -181,9 +181,11 @@ gaps.outer.right =      14
 
 # The borders of the windows
 [borders]
-    # Draw a border around every tiling and floating window of the visible workspaces.
+    # Draw a border around every normal window of the visible workspaces, tiling or floating.
     # No border for: fullscreen windows (the fullscreen of Inlay and the native one of macOS),
-    # minimized windows, windows of hidden apps, popups and dialogs
+    # minimized windows, windows of hidden apps, popups, and the dialogs and sheets that float on their own
+    # (what Inlay detects as a dialog: see 'inlay debug-windows'). A normal window that you make floating,
+    # with 'layout floating' or with an 'on-window-detected' rule, keeps its border
     # Fallback value (if you omit the key): enabled = true
     enabled = true
 

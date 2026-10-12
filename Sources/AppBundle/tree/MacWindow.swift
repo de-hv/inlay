@@ -29,6 +29,7 @@ final class MacWindow: Window {
         // Must be a part of the atomic section, because it may change the tree to make room for the window
         let data = unbindAndGetBindingDataForNewWindow(windowType, workspace, window: nil)
         let window = MacWindow(windowId, macApp, lastFloatingSize: rect?.size, parent: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+        window.detectedType = windowType
         allWindowsMap[windowId] = window
         StartupArrangement.noteDetected(window)
 
@@ -207,6 +208,7 @@ extension Window {
         } else {
             let macWindow = asMacWindow()
             let windowType = try await macWindow.macApp.getAxUiElementWindowType(macWindow.windowId, getWindowLevel(for: macWindow.windowId), cm)
+            detectedType = windowType
             data = unbindAndGetBindingDataForNewWindow(windowType, workspace, window: self)
         }
         bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)

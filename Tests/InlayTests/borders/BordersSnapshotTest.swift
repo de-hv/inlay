@@ -54,6 +54,49 @@ extension InlayTests {
             )
         }
 
+        /// A dialog floats because the heuristics said so, and it has no border. A normal window that the user
+        /// made floating is in the same container, and it has one
+        @Test func testDialogHasNoBorder_aNormalFloatingWindowHasOne() async throws {
+            let workspace = focus.workspace
+            let floating = workspace.floatingWindowsContainer
+            let tiling = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+            let normal = TestWindow.new(id: 2, parent: floating, rect: Rect(topLeftX: 100, topLeftY: 100, width: 640, height: 480))
+            let dialog = TestWindow.new(id: 3, parent: floating, rect: Rect(topLeftX: 300, topLeftY: 300, width: 400, height: 200))
+            dialog.detectedType = .dialog
+            assertEquals(normal.detectedType, .window)
+
+            assertEquals(tiling.focusWindow(), true)
+            try await workspace.layoutWorkspace()
+            assertEquals(summary(), ["1 \(accent)", "2 \(inactive)"])
+            assertEquals(normal.focusWindow(), true)
+            assertEquals(summary(), ["1 \(inactive)", "2 #BF5AF2"])
+            // The focused dialog: nothing takes the color of the focused window
+            assertEquals(dialog.focusWindow(), true)
+            assertEquals(summary(), ["1 \(inactive)", "2 \(inactive)"])
+            // Not with the color of a mode, and not with the glow either
+            config.modes["resize"] = Mode(bindings: [:])
+            config.borders.modeColors = ["resize": .rgba(Rgba(hex: "#30D158").orDie())]
+            config.borders.glow = true
+            activeMode = "resize"
+            assertEquals(summary(), ["1 \(inactive)", "2 \(inactive)"])
+            activeMode = mainModeId
+
+            // The user makes the dialog a tiling window: it is a window of the tree like any other
+            _ = await parseCommand("layout tiling").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            assertEquals(summary(), ["1 \(inactive)", "3 \(accent)", "2 \(inactive)"])
+            // And back: it is still a dialog
+            _ = await parseCommand("layout floating").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            assertEquals(summary(), ["1 \(inactive)", "2 \(inactive)"])
+
+            // The user makes a normal window floating: it keeps its border
+            assertEquals(tiling.focusWindow(), true)
+            _ = await parseCommand("layout floating").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            assertEquals(Set(summary()), ["1 #BF5AF2", "2 \(inactive)"])
+        }
+
         @Test func testGapsLeaveRoomForTheBorder() async throws {
             config.gaps = Gaps(
                 inner: .init(vertical: .constant(14), horizontal: .constant(14)),

@@ -4,6 +4,7 @@ import AppKit
 final class TestWindow: Window, CustomStringConvertible {
     private var _rect: Rect?
     var isMacosFullscreenForTest = false
+    var isMacosMinimizedForTest = false
 
     @MainActor
     private init(_ id: UInt32, _ parent: NonLeafTreeNodeObject, _ adaptiveWeight: CGFloat, _ rect: Rect?, index: Int) {
@@ -66,4 +67,5 @@ final class TestWindow: Window, CustomStringConvertible {
     }
 
     override func isMacosFullscreen(_ cm: CancellationMode) async throws -> Bool { isMacosFullscreenForTest }
+    override func isMacosMinimized(_ cm: CancellationMode) async throws -> Bool { isMacosMinimizedForTest }
 }

@@ -360,6 +360,121 @@ extension InlayTests {
             assertRects([1: (0, 0, 1400, 1079), 3: (1400, 0, 520, 1079)])
         }
 
+        /// The refresh session notices that macOS made a window fullscreen or minimized it. See: normalizeLayoutReason
+        @Test func testMacosFullscreenAndMinimize_previousSiblingTakesTheSpace_andTheWindowComesBackAsNew() async throws {
+            // Otherwise normalizeLayoutReason asks the real app of the window whether it is hidden
+            config.automaticallyUnhideMacosHiddenApps = true
+            for minimize in [false, true] {
+                for window in workspace.allLeafWindowsRecursive + macosMinimizedWindowsContainer.children.filterIsInstance(of: Window.self) {
+                    window.unbindFromParent()
+                }
+                workspace.rootTilingContainer.apply {
+                    TestWindow.new(id: 1, parent: $0, adaptiveWeight: 800)
+                    TestWindow.new(id: 2, parent: $0, adaptiveWeight: 600)
+                    TestWindow.new(id: 3, parent: $0, adaptiveWeight: 520)
+                }
+                assertEquals(window(3).focusWindow(), true)
+                let leaving = window(2)
+
+                if minimize { leaving.isMacosMinimizedForTest = true } else { leaving.isMacosFullscreenForTest = true }
+                try await normalizeLayoutReason()
+                workspace.normalizeContainers()
+                try await workspace.layoutWorkspace()
+                assertTrue(minimize ? leaving.parent is MacosMinimizedWindowsContainer : leaving.parent is MacosFullscreenWindowsContainer)
+                assertRects([1: (0, 0, 1400, 1079), 3: (1400, 0, 520, 1079)])
+
+                // It comes back as a new window: it splits the focused one
+                assertEquals(window(1).focusWindow(), true)
+                leaving.isMacosMinimizedForTest = false
+                leaving.isMacosFullscreenForTest = false
+                try await normalizeLayoutReason()
+                workspace.normalizeContainers()
+                try await workspace.layoutWorkspace()
+                assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2), .window(3)]))
+                assertRects([1: (0, 0, 700, 1079), 2: (700, 0, 700, 1079), 3: (1400, 0, 520, 1079)])
+            }
+        }
+
+        @Test func testMacosNativeMinimize_twoSiblingsInANestedContainer_containerIsFlattened() async throws {
+            config.automaticallyUnhideMacosHiddenApps = true
+            try await openWindow(1)
+            try await openWindow(2)
+            try await openWindow(3)
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(2), .window(3)])]))
+
+            window(3).isMacosMinimizedForTest = true
+            try await normalizeLayoutReason()
+            workspace.normalizeContainers()
+            try await workspace.layoutWorkspace()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
+            assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 1079)])
+        }
+
+        // MARK: - The tree stays sound
+
+        /// Extreme ratios and deep trees: every window keeps a positive size, and the windows tile the whole workspace
+        @Test func testExtremeSplitRatios_noWindowGetsANonPositiveSize() async throws {
+            for ratio in [0.1, 0.9] as [CGFloat] {
+                for window in workspace.allLeafWindowsRecursive { window.unbindFromParent() }
+                config.tiling = TilingConfig(newWindowPlacement: .dwindle, splitRatio: ratio)
+                for id in 1 ... 8 as ClosedRange<UInt32> {
+                    try await openWindow(id)
+                    assertSound("ratio \(ratio), \(id) windows")
+                }
+                // Close in an order that isn't the reverse of the opening
+                for id in [3, 1, 8, 5, 2, 7, 6] as [UInt32] {
+                    try await close(id)
+                    assertSound("ratio \(ratio), closed \(id)")
+                }
+                assertRects([4: (0, 0, 1920, 1079)])
+            }
+        }
+
+        /// A long pseudo-random session of the things a user does. After every step the tree must be normalized
+        /// (no empty container, no container with the orientation of its parent), every weight and every frame
+        /// must be positive, and the frames must tile the workspace without holes or overlaps
+        @Test func testRandomSession_theTreeStaysSound() async throws {
+            var seed: UInt64 = 0x1D1A7
+            func random(_ bound: Int) -> Int {
+                seed = seed &* 6364136223846793005 &+ 1442695040888963407 // Deterministic: a failure can be reproduced
+                return Int((seed >> 33) % UInt64(bound))
+            }
+            let commands = [
+                "layout floating tiling", "swap left", "swap down", "move right", "move up", "join-with left", "join-with down",
+                "resize smart +200", "resize smart -200", "balance-sizes", "layout horizontal vertical", "flatten-workspace-tree",
+                "focus left", "focus right", "focus up", "focus down", "split opposite",
+            ]
+            unsafe Self.issues = 0
+            var nextId: UInt32 = 1
+            var log: [String] = []
+            for step in 0 ..< 400 {
+                let tiling = workspace.rootTilingContainer.allLeafWindowsRecursive
+                let all = workspace.allLeafWindowsRecursive
+                switch random(10) {
+                    case 0 ..< 4 where tiling.count < 9, _ where all.isEmpty:
+                        log.append("open \(nextId)")
+                        try await openWindow(nextId)
+                        nextId += 1
+                    case 4 ..< 6:
+                        let id = all[random(all.count)].windowId
+                        log.append("close \(id)")
+                        try await close(id)
+                    case 6:
+                        let window = all[random(all.count)]
+                        log.append("focus \(window.windowId)")
+                        _ = window.focusWindow()
+                    default:
+                        let command = commands[random(commands.count)]
+                        log.append(command)
+                        // The command may not apply (nothing in that direction, floating window focused...). That's fine
+                        _ = await parseCommand(command).cmdOrDie.run(.defaultEnv, .emptyStdin)
+                        try await workspace.layoutWorkspace()
+                }
+                assertSound("step \(step): \(log.suffix(12).joined(separator: " | "))")
+                if unsafe Self.issues > 0 { return }
+            }
+        }
+
         @Test func testMoveNodeToWorkspace() async throws {
             workspace.rootTilingContainer.apply {
                 TestWindow.new(id: 1, parent: $0, adaptiveWeight: 800)
@@ -594,6 +709,43 @@ extension InlayTests {
                 }
             }
         }
+
+        /// Normalized, positive weights and frames, and the frames tile the workspace
+        private func assertSound(_ context: String, sourceLocation: SourceLocation = #_sourceLocation) {
+            let root = workspace.rootTilingContainer
+            func fail(_ message: String) {
+                unsafe Self.issues += 1
+                Issue.record("\(message)\n\(context)\n\(root.layoutDescription)", sourceLocation: sourceLocation)
+            }
+            func visit(_ container: TilingContainer) {
+                if !container.isRootContainer {
+                    if container.children.count < 2 { fail("A nested container with \(container.children.count) children") }
+                    if (container.parent as? TilingContainer)?.orientation == container.orientation { fail("A container with the orientation of its parent") }
+                }
+                for child in container.children {
+                    let weight = child.getWeight(container.orientation)
+                    if !(weight > 0) || !weight.isFinite { fail("Weight \(weight)") }
+                    if let child = child as? TilingContainer { visit(child) }
+                }
+            }
+            visit(root)
+            let windows = root.allLeafWindowsRecursive
+            if windows.isEmpty { return }
+            let rects = windows.compactMap { ($0 as? TestWindow)?.rect }
+            if rects.count != windows.count { return fail("A tiling window without a frame") }
+            for rect in rects where !(rect.width > 0 && rect.height > 0) { fail("Frame \(rect)") }
+            let area = rects.reduce(0) { $0 + $1.width * $1.height }
+            if abs(area - 1920 * 1079) > 1 { fail("The frames cover \(area) of \(1920 * 1079)") }
+            for (i, a) in rects.enumerated() {
+                for b in rects[(i + 1)...] {
+                    let overlapX = min(a.maxX, b.maxX) - max(a.minX, b.minX)
+                    let overlapY = min(a.maxY, b.maxY) - max(a.minY, b.minY)
+                    if overlapX > 0.001 && overlapY > 0.001 { fail("\(a) overlaps \(b)") }
+                }
+            }
+        }
+
+        nonisolated(unsafe) private static var issues = 0
 
         private func assertNormalized(_ container: TilingContainer, sourceLocation: SourceLocation = #_sourceLocation) {
             if !container.isRootContainer {

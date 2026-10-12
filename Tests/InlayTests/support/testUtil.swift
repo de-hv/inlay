@@ -32,6 +32,12 @@ func setUpWorkspacesForTests() {
             child.unbindFromParent()
         }
     }
+    // The containers that don't belong to any workspace
+    for container in [macosMinimizedWindowsContainer, macosPopupWindowsContainer] as [TreeNode] {
+        for child in container.children {
+            child.unbindFromParent()
+        }
+    }
     check(Workspace.get(byName: "setUpWorkspacesForTests").focusWorkspace())
     Workspace.garbageCollectUnusedWorkspaces()
     check(focus.workspace.isEffectivelyEmpty)

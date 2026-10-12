@@ -164,14 +164,18 @@ extension TilingContainer {
         var point = frame.point
         var virtualPoint = frame.virtual.topLeftCorner
 
-        guard let delta = ((orientation == .h ? width : height) - CGFloat(children.sumOfDouble { $0.getWeight(orientation) }))
-            .div(children.count) else { return [] }
+        if children.isEmpty { return [] }
+        let rawGap = gaps.inner.get(orientation).toDouble()
+        let weights = normalizedWeights(
+            children.map { $0.getWeight(orientation) },
+            toFill: orientation == .h ? width : height,
+            minimum: max(rawGap, 0) + 1,
+        )
 
         var result: [(child: TreeNode, frame: LayoutFrame)] = []
         let lastIndex = children.indices.last
         for (i, child) in children.enumerated() {
-            child.setWeight(orientation, child.getWeight(orientation) + delta)
-            let rawGap = gaps.inner.get(orientation).toDouble()
+            child.setWeight(orientation, weights[i])
             // Gaps. Consider 4 cases:
             // 1. Multiple children. Layout first child
             // 2. Multiple children. Layout last child
@@ -194,5 +198,34 @@ extension TilingContainer {
             point = orientation == .h ? point.addingXOffset(child.hWeight) : point.addingYOffset(child.vWeight)
         }
         return result
+    }
+}
+
+/// The weights of the children of a container, changed so that their sum is the size of the container.
+///
+/// Like in AeroSpace, every child takes the same share of the difference. That alone can leave a small child with
+/// a negative weight, and its window with a negative size that overlaps the neighbors: a window is added with an
+/// average weight next to a small one, or a small window is shrunk with the resize command. So the children that
+/// would end up under `minimum` (the inner gap plus one point: the smallest weight that leaves room for a window)
+/// get `minimum`, and the rest of the children share the difference that is left.
+/// If there is no room for `minimum` for everybody, all the children get the same weight
+func normalizedWeights(_ weights: [CGFloat], toFill size: CGFloat, minimum: CGFloat) -> [CGFloat] {
+    if weights.isEmpty { return [] }
+    let count = CGFloat(weights.count)
+    let delta = (size - weights.reduce(0, +)) / count
+    var result = weights.map { $0 + delta }
+    if result.allSatisfy({ $0 >= minimum }) { return result } // Always the case, but for the corner cases above
+    let equal = Array(repeating: size / count, count: weights.count)
+    if !(size >= minimum * count) { return equal }
+    var pinned: Set<Int> = []
+    while true {
+        let tooSmall = result.indices.filter { !pinned.contains($0) && !(result[$0] >= minimum) }
+        if tooSmall.isEmpty { return result }
+        pinned.formUnion(tooSmall)
+        let free = weights.indices.filter { !pinned.contains($0) }
+        if free.isEmpty { return equal }
+        let delta = (size - minimum * CGFloat(pinned.count) - free.reduce(0) { $0 + weights[$1] }) / CGFloat(free.count)
+        for index in pinned { result[index] = minimum }
+        for index in free { result[index] = weights[index] + delta }
     }
 }

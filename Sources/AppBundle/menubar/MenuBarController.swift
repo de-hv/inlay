@@ -19,6 +19,12 @@ final class MenuBarController: NSObject {
     private var slide: (from: String, start: ContinuousClock.Instant)?
     private var slideTask: Task<Void, Never>?
     private var lastFocusedWorkspace: String?
+    /// The only way to the image of the button. See: MenuBarDrawKey
+    private lazy var redraw = CoalescedRedraw(
+        name: "menu-bar.draw",
+        key: { [weak self] in self?.drawKey() },
+        draw: { [weak self] in self?.draw($0) },
+    )
 
     private static let slideDuration: Duration = .milliseconds(180)
     private static let frameInterval: Duration = .milliseconds(16)
@@ -44,15 +50,18 @@ final class MenuBarController: NSObject {
             shield.onClick = { [weak self] in self?.pressed() }
             button.addSubview(shield)
             button.setAccessibilityHelp(Strings.Item.accessibilityHelp)
-            // A fixed color isn't a template image, so it has to follow the menu bar by hand
+            // A fixed color isn't a template image, so it has to follow the menu bar by hand.
+            // AppKit also reports a change every time it redraws the copies of the item for the other displays,
+            // which is every time the image changes: the request must never draw on its own. See: CoalescedRedraw
             appearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
-                Task { @MainActor in self?.draw() }
+                MainActor.assumeIsolated { self?.redraw.request("appearance") }
             }
         }
         // The accent color, and the scale of the screens
-        for name in [NSColor.systemColorsDidChangeNotification, NSApplication.didChangeScreenParametersNotification] {
+        let reasons = [(NSColor.systemColorsDidChangeNotification, "system-colors"), (NSApplication.didChangeScreenParametersNotification, "screens")]
+        for (name, reason) in reasons {
             notificationTokens.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                Task { @MainActor in self?.draw() }
+                MainActor.assumeIsolated { self?.redraw.request(reason) }
             })
         }
         MenuBarStore.shared.onChange = { [weak self] in self?.render($0) }
@@ -79,25 +88,31 @@ final class MenuBarController: NSObject {
             case .paused: Strings.Menu.paused
             case .needsAccessibility: Strings.Menu.needsAccessibility
         }
-        draw()
+        redraw.drawIfChanged()
     }
 
     // MARK: - Drawing
 
-    private func draw() {
-        guard let state, let button = statusItem?.button else { return }
-        let layout = MenuBarLayout.make(state.snapshot, state.config, transition: currentTransition(), measure: MenuBarFont.size)
-        let palette = MenuBarPalette.resolve(
-            state.config,
-            style: layout.style,
-            isDarkBar: button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua,
+    private func drawKey() -> MenuBarDrawKey? {
+        guard let state, let button = statusItem?.button else { return nil }
+        // A template image is the same over any menu bar, so the appearance of the button is left out of its key:
+        // whatever AppKit does to the appearance, it can't ask for a new image. `mayShowMode` is true at least
+        // whenever the layout draws the initial of the mode (MenuBarLayout.needsColor)
+        let mayShowMode = state.config.showMode && state.snapshot.nonMainMode != nil
+        let followsBar = !MenuBarPalette.isTemplate(state.config.colors, needsColor: mayShowMode)
+        return MenuBarDrawKey(
+            state: state,
+            transition: currentTransition(),
+            isDarkBar: followsBar && button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua,
             systemAccent: .systemAccent,
-            needsColor: layout.needsColor,
+            scale: NSScreen.screens.map(\.backingScaleFactor).max() ?? 2,
         )
-        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
-        let image = MenuBarRenderer.image(layout, palette, scale: scale)
-        image?.accessibilityDescription = Strings.Item.accessibilityDescription(state.snapshot)
-        button.image = image
+    }
+
+    private func draw(_ key: MenuBarDrawKey) {
+        let image = MenuBarRenderer.image(key)
+        image?.accessibilityDescription = Strings.Item.accessibilityDescription(key.state.snapshot)
+        statusItem?.button?.image = image
     }
 
     private func startSlide(from workspace: String) {
@@ -106,7 +121,7 @@ final class MenuBarController: NSObject {
         slideTask = Task { [weak self] in
             while let self, self.slide != nil, !Task.isCancelled {
                 try? await Task.sleep(for: Self.frameInterval)
-                self.draw()
+                self.redraw.drawIfChanged()
             }
             self?.slideTask = nil
         }

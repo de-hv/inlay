@@ -33,8 +33,7 @@ struct MenuBarPalette: Equatable, Sendable {
         typealias M = MenuBarMetrics
         let colors = config.colors
         // The marker of a binding mode only has a color of its own if 'accent' gives it one
-        let isTemplate = allowsTemplate && !(needsColor && colors.accent != .auto)
-            && colors.focused == .auto && colors.occupied == .auto && colors.empty == .auto
+        let isTemplate = allowsTemplate && Self.isTemplate(colors, needsColor: needsColor)
         // A template image is drawn in black: only its alpha channel matters
         let base: Rgba = isTemplate || !isDarkBar ? .black : .white
         func fixed(_ color: ConfigColor) -> Rgba? { color == .auto ? nil : color.resolve(auto: base, systemAccent: systemAccent) }
@@ -58,6 +57,11 @@ struct MenuBarPalette: Equatable, Sendable {
             // White, like the system does over the accent color, unless the accent is too light for it
             modeInitial: accent.map { $0.luminance > 0.6 ? .black : .white } ?? focusedName,
         )
+    }
+
+    /// A template image doesn't depend on the menu bar behind it: macOS colors it
+    static func isTemplate(_ colors: MenuBarColors, needsColor: Bool) -> Bool {
+        !(needsColor && colors.accent != .auto) && colors.focused == .auto && colors.occupied == .auto && colors.empty == .auto
     }
 
     func nameColor(of cell: MenuBarLayout.Cell) -> Rgba { cell.isOccupied ? occupiedName : emptyName }

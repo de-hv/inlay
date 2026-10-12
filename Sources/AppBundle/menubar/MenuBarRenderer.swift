@@ -1,27 +1,71 @@
 import AppKit
 import Common
 import SwiftUI
+import os
 
 extension MenuBarFont {
-    var nsFont: NSFont {
+    // Immutable fonts, never changed after they are created: safe to read from any thread
+    nonisolated(unsafe) private static let fonts: [MenuBarFont: NSFont] = {
         typealias M = MenuBarMetrics
-        return switch self {
-            case .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold)
-            case .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium)
-            case .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy)
-            case .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy)
-        }
+        return [
+            .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold),
+            .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium),
+            .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy),
+            .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy),
+        ]
+    }()
+
+    /// Created once: making a font is slow, compared to everything else that the layout of the item does
+    var nsFont: NSFont { unsafe Self.fonts[self].orDie() }
+
+    private struct Measured: Hashable {
+        var string: String
+        var font: MenuBarFont
     }
+
+    /// The texts of the item are the names of the workspaces and the initials of the modes: a few, always the same
+    private static let sizes = OSAllocatedUnfairLock<[Measured: CGSize]>(initialState: [:])
+    private static let maxCachedSizes = 512
 
     /// The real `MenuBarLayout.Measure`
     static func size(of string: String, _ font: MenuBarFont) -> CGSize {
-        NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
+        let measured = Measured(string: string, font: font)
+        if let size = sizes.withLock({ $0[measured] }) { return size }
+        let size = NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
+        sizes.withLock {
+            if $0.count >= maxCachedSizes { $0.removeAll() }
+            $0[measured] = size
+        }
+        return size
     }
+}
+
+/// Everything that the image of the menu bar item is drawn from. Two equal keys give the same image
+struct MenuBarDrawKey: Equatable, Sendable {
+    var state: MenuBarState
+    /// The frame of the slide of the focus marker
+    var transition: MenuBarFocusTransition? = nil
+    var isDarkBar: Bool
+    var systemAccent: Rgba
+    /// Pixels per point
+    var scale: CGFloat
 }
 
 /// Draws a `MenuBarLayout` with a `MenuBarPalette`
 @MainActor
 enum MenuBarRenderer {
+    static func image(_ key: MenuBarDrawKey) -> NSImage? {
+        let layout = MenuBarLayout.make(key.state.snapshot, key.state.config, transition: key.transition, measure: MenuBarFont.size)
+        let palette = MenuBarPalette.resolve(
+            key.state.config,
+            style: layout.style,
+            isDarkBar: key.isDarkBar,
+            systemAccent: key.systemAccent,
+            needsColor: layout.needsColor,
+        )
+        return image(layout, palette, scale: key.scale)
+    }
+
     /// - Parameter scale: pixels per point
     static func image(_ layout: MenuBarLayout, _ palette: MenuBarPalette, scale: CGFloat) -> NSImage? {
         guard let bitmap = bitmap(layout, palette, scale: scale) else { return nil }

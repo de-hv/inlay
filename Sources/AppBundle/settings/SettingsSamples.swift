@@ -14,7 +14,8 @@ let renderSettingsFlag = "--render-settings"
 func renderSettingsSamples(to directory: URL, config: URL?) throws {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     let text = try String(contentsOf: config ?? defaultConfigUrl, encoding: .utf8)
-    _ = NSApplication.shared
+    // Always the dark appearance, whatever the one of this Mac is: the images don't depend on it
+    NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
     let url = newUserConfigUrl
     ServerState.shared.axPermissionStatus = .granted
     ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now.addingTimeInterval(-120), url: url, errorCount: 0, warningCount: 0, isApplied: true)
@@ -28,7 +29,6 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     for (name, view) in tabs {
         let hosting = NSHostingView(rootView: view)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: .darkAqua)
         window.contentView = hosting
         window.setContentSize(hosting.fittingSize)
         hosting.layoutSubtreeIfNeeded()

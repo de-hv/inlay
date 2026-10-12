@@ -184,7 +184,73 @@ extension InlayTests {
             assertEquals(workspace.floatingWindows.map(\.windowId), [9])
         }
 
+        // MARK: - The 'on-window-detected' rules
+
+        /// The windows that are already open go to the workspaces of their rules first, and then every workspace
+        /// is arranged: not one grid with all of them in the visible workspace
+        @Test func testTheRulesRunForTheWindowsThatAreAlreadyOpen() async throws {
+            config.onWindowDetected = rules([1: "term", 2: "code", 3: "term", 5: "code", 6: "code", 7: "code", 8: "code"])
+            StartupArrangement.begin()
+            for id in 1 ... 9 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            StartupArrangement.finish()
+
+            assertEquals(Workspace.get(byName: "term").rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
+            assertEquals(
+                Workspace.get(byName: "code").rootTilingContainer.layoutDescription,
+                .v_tiles([.h_tiles([.window(2), .window(5), .window(6)]), .h_tiles([.window(7), .window(8)])]),
+            )
+            // The windows without a rule stay in the workspace where they were found
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(4), .window(9)]))
+        }
+
+        /// A rule can make a window float: it isn't a part of the grid
+        @Test func testARuleThatMakesTheWindowFloat() async throws {
+            config.onWindowDetected = [
+                WindowDetectedCallback(matcher: .command(parseCommand("test %{window-id} = 2").cmdOrDie), rawRun: parseCommand("layout floating").cmdOrDie),
+            ]
+            StartupArrangement.begin()
+            for id in 1 ... 4 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            StartupArrangement.finish()
+            assertEquals(workspace.floatingWindows.map(\.windowId), [2])
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.h_tiles([.window(1), .window(3)]), .window(4)]))
+        }
+
+        /// 'enable on': the rules only run for the windows that appeared while Inlay was paused. A window that was
+        /// moved away from the workspace of its rule before the pause stays where it was put
+        @Test func testResume_theRulesOnlyRunForTheNewWindows() async throws {
+            config.onWindowDetected = rules([1: "code", 2: "code", 3: "code"])
+            StartupArrangement.begin()
+            for id in 1 ... 2 as ClosedRange<UInt32> { await detectAndRunRules(id) }
+            StartupArrangement.finish()
+            let code = Workspace.get(byName: "code")
+            assertEquals(code.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(2)]))
+            // The user moves window 2 somewhere else
+            _ = window(2).bindAsFloatingWindow(to: workspace)
+
+            StartupArrangement.begin() // enable on
+            await detectAndRunRules(3)
+            StartupArrangement.finish()
+            assertEquals(workspace.floatingWindows.map(\.windowId), [2])
+            assertEquals(code.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .window(3)]))
+        }
+
         // MARK: - Helpers
+
+        /// A rule per window: the window goes to the workspace
+        private func rules(_ workspaces: [UInt32: String]) -> [WindowDetectedCallback] {
+            workspaces.sorted { $0.key < $1.key }.map { id, workspace in
+                WindowDetectedCallback(
+                    matcher: .command(parseCommand("test %{window-id} = \(id)").cmdOrDie),
+                    rawRun: parseCommand("move-node-to-workspace \(workspace)").cmdOrDie,
+                )
+            }
+        }
+
+        /// The same as MacWindow.getOrRegister: the window is found in the focused workspace, and then its rules run
+        private func detectAndRunRules(_ id: UInt32) async {
+            detect(id, in: workspace)
+            await runOnWindowDetected(ifConventional: window(id))
+        }
 
         /// Inlay starts with `count` windows open in the workspace: 1, 2, ... They are found in one refresh session
         private func startWith(_ count: Int) async throws {

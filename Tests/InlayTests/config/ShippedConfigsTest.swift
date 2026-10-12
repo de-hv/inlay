@@ -1,5 +1,6 @@
 @testable import AppBundle
 import Common
+import CryptoKit
 import Foundation
 import Testing
 
@@ -29,6 +30,30 @@ extension InlayTests {
             // It is the config that the app falls back to
             assertEquals(defaultConfigUrl.lastPathComponent, "inlay.toml")
             assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8))
+        }
+
+        /// install.sh replaces a config that is identical to a default config that Inlay has shipped, and only such
+        /// a config. The list of their hashes must have the inlay.toml of right now: otherwise the config that
+        /// this version installs would be taken for the user's own by the next one, and never updated.
+        /// It fails after a change in inlay.toml until scripts/update-default-config-hashes.sh is run
+        @Test func testBuiltInConfig_isInTheListOfDefaultConfigs() throws {
+            let list = try String(contentsOf: projectRoot.appending(path: "scripts/default-config-hashes.txt"), encoding: .utf8)
+            let entries = list.split(separator: "\n").filter { !$0.hasPrefix("#") }.map { $0.components(separatedBy: "  ") }
+            // "<sha256>  <the file it was>", the format that install.sh looks for
+            for entry in entries {
+                assertEquals(entry.count, 2, additionalMsg: "\(entry)")
+                assertEquals(entry[0].count, 64, additionalMsg: "\(entry)")
+                assertEquals(entry[0].allSatisfy { $0.isHexDigit && !$0.isUppercase }, true, additionalMsg: "\(entry)")
+            }
+            let hashes = entries.map { $0[0] }
+            assertEquals(hashes.count, Set(hashes).count)
+            let current = SHA256.hash(data: try Data(contentsOf: projectRoot.appending(path: "inlay.toml"))).map { String(format: "%02x", $0) }.joined()
+            assertEquals(hashes.contains(current), true, additionalMsg: "inlay.toml has changed: run scripts/update-default-config-hashes.sh and commit the result")
+            assertEquals(entries.last, [current, "inlay.toml"])
+            // The default configs of the versions before inlay.toml: the config of AeroSpace, without any rule.
+            // It is the one that the first installations got
+            assertEquals(entries.filter { $0[1] == "docs/config-examples/default-config.toml" }.count, 11)
+            assertTrue(hashes.contains("40f8d6dea755c66aeacf63e7a8d74a033b1804373b4935cd3c2fe53b014cdd76"))
         }
 
         /// What the built-in config gives to somebody who installs Inlay without a config of their own

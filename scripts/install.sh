@@ -10,13 +10,23 @@
 #     across rebuilds (see "Signing" below);
 #   - installs it into /Applications (or ~/Applications if /Applications isn't writable);
 #   - links the 'inlay' CLI into ~/.local/bin, /opt/homebrew/bin or /usr/local/bin;
-#   - creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo, only if you have no Inlay config
-#     yet (an existing config, file or symbolic link, is never changed, replaced or deleted), and then asks
-#     whether you prefer a symbolic link to a config file of your own instead of that copy;
+#   - creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo if you have no Inlay config yet,
+#     and then asks whether you prefer a symbolic link to a config file of your own instead of that copy
+#     (what happens to a config that you already have: see "Your config" below);
 #   - opens Inlay and tells you what to do the first time (the Accessibility permission).
 # Running it again updates the installed app: the running copy is quit first.
 #
+# Your config: a config that you already have is yours, and it is never edited, replaced or deleted. With one
+# exception: a config that is identical, byte for byte, to a default config that a previous version of Inlay
+# installed (scripts/default-config-hashes.txt) was never edited by anybody, so it is replaced by the current
+# inlay.toml, and the old one is kept next to it as inlay.toml.backup-<date>. Any other config is kept as it
+# is, and the script says so: what is new in the inlay.toml of the repo is not in it. --reset-config is how
+# you switch to the config of the repo on purpose.
+#
 # Options (none of them is needed):
+#   --reset-config         replace your config by the inlay.toml of the repo, whatever is in it. Your config is
+#                          kept next to it as inlay.toml.backup-<date>. If your config is a symbolic link, only
+#                          the link is replaced (it becomes the backup): the file it points to is not touched
 #   --config-link <path>   make the config a symbolic link to <path> instead of asking. Only when you have no
 #                          Inlay config yet, and only if <path> exists: otherwise the copy is kept
 #   --no-prompt            don't ask anything: keep the copy of inlay.toml. It's what happens on its own
@@ -39,7 +49,7 @@
 
 set -euo pipefail
 
-usage() { sed -n '3,39s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,49s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
 check_requirements() {
   local macos swift
@@ -164,25 +174,96 @@ aerospace_config() {
   return 1
 }
 
-# ensure_config <import aerospace: true|false> <link: a path, or empty> <prompt: true|false>
-# Creates the config only when there is none. Never touches an existing one.
+# Prints a name for the backup of <config> that isn't taken: <config>.backup-20261012-153000
+backup_path() {
+  local base n=1 candidate
+  base="$1.backup-$(date +%Y%m%d-%H%M%S)"
+  candidate="$base"
+  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
+    n=$((n + 1))
+    candidate="$base-$n"
+  done
+  printf '%s\n' "$candidate"
+}
+
+# replace_config <config>. Puts the inlay.toml of the repo in the place of the config. The config is renamed, not
+# copied: if it is a symbolic link, it is the link that becomes the backup, and the file it points to is never
+# written, moved or deleted. Sets CONFIG_BACKUP
+replace_config() {
+  local config="$1"
+  CONFIG_BACKUP="$(backup_path "$config")"
+  mv "$config" "$CONFIG_BACKUP"
+  cp inlay.toml "$config"
+}
+
+# existing_config <config> <reset: true|false>. What happens to a config that is already there. See "Your config"
+existing_config() {
+  local config="$1" reset="$2" target=""
+  if [ -L "$config" ]; then target="$(readlink "$config")"; fi
+
+  if [ "$reset" = true ]; then
+    replace_config "$config"
+    info "Replaced your config by the inlay.toml of the repo (--reset-config): $config"
+    if [ -n "$target" ]; then
+      note "It was a symbolic link to $target"
+      note "Only the link was replaced: that file was not touched. The link is kept as"
+      note "$CONFIG_BACKUP"
+    else
+      note "Your previous config is kept as $CONFIG_BACKUP"
+    fi
+    return 0
+  fi
+
+  if [ -z "$target" ] && cmp -s "$config" inlay.toml; then
+    info "You already have a config: $config"
+    note "It is the inlay.toml of the repo, as it is now. Nothing to do."
+    return 0
+  fi
+
+  if [ -z "$target" ] && is_known_default_config "$config" scripts/default-config-hashes.txt; then
+    replace_config "$config"
+    info "Updated your config to the inlay.toml of the repo: $config"
+    note "It was the default config of a previous version of Inlay, exactly as it was installed: nobody had"
+    note "edited it. The previous one is kept as $CONFIG_BACKUP"
+    return 0
+  fi
+
+  if [ -n "$target" ]; then
+    info "You already have a config: $config -> $target"
+  else
+    info "You already have a config: $config"
+  fi
+  warn "your config was KEPT as it is: it is not a default config of Inlay, so it is yours."
+  warn "What is new in the inlay.toml of the repo (key bindings, rules, options) is NOT in it."
+  if [ ! -e "$config" ]; then
+    warn "It is a symbolic link to a file that doesn't exist: Inlay can't read it."
+  elif ! grep -Eq '^[[:space:]]*\[\[on-window-detected\]\]' "$config"; then
+    warn "It has no 'on-window-detected' rule: no window is sent to a workspace, they all stay in the"
+    warn "workspace where they open."
+  fi
+  warn "To switch to the config of the repo (yours is kept next to it, as inlay.toml.backup-<date>):"
+  warn "  ./install.sh --reset-config"
+  warn "To compare them:  diff \"$config\" \"$PWD/inlay.toml\""
+}
+
+# ensure_config <import aerospace: true|false> <link: a path, or empty> <prompt: true|false> <reset: true|false>
+# Creates the config when there is none. An existing one is only replaced when it is a default config of a
+# previous version, or when --reset-config asks for it, and it is always kept as a backup. See "Your config"
 # Sets CONFIG_PATH to the config that Inlay will read, or to nothing if it can't tell (two configs)
 ensure_config() {
-  local import="$1" link="$2" prompt="$3" xdg dotfile source
+  local import="$1" link="$2" prompt="$3" reset="$4" xdg dotfile source
   xdg="$(config_home)/inlay/inlay.toml"
   dotfile="$HOME/.inlay.toml"
   CONFIG_PATH=""
   if [ -e "$xdg" ] || [ -L "$xdg" ] || [ -e "$dotfile" ] || [ -L "$dotfile" ]; then
     if { [ -e "$xdg" ] || [ -L "$xdg" ]; } && { [ -e "$dotfile" ] || [ -L "$dotfile" ]; }; then
       warn "both $xdg and $dotfile exist: Inlay will report an ambiguous config until you remove one."
+      if [ "$reset" = true ]; then
+        warn "--reset-config was ignored: it can't tell which of the two is your config. Remove one and run it again."
+      fi
     else
       if [ -e "$xdg" ] || [ -L "$xdg" ]; then CONFIG_PATH="$xdg"; else CONFIG_PATH="$dotfile"; fi
-      if [ -L "$CONFIG_PATH" ]; then
-        info "You already have a config: $CONFIG_PATH -> $(readlink "$CONFIG_PATH")"
-      else
-        info "You already have a config: $CONFIG_PATH"
-      fi
-      note "It was left as it is: nothing was copied, replaced or asked."
+      existing_config "$CONFIG_PATH" "$reset"
     fi
     if [ "$import" = true ]; then
       note "--import-aerospace was ignored: you already have an Inlay config."
@@ -194,6 +275,9 @@ ensure_config() {
     return 0
   fi
 
+  if [ "$reset" = true ]; then
+    note "--reset-config: you have no Inlay config to replace. Creating it."
+  fi
   mkdir -p "$(dirname "$xdg")"
   CONFIG_PATH="$xdg"
   if [ "$import" = true ] && source="$(aerospace_config)"; then
@@ -331,7 +415,7 @@ open_or_explain() {
 }
 
 main() {
-  local open_app=true signing=stable import=false config_link="" prompt=true
+  local open_app=true signing=stable import=false config_link="" prompt=true reset_config=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-open) open_app=false ;;
@@ -339,6 +423,7 @@ main() {
       --adhoc-signing) signing=adhoc ;;
       --import-aerospace) import=true ;;
       --no-prompt) prompt=false ;;
+      --reset-config) reset_config=true ;;
       --config-link)
         [ $# -ge 2 ] && [ -n "$2" ] || fail "--config-link needs a path."
         config_link="$2"
@@ -355,7 +440,7 @@ main() {
   build_app "$signing"
   install_app
   link_cli
-  ensure_config "$import" "$config_link" "$prompt"
+  ensure_config "$import" "$config_link" "$prompt" "$reset_config"
   check_config
   explain_accessibility
   open_or_explain "$open_app"

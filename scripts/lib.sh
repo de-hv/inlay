@@ -149,6 +149,18 @@ dir_is_in_path() {
 
 config_home() { printf '%s\n' "${XDG_CONFIG_HOME:-$HOME/.config}"; }
 
+# Prints the SHA-256 of the standard input, in hexadecimal
+sha256_of_stdin() { /usr/bin/shasum -a 256 | cut -d ' ' -f 1; }
+
+# is_known_default_config <config file> <list of hashes>. The file is identical to a default config that Inlay
+# has shipped: nobody has edited it. See: scripts/update-default-config-hashes.sh
+is_known_default_config() {
+  local hash
+  [ -f "$1" ] && [ -f "$2" ] || return 1
+  hash="$(sha256_of_stdin < "$1")" || return 1
+  [ -n "$hash" ] && grep -q "^$hash  " "$2"
+}
+
 # Somebody is at the keyboard to answer a question
 is_interactive() { [ -t 0 ]; }
 

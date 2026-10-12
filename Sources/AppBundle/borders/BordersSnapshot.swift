@@ -68,7 +68,9 @@ extension BordersSnapshot {
     /// the tiling ones, and the normal windows that float. No heuristics of its own: everything comes from the tree,
     /// and from what the window was taken for when it was detected.
     ///
-    /// Left out: the fullscreen window and the tiling windows that it covers, the windows in the macOS native fullscreen,
+    /// The fullscreen window keeps its border, pulled inside of the screen where the outer gaps leave no room for it.
+    ///
+    /// Left out: the tiling windows that a fullscreen window covers, the windows in the macOS native fullscreen,
     /// the minimized ones, the ones of hidden apps, popups, the dialogs and sheets that float on their own,
     /// the windows of the invisible workspaces, and the window that is being moved or resized with the mouse
     @MainActor
@@ -86,21 +88,26 @@ extension BordersSnapshot {
         }
         for monitor in monitorInfos {
             let workspace = monitor.activeWorkspace
-            // The fullscreen window has no lastAppliedLayoutPhysicalRect. The other tiling windows are behind it,
-            // but their borders would stick out in the outer gaps
-            if workspace.rootTilingContainer.mostRecentWindowRecursive?.isFullscreen != true {
+            let area = monitor.visibleRectPaddedByOuterGaps
+            // The border is drawn outside of the frame: around a window that fills the screen it needs to be pulled in
+            let room = monitor.visibleRect.insetBy(config.borders.width)
+            // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the whole monitor.
+            // The other tiling windows are behind it, and their borders would stick out in the outer gaps
+            if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
+                let rect = fullscreen.noOuterGapsInFullscreen ? monitor.visibleRect : area
+                add(fullscreen, rect.intersection(room), isFloating: false)
+            } else {
                 for window in workspace.rootTilingContainer.allLeafWindowsRecursive {
                     if let rect = window.lastAppliedLayoutPhysicalRect { add(window, rect, isFloating: false) }
                 }
             }
-            let area = monitor.visibleRectPaddedByOuterGaps
             for window in workspace.floatingWindowsContainer.children.filterIsInstance(of: Window.self) {
                 // A dialog comes and goes with the window it belongs to. Only the windows that the user sees as windows
                 // are decorated. A dialog that the user made a tiling window is in the tiling tree, and it has a border there
                 guard window.detectedType != .dialog, let rect = window.lastKnownFloatingRect else { continue }
                 // A floating window that was made fullscreen
                 let coversMonitor = rect.minX <= area.minX && rect.minY <= area.minY && rect.maxX >= area.maxX && rect.maxY >= area.maxY
-                if !coversMonitor { add(window, rect, isFloating: true) }
+                add(window, coversMonitor ? rect.intersection(room) : rect, isFloating: true)
             }
         }
         return result

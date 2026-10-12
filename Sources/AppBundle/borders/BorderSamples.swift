@@ -106,8 +106,11 @@ private struct BorderScene {
 
     /// The borders of the scene, decided by the same code that decides them for the real windows
     func snapshot(systemAccent: Rgba) -> BordersSnapshot {
-        let candidates = windows.filter { !$0.isFullscreen && !$0.isDialog }
-            .map { BorderCandidate(windowId: $0.id, frame: $0.frame, isFocused: $0.isFocused, isFloating: $0.isFloating) }
+        // A fullscreen window fills the screen: its border is pulled in by its own width, as candidatesFromModel does
+        let candidates = windows.filter { !$0.isDialog }.map {
+            let frame = $0.isFullscreen ? $0.frame.insetBy(dx: config.width, dy: config.width) : $0.frame
+            return BorderCandidate(windowId: $0.id, frame: frame, isFocused: $0.isFocused, isFloating: $0.isFloating)
+        }
         return BordersSnapshot.resolve(candidates, config, mode: mode, systemAccent: systemAccent)
     }
 }

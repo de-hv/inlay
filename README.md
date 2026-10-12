@@ -540,7 +540,7 @@ Inlay draws a colored border around each managed window (tiled or floating) of t
 color comes from the state the manager already knows, with no focus heuristics. It is configured in the
 `[borders]` table (`inlay config --explain borders` documents it), or in the **Borders** tab of Settings.
 
-<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (active-color) and the others with a gray one (inactive-color); a focused floating window with a purple border (floating-color); the focused window with a green border in the resize mode, from [borders.mode-colors]; only the focused window with a border, with inactive-color = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window without a border" width="880"></p>
+<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (active-color) and the others with a gray one (inactive-color); a focused floating window with a purple border (floating-color); the focused window with a green border in the resize mode, from [borders.mode-colors]; only the focused window with a border, with inactive-color = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|
@@ -613,7 +613,9 @@ The details:
   windows use `inactive-color`.
 - A **fully transparent** color (`'#00000000'`) means "no border": with
   `inactive-color = '#00000000'` only the active window has a border.
-- **No border**: fullscreen windows (Inlay's and the native one of macOS) and the tiled windows they cover,
+- A **fullscreen** window (the `fullscreen` command) keeps its border. Where the outer gaps leave no room for
+  it, as with `fullscreen --no-outer-gaps`, it is drawn just inside of the screen.
+- **No border**: windows in the native fullscreen of macOS, the tiled windows that a fullscreen window covers,
   minimized windows, windows of hidden apps, popups, the ones of non-visible workspaces, and the window you are
   dragging or resizing with the mouse (the border comes back on release).
 - **Dialogs and sheets, no border**: only normal windows, tiled or floating, have a border. What Inlay

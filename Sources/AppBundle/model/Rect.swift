@@ -56,6 +56,18 @@ extension Rect {
 
     var minY: CGFloat { topLeftY }
     var maxY: CGFloat { topLeftY + height }
+    /// The rect without a margin of `inset` points on its four sides
+    func insetBy(_ inset: CGFloat) -> Rect {
+        Rect(topLeftX: topLeftX + inset, topLeftY: topLeftY + inset, width: width - 2 * inset, height: height - 2 * inset)
+    }
+
+    /// The part of the rect that is inside of `other`. An empty rect when they don't overlap
+    func intersection(_ other: Rect) -> Rect {
+        let x = max(minX, other.minX)
+        let y = max(minY, other.minY)
+        return Rect(topLeftX: x, topLeftY: y, width: min(maxX, other.maxX) - x, height: min(maxY, other.maxY) - y)
+    }
+
     var minX: CGFloat { topLeftX }
     var maxX: CGFloat { topLeftX + width }
 

@@ -74,7 +74,7 @@ PAGES=(
   borders-corner-radius:880:310
   borders-glow:880:310
   borders-gaps:880:310
-  terminal-install:880:724
+  terminal-install:880:914
   terminal-cli:880:486
   terminal-uninstall:880:462
 )

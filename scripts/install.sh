@@ -27,9 +27,12 @@
 # Your own config folder: if you answer yes to the question, you give the path of a folder (~/.dotfiles/inlay,
 # for example) and ~/.config/inlay becomes a symbolic link to that folder. Inlay reads and writes the inlay.toml
 # in it; nothing else of the folder is touched.
-#   - The folder doesn't exist: nothing is linked, and your config stays as it is (the copy of inlay.toml).
+#   - The script lists the folders of a dotfiles repo that it finds (~/.dotfiles/inlay, ~/dotfiles/inlay…):
+#     type the number of one, or a path (Tab completes it).
+#   - The folder doesn't exist, or it can't be linked: the script says why and asks again. Enter with nothing
+#     keeps your config as it is. With --config-link, nothing is linked.
 #   - The folder has no inlay.toml: the script asks whether to copy the inlay.toml of the repo into it. If you
-#     say no, nothing is linked.
+#     say no, it asks for another folder (with --config-link, nothing is linked).
 #   - You already had a real ~/.config/inlay: it is not deleted. It is renamed to ~/.config/inlay.backup-<date>.
 #   - ~/.config/inlay already is a link: the question says where it points, and Enter leaves it alone.
 #     Linking another folder only replaces the link: the folder it pointed to is not touched.
@@ -66,7 +69,7 @@
 
 set -euo pipefail
 
-usage() { sed -n '3,65s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
+usage() { sed -n '3,68s/^# \{0,1\}//p' "$SCRIPT_PATH"; }
 
 check_requirements() {
   local macos swift
@@ -78,7 +81,7 @@ check_requirements() {
   version_at_least "$swift" 6 2 ||
     fail "Inlay needs Swift 6.2 or later. The Command Line Tools have Swift $swift: update them in Software Update."
   command -v codesign >/dev/null 2>&1 || fail "codesign was not found."
-  info "Requirements: macOS $macos, Swift $swift (${DEVELOPER_DIR:-selected toolchain})"
+  info "Requirements" "macOS $macos · Swift $swift (${DEVELOPER_DIR:-selected toolchain})"
 }
 
 # Sets INSTALL_TARGET
@@ -136,12 +139,14 @@ build_app() {
 
 install_app() {
   quit_running_inlay
-  info "Installing to $INSTALL_TARGET"
+  echo
+  info "Installing"
   rm -rf "$INSTALL_TARGET"
   ditto "build/$APP_NAME.app" "$INSTALL_TARGET"
   # Tells Finder and Launch Services that the bundle changed
   touch "$INSTALL_TARGET"
   "$LSREGISTER" -f "$INSTALL_TARGET" >/dev/null 2>&1 || true
+  ok "Installed $(pretty_path "$INSTALL_TARGET")"
 }
 
 link_cli() {
@@ -172,7 +177,7 @@ LIST
     return 0
   fi
   ln -sfn "$source" "$link"
-  info "Linked the CLI: $link -> $source"
+  ok "Linked the CLI: $(pretty_path "$link") ${C_MAGENTA}->${C_RESET} $(pretty_path "$source")"
   if ! dir_is_in_path "$dir"; then
     warn "$dir is not in your PATH. Add this line to ~/.zshrc:"
     warn "  export PATH=\"$dir:\$PATH\""
@@ -239,7 +244,7 @@ existing_config() {
 
   if [ "$reset" = true ]; then
     replace_config "$config"
-    info "Replaced your config by the inlay.toml of the repo (--reset-config): $config"
+    ok "Replaced your config by the inlay.toml of the repo (--reset-config): $(pretty_path "$config")"
     if [ -n "$target" ]; then
       note "It was a symbolic link to $target"
       note "Only the link was replaced: that file was not touched. The link is kept as"
@@ -251,23 +256,23 @@ existing_config() {
   fi
 
   if [ -z "$target" ] && cmp -s "$config" inlay.toml; then
-    info "You already have a config: $config"
-    note "It is the inlay.toml of the repo, as it is now. Nothing to do."
+    ok "You already have a config: $(pretty_path "$config")"
+    hint "It is the inlay.toml of the repo, as it is now. Nothing to do."
     return 0
   fi
 
   if [ -z "$target" ] && is_known_default_config "$config" scripts/default-config-hashes.txt; then
     replace_config "$config"
-    info "Updated your config to the inlay.toml of the repo: $config"
+    ok "Updated your config to the inlay.toml of the repo: $(pretty_path "$config")"
     note "It was the default config of a previous version of Inlay, exactly as it was installed: nobody had"
     note "edited it. The previous one is kept as $CONFIG_BACKUP"
     return 0
   fi
 
   if [ -n "$target" ]; then
-    info "You already have a config: $config -> $target"
+    ok "You already have a config: $(pretty_path "$config") ${C_MAGENTA}->${C_RESET} $(pretty_path "$target")"
   else
-    info "You already have a config: $config"
+    ok "You already have a config: $(pretty_path "$config")"
   fi
   kept_config_warning "$config"
 }
@@ -283,7 +288,7 @@ linked_config_folder() {
     mv "$dir" "$CONFIG_BACKUP"
     mkdir -p "$dir"
     cp inlay.toml "$dir/inlay.toml"
-    info "Replaced your config by the inlay.toml of the repo (--reset-config): $dir/inlay.toml"
+    ok "Replaced your config by the inlay.toml of the repo (--reset-config): $(pretty_path "$dir/inlay.toml")"
     note "$dir was a symbolic link to $target"
     note "Only the link was replaced: that folder and its files were not touched. The link is kept as"
     note "$CONFIG_BACKUP"
@@ -291,14 +296,14 @@ linked_config_folder() {
     return 0
   fi
 
-  info "You already have a config: $dir -> $target (a linked folder)"
+  ok "You already have a config: $(pretty_path "$dir") ${C_MAGENTA}->${C_RESET} $(pretty_path "$target") (a linked folder)"
   if [ ! -d "$dir" ]; then
     warn "the folder that $dir points to doesn't exist: Inlay can't read your config, and uses"
     warn "its built-in one until the folder is back."
   elif ! path_exists "$dir/inlay.toml"; then
     warn "$target has no inlay.toml: Inlay uses its built-in config until there is one."
   elif cmp -s "$dir/inlay.toml" inlay.toml; then
-    note "Its inlay.toml is the one of the repo, as it is now. Nothing to do."
+    hint "Its inlay.toml is the one of the repo, as it is now. Nothing to do."
   else
     kept_config_warning "$dir/inlay.toml"
   fi
@@ -316,6 +321,8 @@ ensure_config() {
   dotfile="$HOME/.inlay.toml"
   CONFIG_PATH=""
   CONFIG_CREATED=false
+  echo
+  info "Your config"
 
   if path_exists "$dotfile"; then
     if path_exists "$xdg"; then
@@ -358,14 +365,14 @@ ensure_config() {
     if [ "$import" = true ] && source="$(aerospace_config)"; then
       # cp follows a symlink, so the result is a regular file of your own
       cp "$source" "$xdg"
-      info "Created $xdg from $source"
+      ok "Created $(pretty_path "$xdg") from $(pretty_path "$source")"
       review_imported_config "$xdg"
     else
       if [ "$import" = true ]; then
         warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). Using the default config."
       fi
       cp inlay.toml "$xdg"
-      info "Created $xdg (a copy of the inlay.toml of the repo)"
+      ok "Created $(pretty_path "$xdg") (a copy of the inlay.toml of the repo)"
     fi
     import=false
   fi
@@ -383,19 +390,147 @@ ensure_config() {
 # Says that nothing was linked, and which config is in effect
 nothing_was_linked() {
   if [ "$CONFIG_CREATED" = true ]; then
-    warn "Nothing was linked. The default config stays: $CONFIG_PATH (a copy of the inlay.toml of the repo)."
+    warn "Nothing was linked. The default config stays: $(pretty_path "$CONFIG_PATH") (a copy of the inlay.toml of the repo)."
   else
-    warn "Nothing was linked. Your config stays as it is: $CONFIG_PATH"
+    warn "Nothing was linked. Your config stays as it is: $(pretty_path "$CONFIG_PATH")"
   fi
+}
+
+# Folders where people keep the config of Inlay in a dotfiles repo, the ones that exist. Prints one per line
+config_folder_candidates() {
+  local base sub
+  for base in "$HOME/.dotfiles" "$HOME/dotfiles" "$HOME/.dots" "$HOME/dots" "$(config_home)/dotfiles"; do
+    for sub in inlay .config/inlay config/inlay; do
+      if [ -d "$base/$sub" ]; then printf '%s\n' "$base/$sub"; fi
+    done
+  done
+  return 0
+}
+
+# check_link_target <config folder> <folder> <link now: a folder, or empty> <can ask: true|false>
+# Whether the config folder can be linked to <folder>, saying why not. Returns 0 if it can, 1 if it can't and
+# 2 if it already is. A folder without inlay.toml gets the one of the repo if the user says so
+check_link_target() {
+  local dir="$1" target="$2" current="$3" can_ask="$4" pretty
+  pretty="$(pretty_path "$target")"
+  if [ -f "$target" ]; then
+    problem "$pretty is a file. The link is to the folder that holds your inlay.toml: $(pretty_path "$(dirname "$target")")"
+    return 1
+  fi
+  if [ ! -d "$target" ]; then
+    problem "$pretty is not an existing folder."
+    return 1
+  fi
+  if [ -d "$dir" ] && [ "$target" -ef "$dir" ]; then
+    if [ -n "$current" ]; then
+      ok "$(pretty_path "$dir") is already linked to that folder. Nothing was changed."
+      return 2
+    fi
+    problem "$pretty is the config folder itself: it can't be a link to itself."
+    return 1
+  fi
+  if path_exists "$target/inlay.toml"; then
+    return 0
+  fi
+  warn "$pretty has no inlay.toml."
+  if [ "$can_ask" = true ]; then
+    if ask_yes_no "Copy the inlay.toml of the repo into $pretty?"; then
+      cp inlay.toml "$target/inlay.toml"
+      ok "Copied the inlay.toml of the repo to $pretty/inlay.toml"
+      return 0
+    fi
+    return 1
+  fi
+  warn "Nothing was copied into it: there is no terminal to ask on. Put an inlay.toml in that folder and"
+  warn "run this script again."
+  return 1
+}
+
+# choose_config_folder <config folder> <suggestion, or empty> <link now, or empty>
+# Asks for the folder to link until it gets one that can be linked, or nothing. Lists the folders of a dotfiles
+# repo that it finds, to pick one by its number. Sets CHOSEN_FOLDER. Returns 1 if nothing is to be linked
+# and 2 if the config folder already is linked to the folder
+choose_config_folder() {
+  local dir="$1" suggestion="$2" current="$3" found="" candidate n=0 count default="" default_number="" answer target status
+  local first=true
+  CHOSEN_FOLDER=""
+  while IFS= read -r candidate; do
+    [ -n "$candidate" ] || continue
+    # Not the config folder itself, nor a folder already in the list
+    if [ -d "$dir" ] && [ "$candidate" -ef "$dir" ] && [ -z "$current" ]; then continue; fi
+    case "$(printf '\n%s\n' "$found")" in *$'\n'"$candidate"$'\n'*) continue ;; esac
+    found="$found$candidate"$'\n'
+  done <<LIST
+$suggestion
+$(config_folder_candidates)
+LIST
+  count="$(printf '%s' "$found" | grep -c . || true)"
+  if [ "$count" -gt 0 ]; then
+    hint "Found:"
+    while IFS= read -r candidate; do
+      [ -n "$candidate" ] || continue
+      n=$((n + 1))
+      # Enter picks the first folder of the list, unless it is the one linked now: that would change nothing
+      if [ -z "$default" ] && ! { [ -n "$current" ] && [ "$candidate" -ef "$dir" ]; }; then default_number="$n" default="$candidate"; fi
+      if [ -n "$current" ] && [ "$candidate" -ef "$dir" ]; then
+        status="${C_DIM}linked now${C_RESET}"
+      elif path_exists "$candidate/inlay.toml"; then
+        status="${C_GREEN}has inlay.toml${C_RESET}"
+      else
+        status="${C_YELLOW}no inlay.toml${C_RESET}"
+      fi
+      printf '      %s%2d%s  %-32s %s\n' "$C_BOLD" "$n" "$C_RESET" "$(pretty_path "$candidate")" "$status"
+    done <<LIST
+$found
+LIST
+  fi
+
+  while true; do
+    if [ "$first" = true ] && [ -n "$default" ]; then
+      if [ "$count" -gt 1 ]; then
+        ask_path "Folder" "a number or a path · Tab completes · Enter = $default_number"
+      else
+        ask_path "Folder" "Tab completes · Enter = $(pretty_path "$default")"
+      fi
+      if [ -z "$ANSWER" ]; then ANSWER="$default"; fi
+    else
+      ask_path "Folder" "Tab completes · Enter keeps your config"
+      if [ -z "$ANSWER" ]; then return 1; fi
+    fi
+    first=false
+    answer="$ANSWER"
+    case "$answer" in
+      *[!0-9]*) ;;
+      *)
+        if [ "$answer" -ge 1 ] && [ "$answer" -le "$count" ]; then
+          answer="$(printf '%s' "$found" | sed -n "${answer}p")"
+        fi
+        ;;
+    esac
+    target="$(absolute_path "$answer" "$START_DIR")"
+    # Without the trailing slashes: the link is to the folder. Tab leaves one after the name of a folder
+    while [ "$target" != / ] && [ "${target%/}" != "$target" ]; do target="${target%/}"; done
+    status=0
+    check_link_target "$dir" "$target" "$current" true || status=$?
+    case "$status" in
+      0) CHOSEN_FOLDER="$target"; return 0 ;;
+      2) return 2 ;;
+    esac
+    # A folder of the list with the name that was typed is most likely what was meant
+    candidate="$(printf '%s' "$found" | grep -m 1 "/$(basename "$target")\$" || true)"
+    if [ -n "$candidate" ] && [ "$candidate" != "$target" ]; then
+      hint "Did you mean $(pretty_path "$candidate")?"
+    fi
+  done
 }
 
 # link_config_folder <config folder> <link: a folder, or empty> <prompt: true|false>
 # Makes the config folder a symbolic link to a folder of the user: the one of --config-link, or the one that the
-# user types after answering yes. It is asked on every run. See "Your own config folder".
+# user picks after answering yes. It is asked on every run. See "Your own config folder".
 # A real config folder is never deleted (it is renamed), and nothing is written to the folder of the user
 # without asking
 link_config_folder() {
-  local dir="$1" target="$2" prompt="$3" answer="" current="" legacy="" suggestion="" question backup
+  local dir="$1" target="$2" prompt="$3" current="" legacy="" suggestion="" question backup status=0
   if [ -L "$dir" ]; then
     current="$(readlink "$dir")"
   elif [ -L "$dir/inlay.toml" ]; then
@@ -411,14 +546,17 @@ link_config_folder() {
       note "--config-link <folder>)"
       return 0
     fi
-    note "Your config can live in a folder of your own (a dotfiles repo, for example): then"
-    note "$dir is a symbolic link to that folder, and Inlay uses the inlay.toml in it."
-    question="    Use a config folder of your own through a symbolic link?"
+    echo
+    info "Your own config folder"
+    hint "Your config can live in a folder of your own (a dotfiles repo, for example):"
+    hint "$(pretty_path "$dir") becomes a symbolic link to it, and Inlay uses the inlay.toml in it."
+    question="Use a config folder of your own?"
     if [ -n "$current" ]; then
-      question="$question (currently linked to $current)"
+      hint "Right now it is linked to $(pretty_path "$current")"
+      question="Link it to another folder?"
     elif [ -n "$legacy" ]; then
-      note "Right now only the file is linked, the way a previous version did it:"
-      note "$dir/inlay.toml -> $legacy"
+      hint "Right now only the file is linked, the way a previous version did it:"
+      hint "$(pretty_path "$dir/inlay.toml") -> $(pretty_path "$legacy")"
       # The folder that holds the linked file is the obvious one to link, if the file has the name Inlay looks for
       if [ "$(basename "$legacy")" = inlay.toml ]; then
         suggestion="$(dirname "$(absolute_path "$legacy" "$dir")")"
@@ -426,71 +564,33 @@ link_config_folder() {
     fi
     if ! ask_yes_no "$question"; then
       if [ -n "$current" ]; then
-        note "Keeping the link to $current. Nothing was changed."
+        ok "Keeping the link to $(pretty_path "$current")"
       else
-        note "Keeping your config as it is: $CONFIG_PATH"
+        ok "Keeping your config as it is: $(pretty_path "$CONFIG_PATH")"
       fi
       return 0
     fi
-    if [ -n "$suggestion" ]; then
-      printf '    Path of your config folder [%s]: ' "$suggestion"
-    else
-      printf '    Path of your config folder (for example ~/.dotfiles/inlay): '
-    fi
-    IFS= read -r answer || answer=""
-    if [ -z "$answer" ]; then answer="$suggestion"; fi
-    if [ -z "$answer" ]; then
-      warn "no path was given."
-      nothing_was_linked
-      return 0
-    fi
-    target="$answer"
-  fi
-
-  target="$(absolute_path "$target" "$START_DIR")"
-  # Without the trailing slashes: the link is to the folder
-  while [ "$target" != / ] && [ "${target%/}" != "$target" ]; do target="${target%/}"; done
-
-  if [ -f "$target" ]; then
-    warn "$target is a file. The link is to the folder that holds your inlay.toml: $(dirname "$target")"
-    nothing_was_linked
-    return 0
-  fi
-  if [ ! -d "$target" ]; then
-    warn "$target is not an existing folder."
-    nothing_was_linked
-    return 0
-  fi
-  if [ -d "$dir" ] && [ "$target" -ef "$dir" ]; then
-    if [ -n "$current" ]; then
-      note "$dir is already linked to that folder. Nothing was changed."
-    else
-      warn "$target is the config folder itself: it can't be a link to itself."
-      nothing_was_linked
-    fi
-    return 0
-  fi
-  if ! path_exists "$target/inlay.toml"; then
-    warn "$target has no inlay.toml."
-    if [ "$prompt" = true ] && is_interactive; then
-      if ask_yes_no "    Copy the inlay.toml of the repo into $target?"; then
-        cp inlay.toml "$target/inlay.toml"
-        info "Copied the inlay.toml of the repo to $target/inlay.toml"
-      else
-        nothing_was_linked
-        return 0
-      fi
-    else
-      warn "Nothing was copied into it: there is no terminal to ask on. Put an inlay.toml in that folder and"
-      warn "run this script again."
-      nothing_was_linked
-      return 0
-    fi
+    choose_config_folder "$dir" "$suggestion" "$current" || status=$?
+    case "$status" in
+      1) nothing_was_linked; return 0 ;;
+      2) return 0 ;;
+    esac
+    target="$CHOSEN_FOLDER"
+  else
+    target="$(absolute_path "$target" "$START_DIR")"
+    # Without the trailing slashes: the link is to the folder
+    while [ "$target" != / ] && [ "${target%/}" != "$target" ]; do target="${target%/}"; done
+    check_link_target "$dir" "$target" "$current" "$([ "$prompt" = true ] && is_interactive && echo true || echo false)" ||
+      status=$?
+    case "$status" in
+      1) nothing_was_linked; return 0 ;;
+      2) return 0 ;;
+    esac
   fi
 
   if [ -n "$current" ]; then
     rm "$dir"
-    note "The previous link, to $current, was removed. That folder was not touched."
+    note "The previous link, to $(pretty_path "$current"), was removed. That folder was not touched."
   elif [ -d "$dir" ]; then
     # The copy that this run has just made, alone in a folder that this run has just made: nothing to keep
     if [ "$CONFIG_CREATED" = true ] && rm -f "$dir/inlay.toml" && rmdir "$dir" 2>/dev/null; then
@@ -498,14 +598,13 @@ link_config_folder() {
     else
       backup="$(backup_path "$dir")"
       mv "$dir" "$backup"
-      note "Your previous $dir was not deleted. It is now"
-      note "$backup"
+      warn "Your previous $(pretty_path "$dir") was not deleted: it is now $(pretty_path "$backup")"
     fi
   fi
   ln -s "$target" "$dir"
   CONFIG_PATH="$dir/inlay.toml"
-  info "Linked the config folder: $dir -> $target"
-  note "Inlay reads and writes $target/inlay.toml"
+  ok "Linked $(pretty_path "$dir") ${C_MAGENTA}->${C_RESET} $(pretty_path "$target")"
+  hint "Inlay reads and writes $(pretty_path "$target")/inlay.toml"
 }
 
 # Says what the parser of the app that was just installed thinks of the config. Never fails the installation
@@ -515,8 +614,12 @@ check_config() {
   # A link that leads nowhere, or a linked folder without inlay.toml: there is nothing to check, and it was said
   [ -e "$CONFIG_PATH" ] || return 0
   output="$("$binary" --check-config "$CONFIG_PATH" 2>&1)" || status=$?
+  echo
   info "Checking the config"
-  printf '%s\n' "$output" | sed 's/^/    /'
+  case "$output" in
+    *"has no errors or warnings") ok "No errors or warnings in $(pretty_path "$CONFIG_PATH")" ;;
+    *) printf '%s\n' "$output" | sed 's/^/    /' ;;
+  esac
   if [ "$status" -ne 0 ]; then
     warn "the config has errors. Inlay starts anyway and shows them in a window. Fix them and run"
     warn "'$CLI_NAME reload-config' (or just save the file, with 'auto-reload-config = true')."
@@ -542,9 +645,10 @@ review_imported_config() {
 }
 
 explain_accessibility() {
+  echo
   info "Accessibility permission"
   note "Inlay moves and resizes windows through the Accessibility API. The first time it opens, macOS asks"
-  note "for the permission: turn Inlay on in System Settings > Privacy & Security > Accessibility"
+  note "for the permission: turn Inlay on in ${C_BOLD}System Settings > Privacy & Security > Accessibility${C_RESET}"
   note "(it needs an administrator; on a managed Mac the list may be locked by your IT department)."
   note "Until then Inlay does nothing: its menu bar item shows a warning sign."
   note "If Inlay is on in that list but still asks, remove it from the list (-) and open Inlay again."
@@ -554,13 +658,14 @@ explain_accessibility() {
     note "rebuilds it must be signed with the local identity, which is what scripts/install.sh does"
     note "unless it gets --adhoc-signing or the identity can't be created (see the warning above)."
   else
-    note "This build is signed with \"$SIGN_IDENTITY_NAME\": the permission survives rebuilds."
+    ok "This build is signed with \"$SIGN_IDENTITY_NAME\": the permission survives rebuilds."
   fi
 }
 
 # The last thing the script does: open Inlay, or say why not
 open_or_explain() {
   local open_app="$1"
+  echo
   find_conflicts
   if [ -n "$CONFLICTS" ]; then
     warn "these apps are running and do the same job as Inlay: $CONFLICTS"
@@ -570,19 +675,20 @@ open_or_explain() {
     warn "  open \"$INSTALL_TARGET\""
     info "Installed. Inlay was NOT opened (see the warning above)."
   elif [ "$open_app" = true ]; then
-    info "Opening $APP_NAME now ($INSTALL_TARGET)"
+    info "Opening $APP_NAME" "$(pretty_path "$INSTALL_TARGET")"
     if open "$INSTALL_TARGET"; then
       note "Inlay is open: look for its item in the menu bar (it has no Dock icon and no window)."
       note "The first time, macOS asks for the Accessibility permission (see above): until you grant it, the"
       note "item shows a warning sign and no window is moved. Once it is granted, Inlay sends the open"
       note "windows to their workspaces and arranges them. Right-click the item for the menu and the Settings."
-      note "The key bindings are in $([ -n "${CONFIG_PATH:-}" ] && echo "$CONFIG_PATH" || echo "your config") ('$CLI_NAME config --explain' documents every key)."
+      note "The key bindings are in $([ -n "${CONFIG_PATH:-}" ] && pretty_path "$CONFIG_PATH" || echo "your config") (${C_BOLD}$CLI_NAME config --explain${C_RESET} documents every key)."
     else
       warn "could not open it. Open it by hand:  open \"$INSTALL_TARGET\""
     fi
-    info "Done."
+    echo
+    success "Done."
   else
-    info "Done. Inlay was not opened (--no-open). Open it with:  open \"$INSTALL_TARGET\""
+    success "Done." "Inlay was not opened (--no-open). Open it with:  open \"$INSTALL_TARGET\""
   fi
 }
 

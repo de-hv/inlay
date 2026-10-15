@@ -85,7 +85,7 @@ No option is needed. `install.sh`:
 6. **opens Inlay** and says so, with what to do the first time (see
    [Before opening Inlay](#before-opening-inlay)).
 
-<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it installs Inlay.app, links the CLI, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks 'Use a config folder of your own through a symbolic link? [y/N]', gets 'y' and the path ~/dotfiles/inlay, links ~/.config/inlay to that folder, checks the config, explains the Accessibility permission and opens Inlay" width="880"></p>
+<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it installs Inlay.app, links the CLI, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks 'Use a config folder of your own? [y/N]', gets 'y', lists the folder it found, ~/.dotfiles/inlay, which has an inlay.toml, takes it with Enter, links ~/.config/inlay to that folder, checks the config, explains the Accessibility permission and opens Inlay" width="880"></p>
 
 It can be run as many times as needed: it updates what is installed, quitting the running copy first.
 
@@ -111,17 +111,24 @@ two neighboring windows touch.
 On every run, also when you already have a config, `install.sh` asks:
 
 ```
-Use a config folder of your own through a symbolic link? [y/N]
+? Use a config folder of your own? [y/N] y
+    Found:
+       1  ~/.dotfiles/inlay                has inlay.toml
+       2  ~/dotfiles/inlay                 no inlay.toml
+? Folder (a number or a path · Tab completes · Enter = 1):
 ```
 
-Enter (or `n`) keeps what you have. With `y` it asks for the path of a **folder** (`~` is expanded;
-`~/.dotfiles/inlay`, for example) and makes **`~/.config/inlay` a symbolic link to that folder**. Inlay reads
-and writes the `inlay.toml` in it; nothing else in the folder is touched.
+Enter (or `n`) keeps what you have. With `y` it lists the folders of a dotfiles repo that it finds and asks for
+a **folder**: the number of one of them, or a path (`~` is expanded, and Tab completes it). Then it makes
+**`~/.config/inlay` a symbolic link to that folder**. Inlay reads and writes the `inlay.toml` in it; nothing
+else in the folder is touched. A path that doesn't work (a typo, a file, a folder you don't want to fill) is
+asked again, and Enter with nothing keeps your config as it is. In a terminal the output has colors; with
+`NO_COLOR` set, or in a pipe or a log, it is plain text.
 
 | What it finds | What it does |
 |---|---|
-| The folder does not exist | Warns and links nothing. Your config stays as it is: on a new install, the copy of `inlay.toml` in `~/.config/inlay/` |
-| The folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and nothing is linked |
+| The folder does not exist | Says so, suggests a folder of the list with the same name if there is one, and asks again. With `--config-link`, links nothing: your config stays as it is (on a new install, the copy of `inlay.toml` in `~/.config/inlay/`) |
+| The folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and it asks for another folder (with `--config-link`, nothing is linked) |
 | You had a real `~/.config/inlay` | It is not deleted: it is renamed to `~/.config/inlay.backup-<date>`, and the script says so |
 | `~/.config/inlay` is already a link | The question says it (`currently linked to …`), and Enter changes nothing. Linking another folder replaces only the link: the folder it pointed to is not touched |
 | Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | It keeps working and Enter leaves it alone. With `y`, the folder that holds your file is offered as the path, and the old `~/.config/inlay` becomes the backup |

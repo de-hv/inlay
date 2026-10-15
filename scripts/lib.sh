@@ -15,10 +15,59 @@ SIGN_IDENTITY_NAME="${INLAY_SIGN_IDENTITY_NAME:-Inlay Local Code Signing}"
 # Keychain that holds it. Empty means the login keychain
 SIGN_KEYCHAIN="${INLAY_SIGN_KEYCHAIN:-}"
 
-info() { printf '==> %s\n' "$*"; }
+# Colors and symbols only go to a terminal that shows them: not to a pipe or a log, and not with NO_COLOR
+# (https://no-color.org) or TERM=dumb. Without them the output is the plain one: '==>', 'warning:', 'error:'
+use_color() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
+# set_styles <prefix> <file descriptor>: <prefix>_BOLD, <prefix>_DIM... are escape sequences, or empty
+set_styles() {
+  local bold="" dim="" red="" green="" yellow="" blue="" cyan="" magenta="" reset=""
+  if use_color "$2"; then
+    bold=$'\033[1m' dim=$'\033[2m' red=$'\033[31m' green=$'\033[32m' yellow=$'\033[33m'
+    blue=$'\033[34m' cyan=$'\033[36m' magenta=$'\033[35m' reset=$'\033[0m'
+  fi
+  eval "${1}_BOLD=\$bold ${1}_DIM=\$dim ${1}_RED=\$red ${1}_GREEN=\$green ${1}_YELLOW=\$yellow"
+  eval "${1}_BLUE=\$blue ${1}_CYAN=\$cyan ${1}_MAGENTA=\$magenta ${1}_RESET=\$reset"
+}
+set_styles C 1 # Standard output
+set_styles E 2 # Standard error: the warnings and the errors
+
+# A step of the script: '==> Requirements' and, dimmed, its details
+info() {
+  if [ $# -gt 1 ]; then
+    printf '%s==>%s %s%s%s  %s%s%s\n' "$C_BOLD$C_BLUE" "$C_RESET" "$C_BOLD" "$1" "$C_RESET" "$C_DIM" "$2" "$C_RESET"
+  else
+    printf '%s==>%s %s%s%s\n' "$C_BOLD$C_BLUE" "$C_RESET" "$C_BOLD" "$1" "$C_RESET"
+  fi
+}
+# Something done: '  ✓ Installed …'
+ok() {
+  if [ -n "$C_RESET" ]; then printf '  %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; else printf '==> %s\n' "$*"; fi
+}
 note() { printf '    %s\n' "$*"; }
-warn() { printf 'warning: %s\n' "$*" >&2; }
-fail() { printf 'error: %s\n' "$*" >&2; exit 1; }
+# An explanation that can be skimmed
+hint() { printf '    %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+warn() {
+  if [ -n "$E_RESET" ]; then printf '  %s!%s %s\n' "$E_YELLOW" "$E_RESET" "$*" >&2; else printf 'warning: %s\n' "$*" >&2; fi
+}
+# Something the user can fix right away, like a path typed wrong. The script goes on
+problem() {
+  if [ -n "$E_RESET" ]; then printf '  %s✗%s %s\n' "$E_RED" "$E_RESET" "$*" >&2; else printf 'warning: %s\n' "$*" >&2; fi
+}
+fail() {
+  if [ -n "$E_RESET" ]; then printf '  %s✗ error:%s %s\n' "$E_BOLD$E_RED" "$E_RESET" "$*" >&2; else printf 'error: %s\n' "$*" >&2; fi
+  exit 1
+}
+# The last line of a script that went well
+success() { printf '%s==>%s %s%s%s%s\n' "$C_BOLD$C_GREEN" "$C_RESET" "$C_BOLD" "$1" "$C_RESET" "${2:+ $2}"; }
+
+# ~/.config/inlay instead of /Users/me/.config/inlay: shorter, and what people type
+pretty_path() {
+  case "$1" in
+    "$HOME") printf '~\n' ;;
+    "$HOME"/*) printf '~/%s\n' "${1#"$HOME"/}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
 
 # Inlay must build without Xcode, so every script uses the Command Line Tools even when xcode-select points to
 # an Xcode.app. Set INLAY_USE_SELECTED_TOOLCHAIN=1 to build with whatever toolchain is selected instead.
@@ -167,12 +216,32 @@ is_interactive() { [ -t 0 ]; }
 # ask_yes_no <question>. Asks on the terminal and returns 0 only for an explicit yes. The default is no
 ask_yes_no() {
   local answer=""
-  printf '%s [y/N] ' "$1"
+  if [ -n "$C_RESET" ]; then
+    printf '  %s?%s %s%s%s %s[y/N]%s ' "$C_CYAN" "$C_RESET" "$C_BOLD" "$1" "$C_RESET" "$C_DIM" "$C_RESET"
+  else
+    printf '    %s [y/N] ' "$1"
+  fi
   IFS= read -r answer || answer=""
   case "$answer" in
     [yY]|[yY][eE][sS]) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# ask_path <label> <help>. Asks for a path on the terminal, with the line editing of readline: Tab completes the
+# names of files and folders. Sets ANSWER to what was typed, without the spaces around it
+ask_path() {
+  local prompt start="" end=""
+  if [ -n "$C_RESET" ]; then
+    # Readline must not count the escape sequences as characters of the prompt: they go between \001 and \002
+    start=$'\001' end=$'\002'
+    prompt="  $start$C_CYAN$end?$start$C_RESET$C_BOLD$end $1$start$C_RESET$C_DIM$end ($2):$start$C_RESET$end "
+  else
+    prompt="    $1 ($2): "
+  fi
+  ANSWER=""
+  IFS= read -r -e -p "$prompt" ANSWER || ANSWER=""
+  ANSWER="$(printf '%s' "$ANSWER" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 }
 
 # absolute_path <path> [<base directory>]. Expands a leading ~ and makes the path absolute. Prints it

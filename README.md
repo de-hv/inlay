@@ -442,7 +442,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
     theme = 'chips'   # 'chips' | 'square' | 'minimal'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the three themes of the menu bar item, each on a dark and on a light menu bar. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': a layout icon, the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the three themes of the menu bar item, each on a dark and on a light menu bar. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
 
 The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
 still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,

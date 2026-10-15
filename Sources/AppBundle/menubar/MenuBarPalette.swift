@@ -5,7 +5,7 @@ struct MenuBarPalette: Equatable, Sendable {
     /// The item is one color with different opacities, so it can be drawn as a template image:
     /// macOS picks black or white for the menu bar behind it, dims it on an inactive display, etc. That's what Aeromenu does
     var isTemplate: Bool
-    /// The color of the menu bar text. The layout icon and the placeholders are drawn with it
+    /// The color of the menu bar text. The placeholders are drawn with it
     var base: Rgba
     var focused: Rgba
     /// nil: the name of the focused workspace is cut out of its background ('focused' is 'auto').

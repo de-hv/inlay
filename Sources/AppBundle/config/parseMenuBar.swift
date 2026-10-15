@@ -15,7 +15,7 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
 enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// The workspaces alone. The Chips style of Aeromenu
     case chips
-    /// The Square style of Aeromenu: the layout icon, the names, and a square in place of the focused workspace
+    /// The Square style of Aeromenu without its layout icon: the names, and a square in place of the focused workspace
     case square
     /// Only the focused workspace
     case minimal

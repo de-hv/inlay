@@ -249,7 +249,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Possible values: chips|square|minimal
     # - chips.   The workspaces alone. The ones with windows have a faint background,
     #            the focused one has a solid background, and the empty ones are dimmed.
-    # - square.  The layout icon, the names of the workspaces, and a square in place of the focused workspace.
+    # - square.  The names of the workspaces, and a square in place of the focused workspace.
     #            In a binding mode other than 'main' the square shows the initial of the mode.
     # - minimal. Only the focused workspace.
     # ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')

@@ -35,8 +35,6 @@ struct MenuBarSnapshot: Equatable, Sendable {
     var isFocusedWorkspaceFullscreen: Bool = false
     /// The binding mode. nil if the key bindings are off (Inlay is paused)
     var mode: String? = mainModeId
-    /// The orientation of the container of the focused window
-    var orientation: Orientation = .h
     var focusedWindow: FocusedWindow? = nil
 
     /// The mode to show, if it is worth showing
@@ -50,8 +48,6 @@ extension MenuBarSnapshot {
         let focus = focus
         let focusedWorkspace = focus.workspace
         let windows = focusedWorkspace.allLeafWindowsRecursive
-        let container = focus.windowOrNil?.parent as? TilingContainer
-            ?? focusedWorkspace.children.filterIsInstance(of: TilingContainer.self).first
         let status: Status = switch true {
             case state.axPermissionStatus != .granted: .needsAccessibility
             case !state.isEnabled: .paused
@@ -72,7 +68,6 @@ extension MenuBarSnapshot {
             focusedWorkspace: focusedWorkspace.name,
             isFocusedWorkspaceFullscreen: windows.contains { $0.isFullscreen || $0.parent is MacosFullscreenWindowsContainer },
             mode: activeMode,
-            orientation: container?.orientation ?? .h,
             focusedWindow: focus.windowOrNil.map { FocusedWindow(isFloating: $0.isFloating, isFullscreen: $0.isFullscreen) },
         )
     }

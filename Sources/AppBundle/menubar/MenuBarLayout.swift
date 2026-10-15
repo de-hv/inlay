@@ -17,9 +17,6 @@ enum MenuBarMetrics {
     static let emptyWorkspaceOpacity: Double = 0.35
     static let outlineWidth: CGFloat = 1.5
 
-    static let layoutWidth: CGFloat = 16
-    static let layoutSize: CGFloat = 13
-    static let layoutToWorkspaces: CGFloat = 10
     static let workspaceWidth: CGFloat = 15
     static let focusedWorkspaceWidth: CGFloat = 17
     static let workspaceFontSize: CGFloat = 13.5
@@ -106,11 +103,6 @@ struct MenuBarLayout: Equatable, Sendable {
         var initial: Text? = nil
     }
 
-    struct LayoutIcon: Equatable, Sendable {
-        var frame: CGRect
-        var orientation: Orientation
-    }
-
     /// Shown instead of the workspaces when Inlay doesn't manage windows
     struct Placeholder: Equatable, Sendable {
         var status: MenuBarSnapshot.Status
@@ -124,7 +116,6 @@ struct MenuBarLayout: Equatable, Sendable {
 
     var style: Style
     var size: CGSize
-    var layoutIcon: LayoutIcon? = nil
     var cells: [Cell] = []
     var marker: Marker? = nil
     var placeholder: Placeholder? = nil
@@ -199,9 +190,8 @@ extension MenuBarLayout {
         _ measure: Measure,
     ) -> MenuBarLayout {
         typealias M = MenuBarMetrics
-        let layoutIcon = LayoutIcon(frame: CGRect(x: 0, y: 0, width: M.layoutWidth, height: M.height), orientation: snapshot.orientation)
         var cells: [Cell] = []
-        var x: CGFloat = M.layoutWidth + M.layoutToWorkspaces
+        var x: CGFloat = 0
         for workspace in snapshot.workspaces {
             let focus = focusAmount(workspace.name)
             let nameSize = measure(workspace.name, .squareName)
@@ -223,7 +213,7 @@ extension MenuBarLayout {
             ))
             x = slot.maxX
         }
-        return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), layoutIcon: layoutIcon, cells: cells)
+        return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), cells: cells)
     }
 
     // MARK: - Shared

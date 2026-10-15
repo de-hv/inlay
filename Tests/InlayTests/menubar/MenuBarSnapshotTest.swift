@@ -20,7 +20,6 @@ extension InlayTests {
                 focusedWorkspace: "setUpWorkspacesForTests",
                 isFocusedWorkspaceFullscreen: false,
                 mode: "main",
-                orientation: .h,
                 focusedWindow: nil,
             ))
             assertEquals(snapshot.nonMainMode, nil)
@@ -56,10 +55,6 @@ extension InlayTests {
             var snapshot = MenuBarSnapshot.fromModel()
             assertEquals(snapshot.focusedWindow, .init(isFloating: false, isFullscreen: false))
             assertEquals(snapshot.isFocusedWorkspaceFullscreen, false)
-            assertEquals(snapshot.orientation, .h)
-
-            workspace.rootTilingContainer.changeOrientation(.v)
-            assertEquals(MenuBarSnapshot.fromModel().orientation, .v)
 
             window.isFullscreen = true
             snapshot = MenuBarSnapshot.fromModel()

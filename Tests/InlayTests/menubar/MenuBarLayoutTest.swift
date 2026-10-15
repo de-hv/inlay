@@ -50,7 +50,6 @@ extension InlayTests {
             assertEquals(layout.cells.map(\.isDimmed), [false, false, false, true])
             assertEquals(layout.cells.map(\.focus), [0, 1, 0, 0])
             assertEquals(layout.marker, .init(frame: CGRect(x: 19.5, y: 2.5, width: 17, height: 17), cornerRadius: 4.5, isOutlined: false))
-            assertEquals(layout.layoutIcon, nil)
             assertEquals(layout.placeholder, nil)
             assertEquals(layout.needsColor, false)
         }
@@ -159,36 +158,32 @@ extension InlayTests {
         @Test func testSquare() {
             let layout = layout(MenuBarConfig(theme: .square))
             assertEquals(layout.style, .square)
-            assertEquals(layout.layoutIcon, .init(frame: CGRect(x: 0, y: 0, width: 16, height: 22), orientation: .h))
-            // Slots of 15 pt after the icon, 17 pt for the focused one
+            // Slots of 15 pt from the left edge, like the chips, 17 pt for the focused one
             assertEquals(layout.cells.map(\.frame), [
-                CGRect(x: 26, y: 0, width: 15, height: 22),
-                CGRect(x: 41, y: 0, width: 17, height: 22),
-                CGRect(x: 58, y: 0, width: 15, height: 22),
-                CGRect(x: 73, y: 0, width: 15, height: 22),
+                CGRect(x: 0, y: 0, width: 15, height: 22),
+                CGRect(x: 15, y: 0, width: 17, height: 22),
+                CGRect(x: 32, y: 0, width: 15, height: 22),
+                CGRect(x: 47, y: 0, width: 15, height: 22),
             ])
-            assertEquals(layout.size, CGSize(width: 88, height: 22))
-            assertEquals(layout.cells[0].name.frame, CGRect(x: 29.5, y: 3, width: 8, height: 16))
+            assertEquals(layout.size, CGSize(width: 62, height: 22))
+            assertEquals(layout.cells[0].name.frame, CGRect(x: 3.5, y: 3, width: 8, height: 16))
             // A square of 8.5 pt in the place of the focused workspace
-            assertEquals(layout.marker, .init(frame: CGRect(x: 45.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(layout.marker, .init(frame: CGRect(x: 19.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             assertEquals(layout.needsColor, false)
-
-            snapshot.orientation = .v
-            assertEquals(self.layout(MenuBarConfig(theme: .square)).layoutIcon?.orientation, .v)
         }
 
         @Test func testSquareMode() {
             snapshot.mode = "resize"
             // Without 'show-mode' the square is the one of the main mode
             let main = layout(MenuBarConfig(theme: .square, showMode: false))
-            assertEquals(main.marker, .init(frame: CGRect(x: 45.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(main.marker, .init(frame: CGRect(x: 19.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
             let layout = layout(MenuBarConfig(theme: .square, showMode: true))
             assertEquals(layout.marker, .init(
-                frame: CGRect(x: 42.5, y: 4, width: 14, height: 14),
+                frame: CGRect(x: 16.5, y: 4, width: 14, height: 14),
                 cornerRadius: 3.5,
                 isOutlined: false,
-                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 45.5, y: 5, width: 8, height: 12)),
+                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 19.5, y: 5, width: 8, height: 12)),
             ))
             assertEquals(layout.needsColor, true)
             // Nothing shifts when the mode changes: the slot of the focused workspace is always wide enough
@@ -227,8 +222,8 @@ extension InlayTests {
             // Both slots are half way between 15 and 17 pt
             assertEquals(middle.cells.map(\.frame.width), [15, 16, 15, 16])
             assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
-            assertEquals(middle.marker?.frame.midX, (49 + 80) / 2)
-            assertEquals(middle.size.width, 88)
+            assertEquals(middle.marker?.frame.midX, (23 + 54) / 2)
+            assertEquals(middle.size.width, 62)
         }
 
         // MARK: - Placeholders
@@ -238,7 +233,6 @@ extension InlayTests {
             let paused = layout(MenuBarConfig(theme: .square, showMode: true))
             assertEquals(paused.cells, [])
             assertEquals(paused.marker, nil)
-            assertEquals(paused.layoutIcon, nil)
             assertEquals(paused.placeholder?.symbolName, "pause.fill")
             assertEquals(paused.placeholder?.glyphOpacity, 1)
             // The size of the item of Aeromenu while AeroSpace is disabled

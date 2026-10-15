@@ -163,10 +163,6 @@ enum MenuBarRenderer {
 
     private static func drawSquare(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
         typealias M = MenuBarMetrics
-        if let icon = layout.layoutIcon {
-            let name = icon.orientation == .h ? "rectangle.split.2x1" : "rectangle.split.1x2"
-            drawSymbol(name, pointSize: M.layoutSize, centeredIn: icon.frame, palette.base)
-        }
         for cell in layout.cells {
             // The name gives way to the marker
             let color = palette.nameColor(of: cell).opacity(1 - cell.focus)

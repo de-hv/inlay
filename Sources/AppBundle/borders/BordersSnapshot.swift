@@ -101,7 +101,12 @@ extension BordersSnapshot {
                 add(fullscreen, rect.intersection(room), isFloating: false)
             } else {
                 for window in workspace.rootTilingContainer.allLeafWindowsRecursive {
-                    if let rect = window.lastAppliedLayoutPhysicalRect { add(window, rect, isFloating: false) }
+                    // While the window slides to its frame, the border goes with it. See: WindowAnimator
+                    if let frame = WindowAnimator.shared.currentFrame(window.windowId) {
+                        add(window, Rect(topLeftX: frame.minX, topLeftY: frame.minY, width: frame.width, height: frame.height), isFloating: false)
+                    } else if let rect = window.lastAppliedLayoutPhysicalRect {
+                        add(window, rect, isFloating: false)
+                    }
                 }
             }
             for window in workspace.floatingWindowsContainer.children.filterIsInstance(of: Window.self) {

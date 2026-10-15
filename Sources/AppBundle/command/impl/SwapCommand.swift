@@ -47,6 +47,7 @@ struct SwapCommand: Command {
             return .fail
         }
 
+        WindowAnimator.shared.requestAnimatedLayout()
         swapWindows(mruDominant: currentWindow, targetWindow)
 
         if args.swapFocus {

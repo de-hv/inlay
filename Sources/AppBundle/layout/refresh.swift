@@ -208,6 +208,7 @@ private func layoutWorkspaces() async throws {
             try await (window as! MacWindow).hideInCorner(corner) // todo as!
         }
     }
+    WindowAnimator.shared.layoutDidFinish()
 }
 
 @MainActor

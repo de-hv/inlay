@@ -299,6 +299,23 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
         # Fallback value (if you omit the key): empty = 'auto'
         empty = 'auto'
 
+# The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
+# - a window opens (it comes out of the window it splits, which makes room for it) or closes,
+# - a window is moved with 'swap' or 'move' (the key bindings, the CLI).
+# Nothing else is animated: resizing, balance-sizes, switching workspaces, the startup, the mouse.
+# With "Reduce motion" (System Settings -> Accessibility -> Display) nothing is animated.
+# Inlay moves and resizes the windows of other apps through the Accessibility API: a window that is slow to
+# resize (some browsers, Electron apps) skips frames of the animation, but it always ends in its exact frame
+[animations]
+    # Possible values: true|false
+    # Fallback value (if you omit the key): enabled = true
+    enabled = true
+
+    # How long a window takes to get to its new frame, in milliseconds. 0 = no animation
+    # Possible values: 0 ... 500
+    # Fallback value (if you omit the key): duration = 180
+    duration = 180
+
 # The borders of the windows
 [borders]
     # Draw a border around every normal window of the visible workspaces, tiling or floating.

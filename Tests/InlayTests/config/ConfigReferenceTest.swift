@@ -26,6 +26,7 @@ extension InlayTests {
                 ("menu-bar", Array(menuBarParserTable.keys)),
                 ("menu-bar.colors", Array(menuBarColorsParserTable.keys)),
                 ("borders", Array(bordersParserTable.keys)),
+                ("animations", Array(animationsParserTable.keys)),
                 ("on-window-detected", Array(windowDetectedParser.keys)),
                 ("on-window-detected.if", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode
@@ -59,6 +60,7 @@ extension InlayTests {
             assertEquals(result.config.tiling, TilingConfig())
             assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders.copy(\.modeColors, [:]), BordersConfig())
+            assertEquals(result.config.animations, AnimationsConfig())
             assertEquals(result.config.gaps, Config().gaps)
             assertEquals(result.config.execConfig, Config().execConfig)
             assertEquals(result.config.startAtLogin, Config().startAtLogin)

@@ -74,12 +74,15 @@ extension TreeNode {
                     lastAppliedLayoutVirtualRect = virtual
                     if window.isFullscreen && window == context.workspace.rootTilingContainer.mostRecentWindowRecursive {
                         lastAppliedLayoutPhysicalRect = nil
+                        WindowAnimator.shared.cancel(window.windowId)
                         window.layoutFullscreen(context)
                     } else {
+                        let previous = lastAppliedLayoutPhysicalRect
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
                         DebugStats.count("layout.tiling-window-frame")
-                        window.setAxFrame(point, CGSize(width: width, height: height))
+                        // Right away, or sliding there if the layout is animated
+                        WindowAnimator.shared.setFrame(window, physicalRect, previous: previous)
                     }
                 }
             case .tilingContainer(let container):
@@ -151,7 +154,14 @@ extension TilingContainer {
     @MainActor
     fileprivate func layoutTiles(_ point: CGPoint, width: CGFloat, height: CGFloat, virtual: Rect, _ context: LayoutContext) async throws {
         let frame = LayoutFrame(point: point, width: width, height: height, virtual: virtual)
+        // The frames of the children before this layout pass. A new window comes out of the room of the window it splits
+        let previousFrames = children.map(\.lastAppliedLayoutPhysicalRect)
         for (child, frame) in tileChildren(frame, context.resolvedGaps) {
+            if let window = child as? Window, window.entryFrame != nil, let index = window.ownIndex {
+                // The new window goes after the window it splits, or before it if it is the first one
+                let neighbor = index > 0 ? index - 1 : index + 1
+                if let neighborFrame = previousFrames.getOrNil(atIndex: neighbor) ?? nil { window.entryFrame = neighborFrame }
+            }
             try await child.layoutRecursive(frame.point, width: frame.width, height: frame.height, virtual: frame.virtual, context)
         }
     }

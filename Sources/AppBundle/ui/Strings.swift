@@ -72,6 +72,12 @@ enum Strings {
         static let minWindowSize = "Minimum window size"
         static let minWindowSizeDetail = "Resizing with the keyboard or the mouse doesn't make a window smaller than this."
         static let grid = "Grid"
+        static let animations = "Animations"
+        static let animate = "Animate the windows"
+        static let animateDetail = "The windows slide to their place when a window opens or closes, and when you move one with swap or move."
+        static let duration = "Duration"
+        static let durationDetail = "Shorter is snappier. 0 turns the animations off. With Reduce Motion on, nothing is animated."
+        static func milliseconds(_ value: Int) -> String { "\(value) ms" }
         static let row = "Row"
         static let configuration = "Configuration"
         static let file = "File"

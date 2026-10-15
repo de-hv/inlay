@@ -54,6 +54,7 @@ struct Config: ConvenienceMutable {
     var tiling: TilingConfig = TilingConfig()
     var menuBar: MenuBarConfig = MenuBarConfig()
     var borders: BordersConfig = BordersConfig()
+    var animations: AnimationsConfig = AnimationsConfig()
 
     var onFocusChanged: Shell<any Command> = .empty
     // var onFocusedWorkspaceChanged: [any Command] = []

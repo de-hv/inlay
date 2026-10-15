@@ -116,6 +116,16 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
         empty = 'auto'
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                  ANIMATIONS
+# └──────────────────────────────────────────────────────────────────────────────┘
+# The windows slide to their place when a window opens or closes, and when one is moved with swap or move.
+# See: inlay config --explain animations
+[animations]
+    enabled = true
+    # In milliseconds (0 ... 500). 0 = no animation
+    duration = 180
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    BORDERS
 # └──────────────────────────────────────────────────────────────────────────────┘
 # The borders of the windows. See: inlay config --explain borders
@@ -172,11 +182,18 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     cmd-alt-up    = 'focus up'
     cmd-alt-right = 'focus right'
 
-    # move windows into same workspace
-    cmd-alt-ctrl-left  = 'move left'
-    cmd-alt-ctrl-down  = 'move down'
-    cmd-alt-ctrl-up    = 'move up'
-    cmd-alt-ctrl-right = 'move right'
+    # Swap the focused window with its neighbor: the two windows trade places, the layout keeps its shape.
+    # Toward two windows (from the right column to a left column with two), the one focused more recently
+    cmd-alt-ctrl-left  = 'swap left'
+    cmd-alt-ctrl-down  = 'swap down'
+    cmd-alt-ctrl-up    = 'swap up'
+    cmd-alt-ctrl-right = 'swap right'
+
+    # Move the focused window: it leaves its column or row and the layout changes its shape
+    cmd-alt-shift-left  = 'move left'
+    cmd-alt-shift-down  = 'move down'
+    cmd-alt-shift-up    = 'move up'
+    cmd-alt-shift-right = 'move right'
 
     cmd-alt-ctrl-enter = ['fullscreen']
 

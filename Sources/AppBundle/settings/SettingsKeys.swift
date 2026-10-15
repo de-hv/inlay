@@ -28,6 +28,10 @@ extension SettingsKey {
     static let splitTarget = SettingsKey(["tiling"], "split-target", default: .string(SplitTarget.focused.rawValue))
     static let minWindowSize = SettingsKey(["tiling"], "min-window-size", default: .int(100))
 
+    // Animations. The defaults are the ones of AnimationsConfig
+    static let animationsEnabled = SettingsKey(["animations"], "enabled", default: .bool(true))
+    static let animationsDuration = SettingsKey(["animations"], "duration", default: .int(180))
+
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))
     static let menuBarTheme = SettingsKey(["menu-bar"], "theme", default: .string(MenuBarTheme.chips.rawValue))

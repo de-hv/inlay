@@ -75,6 +75,8 @@ private struct SliderRow: View {
     var step: Int = 1
     /// false: the header of the section already names the table of the key
     var showsTable: Bool = true
+    /// The value as the slider shows it
+    var format: (Int) -> String = Strings.Settings.points
 
     var body: some View {
         SettingsRow(model: model, title: title, detail: detail, key: key, showsTable: showsTable) {
@@ -86,9 +88,9 @@ private struct SliderRow: View {
                 if !isEditing { model.commit(key) }
             }
             .frame(width: 160)
-            Text(Strings.Settings.points(model.int(key)))
+            Text(format(model.int(key)))
                 .monospacedDigit()
-                .frame(width: 44, alignment: .trailing)
+                .frame(width: 52, alignment: .trailing)
         }
     }
 }
@@ -228,6 +230,19 @@ struct GeneralSettingsView: View {
                     range: TilingConfig.minWindowSizeRange,
                     step: 10,
                 )
+            }
+            Section(Strings.Settings.animations) {
+                ToggleRow(model: model, title: Strings.Settings.animate, detail: Strings.Settings.animateDetail, key: .animationsEnabled)
+                SliderRow(
+                    model: model,
+                    title: Strings.Settings.duration,
+                    detail: Strings.Settings.durationDetail,
+                    key: .animationsDuration,
+                    range: AnimationsConfig.durationRange,
+                    step: 10,
+                    format: Strings.Settings.milliseconds,
+                )
+                .disabled(!model.bool(.animationsEnabled))
             }
             Section(Strings.Settings.configuration) {
                 LabeledContent {

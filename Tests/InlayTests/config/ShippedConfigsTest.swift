@@ -71,7 +71,9 @@ extension InlayTests {
             }
             for direction in ["left", "down", "up", "right"] {
                 assertEquals(runs("cmd-alt-\(direction)", "focus \(direction)"), true, additionalMsg: direction)
-                assertEquals(runs("cmd-alt-ctrl-\(direction)", "move \(direction)"), true, additionalMsg: direction)
+                // swap keeps the shape of the layout, move changes it
+                assertEquals(runs("cmd-alt-ctrl-\(direction)", "swap \(direction)"), true, additionalMsg: direction)
+                assertEquals(runs("cmd-alt-shift-\(direction)", "move \(direction)"), true, additionalMsg: direction)
                 assertEquals(runs("cmd-alt-ctrl-\(direction)", "join-with \(direction); mode main", mode: "service"), true, additionalMsg: direction)
             }
             assertTrue(runs("cmd-alt-comma", "balance-sizes"))

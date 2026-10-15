@@ -427,6 +427,36 @@ a warning (not with an error) and are treated as `tiles`:
 
 The warnings show up in `inlay reload-config` and in the menu of the menu bar item ("Config contains warnings...").
 
+### Moving windows: `swap` and `move`
+
+The shipped config has two ways of moving the focused window with the arrows:
+
+- **`cmd-alt-ctrl` + arrow: `swap`**. The window trades places with its neighbor and the layout keeps its
+  shape: in a left column with two windows and a right one, the bottom left window moved to the right takes the
+  place of the right one, and the right one goes to the bottom left. Toward a side with two windows, it swaps
+  with the one that was focused more recently. At the edge of the workspace nothing happens.
+- **`cmd-alt-shift` + arrow: `move`**, the one of AeroSpace. The window leaves its column or row and the layout
+  changes its shape (the bottom left window moved to the right becomes a third column).
+
+### Animations
+
+The tiling windows **slide to their place**, in 180 ms, when a window opens (it comes out of the window it
+splits, which makes room for it) or closes, and when a window is moved with `swap` or `move`.
+The borders go with them. Nothing else is animated: resizing, `balance-sizes`, switching workspaces, the
+startup and the mouse stay instant. With *Reduce motion* (System Settings → Accessibility → Display) nothing is
+animated. Settings has the same two keys in its **General** tab.
+
+```toml
+[animations]
+    enabled = true
+    duration = 180   # 0 ... 500 milliseconds. 0 = no animation
+```
+
+macOS only lets Inlay move the windows of other apps through the Accessibility API, one frame at a time, and
+it doesn't let it change their opacity or scale without disabling SIP: the animation moves and resizes the
+windows, nothing more. A window that is slow to resize (some browsers, Electron apps) skips frames, but it
+always ends in its exact place.
+
 ## Menu bar and settings
 
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
@@ -527,7 +557,7 @@ tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>

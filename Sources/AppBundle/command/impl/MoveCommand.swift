@@ -18,6 +18,7 @@ struct MoveCommand: Command {
         ) {
             return .fail
         }
+        WindowAnimator.shared.requestAnimatedLayout()
         switch currentWindow.windowParentCases {
             case .unbound: return .fail
             case .tilingContainer(let parent):

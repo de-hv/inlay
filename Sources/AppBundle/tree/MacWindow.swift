@@ -32,6 +32,12 @@ final class MacWindow: Window {
         window.detectedType = windowType
         allWindowsMap[windowId] = window
         DebugStats.count("window.registered")
+        if !isStartup {
+            // It comes out of the room of the window it splits (see TilingContainer.layoutTiles), or else from where
+            // the app opened it, and the other windows make room for it
+            window.entryFrame = rect
+            WindowAnimator.shared.requestAnimatedLayout()
+        }
         try await window.afterRegistration()
         return window
     }
@@ -76,6 +82,9 @@ final class MacWindow: Window {
             return
         }
         DebugStats.count("window.removed")
+        WindowAnimator.shared.cancel(windowId)
+        // The other windows take the room it leaves
+        if ServerState.shared.isEnabled { WindowAnimator.shared.requestAnimatedLayout() }
         if !skipClosedWindowsCache { cacheClosedWindowIfNeeded() }
         releaseTilingSpaceToNeighbor()
         let parent = unbindFromParent().parent
@@ -119,6 +128,7 @@ final class MacWindow: Window {
     @MainActor
     func hideInCorner(_ corner: OptimalHideCorner) async throws {
         guard let nodeMonitor else { return }
+        WindowAnimator.shared.cancel(windowId)
         DebugStats.count("layout.hide-in-corner")
         // Don't accidentally override prevUnhiddenEmulationPosition in case of subsequent `hideInCorner` calls
         if !isHiddenInCorner {

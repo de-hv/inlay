@@ -73,9 +73,11 @@ private struct SliderRow: View {
     let key: SettingsKey
     let range: ClosedRange<Int>
     var step: Int = 1
+    /// false: the header of the section already names the table of the key
+    var showsTable: Bool = true
 
     var body: some View {
-        SettingsRow(model: model, title: title, detail: detail, key: key) {
+        SettingsRow(model: model, title: title, detail: detail, key: key, showsTable: showsTable) {
             Slider(
                 value: Binding(get: { Double(model.int(key)) }, set: { model.preview(key, .int(Int($0.rounded()))) }),
                 in: Double(range.lowerBound) ... Double(range.upperBound),
@@ -447,10 +449,11 @@ struct BordersSettingsView: View {
             Section(Strings.Settings.windowBorders) {
                 ToggleRow(model: model, title: Strings.Settings.showBorders, key: .bordersEnabled)
                 SliderRow(model: model, title: Strings.Settings.width, key: .bordersWidth, range: BordersConfig.widthRange)
+                ToggleRow(model: model, title: Strings.Settings.squareCorners, detail: Strings.Settings.squareCornersDetail, key: .bordersSquareCorners)
                 SliderRow(
                     model: model,
                     title: Strings.Settings.cornerRadius,
-                    detail: Strings.Settings.cornerRadiusDetail,
+                    detail: model.bool(.bordersSquareCorners) ? Strings.Settings.squareCornersRadiusDetail : Strings.Settings.cornerRadiusDetail,
                     key: .bordersCornerRadius,
                     range: BordersConfig.cornerRadiusRange,
                 )
@@ -499,18 +502,121 @@ struct BordersSettingsView: View {
         )
     }
 
-    /// A window with its border around it: the border is drawn outside of the frame of the window
+    /// A window with its border around it: the border is drawn outside of the frame of the window.
+    /// With square corners the border is a plain rectangle, and it fills the rounded corners of the window
     private func window(_ title: String, _ colorKey: SettingsKey?, glows: Bool = false) -> some View {
         let width = CGFloat(model.int(.bordersWidth))
         let radius = CGFloat(model.int(.bordersCornerRadius))
+        let outerRadius = model.bool(.bordersSquareCorners) ? 0 : radius + width
         let color = colorKey.map { Color(nsColor: model.color($0).resolve(auto: .white, systemAccent: .systemAccent).nsColor) } ?? .clear
         return RoundedRectangle(cornerRadius: radius, style: .continuous)
             .fill(Color(white: 0.13))
             .frame(height: 90)
             .overlay { Text(title).font(.caption).foregroundStyle(.secondary) }
             .padding(width)
-            .background(color, in: RoundedRectangle(cornerRadius: radius + width, style: .continuous))
+            .background(color, in: RoundedRectangle(cornerRadius: outerRadius, style: .continuous))
             // The blur radius of a SwiftUI shadow is a standard deviation: half of the one of the config
             .shadow(color: glows ? color : .clear, radius: CGFloat(model.int(.bordersGlowRadius)) / 2)
+    }
+}
+
+// MARK: - Gaps
+
+/// Edits the [gaps] table: the room between the windows, and between the windows and the edges of the screen
+struct GapsSettingsView: View {
+    let model: SettingsModel
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
+            Section {
+                preview
+            }
+            Section {
+                gapRow(Strings.Settings.horizontal, detail: Strings.Settings.horizontalGapDetail, .gapsInnerHorizontal)
+                gapRow(Strings.Settings.vertical, detail: Strings.Settings.verticalGapDetail, .gapsInnerVertical)
+            } header: {
+                tableHeader(Strings.Settings.innerGaps, SettingsKey.gapsInnerHorizontal)
+            } footer: {
+                footnote(Strings.Settings.innerGapsFooter)
+            }
+            Section {
+                gapRow(Strings.Settings.top, detail: Strings.Settings.topGapDetail, .gapsOuterTop)
+                gapRow(Strings.Settings.bottom, .gapsOuterBottom)
+                gapRow(Strings.Settings.left, .gapsOuterLeft)
+                gapRow(Strings.Settings.right, .gapsOuterRight)
+            } header: {
+                tableHeader(Strings.Settings.outerGaps, SettingsKey.gapsOuterTop)
+            } footer: {
+                footnote(Strings.Settings.outerGapsFooter)
+            }
+        }
+    }
+
+    private func gapRow(_ title: String, detail: String? = nil, _ key: SettingsKey) -> some View {
+        SliderRow(model: model, title: title, detail: detail, key: key, range: Gaps.settingsRange, showsTable: false)
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Three windows of a screen, with the gaps at their real size, and the borders as the Borders tab leaves them
+    private var preview: some View {
+        let gaps = (
+            horizontal: CGFloat(model.int(.gapsInnerHorizontal)),
+            vertical: CGFloat(model.int(.gapsInnerVertical)),
+            top: CGFloat(model.int(.gapsOuterTop)),
+            bottom: CGFloat(model.int(.gapsOuterBottom)),
+            left: CGFloat(model.int(.gapsOuterLeft)),
+            right: CGFloat(model.int(.gapsOuterRight)),
+        )
+        let borderWidth = model.bool(.bordersEnabled) ? CGFloat(model.int(.bordersWidth)) : 0
+        let radius = CGFloat(model.int(.bordersCornerRadius))
+        let squareCorners = model.bool(.bordersSquareCorners)
+        let active = model.color(.bordersActiveColor).resolve(auto: .white, systemAccent: .systemAccent).nsColor
+        let inactive = model.color(.bordersInactiveColor).resolve(auto: .white, systemAccent: .systemAccent).nsColor
+        return Canvas { context, size in
+            let area = CGRect(origin: .zero, size: size).inset(top: gaps.top, left: gaps.left, bottom: gaps.bottom, right: gaps.right)
+            guard area.width > gaps.horizontal, area.height > gaps.vertical else { return }
+            let leftWidth = ((area.width - gaps.horizontal) / 2).rounded()
+            let topHeight = ((area.height - gaps.vertical) / 2).rounded()
+            let rightX = area.minX + leftWidth + gaps.horizontal
+            let windows: [(CGRect, NSColor)] = [
+                (CGRect(x: area.minX, y: area.minY, width: leftWidth, height: area.height), active),
+                (CGRect(x: rightX, y: area.minY, width: area.maxX - rightX, height: topHeight), inactive),
+                (CGRect(x: rightX, y: area.minY + topHeight + gaps.vertical, width: area.maxX - rightX, height: area.height - topHeight - gaps.vertical), inactive),
+            ]
+            for (frame, color) in windows {
+                let windowRadius = min(radius, frame.width / 2, frame.height / 2)
+                if borderWidth > 0 {
+                    // Outside of the window. With square corners, the corners that the window leaves empty keep the color of the border
+                    let outerRadius = squareCorners ? 0 : windowRadius + borderWidth
+                    let border = Path(roundedRect: frame.insetBy(dx: -borderWidth, dy: -borderWidth), cornerRadius: outerRadius, style: .continuous)
+                    context.fill(border, with: .color(Color(nsColor: color)))
+                }
+                context.fill(Path(roundedRect: frame, cornerRadius: windowRadius, style: .continuous), with: .color(Color(white: 0.13)))
+            }
+        }
+        .frame(height: 200)
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(colors: [Color(red: 0.21, green: 0.24, blue: 0.33), Color(red: 0.27, green: 0.27, blue: 0.42)], startPoint: .leading, endPoint: .trailing),
+            in: RoundedRectangle(cornerRadius: 8, style: .continuous),
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(alignment: .bottomTrailing) {
+            Text(Strings.Settings.actualSize).font(.caption2).foregroundStyle(.white.opacity(0.6)).padding(6)
+        }
+        .accessibilityLabel(Strings.Settings.actualSize)
+    }
+}
+
+extension CGRect {
+    fileprivate func inset(top: CGFloat, left: CGFloat, bottom: CGFloat, right: CGFloat) -> CGRect {
+        CGRect(x: minX + left, y: minY + top, width: max(0, width - left - right), height: max(0, height - top - bottom))
     }
 }

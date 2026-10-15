@@ -13,6 +13,7 @@ extension InlayTests {
             assertEquals(borders.enabled, true)
             assertEquals(borders.width, 4)
             assertEquals(borders.cornerRadius, 16)
+            assertEquals(borders.squareCorners, true)
             assertEquals(borders.activeColor, .systemAccent)
             assertEquals(borders.inactiveColor.description, "#8E8E9373")
             assertEquals(borders.floatingColor.description, "#BF5AF2")
@@ -30,6 +31,7 @@ extension InlayTests {
                     enabled = false
                     width = 6
                     corner-radius = 10
+                    square-corners = false
                     active-color = '#D19A66'
                     inactive-color = '#00000000'
                     floating-color = 'system-accent'
@@ -45,6 +47,7 @@ extension InlayTests {
                 enabled: false,
                 width: 6,
                 cornerRadius: 10,
+                squareCorners: false,
                 activeColor: .rgba(Rgba(hex: "#D19A66").orDie()),
                 inactiveColor: .rgba(Rgba(red: 0, green: 0, blue: 0, alpha: 0)),
                 floatingColor: .systemAccent,
@@ -123,6 +126,7 @@ extension InlayTests {
             assertEquals(SettingsKey.bordersEnabled.defaultValue, .bool(defaults.enabled))
             assertEquals(SettingsKey.bordersWidth.defaultValue, .int(Int(defaults.width)))
             assertEquals(SettingsKey.bordersCornerRadius.defaultValue, .int(Int(defaults.cornerRadius)))
+            assertEquals(SettingsKey.bordersSquareCorners.defaultValue, .bool(defaults.squareCorners))
             assertEquals(SettingsKey.bordersActiveColor.defaultValue, .string(defaults.activeColor.description))
             assertEquals(SettingsKey.bordersInactiveColor.defaultValue, .string(defaults.inactiveColor.description))
             assertEquals(SettingsKey.bordersFloatingColor.defaultValue, .string(defaults.floatingColor.description))
@@ -134,6 +138,7 @@ extension InlayTests {
                 (SettingsKey.bordersEnabled, TomlValue.bool(false)),
                 (.bordersWidth, .int(20)),
                 (.bordersCornerRadius, .int(0)),
+                (.bordersSquareCorners, .bool(false)),
                 (.bordersActiveColor, .string("#D19A66")),
                 (.bordersInactiveColor, .string("#00000000")),
                 (.bordersFloatingColor, .string("system-accent")),
@@ -147,6 +152,7 @@ extension InlayTests {
             assertEquals(result.config.borders.enabled, false)
             assertEquals(result.config.borders.width, 20)
             assertEquals(result.config.borders.cornerRadius, 0)
+            assertEquals(result.config.borders.squareCorners, false)
             assertEquals(result.config.borders.inactiveColor.description, "#00000000")
             assertEquals(result.config.borders.floatingColor, .systemAccent)
             assertEquals(result.config.borders.glow, true)

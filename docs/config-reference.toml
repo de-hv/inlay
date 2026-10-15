@@ -147,7 +147,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 #                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
 # The window borders (see [borders]) are drawn outside of the windows, in the gaps.
 # Keep the gaps at least twice as big as borders.width, or the borders of neighbor windows touch.
-# The outer gaps must be at least as big as borders.width, or the border is cut by the edge of the screen
+# The outer gaps must be at least as big as borders.width, or the border is cut by the edge of the screen.
+# The Gaps tab of Settings edits the six gaps with sliders (0 ... 60), but not the gaps per monitor
 # Fallback value (if you omit the keys): 0
 [gaps]
     # The gap between two windows that are side by side
@@ -319,10 +320,22 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # The radius of the corners, in points. Inlay can't read the real radius of the windows of other apps,
     # so tune it by eye. 16 is close to the windows of macOS 26 and later, 10 to the ones of macOS 14 and 15.
-    # 0 = square corners
+    # It is the radius of the inner edge of the border. Its outer edge is square with square-corners, and
+    # rounded (corner-radius + width) without it. 0 = a square border that doesn't cover the corners of the windows
     # Possible values: 0 ... 40
     # Fallback value (if you omit the key): corner-radius = 16
     corner-radius = 16
+
+    # The border fills the rounded corners of the windows, so that they look square. The outer edge of the border
+    # is square, and its inner edge follows the corners of the window (corner-radius): the corners that the window
+    # leaves empty take the color of the border. Set corner-radius to the radius of the windows, or a bit more:
+    # with less, a bit of what is behind the window shows in its corners. A border with a translucent color fills
+    # the corners with that same color, and a window without a border (a transparent color) keeps its round corners.
+    # The shadow of the window stays round: macOS draws it.
+    # false: the border follows the rounded corners of the windows
+    # Possible values: true|false
+    # Fallback value (if you omit the key): square-corners = true
+    square-corners = true
 
     # The color of the border of the focused window, if it is a tiling one.
     # A fully transparent color ('#00000000') means "no border"

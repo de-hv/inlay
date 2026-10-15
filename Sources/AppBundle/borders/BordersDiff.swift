@@ -37,7 +37,7 @@ enum BordersDiff {
                 continue
             }
             if before.frame != item.frame || before.width != item.width || before.cornerRadius != item.cornerRadius ||
-                before.glowRadius != item.glowRadius
+                before.squareCorners != item.squareCorners || before.glowRadius != item.glowRadius
             {
                 result.append(.reshape(item))
             }

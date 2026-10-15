@@ -85,8 +85,11 @@ enum TomlValue: Equatable, Sendable {
 
 /// Edits one key of a TOML document, leaving the rest of the text as it is: comments, order, spacing, line endings.
 ///
-/// - A key that is in its table: only its value is replaced. The comment after it stays
+/// - A key that is in the document: only its value is replaced. The comment after it stays. Also a key written with dots
+///   (`inner.horizontal = 8` in `[gaps]`, or `menu-bar.theme = 'chips'`)
 /// - A key that isn't: it is added after the last key of the table
+/// - A key whose table is defined with dotted keys (`inner.vertical = 8` in `[gaps]`): it is added with dots too,
+///   after the last of them (`inner.horizontal = 8`)
 /// - A table that isn't: it is added to the end of the document
 /// - A sub-table that isn't, of a table that is (`[borders.mode-colors]` when there is a `[borders]`): it is added
 ///   after its parent table and the sub-tables that the parent already has, indented like them
@@ -95,12 +98,10 @@ enum TomlValue: Equatable, Sendable {
 ///
 /// The result is parsed before it is returned, to check that it is valid TOML and that the key has the new value.
 ///
-/// A key written in a way that can't be edited safely is refused: with dots (`menu-bar.theme = 'chips'`),
-/// inside of an inline table (`menu-bar = { theme = 'chips' }`), or with a value that spans several lines
+/// A key written in a way that can't be edited safely is refused: inside of an inline table
+/// (`menu-bar = { theme = 'chips' }`), or with a value that spans several lines
 enum TomlPatcher {
     enum Reason: Equatable, Sendable {
-        /// `a.b = 1`: the key, or its table, is defined with a dotted key
-        case dottedKey
         /// `a = { b = 1 }`
         case inlineTable
         /// The value of the key spans several lines, or it isn't a single value
@@ -325,7 +326,7 @@ extension TomlPatcher {
                 guard let table = entry.table else { continue }
                 let absolute = table + entry.key
                 if absolute == full {
-                    if table != path.table { return .unsupported(.dottedKey) }
+                    // However it is split between the header and the key: `[gaps] inner.horizontal = 8` is gaps.inner.horizontal
                     if found != nil { return .unsupported(.conflict) }
                     found = entry
                 } else if full.starts(with: absolute) {
@@ -334,10 +335,6 @@ extension TomlPatcher {
                 } else if absolute.starts(with: full) {
                     // The key is used as a table
                     return .unsupported(.conflict)
-                } else if entry.key.count > 1, table.count < path.table.count, absolute.dropLast().starts(with: path.table) {
-                    // The table of the key is defined with dotted keys of a parent table: `menu-bar.theme = 'chips'`.
-                    // TOML doesn't allow to open such a table with a [header] afterwards
-                    return .unsupported(.dottedKey)
                 }
             }
             guard let found else { return .absent }
@@ -372,7 +369,16 @@ extension TomlPatcher {
                 if let last = lines.indices.last, lines[last].terminator.isEmpty { lines[last].terminator = newline }
             }
             let sectionEntries = entries.filter { $0.table == path.table }
-            if let last = sectionEntries.last {
+            if let sibling = dottedSibling(path) {
+                // The table of the key is defined with dotted keys of a parent table: `inner.vertical = 8` in [gaps].
+                // TOML doesn't allow to open such a table with a [header] afterwards, so the key is written with dots too,
+                // after its sibling
+                let parent = sibling.table ?? []
+                let dotted = (path.table.dropFirst(parent.count) + [path.key]).map(TomlPatcher.keyLiteral).joined(separator: ".")
+                let indent = lines[sibling.firstLine].content.prefix { $0 == " " || $0 == "\t" }
+                terminateLastLine(ifInsertingAt: sibling.lastLine + 1)
+                lines.insert(Line(content: "\(indent)\(dotted) = \(literal)", terminator: newline), at: sibling.lastLine + 1)
+            } else if let last = sectionEntries.last {
                 // After the last key of the table, with its indentation
                 let indent = lines[last.firstLine].content.prefix { $0 == " " || $0 == "\t" }
                 terminateLastLine(ifInsertingAt: last.lastLine + 1)
@@ -414,6 +420,15 @@ extension TomlPatcher {
                 lines.append(Line(content: "\(key) = \(literal)", terminator: newline))
             }
             scan()
+        }
+
+        /// The last key that defines the table of the path with dots, from one of its parent tables: `inner.vertical = 8`
+        /// in [gaps] for gaps.inner.horizontal. nil if the table of the path isn't defined that way
+        private func dottedSibling(_ path: TomlKeyPath) -> Entry? {
+            entries.last { entry in
+                guard let table = entry.table, entry.key.count > 1, table.count < path.table.count else { return false }
+                return path.table.starts(with: table) && (table + entry.key.dropLast()).starts(with: path.table)
+            }
         }
 
         /// Where the header of a new sub-table goes: after the last table of its family (its parent table, and

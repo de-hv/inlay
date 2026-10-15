@@ -41,7 +41,8 @@ final class BorderPanel: NSPanel {
         // The shape only depends on the size: moving the panel doesn't rebuild it
         let previous = self.geometry
         if previous?.panelFrame.size != geometry.panelFrame.size || previous?.width != geometry.width ||
-            previous?.innerRadius != geometry.innerRadius || previous?.glowMargin != geometry.glowMargin
+            previous?.innerRadius != geometry.innerRadius || previous?.squareCorners != geometry.squareCorners ||
+            previous?.glowMargin != geometry.glowMargin
         {
             borderView.shape.path = geometry.path()
             borderView.glow.frame = CGRect(origin: .zero, size: geometry.panelFrame.size)

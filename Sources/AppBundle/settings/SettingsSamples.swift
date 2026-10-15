@@ -25,6 +25,7 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
         ("general", AnyView(GeneralSettingsView(model: model))),
         ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
         ("borders", AnyView(BordersSettingsView(model: model))),
+        ("gaps", AnyView(GapsSettingsView(model: model))),
     ]
     for (name, view) in tabs {
         let hosting = NSHostingView(rootView: view)

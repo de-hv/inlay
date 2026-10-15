@@ -125,6 +125,8 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     width = 4
     # In points (0 ... 40)
     corner-radius = 16
+    # The border fills the rounded corners of the windows, which then look square
+    square-corners = true
     # '#RRGGBB', '#RRGGBBAA' or 'system-accent'
     active-color = 'system-accent'
     inactive-color = '#8E8E9373'

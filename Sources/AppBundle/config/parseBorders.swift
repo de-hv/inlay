@@ -8,6 +8,8 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var width: CGFloat = 4
     /// The radius of the inner edge of the border, in points. It's meant to match the corners of the windows
     var cornerRadius: CGFloat = 16
+    /// The border fills the rounded corners of the windows, which then look square. false: the border follows the corners
+    var squareCorners: Bool = true
     /// The focused tiling window
     var activeColor: ConfigColor = .systemAccent
     /// Every window that isn't focused
@@ -30,6 +32,7 @@ let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "width": Parser(\.width, parsePoints("width", BordersConfig.widthRange)),
     "corner-radius": Parser(\.cornerRadius, parsePoints("corner-radius", BordersConfig.cornerRadiusRange)),
+    "square-corners": Parser(\.squareCorners, parseBool),
     "active-color": Parser(\.activeColor, parseConfigColor(allowAuto: false)),
     "inactive-color": Parser(\.inactiveColor, parseConfigColor(allowAuto: false)),
     "floating-color": Parser(\.floatingColor, parseConfigColor(allowAuto: false)),

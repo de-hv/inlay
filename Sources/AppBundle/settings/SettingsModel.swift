@@ -104,6 +104,8 @@ final class SettingsModel {
         if let unavailableReason { return unavailableReason }
         _ = target
         if case .unsupported = document.locate(key.path) { return Strings.Settings.definedByHand }
+        // A value that the control can't show: a gap per monitor, `[{ monitor.main = 16 }, 8]`
+        if TomlPatcher.value(in: root, key.path) != nil && fileValue(key) == nil { return Strings.Settings.definedByHand }
         return nil
     }
 

@@ -62,6 +62,7 @@ final class SettingsWindowController: NSObject {
         if SettingsFeatures.borders {
             tabs.addTab(Strings.Settings.borders, symbol: "rectangle.dashed", BordersSettingsView(model: model))
         }
+        tabs.addTab(Strings.Settings.gaps, symbol: "rectangle.split.3x1", GapsSettingsView(model: model))
         let window = NSWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.title = Strings.Settings.windowTitle

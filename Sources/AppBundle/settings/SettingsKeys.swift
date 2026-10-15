@@ -42,11 +42,20 @@ extension SettingsKey {
     static let bordersEnabled = SettingsKey(["borders"], "enabled", default: .bool(true))
     static let bordersWidth = SettingsKey(["borders"], "width", default: .int(4))
     static let bordersCornerRadius = SettingsKey(["borders"], "corner-radius", default: .int(16))
+    static let bordersSquareCorners = SettingsKey(["borders"], "square-corners", default: .bool(true))
     static let bordersActiveColor = SettingsKey(["borders"], "active-color", default: .string(ConfigColor.systemAccentLiteral))
     static let bordersInactiveColor = SettingsKey(["borders"], "inactive-color", default: .string("#8E8E9373"))
     static let bordersFloatingColor = SettingsKey(["borders"], "floating-color", default: .string("#BF5AF2"))
     static let bordersGlow = SettingsKey(["borders"], "glow", default: .bool(false))
     static let bordersGlowRadius = SettingsKey(["borders"], "glow-radius", default: .int(12))
+
+    // Gaps. The fallback of an omitted gap is 0. A gap per monitor (`[{ monitor.main = 16 }, 8]`) is defined by hand
+    static let gapsInnerHorizontal = SettingsKey(["gaps", "inner"], "horizontal", default: .int(0))
+    static let gapsInnerVertical = SettingsKey(["gaps", "inner"], "vertical", default: .int(0))
+    static let gapsOuterTop = SettingsKey(["gaps", "outer"], "top", default: .int(0))
+    static let gapsOuterBottom = SettingsKey(["gaps", "outer"], "bottom", default: .int(0))
+    static let gapsOuterLeft = SettingsKey(["gaps", "outer"], "left", default: .int(0))
+    static let gapsOuterRight = SettingsKey(["gaps", "outer"], "right", default: .int(0))
 
     /// [borders.mode-colors]: the color of the border of the focused window while the binding mode is active.
     /// No default: a mode without a color keeps the normal colors

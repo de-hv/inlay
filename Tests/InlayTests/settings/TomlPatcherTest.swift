@@ -441,21 +441,59 @@ extension InlayTests {
             assertEquals(remove("[menu-bar]\ntheme = 'chips'\n[x]\n", theme), "[menu-bar]\n[x]\n")
         }
 
-        // MARK: - Refused
+        // MARK: - Dotted keys
 
-        @Test func testDottedKeys() {
-            assertEquals(TomlPatcher.locate("menu-bar.theme = 'chips'\n", theme), .unsupported(.dottedKey))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.focused = 'auto'\n", focused), .unsupported(.dottedKey))
-            assertEquals(TomlPatcher.locate("menu-bar.colors.focused = 'auto'\n", focused), .unsupported(.dottedKey))
-            // The table of the key is defined with dotted keys: a [menu-bar] header can't be added
-            assertEquals(TomlPatcher.locate("menu-bar.enabled = true\n", theme), .unsupported(.dottedKey))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.accent = '#FFFFFF'\n", focused), .unsupported(.dottedKey))
-            assertEquals(TomlPatcher.locate("menu-bar . \"colors\".accent = '#FFFFFF'\n", focused), .unsupported(.dottedKey))
-            assertEquals(setError("menu-bar.theme = 'chips'\n", theme), .unsupported(.dottedKey))
+        @Test func testDottedKeysAreReplaced() {
+            assertEquals(TomlPatcher.locate("menu-bar.theme = 'chips'\n", theme), .line(0))
+            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.focused = 'auto'\n", focused), .line(1))
+            assertEquals(TomlPatcher.locate("menu-bar.colors.focused = 'auto'\n", focused), .line(0))
+            assertEquals(set("menu-bar.theme = 'chips'\n", theme, .string("square")), "menu-bar.theme = 'square'\n")
+            // The gaps of the shipped config, aligned, with a comment after the value
+            let gaps = """
+                [gaps]
+                    inner.horizontal = 8
+                    inner.vertical =   8   # Between rows
+                    outer.left =       8
+
+                """
+            let horizontal = TomlKeyPath(["gaps", "inner"], "horizontal")
+            let vertical = TomlKeyPath(["gaps", "inner"], "vertical")
+            assertEquals(set(gaps, horizontal, .int(12)), gaps.replacingOccurrences(of: "inner.horizontal = 8", with: "inner.horizontal = 12"))
+            assertEquals(set(gaps, vertical, .int(16)), gaps.replacingOccurrences(of: "=   8   #", with: "=   16  #"))
+            assertEquals(remove(gaps, vertical), """
+                [gaps]
+                    inner.horizontal = 8
+                    outer.left =       8
+
+                """)
+        }
+
+        @Test func testDottedKeysAreAddedWithDots() {
+            // The table of the key is defined with dotted keys: a [menu-bar] header can't be added, the key gets dots too
+            assertEquals(TomlPatcher.locate("menu-bar.enabled = true\n", theme), .absent)
+            assertEquals(set("menu-bar.enabled = true\n", theme, .string("square")), "menu-bar.enabled = true\nmenu-bar.theme = 'square'\n")
+            assertEquals(
+                set("[menu-bar]\ncolors.accent = '#FFFFFF'\nenabled = true\n", focused, .string("auto")),
+                "[menu-bar]\ncolors.accent = '#FFFFFF'\ncolors.focused = 'auto'\nenabled = true\n",
+            )
+            assertEquals(
+                set("menu-bar . \"colors\".accent = '#FFFFFF'\n", focused, .string("auto")),
+                "menu-bar . \"colors\".accent = '#FFFFFF'\nmenu-bar.colors.focused = 'auto'\n",
+            )
+            // After the last of them, with its indentation
+            let outer = TomlKeyPath(["gaps", "outer"], "top")
+            assertEquals(
+                set("[gaps]\n    inner.horizontal = 8\n    outer.left = 8\n    outer.right = 8\n\n[tiling]\n", outer, .int(4)),
+                "[gaps]\n    inner.horizontal = 8\n    outer.left = 8\n    outer.right = 8\n    outer.top = 4\n\n[tiling]\n",
+            )
+            // Without dotted siblings, the table gets a header of its own
+            assertEquals(set("[gaps]\n    inner.horizontal = 8\n", outer, .int(4)), "[gaps]\n    inner.horizontal = 8\n\n    [gaps.outer]\n        top = 4\n")
             // Dotted keys of other tables don't matter
             assertEquals(TomlPatcher.locate("gaps.inner.horizontal = 0\nmenu-bars.theme = 1\n[menu-bar]\ncolor.focused = 1\n", theme), .absent)
             assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.accent = '#FFFFFF'\n", theme), .absent)
         }
+
+        // MARK: - Refused
 
         @Test func testInlineTables() {
             assertEquals(TomlPatcher.locate("menu-bar = { theme = 'chips' }\n", theme), .unsupported(.inlineTable))

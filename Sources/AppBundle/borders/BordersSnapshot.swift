@@ -10,6 +10,8 @@ struct BorderItem: Equatable, Sendable {
     var color: Rgba
     var width: CGFloat
     var cornerRadius: CGFloat
+    /// The border fills the rounded corners of the window, so that the window looks square. See: BorderGeometry
+    var squareCorners: Bool = false
     /// The blur radius of the glow around the border. 0: no glow
     var glowRadius: CGFloat = 0
 }
@@ -56,6 +58,7 @@ struct BordersSnapshot: Equatable, Sendable {
                 color: rgba,
                 width: config.width,
                 cornerRadius: config.cornerRadius,
+                squareCorners: config.squareCorners,
                 glowRadius: candidate.isFocused && config.glow ? config.glowRadius : 0,
             ))
         }

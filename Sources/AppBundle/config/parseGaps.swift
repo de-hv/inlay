@@ -5,6 +5,8 @@ struct Gaps: ConvenienceMutable, Equatable, Sendable {
     var outer: Outer
 
     static let zero = Gaps(inner: .zero, outer: .zero)
+    /// What the sliders of the settings window offer. The config takes any value
+    static let settingsRange = 0 ... 60
 
     struct Inner: ConvenienceMutable, Equatable, Sendable {
         var vertical: DynamicConfigValue<Int>

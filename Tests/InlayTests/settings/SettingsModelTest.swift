@@ -290,15 +290,51 @@ extension InlayTests {
             let model = try model(original)
             assertEquals(model.unavailableReason, nil)
             // Shown, but not editable
-            assertEquals(model.menuBarTheme, .square)
-            assertEquals(model.disabledReason(.menuBarTheme), "Defined by hand in the config file")
-            assertEquals(model.disabledReason(.menuBarShowMode), "Defined by hand in the config file")
             assertEquals(model.disabledReason(.newWindowPlacement), "Defined by hand in the config file")
             assertEquals(model.disabledReason(.startAtLogin), nil)
             // Even if something tries
-            model.set(.menuBarTheme, .string("chips"))
+            model.set(.newWindowPlacement, .string("after-focused"))
             assertEquals(text, original)
             assertEquals(model.errorMessage, "Defined by hand in the config file")
+            // Keys written with dots are edited in place, and the keys of their table are added with dots too
+            assertEquals(model.menuBarTheme, .square)
+            assertEquals(model.disabledReason(.menuBarTheme), nil)
+            assertEquals(model.disabledReason(.menuBarShowMode), nil)
+            model.set(.menuBarTheme, .string("chips"))
+            model.set(.menuBarShowMode, .bool(false))
+            assertEquals(text, "menu-bar.theme = 'chips'\nmenu-bar.show-mode = false\ntiling = { new-window-placement = 'dwindle' }\n[mode.main.binding]\n")
+        }
+
+        @Test func testGaps() throws {
+            let model = try model(
+                """
+                [gaps]
+                    inner.horizontal = 8
+                    inner.vertical =   8
+                    outer.left =       [{ monitor.main = 16 }, 8]
+                [mode.main.binding]
+
+                """,
+            )
+            assertEquals(model.int(.gapsInnerHorizontal), 8)
+            assertEquals(model.int(.gapsOuterTop), 0) // Omitted
+            assertEquals(model.disabledReason(.gapsInnerHorizontal), nil)
+            assertEquals(model.disabledReason(.gapsOuterTop), nil)
+            // A gap per monitor can't be shown by a slider
+            assertEquals(model.disabledReason(.gapsOuterLeft), "Defined by hand in the config file")
+            model.set(.gapsInnerVertical, .int(12))
+            model.set(.gapsOuterTop, .int(4))
+            assertEquals(model.errorMessage, nil)
+            assertEquals(text, """
+                [gaps]
+                    inner.horizontal = 8
+                    inner.vertical =   12
+                    outer.left =       [{ monitor.main = 16 }, 8]
+                    outer.top = 4
+                [mode.main.binding]
+
+                """)
+            assertEquals(parseConfig(text ?? "").config.gaps.outer.top, .constant(4))
         }
 
         @Test func testConfigWithErrors() throws {

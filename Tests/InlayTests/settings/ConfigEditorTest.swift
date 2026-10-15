@@ -145,7 +145,8 @@ extension InlayTests {
             assertEquals(ConfigEditor.patch(text, [unknown]).errorOrNil, .invalidConfig("[ERROR] menu-bar.them: Unknown key"))
             // A config that already has errors isn't edited
             assertEquals(ConfigEditor.patch("unknown-key = 1\n" + text, [theme]).errorOrNil, .invalidConfig("[ERROR] unknown-key: Unknown top-level key"))
-            assertEquals(ConfigEditor.patch("menu-bar.theme = 'chips'\n", [theme]).errorOrNil, .patch(.unsupported(.dottedKey)))
+            // A key written with dots is edited in place
+            assertEquals(ConfigEditor.patch("menu-bar.theme = 'chips'\n", [theme]).okOrNil, "menu-bar.theme = 'square'\n")
         }
 
         @Test func testPatchSeveralEdits() {

@@ -499,8 +499,9 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   menu). The **right click** (or ctrl-click) opens the menu: the workspaces, *Float Focused Window*, the
   config, pause and Settings. With VoiceOver, "pressing" the item (VO-space) opens the menu. To switch workspace: the
   key bindings, the CLI or the *Workspaces* section of the menu. The left click does not highlight the item
-  either: the button never gets to see the mouse (a transparent view on top of it takes it). With the menu
-  open, the item is highlighted like any menu of the menu bar. A ⌘-drag still moves the item along the bar.
+  either: the button never gets to see the mouse (a transparent view on top of it takes it). The menu pops up
+  below the item without highlighting it either: no rounded background behind the item, with the left or the
+  right click. A ⌘-drag still moves the item along the bar.
 - The menu is short on purpose. It lists the workspaces with the names of the apps that have windows in each
   one, as text and without icons (choosing one switches to it), toggles the focused window between floating and tiling, and has what concerns
   Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a click
@@ -513,22 +514,29 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
   file**, line by line and without touching comments or the rest of the file, and reloads the config. If the
   config folder or the file is a symbolic link, the file is written where it really lives and the link stays. If you have no config yet, the first change creates
-  `~/.config/inlay/inlay.toml` from the shipped one. A key written with dots (`menu-bar.theme = …`) or
-  inside an inline table is not edited from Settings: its control appears disabled. A subtable that does not
-  exist yet (`[menu-bar.colors]`, `[borders.mode-colors]`) is added right after its parent table.
+  `~/.config/inlay/inlay.toml` from the shipped one. A key written with dots (`inner.horizontal = 8` in
+  `[gaps]`, `menu-bar.theme = …`) is edited in place, and a missing key of such a table is added with dots
+  too, after the others. A key inside an inline table, or a gap per monitor (`[{ monitor.main = 16 }, 8]`), is
+  not edited from Settings: its control appears disabled. A subtable that does not exist yet
+  (`[menu-bar.colors]`, `[borders.mode-colors]`) is added right after its parent table.
 
 ### The Settings window
 
-Three tabs, **General**, **Menu Bar** and **Borders**. Next to every control is the key it writes. These are the
+Four tabs, **General**, **Menu Bar**, **Borders** and **Gaps**. Next to every control is the key it writes. These are the
 tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Borders</sub></td></tr>
+<tr>
+<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
+<td></td><td></td>
+</tr>
+<tr><td align="center"><sub>Gaps</sub></td><td></td><td></td></tr>
 </table>
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): only the content
@@ -554,6 +562,7 @@ color comes from the state the manager already knows, with no focus heuristics. 
 | `enabled` | `true`, `false` | `true` |
 | `width` | 1 … 20 (points) | `4` |
 | `corner-radius` | 0 … 40 (points) | `16` |
+| `square-corners` | `true`, `false` | `true` |
 | `active-color` | color | `'system-accent'` |
 | `inactive-color` | color | `'#8E8E9373'` |
 | `floating-color` | color | `'#BF5AF2'` |
@@ -587,10 +596,27 @@ color comes from the state the manager already knows, with no focus heuristics. 
 
 ```toml
 [borders]
-    corner-radius = 16   # 0 ... 40 points. 0 = square corners
+    corner-radius = 16   # 0 ... 40 points. The radius of the corners of the windows
 ```
 
 <p align="center"><img src="docs/images/borders-corner-radius.png" alt="Real render, detail of the corner of two neighboring windows with corner-radius = 0 (square corners), 8, 16 (the default) and 24" width="880"></p>
+
+**`square-corners`**: the windows of macOS have rounded corners, and Inlay can't change them (that would need
+System Integrity Protection disabled). What it can do is fill them: the outer edge of the border is square, and
+its inner edge follows the corners of the window, so the corners that the window leaves empty take the color of
+the border and the window looks square. It applies to every window with a border: focused, not focused and
+floating.
+
+```toml
+[borders]
+    square-corners = true   # false: the border follows the rounded corners of the windows
+    corner-radius = 16      # the radius of the windows, or a bit more
+```
+
+Keep `corner-radius` at the radius of the windows or a bit above it: with less, a bit of what is behind the
+window shows in its corners. A border with a translucent color, like the default `inactive-color`, fills the
+corners with that same translucent color, and a window without a border keeps its round corners. The shadow of
+the window, which macOS draws, stays round.
 
 **`glow` and `glow-radius`**: a halo around the focused window.
 

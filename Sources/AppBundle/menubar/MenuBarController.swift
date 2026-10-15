@@ -173,12 +173,19 @@ final class MenuBarController: NSObject {
         }
     }
 
+    /// Room between the bottom of the menu bar and the top of the menu
+    private static let menuGap: CGFloat = 3
+
+    /// The menu pops up right below the item, without highlighting it: the item looks the same with the menu open.
+    /// A menu attached to the item (`statusItem.menu`) would draw the rounded background of a pressed item behind it
     private func openMenu() {
-        guard let statusItem else { return }
-        // The menu is attached only while it is open. See: start
-        statusItem.menu = menu.menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
+        guard let button = statusItem?.button else { return }
+        // The bottom of the menu bar is the bottom of the window of the item, which is as tall as the bar.
+        // The button may be shorter
+        let barBottom = unsafe button.window != nil ? button.convert(NSPoint.zero, from: nil).y : (button.isFlipped ? button.bounds.maxY : button.bounds.minY)
+        let bottom = NSPoint(x: 0, y: barBottom + (button.isFlipped ? Self.menuGap : -Self.menuGap))
+        // Blocks until the menu closes, like any menu
+        menu.menu.popUp(positioning: nil, at: bottom, in: button)
     }
 }
 
@@ -187,7 +194,7 @@ final class MenuBarController: NSObject {
 /// A button highlights itself while the mouse is held down on it, whatever its action does afterwards. The item only
 /// informs: a click that does nothing must not look like it did something. So the button never sees the mouse go down,
 /// and the click is reported once the mouse goes up. If that opens the menu (see MenuBarController.opensMenu),
-/// the menu highlights the item while it is open, like any menu of the menu bar.
+/// the item isn't highlighted either while the menu is open. See: MenuBarController.openMenu
 ///
 /// VoiceOver and the other clients of the accessibility API don't come through here: they press the button itself.
 /// Neither does a cmd-drag, which is how the items of the menu bar are moved around

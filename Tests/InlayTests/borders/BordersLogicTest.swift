@@ -8,8 +8,16 @@ extension InlayTests {
     @Suite struct BordersLogicTest {
         private let accent = Rgba(red: 1, green: 0.6, blue: 0)
         private let frame = CGRect(x: 10, y: 20, width: 300, height: 200)
-        private func item(_ id: UInt32, _ frame: CGRect? = nil, _ color: Rgba = .white, width: CGFloat = 4, radius: CGFloat = 16, glow: CGFloat = 0) -> BorderItem {
-            BorderItem(windowId: id, frame: frame ?? self.frame, color: color, width: width, cornerRadius: radius, glowRadius: glow)
+        private func item(
+            _ id: UInt32,
+            _ frame: CGRect? = nil,
+            _ color: Rgba = .white,
+            width: CGFloat = 4,
+            radius: CGFloat = 16,
+            square: Bool = false,
+            glow: CGFloat = 0,
+        ) -> BorderItem {
+            BorderItem(windowId: id, frame: frame ?? self.frame, color: color, width: width, cornerRadius: radius, squareCorners: square, glowRadius: glow)
         }
 
         // MARK: - Colors
@@ -47,7 +55,10 @@ extension InlayTests {
             config.width = 7
             config.cornerRadius = 3
             let snapshot = BordersSnapshot.resolve([BorderCandidate(windowId: 1, frame: frame)], config, mode: nil, systemAccent: accent)
-            assertEquals(snapshot.items, [item(1, frame, Rgba(hex: "#8E8E9373").orDie(), width: 7, radius: 3)])
+            assertEquals(snapshot.items, [item(1, frame, Rgba(hex: "#8E8E9373").orDie(), width: 7, radius: 3, square: true)])
+            config.squareCorners = false
+            let rounded = BordersSnapshot.resolve([BorderCandidate(windowId: 1, frame: frame)], config, mode: nil, systemAccent: accent)
+            assertEquals(rounded.items.map(\.squareCorners), [false])
         }
 
         @Test func testTransparentColorMeansNoBorder() {
@@ -185,6 +196,8 @@ extension InlayTests {
             ])
             assertEquals(BordersDiff.ops(from: [item(1, glow: 12)], to: [item(1, glow: 20)]), [.reshape(item(1, glow: 20))])
             assertEquals(BordersDiff.ops(from: [item(1, glow: 12)], to: [item(1, glow: 12)]), [])
+            // Square corners are another shape
+            assertEquals(BordersDiff.ops(from: [item(1)], to: [item(1, square: true)]), [.reshape(item(1, square: true))])
         }
 
         @Test func testGeometryWithGlow() {
@@ -322,6 +335,26 @@ extension InlayTests {
             assertEquals(square.innerRadius, 0)
             assertEquals(square.outerRadius, 0)
             assertTrue(square.path().contains(CGPoint(x: 0.5, y: 0.5), using: .evenOdd))
+        }
+
+        @Test func testGeometryWithSquareCorners() {
+            let geometry = BorderGeometry(frame: frame, width: 4, cornerRadius: 16, squareCorners: true, scale: 2)
+            // The panel and the ring are where they were: only the shape of the corners changes
+            assertEquals(geometry.panelFrame, BorderGeometry(frame: frame, width: 4, cornerRadius: 16, scale: 2).panelFrame)
+            assertEquals(geometry.innerRadius, 16)
+            assertEquals(geometry.outerRadius, 0)
+            let path = geometry.path()
+            func isPainted(_ x: CGFloat, _ y: CGFloat) -> Bool { path.contains(CGPoint(x: x, y: y), using: .evenOdd) }
+            assertTrue(isPainted(0.5, 0.5)) // The outer corner is square
+            assertTrue(isPainted(5, 5)) // The corner that the window leaves empty is filled
+            assertTrue(isPainted(8, 8))
+            assertFalse(isPainted(10, 10)) // But not the window itself
+            assertFalse(isPainted(154, 104))
+            assertTrue(isPainted(2, 104)) // The sides are the same
+            assertFalse(isPainted(4.1, 104))
+            // The glow follows the square outer edge
+            let glow = BorderGlow(BorderGeometry(frame: frame, width: 4, cornerRadius: 16, squareCorners: true, glowRadius: 12, scale: 2), color: accent)
+            assertEquals(glow?.outerRadius, 0)
         }
 
         @Test func testScreenScale() {

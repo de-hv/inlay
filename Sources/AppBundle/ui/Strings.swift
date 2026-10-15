@@ -46,6 +46,7 @@ enum Strings {
         static let general = "General"
         static let menuBar = "Menu Bar"
         static let borders = "Borders"
+        static let gaps = "Gaps"
         static let reset = "Reset"
 
         // General
@@ -123,6 +124,9 @@ enum Strings {
         static let width = "Width"
         static let cornerRadius = "Corner radius"
         static let cornerRadiusDetail = "It should be close to the radius of the macOS windows."
+        static let squareCorners = "Square corners"
+        static let squareCornersDetail = "The border fills the rounded corners of the windows, so they look square. Off: the border follows the corners."
+        static let squareCornersRadiusDetail = "The radius of the macOS windows, or a bit more: with less, what is behind a window shows in its corners."
         static let glow = "Glow"
         static let glowDetail = "A halo of the color of the border around the focused window."
         static let glowRadius = "Glow radius"
@@ -137,6 +141,22 @@ enum Strings {
         static let inactive = "Inactive"
         static let floatingPreview = "Floating"
         static func points(_ value: Int) -> String { "\(value) pt" }
+
+        // Gaps
+        static let innerGaps = "Inner Gaps"
+        static let outerGaps = "Outer Gaps"
+        static let horizontal = "Horizontal"
+        static let horizontalGapDetail = "Between two windows side by side."
+        static let vertical = "Vertical"
+        static let verticalGapDetail = "Between two windows one above the other."
+        static let top = "Top"
+        static let topGapDetail = "Below the menu bar."
+        static let bottom = "Bottom"
+        static let left = "Left"
+        static let right = "Right"
+        static let innerGapsFooter = "The borders are drawn in the gaps, outside of the windows: with inner gaps less than twice the width of the border, the borders of two windows touch."
+        static let outerGapsFooter = "Between the windows and the edges of the screen. With outer gaps less than the width of the border, the edge of the screen cuts the border."
+        static let actualSize = "Actual size"
 
         // Why a control is disabled
         static let definedByHand = "Defined by hand in the config file"

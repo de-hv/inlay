@@ -81,17 +81,18 @@ final class WindowAnimator {
     /// Puts a tiling window in the frame of the layout: right away, or sliding there if the layout is animated.
     ///
     /// - Parameter previous: the frame that the previous layout gave to the window. The window slides from there,
-    ///   or out of the window it splits if it is new (Window.entryFrame), or from where it is if it is already sliding
+    ///   or grows from the center of its tile if it is new (Window.isEntering), or goes on from where it is if it is
+    ///   already sliding
     func setFrame(_ window: Window, _ rect: Rect, previous: Rect?) {
         let target = CGRect(rect)
         let now: ContinuousClock.Instant = .now
         let current = animations[window.windowId]
-        let entryFrame = window.entryFrame
-        window.entryFrame = nil
+        let isEntering = window.isEntering
+        window.isEntering = false
         // The layout runs more than once for the same change (the light session, then the complete one)
         if let current, current.animation.to == target { return }
         let duration = duration
-        let from = current.map { $0.animation.frame(at: now) } ?? entryFrame.map(CGRect.init) ?? previous.map(CGRect.init)
+        let from = current.map { $0.animation.frame(at: now) } ?? (isEntering ? Self.entryFrame(target) : previous.map(CGRect.init))
         guard isAnimatedLayoutRequested, duration > .zero, let from, from != target else {
             animations[window.windowId] = nil
             window.setAxFrame(target.origin, target.size)
@@ -101,6 +102,14 @@ final class WindowAnimator {
         animations[window.windowId] = (window, FrameAnimation(from: from, to: target, start: now, duration: duration))
         tick(now: now)
         startLoop()
+    }
+
+    /// How big a new window is when it starts to grow, as a fraction of its tile: like the 'popin' of Hyprland
+    static let entryScale: CGFloat = 0.8
+
+    /// Where a new window starts: smaller than its tile, in its center
+    static func entryFrame(_ tile: CGRect) -> CGRect {
+        tile.insetBy(dx: tile.width * (1 - entryScale) / 2, dy: tile.height * (1 - entryScale) / 2)
     }
 
     /// Something else places the window: hiding it in a corner, the mouse, the fullscreen

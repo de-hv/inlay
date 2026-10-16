@@ -300,7 +300,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
         empty = 'auto'
 
 # The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
-# - a window opens (it comes out of the window it splits, which makes room for it) or closes,
+# - a window opens (it grows from the center of its tile, from 80% of its size, while its neighbor makes room) or closes,
 # - a window is moved with 'swap' or 'move' (the key bindings, the CLI).
 # Nothing else is animated: resizing, balance-sizes, switching workspaces, the startup, the mouse.
 # With "Reduce motion" (System Settings -> Accessibility -> Display) nothing is animated.

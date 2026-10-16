@@ -54,7 +54,7 @@ extension InlayTests {
 
         // MARK: - The layout
 
-        @Test func testANewWindowComesOutOfTheWindowItSplits() async throws {
+        @Test func testANewWindowGrowsFromTheCenterOfItsTile() async throws {
             let workspace = focus.workspace
             let window1 = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
             assertEquals(window1.focusWindow(), true)
@@ -64,18 +64,19 @@ extension InlayTests {
             let alone = try #require(window1.lastAppliedLayoutPhysicalRect.map(CGRect.init))
 
             let window2 = TestWindow.newTiling(id: 2, workspace: workspace)
-            let entry = Rect(topLeftX: 300, topLeftY: 200, width: 800, height: 600)
-            window2.entryFrame = entry
+            window2.isEntering = true
             animator.requestAnimatedLayout()
             let started = DebugStats.counters["animation.started"] ?? 0
             try await workspace.layoutWorkspace()
             assertEquals(animator.isAnimating, true)
             assertEquals(DebugStats.counters["animation.started"], started + 2)
-            // The first frame: the window that is split where it was, and the new one on top of it, not where the app opened it
+            // The first frame: the window that is split where it was, and the new one in the center of its tile, smaller
             animator.tick(now: .now - .seconds(10))
+            let tile2 = try #require(window2.lastAppliedLayoutPhysicalRect.map(CGRect.init))
             assertEquals(isClose(frame(window1), alone), true, additionalMsg: "\(String(describing: frame(window1))) \(alone)")
-            assertEquals(isClose(frame(window2), alone), true, additionalMsg: "\(String(describing: frame(window2))) \(alone)")
-            assertEquals(window2.entryFrame == nil, true)
+            assertEquals(isClose(frame(window2), WindowAnimator.entryFrame(tile2)), true, additionalMsg: "\(String(describing: frame(window2))) \(tile2)")
+            assertEquals(frame(window2).map { abs($0.midX - tile2.midX) <= 1 && abs($0.width - tile2.width * 0.8) <= 1 }, true)
+            assertEquals(window2.isEntering, false)
             assertEquals(animator.currentFrame(1) != nil, true)
 
             // The same layout again (the complete session after the light one): the animations go on

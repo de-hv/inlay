@@ -33,9 +33,8 @@ final class MacWindow: Window {
         allWindowsMap[windowId] = window
         DebugStats.count("window.registered")
         if !isStartup {
-            // It comes out of the room of the window it splits (see TilingContainer.layoutTiles), or else from where
-            // the app opened it, and the other windows make room for it
-            window.entryFrame = rect
+            // It grows from the center of its tile, and the other windows make room for it
+            window.isEntering = true
             WindowAnimator.shared.requestAnimatedLayout()
         }
         try await window.afterRegistration()

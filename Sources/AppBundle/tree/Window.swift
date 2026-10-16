@@ -20,9 +20,9 @@ open class Window: TreeNode, Hashable {
     /// The name of the workspace that the window was in before it left its place because of macOS.
     /// A minimized window belongs to no workspace: this is where it goes back. See: normalizeLayoutReason
     var workspaceBeforeMinimize: String? = nil
-    /// Where a new window starts, for a window that hasn't been laid out yet: an animated layout slides it from there to
-    /// its tile. The frame of the window it splits, or else where the app opened it. See: WindowAnimator, layoutTiles
-    var entryFrame: Rect? = nil
+    /// A new window that hasn't been laid out yet: an animated layout grows it from the center of its tile, while the
+    /// other windows make room for it. See: WindowAnimator
+    var isEntering: Bool = false
 
     @MainActor
     init(id: UInt32, _ app: any AbstractApp, lastFloatingSize: CGSize?, parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat, index: Int) {

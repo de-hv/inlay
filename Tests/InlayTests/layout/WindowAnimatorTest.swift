@@ -157,6 +157,35 @@ extension InlayTests {
             assertEquals(WorkspaceSlide.axis(macBook, others: [right, below]), nil)
         }
 
+        /// Your two arrangements: the MacBook beside the Studio Display, and below it. The Studio Display is the main screen
+        @Test func testTheDirectionOfTheConfig() {
+            let studio = CGRect(x: 0, y: 0, width: 2560, height: 1440)
+            let beside = CGRect(x: 2560, y: 400, width: 1512, height: 982)
+            let below = CGRect(x: 500, y: 1440, width: 1512, height: 982)
+            func name(_ mode: WorkspaceSwitch, _ screen: CGRect, _ others: [CGRect]) -> String? {
+                WorkspaceSlide.slide(mode, screen, others: others, direction: 1)?.name
+            }
+            // Horizontal: on the side of the Studio Display that is free, both in and out
+            let free = WorkspaceSlide.slide(.horizontal, studio, others: [beside], direction: 1)
+            assertEquals(free?.slidingIn, CGSize(width: -2560, height: 0))
+            assertEquals(free?.slidingOut, CGSize(width: -2560, height: 0))
+            assertEquals(WorkspaceSlide.slide(.horizontal, beside, others: [studio], direction: 1)?.slidingIn, CGSize(width: 1512, height: 0))
+            assertEquals(name(.horizontal, studio, [below]), "horizontal")
+            assertEquals(name(.horizontal, below, [studio]), "horizontal")
+            assertEquals(name(.horizontal, studio, []), "horizontal")
+            // A screen between two others has no way out sideways
+            assertEquals(name(.horizontal, studio, [beside, CGRect(x: -1920, y: 0, width: 1920, height: 1080)]), nil)
+            // Vertical: through the bottom, but for the screen that has another one below
+            assertEquals(name(.vertical, studio, [beside]), "vertical")
+            assertEquals(name(.vertical, beside, [studio]), "vertical")
+            assertEquals(name(.vertical, studio, [below]), nil)
+            assertEquals(name(.vertical, below, [studio]), "vertical")
+            // Auto: what the screens around allow, horizontal first
+            assertEquals(name(.auto, studio, [beside]), "vertical")
+            assertEquals(name(.auto, studio, [below]), "horizontal")
+            assertEquals(name(.off, studio, []), nil)
+        }
+
         @Test func testOffsets() {
             let screen = CGSize(width: 1512, height: 982)
             // Toward a later workspace the windows move to the left, toward an earlier one to the right
@@ -208,9 +237,9 @@ extension InlayTests {
             assertEquals(animator.beginLayout(monitorInfos), [:])
             // Back to the earlier workspace: to the right. Not with the switch turned off
             assertEquals(left.focusWorkspace(), true)
-            config.animations.workspaceSwitch = false
+            config.animations.workspaceSwitch = .off
             assertEquals(animator.beginLayout(monitorInfos), [:])
-            config.animations.workspaceSwitch = true
+            config.animations.workspaceSwitch = .horizontal
             assertEquals(right.focusWorkspace(), true)
             _ = animator.beginLayout(monitorInfos)
             assertEquals(left.focusWorkspace(), true)

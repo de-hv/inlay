@@ -451,19 +451,23 @@ go out by one side of the screen and the ones of the workspace you go to come in
 workspace (in the order of the menu bar item) they move to the left, toward an earlier one to the right. Only
 the tiling windows slide: the floating ones appear and disappear as before.
 
-The windows never cross another screen. Each screen picks its own way:
+The windows never cross another screen. `workspace-switch` picks the direction, and each screen that switches
+workspace applies it as far as the screens around it allow:
 
-| Around the screen | The windows slide |
-|---|---|
-| No screen on its left or on its right (alone, or with a screen above or below) | Sideways |
-| A screen on its left or on its right | Through the bottom: out downwards, in from below (macOS doesn't let a window above the menu bar) |
-| A screen on a side and another one below | They don't slide |
+| `workspace-switch` | No screen around | A screen on one side | Screens on both sides | A screen below |
+|---|---|---|---|---|
+| `'horizontal'` (default) | Side to side | In and out by the free side | No slide | Side to side |
+| `'vertical'` | Through the bottom | Through the bottom | Through the bottom | No slide |
+| `'auto'` | Side to side | Through the bottom | Through the bottom | Side to side |
+
+Through the bottom means out downwards and in from below: macOS doesn't let a window above the menu bar, so the
+top of a screen can't be used. `'off'` turns the slide off and keeps the other animations.
 
 ```toml
 [animations]
     enabled = true
-    duration = 180            # 0 ... 500 milliseconds. 0 = no animation
-    workspace-switch = true   # slide the windows when switching workspaces
+    duration = 180                    # 0 ... 500 milliseconds. 0 = no animation
+    workspace-switch = 'horizontal'   # 'horizontal' | 'vertical' | 'auto' | 'off'
 ```
 
 macOS only lets Inlay move the windows of other apps through the Accessibility API, one frame at a time, and
@@ -571,7 +575,7 @@ tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled), Slide between workspaces ([animations] workspace-switch) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled), Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>

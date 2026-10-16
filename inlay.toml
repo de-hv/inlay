@@ -124,8 +124,8 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     enabled = true
     # In milliseconds (0 ... 500). 0 = no animation
     duration = 180
-    # Switching workspaces slides the windows out by one side of the screen and in by the other
-    workspace-switch = true
+    # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
+    workspace-switch = 'horizontal'
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    BORDERS

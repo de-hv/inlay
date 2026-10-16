@@ -91,7 +91,8 @@ final class WindowAnimator {
         for monitor in monitors { shown[monitor.rect.topLeftCorner] = monitor.activeWorkspace.name }
         let previous = shownWorkspaces
         shownWorkspaces = shown
-        guard config.animations.workspaceSwitch, duration > .zero else { return [:] }
+        let mode = config.animations.workspaceSwitch
+        guard mode != .off, duration > .zero else { return [:] }
         let order = Workspace.all.map(\.name)
         let screens = monitors.map { CGRect($0.rect) }
         var slidingOut: [String: CGSize] = [:]
@@ -102,11 +103,13 @@ final class WindowAnimator {
                   let direction = WorkspaceSlide.direction(from: old, to: new, order: order) else { continue }
             var others = screens
             others.remove(at: index)
-            guard let axis = WorkspaceSlide.axis(screens[index], others: others) else { continue }
-            DebugStats.count("animation.workspace-switch.\(axis)")
-            let offsets = WorkspaceSlide.offsets(axis, direction: direction, screen: screens[index].size)
-            slidingIn[new] = offsets.slidingIn
-            slidingOut[old] = offsets.slidingOut
+            guard let slide = WorkspaceSlide.slide(mode, screens[index], others: others, direction: direction) else {
+                DebugStats.count("animation.workspace-switch.blocked")
+                continue
+            }
+            DebugStats.count("animation.workspace-switch.\(slide.name)")
+            slidingIn[new] = slide.slidingIn
+            slidingOut[old] = slide.slidingOut
         }
         return slidingOut
     }
@@ -271,6 +274,46 @@ enum WorkspaceSlide {
         switch axis {
             case .horizontal: (CGSize(width: direction * screen.width, height: 0), CGSize(width: -direction * screen.width, height: 0))
             case .vertical: (CGSize(width: 0, height: screen.height), CGSize(width: 0, height: screen.height))
+        }
+    }
+
+    struct Slide: Equatable, Sendable {
+        var slidingIn: CGSize
+        var slidingOut: CGSize
+        /// For the counters of DebugStats
+        var name: String
+    }
+
+    /// How the windows of a screen slide with the direction chosen in the config, without crossing another screen.
+    /// nil: they can't slide.
+    ///
+    /// - horizontal: from side to side. With another screen on one side, in and out by the free side. With screens on
+    ///   both sides, no slide
+    /// - vertical: through the bottom. With another screen below, no slide (the top can't be used: macOS doesn't let
+    ///   a window above the menu bar)
+    /// - auto: horizontal without screens on the sides, else vertical. See: axis
+    static func slide(_ mode: WorkspaceSwitch, _ screen: CGRect, others: [CGRect], direction: CGFloat) -> Slide? {
+        func make(_ axis: Axis) -> Slide {
+            let offsets = offsets(axis, direction: direction, screen: screen.size)
+            return Slide(slidingIn: offsets.slidingIn, slidingOut: offsets.slidingOut, name: axis.rawValue)
+        }
+        let below = others.contains { $0.minX < screen.maxX && $0.maxX > screen.minX && $0.minY >= screen.midY }
+        switch mode {
+            case .off: return nil
+            case .auto: return axis(screen, others: others).map(make)
+            case .vertical: return below ? nil : make(.vertical)
+            case .horizontal:
+                let beside = others.filter { $0.minY < screen.maxY && $0.maxY > screen.minY }
+                let left = beside.contains { $0.midX < screen.midX }
+                let right = beside.contains { $0.midX >= screen.midX }
+                switch (left, right) {
+                    case (false, false): return make(.horizontal)
+                    case (true, true): return nil
+                    // In and out by the free side: right if the screen on the left blocks, left otherwise
+                    case (true, false), (false, true):
+                        let free = CGSize(width: (left ? 1 : -1) * screen.width, height: 0)
+                        return Slide(slidingIn: free, slidingOut: free, name: "horizontal-free-side")
+                }
         }
     }
 }

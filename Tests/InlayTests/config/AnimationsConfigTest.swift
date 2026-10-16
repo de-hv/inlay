@@ -19,6 +19,17 @@ extension InlayTests {
             let result = parseConfig("[animations]\nenabled = false\nduration = 250\n")
             assertEquals(result.errors, [])
             assertEquals(result.config.animations, AnimationsConfig(enabled: false, duration: 250))
+            for (value, expected) in [("'vertical'", WorkspaceSwitch.vertical), ("'auto'", .auto), ("'off'", .off), ("'horizontal'", .horizontal),
+                                      ("false", .off), ("true", .horizontal)]
+            {
+                let parsed = parseConfig("animations.workspace-switch = \(value)")
+                assertEquals(parsed.errors, [])
+                assertEquals(parsed.config.animations.workspaceSwitch, expected, additionalMsg: value)
+            }
+            assertEquals(
+                parseConfig("animations.workspace-switch = 'diagonal'").strErrors,
+                ["[ERROR] animations.workspace-switch: Can't parse workspace-switch 'diagonal'. Possible values: (horizontal|vertical|auto|off)"],
+            )
             // Off: no animation, whatever the duration
             assertEquals(result.config.animations.effectiveDuration, .zero)
         }
@@ -40,6 +51,8 @@ extension InlayTests {
             let defaults = AnimationsConfig()
             assertEquals(SettingsKey.animationsEnabled.defaultValue, .bool(defaults.enabled))
             assertEquals(SettingsKey.animationsDuration.defaultValue, .int(defaults.duration))
+            assertEquals(SettingsKey.animationsWorkspaceSwitch.defaultValue, .string(defaults.workspaceSwitch.rawValue))
+            assertEquals(defaults.workspaceSwitch, .horizontal)
         }
     }
 }

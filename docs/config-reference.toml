@@ -317,16 +317,21 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): duration = 180
     duration = 180
 
-    # Switching workspaces slides the windows, in the same duration: the windows of the workspace that is left go out
-    # by one side of the screen, and the ones of the workspace that is shown come in by the other. Toward a workspace
-    # that comes later (in the order of persistent-workspaces, then by name) they move to the left; toward an earlier
-    # one, to the right. Only the tiling windows slide: the floating ones appear and disappear as before.
-    # The windows never cross another screen: a screen with another screen to its left or to its right slides them
-    # through its bottom instead (out downwards, in from below; macOS doesn't let a window above the menu bar), and
-    # a screen that also has another screen below it doesn't slide them
-    # Possible values: true|false
-    # Fallback value (if you omit the key): workspace-switch = true
-    workspace-switch = true
+    # How switching workspaces slides the windows, in the same duration: the windows of the workspace that is left
+    # go out of the screen, and the ones of the workspace that is shown come in. Only the tiling windows slide: the
+    # floating ones appear and disappear as before. The windows never cross another screen, and each screen of
+    # the ones that switch workspace decides on its own:
+    # - 'horizontal': from side to side. Toward a later workspace (in the order of the menu bar item) they move to the
+    #   left, toward an earlier one to the right. A screen with another screen on one side uses the other side for
+    #   both, in and out; one with screens on both sides doesn't slide.
+    # - 'vertical': through the bottom of the screen, out downwards and in from below (macOS doesn't let a window
+    #   above the menu bar, so the top can't be used). A screen with another screen below it doesn't slide.
+    # - 'auto': 'horizontal' on a screen without screens on its sides, else 'vertical'.
+    # - 'off': no slide. The other animations stay.
+    # true and false, what an earlier version wrote, mean 'horizontal' and 'off'
+    # Possible values: 'horizontal' | 'vertical' | 'auto' | 'off'
+    # Fallback value (if you omit the key): workspace-switch = 'horizontal'
+    workspace-switch = 'horizontal'
 
 # The borders of the windows
 [borders]

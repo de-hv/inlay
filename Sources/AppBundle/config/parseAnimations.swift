@@ -8,9 +8,8 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
     /// How long a window takes to get to its new frame, in milliseconds. 0: no animation
     var duration: Int = 180
-    /// Switching workspaces slides the windows: the ones of the workspace that is left go out by one side of the screen,
-    /// the ones of the workspace that is shown come in by the other. See: WorkspaceSlide
-    var workspaceSwitch: Bool = true
+    /// How switching workspaces slides the windows. See: WorkspaceSlide
+    var workspaceSwitch: WorkspaceSwitch = .horizontal
 
     static let durationRange = 0 ... 500
 
@@ -21,8 +20,30 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
 let animationsParserTable: [String: any ParserProtocol<AnimationsConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "duration": Parser(\.duration, parseDuration),
-    "workspace-switch": Parser(\.workspaceSwitch, parseBool),
+    "workspace-switch": Parser(\.workspaceSwitch, parseWorkspaceSwitch),
 ]
+
+/// How switching workspaces slides the windows of the screen. They never cross another screen. See: WorkspaceSlide
+enum WorkspaceSwitch: String, CaseIterable, Equatable, Sendable {
+    /// Sideways on every screen: toward a later workspace to the left, toward an earlier one to the right.
+    /// With a screen on one side, in and out by the other side
+    case horizontal
+    /// Through the bottom of every screen: out downwards, and in from below
+    case vertical
+    /// Sideways, or through the bottom on a screen with another screen on its left or on its right
+    case auto
+    /// No slide
+    case off
+}
+
+/// A value of WorkspaceSwitch. `true` and `false`, what an earlier version wrote, are `horizontal` and `off`
+private func parseWorkspaceSwitch(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<WorkspaceSwitch> {
+    if let bool = raw.asBoolOrNil { return .success(bool ? .horizontal : .off) }
+    return parseString(raw, backtrace).flatMap {
+        WorkspaceSwitch(rawValue: $0)
+            .toResult(.init(backtrace, "Can't parse workspace-switch '\($0)'. Possible values: \(WorkspaceSwitch.unionLiteral)"))
+    }
+}
 
 func parseAnimations(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> AnimationsConfig {
     parseTable(raw, AnimationsConfig(), animationsParserTable, backtrace, &c)

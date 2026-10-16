@@ -233,8 +233,18 @@ struct GeneralSettingsView: View {
             }
             Section(Strings.Settings.animations) {
                 ToggleRow(model: model, title: Strings.Settings.animate, detail: Strings.Settings.animateDetail, key: .animationsEnabled)
-                ToggleRow(model: model, title: Strings.Settings.workspaceSwitch, detail: Strings.Settings.workspaceSwitchDetail, key: .animationsWorkspaceSwitch)
-                    .disabled(!model.bool(.animationsEnabled))
+                pickerRow(
+                    Strings.Settings.workspaceSwitch,
+                    detail: workspaceSwitchDetail,
+                    key: .animationsWorkspaceSwitch,
+                    options: [
+                        (WorkspaceSwitch.horizontal.rawValue, Strings.Settings.horizontal),
+                        (WorkspaceSwitch.vertical.rawValue, Strings.Settings.vertical),
+                        (WorkspaceSwitch.auto.rawValue, Strings.Settings.auto),
+                        (WorkspaceSwitch.off.rawValue, Strings.Settings.off),
+                    ],
+                )
+                .disabled(!model.bool(.animationsEnabled))
                 SliderRow(
                     model: model,
                     title: Strings.Settings.duration,
@@ -310,6 +320,15 @@ struct GeneralSettingsView: View {
             case _ where !isDwindle: Strings.Settings.splitTargetNotDwindleDetail
             case .cursor: Strings.Settings.splitTargetCursorDetail
             case .focused, nil: Strings.Settings.splitTargetFocusedDetail
+        }
+    }
+
+    private var workspaceSwitchDetail: String {
+        switch WorkspaceSwitch(rawValue: model.string(.animationsWorkspaceSwitch)) {
+            case .vertical: Strings.Settings.workspaceSwitchVerticalDetail
+            case .auto: Strings.Settings.workspaceSwitchAutoDetail
+            case .off: Strings.Settings.workspaceSwitchOffDetail
+            case .horizontal, nil: Strings.Settings.workspaceSwitchHorizontalDetail
         }
     }
 

@@ -368,7 +368,7 @@ and `resize` simply does not shrink them any further. `resize` always works in s
 
 ![Illustration, animated: two windows side by side. 'resize width -50' is run again and again on the left one, whose width goes down from 616 points in steps of 50 until it reaches a dashed line marked 'min-window-size = 100', where it stays at 100 points however many more times the command runs](docs/images/tiling-min-window-size.gif)
 
-Both keys are also in **Settings › General › Tiling** ("Window to split" and "Minimum window size").
+Both keys are also in **Settings › Tiling** ("Window to split" and "Minimum window size").
 
 The windows that **are already open when Inlay starts** (or when it is resumed with `inlay enable on`) are not
 placed one by one. First the `on-window-detected` rules of the config run for each of them, exactly as for a
@@ -397,7 +397,7 @@ while Inlay was paused. To run them again for all the open windows, use
 It only affects that moment. The windows you open afterwards follow `new-window-placement`, and the grid is a
 normal tree: it can be moved, resized and rearranged with the usual commands. When resuming after a pause,
 only the workspaces in which some window appeared while Inlay was paused are rearranged; the others keep
-their arrangement. It is also in **Settings › General › Tiling**.
+their arrangement. It is also in **Settings › Tiling**.
 
 A window that leaves the tiling because macOS **minimizes** it, puts it in **native fullscreen** or **hides
 its app** remembers its place (container, position, size and the neighbor that kept its space) and gets it
@@ -444,7 +444,7 @@ The tiling windows **slide to their place**, in 180 ms, when a window opens (it 
 tile while its neighbor makes room for it, like the *popin* of Hyprland) or closes, and when a window is moved with `swap` or `move`.
 The borders go with them. Switching workspaces has its own slide (below). Nothing else is animated: resizing, `balance-sizes`, the
 startup and the mouse stay instant. With *Reduce motion* (System Settings → Accessibility → Display) nothing is
-animated. Settings has the same keys in its **General** tab.
+animated. Settings has the same keys in its **Animations** tab.
 
 **Switching workspaces** slides the windows too, in the same duration: the windows of the workspace you leave
 go out by one side of the screen and the ones of the workspace you go to come in by the other. Toward a later
@@ -570,28 +570,29 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 ### The Settings window
 
-Four tabs, **General**, **Menu Bar**, **Borders** and **Gaps**. Next to every control is the key it writes. These are the
+Six tabs, **General**, **Tiling**, **Gaps**, **Animations**, **Menu Bar** and **Borders**. Next to every control is the key it writes. These are the
 tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled), Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Configuration, with the path of the file, Show in Finder and Open, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-tiling.png"><img src="docs/images/settings-tiling.png" alt="Real render of the Tiling tab of Settings: New Windows, with Placement (Dwindle or After Focused) and Window to split (Focused or Cursor); and Arrangement, with Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
+</tr>
+<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Tiling</sub></td><td align="center"><sub>Gaps</sub></td></tr>
+<tr>
+<td valign="top"><a href="docs/images/settings-animations.png"><img src="docs/images/settings-animations.png" alt="Real render of the Animations tab of Settings: Windows, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; and Workspaces, with Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch)" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Borders</sub></td></tr>
-<tr>
-<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
-<td></td><td></td>
-</tr>
-<tr><td align="center"><sub>Gaps</sub></td><td></td><td></td></tr>
+<tr><td align="center"><sub>Animations</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Borders</sub></td></tr>
 </table>
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): only the content
 of each tab, without the title bar and the tab bar of the window.</sub>
 
 The window is never taller than the usable part of the screen and never leaves it. A tab that does not fit
-(on the screen of a small laptop, General is taller than what the menu bar and the Dock leave) scrolls, so
+(on the screen of a small laptop, Borders is taller than what the menu bar and the Dock leave) scrolls, so
 every control can be reached. `Inlay --debug-settings <config> [--inspect] [--screen-height <points>]` opens
 the window alone, without the window manager, against a config file of your choice.
 

@@ -72,25 +72,36 @@ extension InlayTests {
             return SettingsWindowController(model: model).makeWindow { _ in CGRect(x: 0, y: 0, width: 1512, height: visibleHeight) }
         }
 
-        @Test func testEveryTabScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
+        @Test func testEveryTabFitsOrScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
             let window = try window(visibleHeight: 600)
             let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            assertEquals(tabs.tabViewItems.count, 4)
+            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Tiling", "Gaps", "Animations", "Menu Bar", "Borders"])
+            var scrolling: [String] = []
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index
                 tabs.fitWindow(animate: false)
                 window.layoutIfNeeded()
+                let label = tabs.tabViewItems[index].label
                 let page = try #require(tabs.tabViewItems[index].viewController as? SettingsPageController)
                 let scrollView = try #require(page.view as? NSScrollView)
                 let form = try #require(scrollView.documentView)
-                assertEquals(window.frame.height, 600, additionalMsg: tabs.tabViewItems[index].label)
-                assertEquals(window.frame.minY >= 0 && window.frame.maxY <= 600, true)
-                // The whole form is there, taller than what is seen of it, and it starts at its top
-                assertEquals(page.contentSize.height > scrollView.contentView.bounds.height, true)
-                assertEquals(form.frame.height, page.contentSize.height)
+                assertEquals(window.frame.minY >= 0 && window.frame.maxY <= 600, true, additionalMsg: label)
+                // The whole form is there, and it starts at its top
+                assertEquals(form.frame.height, page.contentSize.height, additionalMsg: label)
                 assertEquals(scrollView.contentView.isFlipped, true)
                 assertEquals(scrollView.contentView.bounds.origin.y, 0)
+                if page.contentSize.height > scrollView.contentView.bounds.height {
+                    // Taller than the screen: the window is as tall as the screen, and the tab scrolls
+                    assertEquals(window.frame.height, 600, additionalMsg: label)
+                    scrolling.append(label)
+                } else {
+                    // A short tab: the window is as tall as the tab
+                    assertEquals(window.frame.height < 600, true, additionalMsg: label)
+                }
             }
+            // Some tabs are taller than such a screen. General is short now
+            assertEquals(scrolling.isEmpty, false)
+            assertEquals(scrolling.contains("General"), false)
         }
 
         @Test func testOnABigScreenTheWindowIsAsTallAsTheTab() throws {

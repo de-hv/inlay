@@ -180,6 +180,20 @@ private struct ErrorBanner: View {
     }
 }
 
+/// A key with a few possible values, as a segmented control
+private func pickerRow(_ model: SettingsModel, _ title: String, detail: String, key: SettingsKey, options: [(value: String, title: String)]) -> some View {
+    SettingsRow(model: model, title: title, detail: detail, key: key) {
+        Picker("", selection: Binding(get: { model.string(key) }, set: { model.set(key, .string($0)) })) {
+            ForEach(options, id: \.value) { option in
+                Text(option.title).tag(option.value)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+    }
+}
+
 // MARK: - General
 
 struct GeneralSettingsView: View {
@@ -190,71 +204,6 @@ struct GeneralSettingsView: View {
             ErrorBanner(model: model)
             Section(Strings.Settings.startup) {
                 ToggleRow(model: model, title: Strings.Settings.startAtLogin, detail: Strings.Settings.startAtLoginDetail, key: .startAtLogin)
-            }
-            Section(Strings.Settings.tiling) {
-                let isDwindle = model.string(.newWindowPlacement) == NewWindowPlacement.dwindle.rawValue
-                pickerRow(
-                    Strings.Settings.placement,
-                    detail: isDwindle ? Strings.Settings.placementDwindleDetail : Strings.Settings.placementAfterFocusedDetail,
-                    key: .newWindowPlacement,
-                    options: [
-                        (NewWindowPlacement.dwindle.rawValue, Strings.Settings.dwindle),
-                        (NewWindowPlacement.afterFocused.rawValue, Strings.Settings.afterFocused),
-                    ],
-                )
-                pickerRow(
-                    Strings.Settings.splitTarget,
-                    detail: splitTargetDetail(isDwindle: isDwindle),
-                    key: .splitTarget,
-                    options: [
-                        (SplitTarget.focused.rawValue, Strings.Settings.focusedWindow),
-                        (SplitTarget.cursor.rawValue, Strings.Settings.cursor),
-                    ],
-                )
-                .disabled(!isDwindle)
-                pickerRow(
-                    Strings.Settings.startupLayout,
-                    detail: startupLayoutDetail,
-                    key: .startupLayout,
-                    options: [
-                        (StartupLayout.grid.rawValue, Strings.Settings.grid),
-                        (StartupLayout.row.rawValue, Strings.Settings.row),
-                        (StartupLayout.dwindle.rawValue, Strings.Settings.dwindle),
-                    ],
-                )
-                SliderRow(
-                    model: model,
-                    title: Strings.Settings.minWindowSize,
-                    detail: Strings.Settings.minWindowSizeDetail,
-                    key: .minWindowSize,
-                    range: TilingConfig.minWindowSizeRange,
-                    step: 10,
-                )
-            }
-            Section(Strings.Settings.animations) {
-                ToggleRow(model: model, title: Strings.Settings.animate, detail: Strings.Settings.animateDetail, key: .animationsEnabled)
-                pickerRow(
-                    Strings.Settings.workspaceSwitch,
-                    detail: workspaceSwitchDetail,
-                    key: .animationsWorkspaceSwitch,
-                    options: [
-                        (WorkspaceSwitch.horizontal.rawValue, Strings.Settings.horizontal),
-                        (WorkspaceSwitch.vertical.rawValue, Strings.Settings.vertical),
-                        (WorkspaceSwitch.auto.rawValue, Strings.Settings.auto),
-                        (WorkspaceSwitch.off.rawValue, Strings.Settings.off),
-                    ],
-                )
-                .disabled(!model.bool(.animationsEnabled))
-                SliderRow(
-                    model: model,
-                    title: Strings.Settings.duration,
-                    detail: Strings.Settings.durationDetail,
-                    key: .animationsDuration,
-                    range: AnimationsConfig.durationRange,
-                    step: 10,
-                    format: Strings.Settings.milliseconds,
-                )
-                .disabled(!model.bool(.animationsEnabled))
             }
             Section(Strings.Settings.configuration) {
                 LabeledContent {
@@ -301,45 +250,6 @@ struct GeneralSettingsView: View {
         }
     }
 
-    /// A key with a few possible values, as a segmented control
-    private func pickerRow(_ title: String, detail: String, key: SettingsKey, options: [(value: String, title: String)]) -> some View {
-        SettingsRow(model: model, title: title, detail: detail, key: key) {
-            Picker("", selection: Binding(get: { model.string(key) }, set: { model.set(key, .string($0)) })) {
-                ForEach(options, id: \.value) { option in
-                    Text(option.title).tag(option.value)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-        }
-    }
-
-    private func splitTargetDetail(isDwindle: Bool) -> String {
-        switch SplitTarget(rawValue: model.string(.splitTarget)) {
-            case _ where !isDwindle: Strings.Settings.splitTargetNotDwindleDetail
-            case .cursor: Strings.Settings.splitTargetCursorDetail
-            case .focused, nil: Strings.Settings.splitTargetFocusedDetail
-        }
-    }
-
-    private var workspaceSwitchDetail: String {
-        switch WorkspaceSwitch(rawValue: model.string(.animationsWorkspaceSwitch)) {
-            case .vertical: Strings.Settings.workspaceSwitchVerticalDetail
-            case .auto: Strings.Settings.workspaceSwitchAutoDetail
-            case .off: Strings.Settings.workspaceSwitchOffDetail
-            case .horizontal, nil: Strings.Settings.workspaceSwitchHorizontalDetail
-        }
-    }
-
-    private var startupLayoutDetail: String {
-        switch StartupLayout(rawValue: model.string(.startupLayout)) {
-            case .row: Strings.Settings.startupRowDetail
-            case .dwindle: Strings.Settings.startupDwindleDetail
-            case .grid, nil: Strings.Settings.startupGridDetail
-        }
-    }
-
     private var filePath: String {
         guard let target = model.target else { return "–" }
         let path = (target.url.path as NSString).abbreviatingWithTildeInPath
@@ -360,6 +270,128 @@ struct GeneralSettingsView: View {
             case load.errorCount > 0: .red
             case load.warningCount > 0: .yellow
             default: .green
+        }
+    }
+}
+
+// MARK: - Tiling
+
+struct TilingSettingsView: View {
+    let model: SettingsModel
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
+            Section(Strings.Settings.newWindows) {
+                let isDwindle = model.string(.newWindowPlacement) == NewWindowPlacement.dwindle.rawValue
+                pickerRow(
+                    model,
+                    Strings.Settings.placement,
+                    detail: isDwindle ? Strings.Settings.placementDwindleDetail : Strings.Settings.placementAfterFocusedDetail,
+                    key: .newWindowPlacement,
+                    options: [
+                        (NewWindowPlacement.dwindle.rawValue, Strings.Settings.dwindle),
+                        (NewWindowPlacement.afterFocused.rawValue, Strings.Settings.afterFocused),
+                    ],
+                )
+                pickerRow(
+                    model,
+                    Strings.Settings.splitTarget,
+                    detail: splitTargetDetail(isDwindle: isDwindle),
+                    key: .splitTarget,
+                    options: [
+                        (SplitTarget.focused.rawValue, Strings.Settings.focusedWindow),
+                        (SplitTarget.cursor.rawValue, Strings.Settings.cursor),
+                    ],
+                )
+                .disabled(!isDwindle)
+            }
+            Section(Strings.Settings.arrangement) {
+                pickerRow(
+                    model,
+                    Strings.Settings.startupLayout,
+                    detail: startupLayoutDetail,
+                    key: .startupLayout,
+                    options: [
+                        (StartupLayout.grid.rawValue, Strings.Settings.grid),
+                        (StartupLayout.row.rawValue, Strings.Settings.row),
+                        (StartupLayout.dwindle.rawValue, Strings.Settings.dwindle),
+                    ],
+                )
+                SliderRow(
+                    model: model,
+                    title: Strings.Settings.minWindowSize,
+                    detail: Strings.Settings.minWindowSizeDetail,
+                    key: .minWindowSize,
+                    range: TilingConfig.minWindowSizeRange,
+                    step: 10,
+                )
+            }
+        }
+    }
+
+    private func splitTargetDetail(isDwindle: Bool) -> String {
+        switch SplitTarget(rawValue: model.string(.splitTarget)) {
+            case _ where !isDwindle: Strings.Settings.splitTargetNotDwindleDetail
+            case .cursor: Strings.Settings.splitTargetCursorDetail
+            case .focused, nil: Strings.Settings.splitTargetFocusedDetail
+        }
+    }
+
+    private var startupLayoutDetail: String {
+        switch StartupLayout(rawValue: model.string(.startupLayout)) {
+            case .row: Strings.Settings.startupRowDetail
+            case .dwindle: Strings.Settings.startupDwindleDetail
+            case .grid, nil: Strings.Settings.startupGridDetail
+        }
+    }
+}
+
+// MARK: - Animations
+
+struct AnimationsSettingsView: View {
+    let model: SettingsModel
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
+            Section(Strings.Settings.windows) {
+                ToggleRow(model: model, title: Strings.Settings.animate, detail: Strings.Settings.animateDetail, key: .animationsEnabled)
+                SliderRow(
+                    model: model,
+                    title: Strings.Settings.duration,
+                    detail: Strings.Settings.durationDetail,
+                    key: .animationsDuration,
+                    range: AnimationsConfig.durationRange,
+                    step: 10,
+                    format: Strings.Settings.milliseconds,
+                )
+                .disabled(!model.bool(.animationsEnabled))
+            }
+            Section(Strings.Settings.workspaces) {
+                pickerRow(
+                    model,
+                    Strings.Settings.workspaceSwitch,
+                    detail: workspaceSwitchDetail,
+                    key: .animationsWorkspaceSwitch,
+                    options: [
+                        (WorkspaceSwitch.horizontal.rawValue, Strings.Settings.horizontal),
+                        (WorkspaceSwitch.vertical.rawValue, Strings.Settings.vertical),
+                        (WorkspaceSwitch.auto.rawValue, Strings.Settings.auto),
+                        (WorkspaceSwitch.off.rawValue, Strings.Settings.off),
+                    ],
+                )
+                .disabled(!model.bool(.animationsEnabled))
+            }
+        }
+    }
+
+    private var workspaceSwitchDetail: String {
+        switch WorkspaceSwitch(rawValue: model.string(.animationsWorkspaceSwitch)) {
+            case .vertical: Strings.Settings.workspaceSwitchVerticalDetail
+            case .auto: Strings.Settings.workspaceSwitchAutoDetail
+            case .off: Strings.Settings.workspaceSwitchOffDetail
+            case .horizontal, nil: Strings.Settings.workspaceSwitchHorizontalDetail
         }
     }
 }

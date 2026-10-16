@@ -23,9 +23,11 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     model.refresh()
     let tabs: [(String, AnyView)] = [
         ("general", AnyView(GeneralSettingsView(model: model))),
+        ("tiling", AnyView(TilingSettingsView(model: model))),
+        ("gaps", AnyView(GapsSettingsView(model: model))),
+        ("animations", AnyView(AnimationsSettingsView(model: model))),
         ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
         ("borders", AnyView(BordersSettingsView(model: model))),
-        ("gaps", AnyView(GapsSettingsView(model: model))),
     ]
     for (name, view) in tabs {
         let hosting = NSHostingView(rootView: view)

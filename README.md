@@ -449,8 +449,15 @@ animated. Settings has the same keys in its **General** tab.
 **Switching workspaces** slides the windows too, in the same duration: the windows of the workspace you leave
 go out by one side of the screen and the ones of the workspace you go to come in by the other. Toward a later
 workspace (in the order of the menu bar item) they move to the left, toward an earlier one to the right. Only
-the tiling windows slide: the floating ones appear and disappear as before. A screen with another screen to its
-left or to its right doesn't slide, or the windows would cross it.
+the tiling windows slide: the floating ones appear and disappear as before.
+
+The windows never cross another screen. Each screen picks its own way:
+
+| Around the screen | The windows slide |
+|---|---|
+| No screen on its left or on its right (alone, or with a screen above or below) | Sideways |
+| A screen on its left or on its right | Through the bottom: out downwards, in from below (macOS doesn't let a window above the menu bar) |
+| A screen on a side and another one below | They don't slide |
 
 ```toml
 [animations]

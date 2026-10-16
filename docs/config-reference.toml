@@ -321,7 +321,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # by one side of the screen, and the ones of the workspace that is shown come in by the other. Toward a workspace
     # that comes later (in the order of persistent-workspaces, then by name) they move to the left; toward an earlier
     # one, to the right. Only the tiling windows slide: the floating ones appear and disappear as before.
-    # Not on a screen with another screen to its left or to its right: the windows would cross it
+    # The windows never cross another screen: a screen with another screen to its left or to its right slides them
+    # through its bottom instead (out downwards, in from below; macOS doesn't let a window above the menu bar), and
+    # a screen that also has another screen below it doesn't slide them
     # Possible values: true|false
     # Fallback value (if you omit the key): workspace-switch = true
     workspace-switch = true

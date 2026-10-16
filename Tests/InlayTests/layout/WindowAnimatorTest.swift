@@ -136,14 +136,38 @@ extension InlayTests {
             assertEquals(WorkspaceSlide.direction(from: "gone", to: "1", order: order), nil)
         }
 
-        @Test func testNoSlideTowardAnotherScreen() {
-            let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
-            // Side by side: the windows would cross the other screen
-            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: 1920, y: 200, width: 1440, height: 900)]), true)
-            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: -1440, y: 0, width: 1440, height: 900)]), true)
-            // Above or below: the windows slide sideways, away from it
-            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: 0, y: -900, width: 1440, height: 900)]), false)
-            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: []), false)
+        @Test func testTheAxisNeverCrossesAnotherScreen() {
+            let macBook = CGRect(x: 0, y: 0, width: 1512, height: 982)
+            // Alone: sideways
+            assertEquals(WorkspaceSlide.axis(macBook, others: []), .horizontal)
+            // A screen on the left or on the right: through the bottom
+            let right = CGRect(x: 1512, y: -200, width: 2560, height: 1440)
+            let left = CGRect(x: -1920, y: 0, width: 1920, height: 1080)
+            assertEquals(WorkspaceSlide.axis(macBook, others: [right]), .vertical)
+            assertEquals(WorkspaceSlide.axis(macBook, others: [left]), .vertical)
+            // The external screen too, seen from it
+            assertEquals(WorkspaceSlide.axis(right, others: [macBook]), .vertical)
+            // A screen above or below: sideways, away from it
+            let above = CGRect(x: -300, y: -1440, width: 2560, height: 1440)
+            let below = CGRect(x: 0, y: 982, width: 1920, height: 1080)
+            assertEquals(WorkspaceSlide.axis(macBook, others: [above]), .horizontal)
+            assertEquals(WorkspaceSlide.axis(macBook, others: [below]), .horizontal)
+            // On a side and above: the top isn't used, so through the bottom. On a side and below: no slide
+            assertEquals(WorkspaceSlide.axis(macBook, others: [right, above]), .vertical)
+            assertEquals(WorkspaceSlide.axis(macBook, others: [right, below]), nil)
+        }
+
+        @Test func testOffsets() {
+            let screen = CGSize(width: 1512, height: 982)
+            // Toward a later workspace the windows move to the left, toward an earlier one to the right
+            assertEquals(WorkspaceSlide.offsets(.horizontal, direction: 1, screen: screen).slidingIn, CGSize(width: 1512, height: 0))
+            assertEquals(WorkspaceSlide.offsets(.horizontal, direction: 1, screen: screen).slidingOut, CGSize(width: -1512, height: 0))
+            assertEquals(WorkspaceSlide.offsets(.horizontal, direction: -1, screen: screen).slidingIn, CGSize(width: -1512, height: 0))
+            // Vertically, always through the bottom: in from below, out downwards
+            for direction: CGFloat in [1, -1] {
+                assertEquals(WorkspaceSlide.offsets(.vertical, direction: direction, screen: screen).slidingIn, CGSize(width: 0, height: 982))
+                assertEquals(WorkspaceSlide.offsets(.vertical, direction: direction, screen: screen).slidingOut, CGSize(width: 0, height: 982))
+            }
         }
 
         @Test func testSwitchingWorkspacesSlidesTheWindows() async throws {
@@ -160,14 +184,14 @@ extension InlayTests {
             // To a later workspace: the windows go to the left
             assertEquals(right.focusWorkspace(), true)
             let width = mainMonitorInfo.width
-            assertEquals(animator.beginLayout(monitorInfos), ["a-left": -width])
+            assertEquals(animator.beginLayout(monitorInfos), ["a-left": CGSize(width: -width, height: 0)])
             try await right.layoutWorkspace()
             animator.tick(now: .now - .seconds(10))
             let rightTile = try #require(incoming.lastAppliedLayoutPhysicalRect.map(CGRect.init))
             // The new one starts a screen to the right of its tile
             assertEquals(isClose(frame(incoming), rightTile.offsetBy(dx: width, dy: 0)), true)
             var hidden = false
-            animator.slideOut(outgoing, distance: -width) { hidden = true }
+            animator.slideOut(outgoing, distance: CGSize(width: -width, height: 0)) { hidden = true }
             assertEquals(animator.isSlidingOut(1), true)
             animator.tick(now: .now - .seconds(10))
             assertEquals(isClose(frame(outgoing), leftTile), true)
@@ -190,7 +214,7 @@ extension InlayTests {
             assertEquals(right.focusWorkspace(), true)
             _ = animator.beginLayout(monitorInfos)
             assertEquals(left.focusWorkspace(), true)
-            assertEquals(animator.beginLayout(monitorInfos), ["b-right": width])
+            assertEquals(animator.beginLayout(monitorInfos), ["b-right": CGSize(width: width, height: 0)])
         }
 
         // MARK: - What asks for an animated layout

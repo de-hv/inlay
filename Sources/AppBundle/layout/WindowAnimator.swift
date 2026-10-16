@@ -49,8 +49,8 @@ final class WindowAnimator {
     private var sized: Set<UInt32> = []
     /// The workspace that each screen showed in the previous layout pass, by the top left corner of the screen
     private var shownWorkspaces: [CGPoint: String] = [:]
-    /// The workspaces that come in during this layout pass -> how far from their tiles their windows start, horizontally
-    private var slidingIn: [String: CGFloat] = [:]
+    /// The workspaces that come in during this layout pass -> how far from their tiles their windows start
+    private var slidingIn: [String: CGSize] = [:]
     /// The windows that slide out of the screen -> what happens to them once they are out (they are hidden in a corner)
     private var slideOutEnds: [UInt32: @MainActor () async -> Void] = [:]
     private var task: Task<Void, Never>? = nil
@@ -83,9 +83,9 @@ final class WindowAnimator {
     }
 
     /// Before the layout of the visible workspaces: the screens that show another workspace than in the previous pass
-    /// slide their windows. Returns the workspaces that are left -> how far their windows slide out, horizontally.
-    /// The windows of the workspace that is shown slide in from the other side. See: WorkspaceSlide
-    func beginLayout(_ monitors: [any MonitorInfo]) -> [String: CGFloat] {
+    /// slide their windows. Returns the workspaces that are left -> how far their windows slide out.
+    /// The windows of the workspace that is shown slide in. See: WorkspaceSlide
+    func beginLayout(_ monitors: [any MonitorInfo]) -> [String: CGSize] {
         slidingIn = [:]
         var shown: [CGPoint: String] = [:]
         for monitor in monitors { shown[monitor.rect.topLeftCorner] = monitor.activeWorkspace.name }
@@ -94,7 +94,7 @@ final class WindowAnimator {
         guard config.animations.workspaceSwitch, duration > .zero else { return [:] }
         let order = Workspace.all.map(\.name)
         let screens = monitors.map { CGRect($0.rect) }
-        var slidingOut: [String: CGFloat] = [:]
+        var slidingOut: [String: CGSize] = [:]
         for (index, monitor) in monitors.enumerated() {
             let new = monitor.activeWorkspace.name
             // The workspace that was left is gone (it had no windows), or another screen shows it now
@@ -102,17 +102,18 @@ final class WindowAnimator {
                   let direction = WorkspaceSlide.direction(from: old, to: new, order: order) else { continue }
             var others = screens
             others.remove(at: index)
-            if WorkspaceSlide.hasHorizontalNeighbor(screens[index], others: others) { continue }
-            DebugStats.count("animation.workspace-switch")
-            slidingIn[new] = direction * monitor.width
-            slidingOut[old] = -direction * monitor.width
+            guard let axis = WorkspaceSlide.axis(screens[index], others: others) else { continue }
+            DebugStats.count("animation.workspace-switch.\(axis)")
+            let offsets = WorkspaceSlide.offsets(axis, direction: direction, screen: screens[index].size)
+            slidingIn[new] = offsets.slidingIn
+            slidingOut[old] = offsets.slidingOut
         }
         return slidingOut
     }
 
-    /// Slides a tiling window of the workspace that is left out of the screen, by `distance` points, and then runs `end`,
+    /// Slides a tiling window of the workspace that is left out of the screen, by `distance`, and then runs `end`,
     /// which hides it. See: layoutWorkspaces
-    func slideOut(_ window: Window, distance: CGFloat, then end: @escaping @MainActor () async -> Void) {
+    func slideOut(_ window: Window, distance: CGSize, then end: @escaping @MainActor () async -> Void) {
         if slideOutEnds[window.windowId] != nil { return }
         let now: ContinuousClock.Instant = .now
         guard let from = currentFrame(window.windowId) ?? window.lastAppliedLayoutPhysicalRect.map(CGRect.init) else {
@@ -120,7 +121,7 @@ final class WindowAnimator {
             return
         }
         slideOutEnds[window.windowId] = end
-        start(window, FrameAnimation(from: from, to: from.offsetBy(dx: distance, dy: 0), start: now, duration: duration), now: now)
+        start(window, FrameAnimation(from: from, to: from.offsetBy(dx: distance.width, dy: distance.height), start: now, duration: duration), now: now)
     }
 
     /// The window is sliding out of the screen: it is hidden once it is out
@@ -150,7 +151,7 @@ final class WindowAnimator {
         let duration = duration
         let slide = window.nodeWorkspace.flatMap { slidingIn[$0.name] }
         let from = current.map { $0.animation.frame(at: now) }
-            ?? (isEntering ? Self.entryFrame(target) : slide.map { target.offsetBy(dx: $0, dy: 0) } ?? previous.map(CGRect.init))
+            ?? (isEntering ? Self.entryFrame(target) : slide.map { target.offsetBy(dx: $0.width, dy: $0.height) } ?? previous.map(CGRect.init))
         guard isAnimatedLayoutRequested || slide != nil, duration > .zero, let from, from != target else {
             animations[window.windowId] = nil
             window.setAxFrame(target.origin, target.size)
@@ -246,9 +247,31 @@ enum WorkspaceSlide {
         return newIndex > oldIndex ? 1 : -1
     }
 
-    /// Another screen on the left or on the right of the screen: the windows would slide across it
-    static func hasHorizontalNeighbor(_ screen: CGRect, others: [CGRect]) -> Bool {
-        others.contains { $0.minY < screen.maxY && $0.maxY > screen.minY }
+    enum Axis: String, Equatable, Sendable {
+        /// Out by one side of the screen and in by the other
+        case horizontal
+        /// Through the bottom of the screen: out downwards, and in from below. macOS doesn't let a window above the
+        /// menu bar, so the top of the screen can't be used
+        case vertical
+    }
+
+    /// How the windows of a screen slide, so that they never cross another screen: sideways if there is no screen on its
+    /// left or on its right, else through its bottom if there is no screen below it. nil: they can't slide.
+    /// The frames are in the coordinates of the layout: Y grows downwards
+    static func axis(_ screen: CGRect, others: [CGRect]) -> Axis? {
+        if !others.contains(where: { $0.minY < screen.maxY && $0.maxY > screen.minY }) { return .horizontal }
+        if !others.contains(where: { $0.minX < screen.maxX && $0.maxX > screen.minX && $0.minY >= screen.midY }) { return .vertical }
+        return nil
+    }
+
+    /// How far from their tiles the windows that come in start, and how far the windows that go out go.
+    /// Horizontally, toward a later workspace they move to the left, and to the right toward an earlier one.
+    /// Vertically, always down and up through the bottom of the screen
+    static func offsets(_ axis: Axis, direction: CGFloat, screen: CGSize) -> (slidingIn: CGSize, slidingOut: CGSize) {
+        switch axis {
+            case .horizontal: (CGSize(width: direction * screen.width, height: 0), CGSize(width: -direction * screen.width, height: 0))
+            case .vertical: (CGSize(width: 0, height: screen.height), CGSize(width: 0, height: screen.height))
+        }
     }
 }
 

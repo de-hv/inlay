@@ -127,6 +127,8 @@ final class MacWindow: Window {
     @MainActor
     func hideInCorner(_ corner: OptimalHideCorner) async throws {
         guard let nodeMonitor else { return }
+        // It is hidden once it is out of the screen. See: WindowAnimator.slideOut
+        if WindowAnimator.shared.isSlidingOut(windowId) { return }
         WindowAnimator.shared.cancel(windowId)
         DebugStats.count("layout.hide-in-corner")
         // Don't accidentally override prevUnhiddenEmulationPosition in case of subsequent `hideInCorner` calls

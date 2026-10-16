@@ -125,6 +125,74 @@ extension InlayTests {
             assertEquals(animator.isAnimating, false)
         }
 
+        // MARK: - Switching workspaces
+
+        @Test func testWorkspaceSlideDirection() {
+            let order = ["1", "2", "3", "10"]
+            // Toward a later workspace the windows move to the left: the new ones come in from the right
+            assertEquals(WorkspaceSlide.direction(from: "1", to: "3", order: order), 1)
+            assertEquals(WorkspaceSlide.direction(from: "10", to: "2", order: order), -1)
+            assertEquals(WorkspaceSlide.direction(from: "1", to: "1", order: order), nil)
+            assertEquals(WorkspaceSlide.direction(from: "gone", to: "1", order: order), nil)
+        }
+
+        @Test func testNoSlideTowardAnotherScreen() {
+            let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+            // Side by side: the windows would cross the other screen
+            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: 1920, y: 200, width: 1440, height: 900)]), true)
+            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: -1440, y: 0, width: 1440, height: 900)]), true)
+            // Above or below: the windows slide sideways, away from it
+            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: [CGRect(x: 0, y: -900, width: 1440, height: 900)]), false)
+            assertEquals(WorkspaceSlide.hasHorizontalNeighbor(main, others: []), false)
+        }
+
+        @Test func testSwitchingWorkspacesSlidesTheWindows() async throws {
+            let left = Workspace.get(byName: "a-left")
+            let right = Workspace.get(byName: "b-right")
+            let outgoing = TestWindow.new(id: 1, parent: left.rootTilingContainer)
+            let incoming = TestWindow.new(id: 2, parent: right.rootTilingContainer)
+            assertEquals(left.focusWorkspace(), true)
+            try await left.layoutWorkspace()
+            let leftTile = try #require(outgoing.lastAppliedLayoutPhysicalRect.map(CGRect.init))
+            assertEquals(animator.beginLayout(monitorInfos), [:]) // The first pass knows nothing to compare with
+            animator.layoutDidFinish()
+
+            // To a later workspace: the windows go to the left
+            assertEquals(right.focusWorkspace(), true)
+            let width = mainMonitorInfo.width
+            assertEquals(animator.beginLayout(monitorInfos), ["a-left": -width])
+            try await right.layoutWorkspace()
+            animator.tick(now: .now - .seconds(10))
+            let rightTile = try #require(incoming.lastAppliedLayoutPhysicalRect.map(CGRect.init))
+            // The new one starts a screen to the right of its tile
+            assertEquals(isClose(frame(incoming), rightTile.offsetBy(dx: width, dy: 0)), true)
+            var hidden = false
+            animator.slideOut(outgoing, distance: -width) { hidden = true }
+            assertEquals(animator.isSlidingOut(1), true)
+            animator.tick(now: .now - .seconds(10))
+            assertEquals(isClose(frame(outgoing), leftTile), true)
+            // Over: the new one in its tile, the old one a screen to the left, and then hidden
+            animator.tick(now: .now + .seconds(1))
+            assertEquals(frame(incoming), rightTile)
+            assertEquals(frame(outgoing), leftTile.offsetBy(dx: -width, dy: 0))
+            await Task.yield()
+            assertEquals(hidden, true)
+            assertEquals(animator.isSlidingOut(1), false)
+            animator.layoutDidFinish()
+
+            // The same layout again: nothing slides
+            assertEquals(animator.beginLayout(monitorInfos), [:])
+            // Back to the earlier workspace: to the right. Not with the switch turned off
+            assertEquals(left.focusWorkspace(), true)
+            config.animations.workspaceSwitch = false
+            assertEquals(animator.beginLayout(monitorInfos), [:])
+            config.animations.workspaceSwitch = true
+            assertEquals(right.focusWorkspace(), true)
+            _ = animator.beginLayout(monitorInfos)
+            assertEquals(left.focusWorkspace(), true)
+            assertEquals(animator.beginLayout(monitorInfos), ["b-right": width])
+        }
+
         // MARK: - What asks for an animated layout
 
         @Test func testSwapAndMoveAskForAnAnimatedLayout() async throws {

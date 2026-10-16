@@ -171,6 +171,9 @@ private func layoutWorkspaces() async throws {
         return
     }
     let monitors = monitorInfos
+    // The screens that switched workspace: the windows of the workspace that is left slide out, and the ones of
+    // the workspace that is shown slide in (see WindowAnimator.setFrame)
+    let slidingOut = WindowAnimator.shared.beginLayout(monitors)
     var monitorToOptimalHideCorner: [CGPoint: OptimalHideCorner] = [:]
     for monitor in monitors {
         let xOff = monitor.width * 0.1
@@ -204,8 +207,14 @@ private func layoutWorkspaces() async throws {
     }
     for workspace in Workspace.all where !workspace.isVisible {
         let corner = monitorToOptimalHideCorner[workspace.workspaceMonitor.rect.topLeftCorner] ?? .bottomRightCorner
+        let distance = slidingOut[workspace.name]
         for window in workspace.allLeafWindowsRecursive {
-            try await (window as! MacWindow).hideInCorner(corner) // todo as!
+            let window = window as! MacWindow // todo as!
+            if let distance, !window.isFloating, !window.isHiddenInCorner, window.lastAppliedLayoutPhysicalRect != nil {
+                WindowAnimator.shared.slideOut(window, distance: distance) { try? await window.hideInCorner(corner) }
+            } else {
+                try await window.hideInCorner(corner)
+            }
         }
     }
     WindowAnimator.shared.layoutDidFinish()

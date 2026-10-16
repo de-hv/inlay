@@ -75,6 +75,8 @@ enum Strings {
         static let animations = "Animations"
         static let animate = "Animate the windows"
         static let animateDetail = "The windows slide to their place when a window opens or closes, and when you move one with swap or move."
+        static let workspaceSwitch = "Slide between workspaces"
+        static let workspaceSwitchDetail = "The windows of the workspace you leave go out by one side, and the ones of the next workspace come in by the other."
         static let duration = "Duration"
         static let durationDetail = "Shorter is snappier. 0 turns the animations off. With Reduce Motion on, nothing is animated."
         static func milliseconds(_ value: Int) -> String { "\(value) ms" }

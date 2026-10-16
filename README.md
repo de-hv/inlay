@@ -442,14 +442,21 @@ The shipped config has two ways of moving the focused window with the arrows:
 
 The tiling windows **slide to their place**, in 180 ms, when a window opens (it grows from the center of its
 tile while its neighbor makes room for it, like the *popin* of Hyprland) or closes, and when a window is moved with `swap` or `move`.
-The borders go with them. Nothing else is animated: resizing, `balance-sizes`, switching workspaces, the
+The borders go with them. Switching workspaces has its own slide (below). Nothing else is animated: resizing, `balance-sizes`, the
 startup and the mouse stay instant. With *Reduce motion* (System Settings → Accessibility → Display) nothing is
-animated. Settings has the same two keys in its **General** tab.
+animated. Settings has the same keys in its **General** tab.
+
+**Switching workspaces** slides the windows too, in the same duration: the windows of the workspace you leave
+go out by one side of the screen and the ones of the workspace you go to come in by the other. Toward a later
+workspace (in the order of the menu bar item) they move to the left, toward an earlier one to the right. Only
+the tiling windows slide: the floating ones appear and disappear as before. A screen with another screen to its
+left or to its right doesn't slide, or the windows would cross it.
 
 ```toml
 [animations]
     enabled = true
-    duration = 180   # 0 ... 500 milliseconds. 0 = no animation
+    duration = 180            # 0 ... 500 milliseconds. 0 = no animation
+    workspace-switch = true   # slide the windows when switching workspaces
 ```
 
 macOS only lets Inlay move the windows of other apps through the Accessibility API, one frame at a time, and
@@ -557,7 +564,7 @@ tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Tiling, with New windows (Dwindle or After Focused), Window to split (Focused or Cursor), Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt; Animations, with Animate the windows ([animations] enabled), Slide between workspaces ([animations] workspace-switch) and a Duration slider at 180 ms; Configuration, with the path of the file, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>

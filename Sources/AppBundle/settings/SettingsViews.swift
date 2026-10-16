@@ -233,6 +233,8 @@ struct GeneralSettingsView: View {
             }
             Section(Strings.Settings.animations) {
                 ToggleRow(model: model, title: Strings.Settings.animate, detail: Strings.Settings.animateDetail, key: .animationsEnabled)
+                ToggleRow(model: model, title: Strings.Settings.workspaceSwitch, detail: Strings.Settings.workspaceSwitchDetail, key: .animationsWorkspaceSwitch)
+                    .disabled(!model.bool(.animationsEnabled))
                 SliderRow(
                     model: model,
                     title: Strings.Settings.duration,

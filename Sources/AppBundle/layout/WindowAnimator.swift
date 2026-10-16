@@ -44,6 +44,15 @@ final class WindowAnimator {
     static let shared = WindowAnimator()
 
     private var animations: [UInt32: (window: Window, animation: FrameAnimation)] = [:]
+    /// The windows whose size the current animation has already set. While the size doesn't change, only the position is
+    /// set: the app doesn't have to lay out its content again
+    private var sized: Set<UInt32> = []
+    /// The workspace that each screen showed in the previous layout pass, by the top left corner of the screen
+    private var shownWorkspaces: [CGPoint: String] = [:]
+    /// The workspaces that come in during this layout pass -> how far from their tiles their windows start, horizontally
+    private var slidingIn: [String: CGFloat] = [:]
+    /// The windows that slide out of the screen -> what happens to them once they are out (they are hidden in a corner)
+    private var slideOutEnds: [UInt32: @MainActor () async -> Void] = [:]
     private var task: Task<Void, Never>? = nil
     /// When something asked for the next layout to be animated. See: requestAnimatedLayout
     private var requestedAt: ContinuousClock.Instant? = nil
@@ -70,7 +79,52 @@ final class WindowAnimator {
     /// The windows have been laid out. See: layoutWorkspaces
     func layoutDidFinish() {
         requestedAt = nil
+        slidingIn = [:]
     }
+
+    /// Before the layout of the visible workspaces: the screens that show another workspace than in the previous pass
+    /// slide their windows. Returns the workspaces that are left -> how far their windows slide out, horizontally.
+    /// The windows of the workspace that is shown slide in from the other side. See: WorkspaceSlide
+    func beginLayout(_ monitors: [any MonitorInfo]) -> [String: CGFloat] {
+        slidingIn = [:]
+        var shown: [CGPoint: String] = [:]
+        for monitor in monitors { shown[monitor.rect.topLeftCorner] = monitor.activeWorkspace.name }
+        let previous = shownWorkspaces
+        shownWorkspaces = shown
+        guard config.animations.workspaceSwitch, duration > .zero else { return [:] }
+        let order = Workspace.all.map(\.name)
+        let screens = monitors.map { CGRect($0.rect) }
+        var slidingOut: [String: CGFloat] = [:]
+        for (index, monitor) in monitors.enumerated() {
+            let new = monitor.activeWorkspace.name
+            // The workspace that was left is gone (it had no windows), or another screen shows it now
+            guard let old = previous[monitor.rect.topLeftCorner], old != new, !shown.values.contains(old),
+                  let direction = WorkspaceSlide.direction(from: old, to: new, order: order) else { continue }
+            var others = screens
+            others.remove(at: index)
+            if WorkspaceSlide.hasHorizontalNeighbor(screens[index], others: others) { continue }
+            DebugStats.count("animation.workspace-switch")
+            slidingIn[new] = direction * monitor.width
+            slidingOut[old] = -direction * monitor.width
+        }
+        return slidingOut
+    }
+
+    /// Slides a tiling window of the workspace that is left out of the screen, by `distance` points, and then runs `end`,
+    /// which hides it. See: layoutWorkspaces
+    func slideOut(_ window: Window, distance: CGFloat, then end: @escaping @MainActor () async -> Void) {
+        if slideOutEnds[window.windowId] != nil { return }
+        let now: ContinuousClock.Instant = .now
+        guard let from = currentFrame(window.windowId) ?? window.lastAppliedLayoutPhysicalRect.map(CGRect.init) else {
+            Task { @MainActor in await end() }
+            return
+        }
+        slideOutEnds[window.windowId] = end
+        start(window, FrameAnimation(from: from, to: from.offsetBy(dx: distance, dy: 0), start: now, duration: duration), now: now)
+    }
+
+    /// The window is sliding out of the screen: it is hidden once it is out
+    func isSlidingOut(_ windowId: UInt32) -> Bool { slideOutEnds[windowId] != nil }
 
     private var duration: Duration {
         if isUnitTest && !isEnabledInTests { return .zero }
@@ -81,8 +135,8 @@ final class WindowAnimator {
     /// Puts a tiling window in the frame of the layout: right away, or sliding there if the layout is animated.
     ///
     /// - Parameter previous: the frame that the previous layout gave to the window. The window slides from there,
-    ///   or grows from the center of its tile if it is new (Window.isEntering), or goes on from where it is if it is
-    ///   already sliding
+    ///   or grows from the center of its tile if it is new (Window.isEntering), or comes in from the side of the screen
+    ///   if its workspace is being switched to (see beginLayout), or goes on from where it is if it is already sliding
     func setFrame(_ window: Window, _ rect: Rect, previous: Rect?) {
         let target = CGRect(rect)
         let now: ContinuousClock.Instant = .now
@@ -91,15 +145,24 @@ final class WindowAnimator {
         window.isEntering = false
         // The layout runs more than once for the same change (the light session, then the complete one)
         if let current, current.animation.to == target { return }
+        // Shown again while it was sliding out: it isn't hidden
+        slideOutEnds[window.windowId] = nil
         let duration = duration
-        let from = current.map { $0.animation.frame(at: now) } ?? (isEntering ? Self.entryFrame(target) : previous.map(CGRect.init))
-        guard isAnimatedLayoutRequested, duration > .zero, let from, from != target else {
+        let slide = window.nodeWorkspace.flatMap { slidingIn[$0.name] }
+        let from = current.map { $0.animation.frame(at: now) }
+            ?? (isEntering ? Self.entryFrame(target) : slide.map { target.offsetBy(dx: $0, dy: 0) } ?? previous.map(CGRect.init))
+        guard isAnimatedLayoutRequested || slide != nil, duration > .zero, let from, from != target else {
             animations[window.windowId] = nil
             window.setAxFrame(target.origin, target.size)
             return
         }
         DebugStats.count("animation.started")
-        animations[window.windowId] = (window, FrameAnimation(from: from, to: target, start: now, duration: duration))
+        start(window, FrameAnimation(from: from, to: target, start: now, duration: duration), now: now)
+    }
+
+    private func start(_ window: Window, _ animation: FrameAnimation, now: ContinuousClock.Instant) {
+        animations[window.windowId] = (window, animation)
+        sized.remove(window.windowId)
         tick(now: now)
         startLoop()
     }
@@ -115,6 +178,7 @@ final class WindowAnimator {
     /// Something else places the window: hiding it in a corner, the mouse, the fullscreen
     func cancel(_ windowId: UInt32) {
         animations[windowId] = nil
+        slideOutEnds[windowId] = nil
     }
 
     /// Where the window is while it slides. nil if it isn't sliding
@@ -127,6 +191,9 @@ final class WindowAnimator {
     /// Stops every animation where it is
     func cancelAll() {
         animations = [:]
+        slideOutEnds = [:]
+        slidingIn = [:]
+        shownWorkspaces = [:]
     }
 
     private func startLoop() {
@@ -147,16 +214,41 @@ final class WindowAnimator {
             // The window has closed, or the mouse has taken it
             if window.parent == nil || windowId == currentlyManipulatedWithMouseWindowId {
                 animations[windowId] = nil
+                slideOutEnds[windowId] = nil
                 continue
             }
             let isFinished = animation.isFinished(at: now)
             // Whole points: a fraction of a point makes some apps lay out their content again for nothing
             let frame = isFinished ? animation.to : animation.frame(at: now).integral(roundingTo: 1)
             DebugStats.count("animation.frame")
-            window.setAxFrame(frame.origin, frame.size)
-            if isFinished { animations[windowId] = nil }
+            // The size is set in the first frame and in the last one. In between, only if it changes
+            let movesOnly = !isFinished && animation.from.size == animation.to.size && sized.contains(windowId)
+            window.setAxFrame(frame.origin, movesOnly ? nil : frame.size)
+            sized.insert(windowId)
+            if isFinished {
+                animations[windowId] = nil
+                sized.remove(windowId)
+                if let end = slideOutEnds.removeValue(forKey: windowId) {
+                    Task { @MainActor in await end() }
+                }
+            }
         }
         BordersController.shared.refresh()
+    }
+}
+
+/// The slide of the windows when a screen switches workspaces. Pure
+enum WorkspaceSlide {
+    /// 1: the workspace that is shown comes after the one that is left, in the order of the menu bar item. Its windows come
+    /// in from the right, and the others go out by the left. -1: the other way. nil if one of them isn't in the order
+    static func direction(from old: String, to new: String, order: [String]) -> CGFloat? {
+        guard let oldIndex = order.firstIndex(of: old), let newIndex = order.firstIndex(of: new), oldIndex != newIndex else { return nil }
+        return newIndex > oldIndex ? 1 : -1
+    }
+
+    /// Another screen on the left or on the right of the screen: the windows would slide across it
+    static func hasHorizontalNeighbor(_ screen: CGRect, others: [CGRect]) -> Bool {
+        others.contains { $0.minY < screen.maxY && $0.maxY > screen.minY }
     }
 }
 

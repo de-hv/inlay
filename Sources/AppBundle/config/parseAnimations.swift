@@ -8,6 +8,9 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
     /// How long a window takes to get to its new frame, in milliseconds. 0: no animation
     var duration: Int = 180
+    /// Switching workspaces slides the windows: the ones of the workspace that is left go out by one side of the screen,
+    /// the ones of the workspace that is shown come in by the other. See: WorkspaceSlide
+    var workspaceSwitch: Bool = true
 
     static let durationRange = 0 ... 500
 
@@ -18,6 +21,7 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
 let animationsParserTable: [String: any ParserProtocol<AnimationsConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "duration": Parser(\.duration, parseDuration),
+    "workspace-switch": Parser(\.workspaceSwitch, parseBool),
 ]
 
 func parseAnimations(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> AnimationsConfig {

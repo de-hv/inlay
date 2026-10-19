@@ -97,7 +97,10 @@ extension BordersSnapshot {
             // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the whole monitor.
             // The other tiling windows are behind it, and their borders would stick out in the outer gaps
             if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
-                let rect = fullscreen.noOuterGapsInFullscreen ? monitor.visibleRect : area
+                // While it grows, the border goes with it. See: WindowAnimator
+                let rect = WindowAnimator.shared.currentFrame(fullscreen.windowId)
+                    .map { Rect(topLeftX: $0.minX, topLeftY: $0.minY, width: $0.width, height: $0.height) }
+                    ?? (fullscreen.noOuterGapsInFullscreen ? monitor.visibleRect : area)
                 add(fullscreen, rect.intersection(room), isFloating: false)
             } else {
                 for window in workspace.rootTilingContainer.allLeafWindowsRecursive {

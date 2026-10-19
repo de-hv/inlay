@@ -441,7 +441,9 @@ The shipped config has two ways of moving the focused window with the arrows:
 ### Animations
 
 The tiling windows **slide to their place**, in 180 ms, when a window opens (it grows from the center of its
-tile while its neighbor makes room for it, like the *popin* of Hyprland) or closes, and when a window is moved with `swap` or `move`.
+tile while its neighbor makes room for it, like the *popin* of Hyprland) or closes, when a window is moved with `swap` or `move`,
+and when the `fullscreen` command (`cmd-alt-ctrl-enter`) makes a window grow from its tile to the whole screen, or
+shrink back to its tile. The native fullscreen of macOS has an animation of its own.
 The borders go with them. Switching workspaces has its own slide (below). Nothing else is animated: resizing, `balance-sizes`, the
 startup and the mouse stay instant. With *Reduce motion* (System Settings → Accessibility → Display) nothing is
 animated. Settings has the same keys in its **Animations** tab.

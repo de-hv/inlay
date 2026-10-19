@@ -3,8 +3,9 @@ import Foundation
 
 /// [animations] table of the config. See: WindowAnimator
 struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
-    /// The tiling windows slide to their new frames when a window opens or closes, and when a window is moved
-    /// with 'swap' or 'move'. Nothing else is animated: resizing, switching workspaces, the mouse
+    /// The tiling windows slide to their new frames when a window opens or closes, when a window is moved
+    /// with 'swap' or 'move', and in and out of fullscreen. Switching workspaces has its own slide (workspaceSwitch).
+    /// Nothing else is animated: resizing, the mouse
     var enabled: Bool = true
     /// How long a window takes to get to its new frame, in milliseconds. 0: no animation
     var duration: Int = 180

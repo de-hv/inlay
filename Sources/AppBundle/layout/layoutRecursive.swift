@@ -73,11 +73,14 @@ extension TreeNode {
                 if window.windowId != currentlyManipulatedWithMouseWindowId {
                     lastAppliedLayoutVirtualRect = virtual
                     if window.isFullscreen && window == context.workspace.rootTilingContainer.mostRecentWindowRecursive {
-                        lastAppliedLayoutPhysicalRect = nil
-                        WindowAnimator.shared.cancel(window.windowId)
-                        window.layoutFullscreen(context)
-                    } else {
+                        // It grows from its tile, if the layout is animated
                         let previous = lastAppliedLayoutPhysicalRect
+                        lastAppliedLayoutPhysicalRect = nil
+                        window.layoutFullscreen(context, previous: previous)
+                    } else {
+                        // Out of fullscreen: it shrinks back to its tile from the whole screen, if the layout is animated
+                        let previous = lastAppliedLayoutPhysicalRect ?? window.fullscreenFrame
+                        window.fullscreenFrame = nil
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
                         DebugStats.count("layout.tiling-window-frame")
@@ -136,17 +139,19 @@ extension Window {
         }
         if isFullscreen {
             lastKnownFloatingRect = nil
-            layoutFullscreen(context)
+            layoutFullscreen(context, previous: nil)
             isFullscreen = false
         }
     }
 
+    /// - Parameter previous: the frame of the window before, for an animated layout. nil: right away
     @MainActor
-    fileprivate func layoutFullscreen(_ context: LayoutContext) {
+    fileprivate func layoutFullscreen(_ context: LayoutContext, previous: Rect?) {
         let monitorRect = noOuterGapsInFullscreen
             ? context.workspace.workspaceMonitor.visibleRect
             : context.workspace.workspaceMonitor.visibleRectPaddedByOuterGaps
-        setAxFrame(monitorRect.topLeftCorner, CGSize(width: monitorRect.width, height: monitorRect.height))
+        fullscreenFrame = monitorRect
+        WindowAnimator.shared.setFrame(self, monitorRect, previous: previous)
     }
 }
 

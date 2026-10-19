@@ -23,6 +23,9 @@ open class Window: TreeNode, Hashable {
     /// A new window that hasn't been laid out yet: an animated layout grows it from the center of its tile, while the
     /// other windows make room for it. See: WindowAnimator
     var isEntering: Bool = false
+    /// The frame that the layout gives to the window in fullscreen (the 'fullscreen' command). When the window leaves
+    /// fullscreen, an animated layout shrinks it from there back to its tile. See: WindowAnimator
+    var fullscreenFrame: Rect? = nil
 
     @MainActor
     init(id: UInt32, _ app: any AbstractApp, lastFloatingSize: CGSize?, parent: NonLeafTreeNodeObject, adaptiveWeight: CGFloat, index: Int) {

@@ -210,7 +210,8 @@ private func layoutWorkspaces() async throws {
         let distance = slidingOut[workspace.name]
         for window in workspace.allLeafWindowsRecursive {
             let window = window as! MacWindow // todo as!
-            if let distance, !window.isFloating, !window.isHiddenInCorner, window.lastAppliedLayoutPhysicalRect != nil {
+            // A fullscreen window has no tile, but the frame of the screen
+            if let distance, !window.isFloating, !window.isHiddenInCorner, window.lastAppliedLayoutPhysicalRect ?? window.fullscreenFrame != nil {
                 WindowAnimator.shared.slideOut(window, distance: distance) { try? await window.hideInCorner(corner) }
             } else {
                 try await window.hideInCorner(corner)

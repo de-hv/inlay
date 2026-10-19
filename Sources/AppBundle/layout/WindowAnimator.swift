@@ -119,7 +119,7 @@ final class WindowAnimator {
     func slideOut(_ window: Window, distance: CGSize, then end: @escaping @MainActor () async -> Void) {
         if slideOutEnds[window.windowId] != nil { return }
         let now: ContinuousClock.Instant = .now
-        guard let from = currentFrame(window.windowId) ?? window.lastAppliedLayoutPhysicalRect.map(CGRect.init) else {
+        guard let from = currentFrame(window.windowId) ?? (window.lastAppliedLayoutPhysicalRect ?? window.fullscreenFrame).map(CGRect.init) else {
             Task { @MainActor in await end() }
             return
         }

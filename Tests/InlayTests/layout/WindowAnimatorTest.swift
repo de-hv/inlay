@@ -125,6 +125,63 @@ extension InlayTests {
             assertEquals(animator.isAnimating, false)
         }
 
+        // MARK: - Fullscreen
+
+        @Test func testFullscreenGrowsFromTheTileAndShrinksBackToIt() async throws {
+            let workspace = focus.workspace
+            let window1 = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+            TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+            assertEquals(window1.focusWindow(), true)
+            try await workspace.layoutWorkspace()
+            let tile = try #require(window1.lastAppliedLayoutPhysicalRect.map(CGRect.init))
+
+            // In: the command asks for an animated layout, and the window grows from its tile
+            await parseCommand("fullscreen").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(animator.isAnimatedLayoutRequested, true)
+            try await workspace.layoutWorkspace()
+            assertEquals(animator.isAnimating, true)
+            let screen = try #require(window1.fullscreenFrame.map(CGRect.init))
+            assertEquals(screen.width > tile.width, true)
+            animator.tick(now: .now - .seconds(10))
+            assertEquals(isClose(frame(window1), tile), true)
+            animator.tick(now: .now + .seconds(1))
+            assertEquals(frame(window1), screen)
+            animator.layoutDidFinish()
+            // The same layout again: nothing moves
+            try await workspace.layoutWorkspace()
+            assertEquals(animator.isAnimating, false)
+            assertEquals(frame(window1), screen)
+
+            // Out, with the same command: it shrinks back to its tile from the whole screen
+            await parseCommand("fullscreen").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(window1.isFullscreen, false)
+            try await workspace.layoutWorkspace()
+            assertEquals(animator.isAnimating, true)
+            animator.tick(now: .now - .seconds(10))
+            assertEquals(isClose(frame(window1), screen), true)
+            animator.tick(now: .now + .seconds(1))
+            assertEquals(frame(window1), tile)
+            assertEquals(window1.fullscreenFrame == nil, true)
+        }
+
+        @Test func testFullscreenWithoutAnimations() async throws {
+            config.animations.enabled = false
+            let workspace = focus.workspace
+            let window1 = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+            TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+            assertEquals(window1.focusWindow(), true)
+            try await workspace.layoutWorkspace()
+            let tile = try #require(window1.lastAppliedLayoutPhysicalRect.map(CGRect.init))
+            await parseCommand("fullscreen").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            assertEquals(animator.isAnimating, false)
+            assertEquals(frame(window1), window1.fullscreenFrame.map(CGRect.init))
+            await parseCommand("fullscreen").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            try await workspace.layoutWorkspace()
+            assertEquals(animator.isAnimating, false)
+            assertEquals(frame(window1), tile)
+        }
+
         // MARK: - Switching workspaces
 
         @Test func testWorkspaceSlideDirection() {

@@ -25,6 +25,8 @@ struct FullscreenCommand: Command {
                     return .succ(io.err(msg))
             }
         }
+        // It grows to the whole screen, or shrinks back to its tile
+        WindowAnimator.shared.requestAnimatedLayout()
         window.isFullscreen = newState
         window.noOuterGapsInFullscreen = args.noOuterGaps
 

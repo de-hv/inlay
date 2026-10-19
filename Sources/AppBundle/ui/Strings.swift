@@ -78,7 +78,7 @@ enum Strings {
         static let grid = "Grid"
         static let animations = "Animations"
         static let animate = "Animate the windows"
-        static let animateDetail = "The windows slide to their place when a window opens or closes, and when you move one with swap or move."
+        static let animateDetail = "The windows slide to their place when a window opens or closes, when you move one with swap or move, and in and out of fullscreen."
         static let workspaceSwitch = "Switching workspaces"
         static let workspaceSwitchHorizontalDetail = "Horizontal: the windows slide sideways on every screen. With a screen on one side, in and out by the other side."
         static let workspaceSwitchVerticalDetail = "Vertical: the windows slide through the bottom of every screen. Not on a screen with another one below it."

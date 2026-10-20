@@ -42,10 +42,9 @@ extension InlayTests {
             try await open(2, Self.notes)
             try await open(3, Self.notes, type: .dialog)
             assertEquals(tiling("2"), [1])
-            // No rule for the app: workspace 6
-            assertEquals(tiling("6"), [2])
-            // The dialog floats where it was opened
-            assertEquals(floating("1"), [3])
+            // No rule for the app: it floats where it opens, like the dialog
+            assertEquals(tiling("6"), [])
+            assertEquals(floating("1"), [2, 3])
             assertEquals(tiling("1"), [])
             // The focus stays where it was, like it does for the apps with a workspace
             assertEquals(focus.workspace.name, "1")
@@ -93,14 +92,25 @@ extension InlayTests {
             assertEquals(tiling("3"), [8])
         }
 
-        /// A window that the user moves out of workspace 6 stays where it is put: the rules run once per window
-        @Test func testAWindowMovedOutOfWorkspace6Stays() async throws {
+        /// The window of an app without a workspace floats until the keys that move a window to a workspace
+        /// (cmd-alt-shift + j k l i o p) put it in a layout: of another workspace, or of the one on the screen.
+        /// It stays tiled: the rules run once per window
+        @Test func testAnAppWithoutAWorkspaceFloatsUntilTheMoveKeysTileIt() async throws {
+            let moveKeys = { (workspace: String) in parseCommand("layout tiling; move-node-to-workspace \(workspace)").cmdOrDie }
             try await open(1, Self.notes)
-            assertEquals(tiling("6"), [1])
-            assertEquals(await parseCommand("move-node-to-workspace --window-id 1 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
+            try await open(2, Self.player)
+            assertEquals(floating("1"), [1, 2])
+            assertEquals(tiling("1"), [])
+            // To another workspace
+            assertEquals(window(1).focusWindow(), true)
+            assertEquals(await moveKeys("2").run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
+            // To the workspace on the screen: it takes its place there
+            assertEquals(window(2).focusWindow(), true)
+            _ = await moveKeys("1").run(.defaultEnv, .emptyStdin)
             try await restOfTheSession()
             assertEquals(tiling("2"), [1])
-            assertEquals(tiling("6"), [])
+            assertEquals(tiling("1"), [2])
+            assertEquals(floating("1"), [])
         }
 
         // MARK: - (a) All the windows that are already open
@@ -127,8 +137,9 @@ extension InlayTests {
             )
             assertEquals(tiling("4"), [5])
             assertEquals(tiling("5"), [4])
-            assertEquals(Workspace.get(byName: "6").rootTilingContainer.layoutDescription, .h_tiles([.window(6), .window(10)]))
-            assertEquals(floating("1"), [12])
+            // The apps without a workspace float where they are, like Finder
+            assertEquals(tiling("6"), [])
+            assertEquals(floating("1"), [6, 10, 12])
             // Nothing is left behind in the workspace that was on the screen, but its own windows
             assertEquals(Workspace.all.flatMap(\.allLeafWindowsRecursive).count, open.count)
         }
@@ -144,7 +155,8 @@ extension InlayTests {
             try await $refreshSessionEvent.withValue(.startup) { try await open(4, Self.zed) }
             try await restOfTheSession()
             try await open(5, Self.claude) // A new window, long after the startup
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [4], [2], [], [5], [3]])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [4], [2], [], [5], []])
+            assertEquals(floating("1"), [3])
         }
 
         // MARK: - (b) The built-in config is loaded before the config of the user
@@ -184,7 +196,8 @@ extension InlayTests {
             try await restOfTheSession()
             // The user moves the browser next to the terminal
             assertEquals(await parseCommand("move-node-to-workspace --window-id 2 1").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], [3]])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], []])
+            assertEquals(floating("1"), [3])
 
             let edited = try temporaryConfig(
                 rules: """
@@ -199,13 +212,15 @@ extension InlayTests {
             assertEquals(config.onWindowDetected.count, 1)
             // The refresh session that follows the command
             try await restOfTheSession()
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], [3]])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], []])
+            assertEquals(floating("1"), [3])
 
             try await open(4, Self.ghostty)
             assertEquals(tiling("5"), [4])
             // Running them again is something the user asks for
             assertEquals(await parseCommand("run-callback on-window-detected --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [2, 4], [3]])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [2, 4], []])
+            assertEquals(floating("1"), [3])
         }
 
         // MARK: - (d) startup-layout comes after the rules
@@ -260,7 +275,9 @@ extension InlayTests {
             window(2).isMacosMinimizedForTest = false
             window(3).isMacosMinimizedForTest = false
             try await restOfTheSession()
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [2], [], [], [3]])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [2], [], [], []])
+            // The app without a workspace floats, as it did when it opened
+            assertEquals(floating("1"), [3])
         }
 
         // MARK: - Helpers

@@ -67,7 +67,8 @@ extension InlayTests {
             }
             for (key, workspace) in zip(["j", "k", "l", "i", "o", "p"], 1 ... 6) {
                 assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
-                assertEquals(runs("cmd-alt-shift-\(key)", "move-node-to-workspace \(workspace)"), true, additionalMsg: key)
+                // The window also stops floating: the windows of the apps without a workspace open floating
+                assertEquals(runs("cmd-alt-shift-\(key)", "layout tiling; move-node-to-workspace \(workspace)"), true, additionalMsg: key)
             }
             for direction in ["left", "down", "up", "right"] {
                 assertEquals(runs("cmd-alt-\(direction)", "focus \(direction)"), true, additionalMsg: direction)
@@ -105,11 +106,11 @@ extension InlayTests {
             assertEquals(workspace(of: "com.tinyspeck.slackmacgap"), "4")
             assertEquals(workspace(of: "com.anthropic.claudefordesktop"), "5")
             assertEquals(workspace(of: "com.apple.finder"), nil) // It only floats
-            // The last rule is the catch-all one: the tiling windows of every other app go to workspace 6.
+            // The last rule is the catch-all one: the tiling windows of every other app float.
             // What it does to each kind of window is in StartupRulesTest
             let last = try #require(config.onWindowDetected.last)
             assertEquals(last.matcher, .command(parseCommand("test %{window-layout} ~= _tiles").cmdOrDie))
-            assertTrue(last.run.strictEquals(parseCommand("move-node-to-workspace 6").cmdOrDie))
+            assertTrue(last.run.strictEquals(parseCommand("layout floating").cmdOrDie))
             // The first rule that matches is the only one that runs: the order of the file is the order of the rules
             assertEquals(config.onWindowDetected.filter(\.checkFurtherCallbacks).count, 0)
             assertEquals(config.workspaceToMonitorForceAssignment.keys.sorted(), ["1", "2", "3", "4", "5", "6"])

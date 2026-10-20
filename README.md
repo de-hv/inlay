@@ -225,24 +225,25 @@ none). In `inlay.toml` they come in this order:
 2. the apps with a workspace go to it: terminals to 1, editors to 2, browsers to 3, chats to 4, AI to 5;
 3. the quick apps (Finder, System Settings, Calculator…) and the settings window of any app float where they
    open;
-4. **every other tiling window goes to workspace 6**, the one of the secondary display when there are two.
+4. **every other window floats where it opens**, until you put it in a layout.
 
 The last rule is a catch-all one:
 
 ```toml
 [[on-window-detected]]
 if = 'test %{window-layout} ~= _tiles'   # h_tiles or v_tiles: a tiling window
-run = 'move-node-to-workspace 6'
+run = 'layout floating'
 ```
 
 It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About"
 window) is already floating when the rules run, so it does not match and stays where it opens; popups never
-get to the rules. As with the apps that have a workspace, the window goes to 6 and the focus stays where it
-was: with a single display the window of an app without a rule leaves the screen as it opens, and
-`cmd-alt-ctrl-p` goes to it. To keep an app out of workspace 6, give it a rule above (a workspace of its own,
-or `layout floating`); to have every other window stay in the workspace where it opens, as AeroSpace does,
-delete the rule. Like every rule it runs once per window: a window that you move out of workspace 6 stays where
-you put it, until you run the rules again by hand (`w` in the `service` mode).
+get to the rules. The window of an app without a rule floats in the workspace on the screen, where the app
+opens it, and the tiled windows don't move. **`cmd-alt-shift` + a workspace key (`j k l i o p`) puts it in
+the layout**: the keys run `layout tiling` and then `move-node-to-workspace`, so the window stops floating and
+goes to that workspace, or takes its place in the workspace on the screen if it is that one. To give an app
+a place of its own, give it a rule above (a workspace of its own); to have every other window tiled in the
+workspace where it opens, as AeroSpace does, delete the rule. Like every rule it runs once per window: a
+window that you tile stays tiled, until you run the rules again by hand (`w` in the `service` mode).
 
 **Every key is documented in [`docs/config-reference.toml`](./docs/config-reference.toml)**: what it does,
 its possible values and its default, for the keys inherited from AeroSpace and for the ones of Inlay. The

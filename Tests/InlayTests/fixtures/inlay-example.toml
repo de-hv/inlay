@@ -113,7 +113,9 @@ enabled = true
 #   'square'       Icono del layout, nombres sin fondo y un cuadrado en lugar
 #                  del enfocado (lleva la inicial del modo si no es main).
 #   'minimal'      Solo el workspace enfocado.
-theme = 'pills'                                               # defecto: 'pills'
+#   'liquid'       Un punto por workspace y una gota con el nombre del enfocado,
+#                  que fluye al siguiente dejando una estela.
+theme = 'liquid'                                              # defecto: 'liquid'
 
 # Dibujar más tenues los workspaces sin ventanas.             (defecto: true)
 dim-empty-workspaces = true

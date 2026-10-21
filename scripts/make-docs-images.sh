@@ -64,8 +64,8 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 # --- PNG: name:width:height (in points; rendered at 2x) ---
 PAGES=(
   hero:1280:800
-  menu-bar-themes:880:388
-  menu-bar-palettes:880:610
+  menu-bar-themes:880:700
+  menu-bar-palettes:880:1170
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500

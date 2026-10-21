@@ -32,15 +32,15 @@ struct MenuBarPalette: Equatable, Sendable {
     ) -> MenuBarPalette {
         typealias M = MenuBarMetrics
         // The palette of [theme] gives the colors that are 'auto', in the variant of the menu bar
-        let colors = config.colors.applying(config.palette, isDark: isDarkBar)
+        let colors = config.colors.applying(config.palette, seed: config.paletteSeed, isDark: isDarkBar)
         // The marker of a binding mode only has a color of its own if 'accent' gives it one
         let isTemplate = allowsTemplate && Self.isTemplate(colors, needsColor: needsColor)
         // A template image is drawn in black: only its alpha channel matters
         let base: Rgba = isTemplate || !isDarkBar ? .black : .white
         func fixed(_ color: ConfigColor) -> Rgba? { color == .auto ? nil : color.resolve(auto: base, systemAccent: systemAccent) }
 
-        // The names of the square style have no background to stand out from, so they aren't faded
-        let nameOpacity = style == .square ? 1 : M.chipNameOpacity
+        // The names of the square and underline styles have no background to stand out from, so they aren't faded
+        let nameOpacity = style == .square || style == .underline ? 1 : M.chipNameOpacity
         let occupiedName = fixed(colors.occupied) ?? base.opacity(nameOpacity)
         let accent = fixed(colors.accent)
         let focused = fixed(colors.focused) ?? base

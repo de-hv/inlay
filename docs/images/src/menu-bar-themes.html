@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><title>The themes of the menu bar item</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 388px; }
+  body { width: 880px; height: 700px; }
   .row { margin-top: 16px; } .row .cap { margin: 0 0 7px; }
   .pair { display: grid; grid-template-columns: 404px 404px; gap: 16px; }
   .pair > div { border-radius: 8px; overflow: hidden; height: 36px; } .pair > div:first-child { background: #383d5c; } .pair > div:last-child { background: #e6e6e6; }
@@ -12,7 +12,7 @@
 <div class="sheet"><span class="tag real">Real render</span>
   <h1>[menu-bar] theme</h1>
   <div class="sub">The item drawn by Inlay itself, on a dark and on a light menu bar. Workspace 2 is the focused one, and 6 is empty.</div>
-  <div class="row"><div class="cap"><code>theme = 'pills'</code> &nbsp;the default: round workspaces, and the focused one a wider pill</div>
+  <div class="row"><div class="cap"><code>theme = 'pills'</code> &nbsp;round workspaces, and the focused one a wider pill</div>
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-default-light.png" style="height:36px"></div></div></div>
   <div class="row"><div class="cap"><code>theme = 'chips'</code> &nbsp;the workspaces alone, as rounded squares</div>
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/chips-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/chips-default-light.png" style="height:36px"></div></div></div>
@@ -20,6 +20,14 @@
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/square-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/square-default-light.png" style="height:36px"></div></div></div>
   <div class="row"><div class="cap"><code>theme = 'minimal'</code> &nbsp;only the focused workspace</div>
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/minimal-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/minimal-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'dots'</code> &nbsp;a dot per workspace, a ring if it is empty, and the focused one a pill</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/dots-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/dots-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'underline'</code> &nbsp;the names, and a bar under the focused one</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/underline-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/underline-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'glyphs'</code> &nbsp;a disc per workspace with windows, a ring per empty one, and a target for the focused one</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/glyphs-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/glyphs-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'liquid'</code> &nbsp;the default: a dot per workspace, and a drop with the name of the focused one</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/liquid-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/liquid-default-light.png" style="height:36px"></div></div></div>
 </div>
 <script>fillToml();</script>
 </body></html>

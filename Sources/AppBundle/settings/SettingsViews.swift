@@ -443,7 +443,7 @@ struct ThemesSettingsView: View {
                 preview
             }
             Section(Strings.Settings.workspaceIndicator) {
-                HStack(spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                     ForEach(MenuBarTheme.allCases, id: \.self) { theme in
                         styleButton(theme)
                     }
@@ -454,12 +454,16 @@ struct ThemesSettingsView: View {
                 }
             }
             Section {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
                     ForEach(ThemePalette.allCases, id: \.self) { palette in
                         paletteButton(palette)
                     }
                 }
                 .disabled(model.disabledReason(.themePalette) != nil)
+                // Only Material You is made from a color
+                if model.palette == .material {
+                    ColorRow(model: model, title: Strings.Settings.seed, detail: Strings.Settings.seedDetail, key: .themeSeed, allowsAuto: false)
+                }
             } header: {
                 tableHeader(Strings.Settings.palette, SettingsKey.themePalette)
             } footer: {
@@ -496,7 +500,7 @@ struct ThemesSettingsView: View {
             .copy(\.activeColor, model.color(.bordersActiveColor))
             .copy(\.inactiveColor, model.color(.bordersInactiveColor))
             .copy(\.floatingColor, model.color(.bordersFloatingColor))
-            .applying(model.palette, isDark: isDark)
+            .applying(model.palette, seed: model.paletteSeed, isDark: isDark)
         func color(_ config: ConfigColor) -> Color { Color(nsColor: config.resolve(auto: .white, systemAccent: .systemAccent).nsColor) }
         let window = Color(white: isDark ? 0.13 : 0.96)
         return VStack(spacing: 10) {
@@ -530,7 +534,7 @@ struct ThemesSettingsView: View {
             model.setTheme(theme)
         } label: {
             VStack(spacing: 6) {
-                MenuBarItemImage(config: MenuBarConfig(theme: theme, palette: model.palette), isDarkBar: true, zoom: 0.8)
+                MenuBarItemImage(config: MenuBarConfig(theme: theme, palette: model.palette, paletteSeed: model.paletteSeed), isDarkBar: true, zoom: 0.8)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
                     .background(menuBarBackground(true), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -554,7 +558,7 @@ struct ThemesSettingsView: View {
     private func paletteButton(_ palette: ThemePalette) -> some View {
         let isSelected = model.palette == palette
         let isDark = isSystemAppearanceDark
-        let swatches: [Color] = switch palette.colors(isDark: isDark) {
+        let swatches: [Color] = switch palette.colors(isDark: isDark, seed: model.paletteSeed) {
             case let colors?: [colors.focused, colors.accent, colors.occupied, colors.inactiveBorder].map { Color(nsColor: $0.nsColor) }
             case nil: [Color.accentColor, isDark ? .white : .black, .gray, Color(nsColor: Rgba(hex: "#8E8E93").orDie().nsColor)]
         }

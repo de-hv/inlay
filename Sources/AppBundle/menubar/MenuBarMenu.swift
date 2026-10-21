@@ -152,7 +152,7 @@ struct MenuBarCard: Equatable {
     @MainActor
     static func fromModel(_ state: MenuBarState) -> MenuBarCard {
         let snapshot = state.snapshot
-        let colors = state.config.colors.applying(state.config.palette, isDark: isSystemAppearanceDark)
+        let colors = state.config.colors.applying(state.config.palette, seed: state.config.paletteSeed, isDark: isSystemAppearanceDark)
         let accent = (colors.focused == .auto ? colors.accent : colors.focused).resolve(auto: .systemAccent, systemAccent: .systemAccent)
         var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace, accent: accent)
         guard snapshot.status == .running else { return card }

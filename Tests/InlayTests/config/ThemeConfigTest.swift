@@ -8,7 +8,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testParse() {
-            assertEquals(parseConfig("config-version = 2").config.theme.palette, .catppuccin)
+            assertEquals(parseConfig("config-version = 2").config.theme.palette, .oneDark)
             assertEquals(defaultConfig.theme, ThemeConfig())
             for palette in ThemePalette.allCases {
                 let result = parseConfig("theme.palette = '\(palette.rawValue)'")
@@ -17,9 +17,56 @@ extension InlayTests {
             }
             assertEquals(
                 parseConfig("theme.palette = 'solarized'").strErrors,
-                ["[ERROR] theme.palette: Can't parse palette 'solarized'. Possible values: (system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest)"],
+                ["[ERROR] theme.palette: Can't parse palette 'solarized'. Possible values: (system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest|kanagawa|oxocarbon|ayu|one-dark|mono|material|flexoki)"],
             )
             assertEquals(SettingsKey.themePalette.defaultValue, .string(ThemeConfig().palette.rawValue))
+            assertEquals(SettingsKey.themeSeed.defaultValue, .string(ThemeConfig().seed.description))
+        }
+
+        /// [theme] seed: the color that 'material' is made from
+        @Test func testParseSeed() {
+            assertEquals(ThemeConfig().seed, .rgba(MaterialPalette.baselineSeed))
+            assertEquals(parseConfig("theme.seed = '#B5651D'").config.theme.seed, .rgba(Rgba(hex: "#B5651D").orDie()))
+            assertEquals(parseConfig("theme.seed = 'system-accent'").config.theme.seed, .systemAccent)
+            assertEquals(
+                parseConfig("theme.seed = 'auto'").strErrors,
+                ["[ERROR] theme.seed: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'"],
+            )
+            // 'system-accent' is the accent color of the system, and the alpha doesn't count
+            let accent = Rgba(hex: "#FF9500").orDie()
+            assertEquals(ThemeConfig(seed: .systemAccent).seedColor(systemAccent: accent), accent)
+            assertEquals(ThemeConfig(seed: .rgba(Rgba(hex: "#B5651D80").orDie())).seedColor(systemAccent: accent), Rgba(hex: "#B5651D").orDie())
+        }
+
+        /// The baseline seed gives the colors of the Material 3 baseline. Another seed keeps its hue, and the
+        /// colors keep the lightness that Material gives to their role
+        @Test func testMaterial() throws {
+            assertEquals(ThemePalette.material.colors(isDark: true)?.focused.hex, "#D0BCFF")
+            assertEquals(ThemePalette.material.colors(isDark: false)?.focused.hex, "#6750A4")
+            let seed = Rgba(hex: "#B5651D").orDie()
+            let dark = try #require(ThemePalette.material.colors(isDark: true, seed: seed))
+            let light = try #require(ThemePalette.material.colors(isDark: false, seed: seed))
+            assertEquals(dark != ThemePalette.material.colors(isDark: true), true)
+            func near(_ a: Double, _ b: Double, _ tolerance: Double) -> Bool { abs(a - b) <= tolerance }
+            let hue = Lch(seed).hue
+            assertTrue(near(Lch(dark.focused).hue, hue, 6))
+            assertTrue(near(Lch(dark.focused).lightness, 80, 1))
+            assertTrue(near(Lch(light.focused).lightness, 40, 1))
+            assertTrue(near(Lch(dark.inactiveBorder).lightness, 30, 1))
+            // The palette is the same as the others: the main color is the active border, the accent the floating one
+            assertEquals(dark.focused, dark.activeBorder)
+            assertEquals(dark.accent, dark.floatingBorder)
+            // The other palettes ignore the seed
+            assertEquals(ThemePalette.nord.colors(isDark: true, seed: seed), ThemePalette.nord.colors(isDark: true))
+            assertEquals(MenuBarColors().applying(.material, seed: seed, isDark: true).focused, .rgba(dark.focused))
+            assertEquals(BordersConfig().applying(.material, seed: seed, isDark: false).activeColor, .rgba(light.focused))
+        }
+
+        /// sRGB -> CIELAB -> sRGB gives the color back
+        @Test func testLchRoundTrip() {
+            for hex in ["#6750A4", "#B5651D", "#00A86B", "#FFFFFF", "#000000", "#808080"] {
+                assertEquals(Lch(Rgba(hex: hex).orDie()).rgba.hex, hex)
+            }
         }
 
         /// Every palette but 'system' has a light and a dark variant, and they differ

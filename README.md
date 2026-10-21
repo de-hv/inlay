@@ -42,7 +42,9 @@ environment and with tests, not yet in real use. And for the latest one: the bin
 the focused workspace, the menu without icons, the Settings window that fits small screens, the config folder
 linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the smart gaps and the
 border hidden around a single window (`gaps.smart`, `borders.hide-when-single`) and the notice after a reload of
-the config (`[notifications]`).
+the config (`[notifications]`), and the four themes and seven palettes taken from Hyprland setups (`dots`,
+`underline`, `glyphs`, `liquid`; `kanagawa`, `oxocarbon`, `ayu`, `one-dark`, `mono`, `material` and its `seed`,
+`flexoki`): they are checked with tests and renders, including the frames of their animations.
 
 Known limitations of this version:
 
@@ -514,7 +516,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'pills'`, `'chips'`, `'square'`, `'minimal'` | `'pills'` |
+| `theme` | `'pills'`, `'chips'`, `'square'`, `'minimal'`, `'dots'`, `'underline'`, `'glyphs'`, `'liquid'` | `'liquid'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `true` |
 | `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
@@ -523,28 +525,45 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 
 ```toml
 [menu-bar]
-    theme = 'pills'   # 'pills' | 'chips' | 'square' | 'minimal'
+    theme = 'liquid'  # 'pills' | 'chips' | 'square' | 'minimal' | 'dots' | 'underline' | 'glyphs' | 'liquid'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the four themes of the menu bar item, each on a dark and on a light menu bar. 'pills', the default: round workspaces and 2, the focused one, a wider pill. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the eight themes of the menu bar item, each on a dark and on a light menu bar. 'pills': round workspaces and 2, the focused one, a wider pill. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2. 'dots': six dots, the second one a pill and the sixth a ring. 'underline': the numbers, 2 with a bar under it. 'glyphs': discs, a target on 2 and a ring on 6. 'liquid', the default: small dots and a round drop with the 2 in it" width="880"></p>
+
+When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). The
+four themes taken from Hyprland setups move in their own way: the pill of **`dots`** stretches on its way,
+like the page indicator of iOS; the bar of **`underline`** leaves by its leading edge, stretches towards the
+new workspace and then shrinks into it; the target of **`glyphs`** fades from one workspace to the other; and
+the drop of **`liquid`** flows to the new workspace with a trail behind it that catches up at the end. With
+"Reduce motion" nothing slides.
 
 The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
 still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,
 the theme is treated as `'chips'` and the key is ignored. Picking a theme in Settings removes both.
 
 **`[theme] palette`**: the colors of the item **and** of the borders, from a palette of the Hyprland world:
-`'catppuccin'`, `'tokyo-night'`, `'gruvbox'`, `'nord'`, `'rose-pine'`, `'dracula'` or `'everforest'`. Each one has
+`'catppuccin'`, `'tokyo-night'`, `'gruvbox'`, `'nord'`, `'rose-pine'`, `'dracula'`, `'everforest'`, `'kanagawa'`,
+`'oxocarbon'`, `'ayu'`, `'one-dark'`, `'mono'` (black, white and grays), `'material'` or `'flexoki'`. Each one has
 a light and a dark variant, and the one of the appearance of the system applies (it changes with it). A palette
 only gives the colors you left at their default: the ones of `[menu-bar.colors]` that are `'auto'`, and the
-three colors of `[borders]`; a color you wrote there wins. `'catppuccin'` is the default; `'system'` is no palette. The
+three colors of `[borders]`; a color you wrote there wins. `'one-dark'` is the default; `'system'` is no palette. The
 **Themes** tab of Settings picks it.
 
 ```toml
 [theme]
-    palette = 'catppuccin'   # system | catppuccin | tokyo-night | gruvbox | nord | rose-pine | dracula | everforest
+    palette = 'one-dark'     # system | catppuccin | tokyo-night | gruvbox | nord | rose-pine | dracula | everforest
+                             # | kanagawa | oxocarbon | ayu | one-dark | mono | material | flexoki
+    seed = '#6750A4'         # only for 'material': '#RRGGBB' or 'system-accent'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-palettes.png" alt="Real render of the pills theme in the seven palettes, the dark variant on a dark menu bar and the light one on a light menu bar: Catppuccin with a mauve focused pill, Tokyo Night blue, Gruvbox yellow, Nord frost blue, Rosé Pine rose, Dracula purple and Everforest green" width="880"></p>
+**`'material'`** is Material You: its colors are made from a single color, **`seed`**, the way matugen makes
+them from a wallpaper. They keep the hue of the seed, and each one has the lightness that Material gives to its
+role (the focused workspace and the active border, the accent and the floating border, the grays). The default
+seed gives the colors of the Material 3 baseline, and `seed = 'system-accent'` makes the palette from the accent
+color of macOS. It is an approximation of Material in CIELAB: the colors are close to the ones of matugen, not
+equal. The other palettes ignore `seed`.
+
+<p align="center"><img src="docs/images/menu-bar-palettes.png" alt="Real render of the pills theme in the fourteen palettes, the dark variant on a dark menu bar and the light one on a light menu bar: Catppuccin with a mauve focused pill, Tokyo Night blue, Gruvbox yellow, Nord frost blue, Rosé Pine rose, Dracula purple, Everforest green, Kanagawa blue, Oxocarbon magenta, Ayu yellow and orange, One Dark blue, Mono white and black, Material You lavender and purple, Flexoki orange; and Material You with seed '#B5651D', in peach and brown" width="880"></p>
 
 **`dim-empty-workspaces`, `show-mode`**: what the item shows besides the names. With
 `enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI.
@@ -559,9 +578,11 @@ three colors of `[borders]`; a color you wrote there wins. `'catppuccin'` is the
 With `show-mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
 focused workspace carries the initial of the mode**, the way Aeromenu did it. In `chips` and `minimal` the
 initial takes the place of the name in the chip; in `square` the square grows from 8.5 to 14 pt to hold it.
+In `dots` the pill grows taller to hold it, in `glyphs` the target becomes a disc with the initial, in
+`underline` the initial takes the place of the name and in `liquid` the drop shows it.
 Nothing is added next to the workspaces, so the item is exactly as wide in every mode and nothing in the menu
 bar moves. While a window of the workspace is fullscreen, the marker is an outline and the initial is drawn
-inside it. The key governs the three themes (`square` used to show the mode always).
+inside it. The key governs every theme (`square` used to show the mode always).
 
 <p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'square', the item as wide as before; and the same with a fullscreen window, the R inside of an outline" width="880"></p>
 
@@ -622,7 +643,7 @@ tabs with the shipped config (click one to see it at full size):
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Configuration, with the path of the file, Show in Finder and Open, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: a preview of the menu bar item on a dark and on a light bar and of three windows with their borders; Workspace Indicator, the four styles of the item as thumbnails (pills, the default, chips, square, minimal); and Palette, eight cards with their colors (System, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Dracula and Everforest)" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: a preview of the menu bar item on a dark and on a light bar and of three windows with their borders; Workspace Indicator, the eight styles of the item as thumbnails in two rows (pills, chips, square, minimal, dots, underline, glyphs and liquid, the default); and Palette, fifteen cards with their colors in three rows (System, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Dracula, Everforest, Kanagawa, Oxocarbon, Ayu, One Dark, Mono, Material You and Flexoki). With Material You, a row below them picks its seed" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-tiling.png"><img src="docs/images/settings-tiling.png" alt="Real render of the Tiling tab of Settings: New Windows, with Placement (Dwindle or After Focused) and Window to split (Focused or Cursor); and Arrangement, with Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Themes</sub></td><td align="center"><sub>Tiling</sub></td></tr>

@@ -46,7 +46,7 @@ extension InlayTests {
             assertEquals(model.string(.startupLayout), "grid")
             assertEquals(model.string(.splitTarget), "focused")
             assertEquals(model.int(.minWindowSize), 100)
-            assertEquals(model.string(.menuBarTheme), "pills")
+            assertEquals(model.string(.menuBarTheme), "liquid")
             assertEquals(model.bool(.menuBarEnabled), true)
             assertEquals(model.color(.menuBarAccent), .auto)
             assertEquals(model.color(.menuBarFocused), .auto)
@@ -54,7 +54,7 @@ extension InlayTests {
             assertEquals(model.isSet(.menuBarTheme), false)
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // The same as an empty [menu-bar] table
-            assertEquals(model.menuBarConfig, MenuBarConfig(palette: .catppuccin))
+            assertEquals(model.menuBarConfig, MenuBarConfig(palette: .oneDark))
         }
 
         @Test func testReadsTheFile() throws {
@@ -73,7 +73,7 @@ extension InlayTests {
             assertEquals(model.bool(.startAtLogin), true)
             assertEquals(model.isSet(.menuBarTheme), true)
             assertEquals(model.isSet(.menuBarDimEmpty), false)
-            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())), palette: .catppuccin)
+            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())), palette: .oneDark)
             assertEquals(model.menuBarConfig, expected)
         }
 
@@ -83,7 +83,7 @@ extension InlayTests {
             let model = try model("config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\n[mode.main.binding]\n")
             assertEquals(model.unavailableReason, nil)
             assertEquals(model.menuBarTheme, .chips)
-            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips, palette: .catppuccin))
+            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips, palette: .oneDark))
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // Another control: the file is edited as it is
             model.set(.menuBarShowMode, .bool(true))
@@ -108,7 +108,7 @@ extension InlayTests {
 
             model.reset(.menuBarTheme)
             assertEquals(text, "start-at-login = true\n\n# My config\n[mode.main.binding]\n\n[menu-bar]\n")
-            assertEquals(model.menuBarTheme, .pills)
+            assertEquals(model.menuBarTheme, .liquid)
             assertEquals(model.isSet(.menuBarTheme), false)
         }
 
@@ -347,7 +347,7 @@ extension InlayTests {
 
             let broken = try self.model("[menu-bar\n")
             assertEquals(broken.unavailableReason, "inlay.toml has errors. Fix them to change the settings from here.")
-            assertEquals(broken.menuBarConfig, MenuBarConfig(palette: .catppuccin))
+            assertEquals(broken.menuBarConfig, MenuBarConfig(palette: .oneDark))
         }
 
         @Test func testNeedsAccessibility() throws {
@@ -365,7 +365,7 @@ extension InlayTests {
             model.set(.menuBarTheme, .string("bubbles"))
             assertEquals(text, "[mode.main.binding]\n")
             assertEquals(model.errorMessage?.contains("Can't parse menu bar theme 'bubbles'"), true)
-            assertEquals(model.menuBarTheme, .pills)
+            assertEquals(model.menuBarTheme, .liquid)
             // The next change that works clears the error
             model.set(.menuBarTheme, .string("minimal"))
             assertEquals(model.errorMessage, nil)

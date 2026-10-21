@@ -4,7 +4,9 @@ import Foundation
 /// [theme] table of the config
 struct ThemeConfig: ConvenienceMutable, Equatable, Sendable {
     /// The colors of the menu bar item and of the borders, from a palette of the Hyprland world
-    var palette: ThemePalette = .catppuccin
+    var palette: ThemePalette = .oneDark
+    /// The color that the 'material' palette is made from. The other palettes ignore it
+    var seed: ConfigColor = .rgba(MaterialPalette.baselineSeed)
 }
 
 /// A set of colors for the menu bar item and the borders, with a light and a dark variant: the one of the appearance of
@@ -20,6 +22,14 @@ enum ThemePalette: String, CaseIterable, Equatable, Sendable {
     case rosePine = "rose-pine"
     case dracula
     case everforest
+    case kanagawa
+    case oxocarbon
+    case ayu
+    case oneDark = "one-dark"
+    case mono
+    /// Material You: made from a color, the seed. See: ThemeConfig.seed
+    case material
+    case flexoki
 
     var title: String {
         switch self {
@@ -31,11 +41,19 @@ enum ThemePalette: String, CaseIterable, Equatable, Sendable {
             case .rosePine: "Rosé Pine"
             case .dracula: "Dracula"
             case .everforest: "Everforest"
+            case .kanagawa: "Kanagawa"
+            case .oxocarbon: "Oxocarbon"
+            case .ayu: "Ayu"
+            case .oneDark: "One Dark"
+            case .mono: "Mono"
+            case .material: "Material You"
+            case .flexoki: "Flexoki"
         }
     }
 
     /// The colors of the variant. nil for 'system'
-    func colors(isDark: Bool) -> PaletteColors? {
+    /// - Parameter seed: the color that 'material' is made from. See: ThemeConfig.seed
+    func colors(isDark: Bool, seed: Rgba = MaterialPalette.baselineSeed) -> PaletteColors? {
         func c(_ hex: String) -> Rgba { Rgba(hex: hex).orDie("Bad color \(hex) of the palette \(rawValue)") }
         func p(_ f: String, _ o: String, _ e: String, _ a: String, _ inactive: String) -> PaletteColors {
             // The focused workspace and the border of the active window share the main color of the palette,
@@ -62,6 +80,23 @@ enum ThemePalette: String, CaseIterable, Equatable, Sendable {
             case (.dracula, false): p("#644AC9", "#1F1F1F", "#6C6F93", "#A3144D", "#CFCFDE")
             case (.everforest, true): p("#A7C080", "#D3C6AA", "#7A8478", "#DBBC7F", "#475258")
             case (.everforest, false): p("#8DA101", "#5C6A72", "#939F91", "#DFA000", "#E6E2CC")
+            // Wave and Lotus
+            case (.kanagawa, true): p("#7E9CD8", "#DCD7BA", "#727169", "#FFA066", "#363646")
+            case (.kanagawa, false): p("#4D699B", "#545464", "#A09CAC", "#CC6D00", "#D5CEA3")
+            case (.oxocarbon, true): p("#EE5396", "#DDE1E6", "#6F6F6F", "#08BDBA", "#393939")
+            case (.oxocarbon, false): p("#D02670", "#393939", "#A8A8A8", "#007D79", "#DDE1E6")
+            // Mirage and Light
+            case (.ayu, true): p("#FFCC66", "#CCCAC2", "#707A8C", "#73D0FF", "#3A4252")
+            case (.ayu, false): p("#FA8D3E", "#5C6166", "#ADAEB1", "#399EE6", "#D8D8D7")
+            // One Dark and One Light
+            case (.oneDark, true): p("#61AFEF", "#ABB2BF", "#5C6370", "#E06C75", "#3E4451")
+            case (.oneDark, false): p("#4078F2", "#383A42", "#A0A1A7", "#E45649", "#D3D3D5")
+            // No hue at all: the binding mode stands out by its initial, not by its color
+            case (.mono, true): p("#FFFFFF", "#A3A3A3", "#6B6B6B", "#BDBDBD", "#3A3A3A")
+            case (.mono, false): p("#0A0A0A", "#525252", "#A3A3A3", "#6B6B6B", "#D4D4D4")
+            case (.material, _): MaterialPalette.colors(seed: seed, isDark: isDark)
+            case (.flexoki, true): p("#DA702C", "#CECDC3", "#6F6E69", "#4385BE", "#403E3C")
+            case (.flexoki, false): p("#BC5215", "#403E3C", "#B7B5AC", "#205EA6", "#DAD8CE")
         }
     }
 }
@@ -79,8 +114,14 @@ struct PaletteColors: Equatable, Sendable {
     var floatingBorder: Rgba
 }
 
+extension ThemeConfig {
+    /// The seed as a color: 'system-accent' is the accent color of the system
+    func seedColor(systemAccent: Rgba) -> Rgba { seed.resolve(auto: MaterialPalette.baselineSeed, systemAccent: systemAccent).withAlpha(1) }
+}
+
 let themeParserTable: [String: any ParserProtocol<ThemeConfig>] = [
     "palette": Parser(\.palette, parseThemePalette),
+    "seed": Parser(\.seed, parseConfigColor(allowAuto: false)),
 ]
 
 func parseTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> ThemeConfig {
@@ -96,8 +137,9 @@ private func parseThemePalette(_ raw: OrderedJson, _ backtrace: ConfigBacktrace)
 
 extension MenuBarColors {
     /// The colors that are 'auto' take the ones of the palette
-    func applying(_ palette: ThemePalette, isDark: Bool) -> MenuBarColors {
-        guard let colors = palette.colors(isDark: isDark) else { return self }
+    /// - Parameter seed: the color that 'material' is made from. See: ThemeConfig.seed
+    func applying(_ palette: ThemePalette, seed: Rgba = MaterialPalette.baselineSeed, isDark: Bool) -> MenuBarColors {
+        guard let colors = palette.colors(isDark: isDark, seed: seed) else { return self }
         func pick(_ color: ConfigColor, _ fallback: Rgba) -> ConfigColor { color == .auto ? .rgba(fallback) : color }
         return MenuBarColors(
             accent: pick(accent, colors.accent),
@@ -110,8 +152,9 @@ extension MenuBarColors {
 
 extension BordersConfig {
     /// The colors that are at their default take the ones of the palette
-    func applying(_ palette: ThemePalette, isDark: Bool) -> BordersConfig {
-        guard let colors = palette.colors(isDark: isDark) else { return self }
+    /// - Parameter seed: the color that 'material' is made from. See: ThemeConfig.seed
+    func applying(_ palette: ThemePalette, seed: Rgba = MaterialPalette.baselineSeed, isDark: Bool) -> BordersConfig {
+        guard let colors = palette.colors(isDark: isDark, seed: seed) else { return self }
         let defaults = BordersConfig()
         var result = self
         if activeColor == defaults.activeColor { result.activeColor = .rgba(colors.activeBorder) }

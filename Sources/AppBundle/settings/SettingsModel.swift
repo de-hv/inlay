@@ -123,10 +123,14 @@ final class SettingsModel {
                 empty: color(.menuBarEmpty),
             ),
             palette: palette,
+            paletteSeed: paletteSeed,
         )
     }
 
     var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? ThemeConfig().palette }
+
+    /// [theme] seed, the color that 'material' is made from
+    var paletteSeed: Rgba { ThemeConfig(seed: color(.themeSeed)).seedColor(systemAccent: .systemAccent) }
 
     /// 'chips-icons', the theme of a previous version, is 'chips', like for the parser
     var menuBarTheme: MenuBarTheme {

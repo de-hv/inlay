@@ -34,6 +34,36 @@ enum MenuBarMetrics {
     /// The initial of the binding mode in a chip. The size it had in the Chips style of Aeromenu
     static let chipModeFontSize: CGFloat = 11
 
+    /// The dots theme: a dot per workspace, and the focused one stretched into a pill this wide
+    static let dotSide: CGFloat = 7
+    static let dotFocusedWidth: CGFloat = 20
+    static let dotSpacing: CGFloat = 5
+    static let dotLineWidth: CGFloat = 1.3
+
+    /// The underline theme: the names in slots at least this wide, and a bar under the focused one
+    static let underlineSlot: CGFloat = 16
+    static let underlineWidth: CGFloat = 9
+    static let underlineHeight: CGFloat = 2
+    /// The top of the bar, from the top of the item
+    static let underlineTop: CGFloat = 18.5
+    /// The names go up this much, to make room for the bar
+    static let underlineLift: CGFloat = 1.5
+
+    /// The glyphs theme: the target of the focused workspace, the ring of an empty one and the disc of one with windows
+    static let ringSide: CGFloat = 12
+    static let ringEmptySide: CGFloat = 8.5
+    static let ringDiscSide: CGFloat = 7
+    static let ringCenterSide: CGFloat = 5
+    static let ringSpacing: CGFloat = 4.5
+    static let ringLineWidth: CGFloat = 1.4
+
+    /// The liquid theme: the dots in slots this wide, the drop over the focused one and its trail
+    static let liquidSlot: CGFloat = 17
+    static let liquidDrop: CGFloat = 17
+    static let liquidTrail: CGFloat = 11
+    static let liquidEmptyDot: CGFloat = 3.6
+    static let liquidOccupiedDot: CGFloat = 5
+
     static let glyphSide: CGFloat = 6
     static let glyphGap: CGFloat = 1.5
     static let glyphLineWidth: CGFloat = 1.1
@@ -73,6 +103,10 @@ struct MenuBarLayout: Equatable, Sendable {
         /// 'chips', 'pills' and 'minimal' themes
         case chips
         case square
+        case dots
+        case underline
+        case glyphs
+        case liquid
     }
 
     struct Text: Equatable, Sendable {
@@ -104,6 +138,8 @@ struct MenuBarLayout: Equatable, Sendable {
         /// A chip shows it instead of the name of the workspace, and the square grows to make room for it.
         /// Either way the item is as wide as in the main mode, like in Aeromenu
         var initial: Text? = nil
+        /// The liquid theme: the end of the trail that the drop leaves behind while it flows. nil at rest
+        var trail: CGRect? = nil
     }
 
     /// Shown instead of the workspaces when Inlay doesn't manage windows
@@ -152,6 +188,10 @@ extension MenuBarLayout {
             case .chips: chips(snapshot, config, snapshot.workspaces, focusAmount, measure)
             case .minimal: chips(snapshot, config, snapshot.workspaces.filter { $0.name == snapshot.focusedWorkspace }, focusAmount, measure)
             case .square: square(snapshot, config, focusAmount, measure)
+            case .dots: dots(snapshot, config, focusAmount, measure)
+            case .underline: underline(snapshot, config, focusAmount, measure)
+            case .glyphs: glyphs(snapshot, config, focusAmount, measure)
+            case .liquid: liquid(snapshot, config, focusAmount, measure)
         }
         layout.placeMarker(snapshot, mode: config.showMode ? snapshot.nonMainMode : nil, from: from, progress: from == nil ? 1 : progress, measure)
         return layout
@@ -255,6 +295,112 @@ extension MenuBarLayout {
         return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), cells: cells)
     }
 
+    // MARK: - Dots
+
+    /// The pills without names, smaller: a dot per workspace, and the focused one stretched into a pill. The width
+    /// follows the focus while the marker slides, like in the pills
+    private static func dots(
+        _ snapshot: MenuBarSnapshot,
+        _ config: MenuBarConfig,
+        _ focusAmount: (String) -> Double,
+        _ measure: Measure,
+    ) -> MenuBarLayout {
+        typealias M = MenuBarMetrics
+        let top = (M.height - M.dotSide) / 2
+        var cells: [Cell] = []
+        var x: CGFloat = 0
+        for workspace in snapshot.workspaces {
+            let focus = focusAmount(workspace.name)
+            let frame = CGRect(x: x, y: top, width: M.dotSide + (M.dotFocusedWidth - M.dotSide) * focus, height: M.dotSide)
+            cells.append(cell(workspace, config, frame: frame, font: .chipName, focus: focus, measure))
+            x = frame.maxX + M.dotSpacing
+        }
+        return MenuBarLayout(style: .dots, cornerRadius: M.dotSide / 2, size: CGSize(width: max(0, x - M.dotSpacing), height: M.height), cells: cells)
+    }
+
+    // MARK: - Underline
+
+    /// The names, like in the square style, a bit higher to leave room for the bar under the focused one
+    private static func underline(
+        _ snapshot: MenuBarSnapshot,
+        _ config: MenuBarConfig,
+        _ focusAmount: (String) -> Double,
+        _ measure: Measure,
+    ) -> MenuBarLayout {
+        typealias M = MenuBarMetrics
+        var cells: [Cell] = []
+        var x: CGFloat = 0
+        for workspace in snapshot.workspaces {
+            let nameSize = measure(workspace.name, .squareName)
+            let slot = CGRect(x: x, y: 0, width: max(M.underlineSlot, nameSize.width + 6), height: M.height)
+            var cell = cell(workspace, config, frame: slot, font: .squareName, focus: focusAmount(workspace.name), measure)
+            cell.name.frame = cell.name.frame.offsetBy(dx: 0, dy: -M.underlineLift)
+            cells.append(cell)
+            x = slot.maxX
+        }
+        return MenuBarLayout(style: .underline, size: CGSize(width: x, height: M.height), cells: cells)
+    }
+
+    // MARK: - Glyphs
+
+    /// A glyph per workspace. The focus fades from one glyph to the other instead of sliding
+    private static func glyphs(
+        _ snapshot: MenuBarSnapshot,
+        _ config: MenuBarConfig,
+        _ focusAmount: (String) -> Double,
+        _ measure: Measure,
+    ) -> MenuBarLayout {
+        typealias M = MenuBarMetrics
+        let top = (M.height - M.ringSide) / 2
+        var cells: [Cell] = []
+        var x: CGFloat = 0
+        for workspace in snapshot.workspaces {
+            let frame = CGRect(x: x, y: top, width: M.ringSide, height: M.ringSide)
+            cells.append(cell(workspace, config, frame: frame, font: .chipName, focus: focusAmount(workspace.name), measure))
+            x = frame.maxX + M.ringSpacing
+        }
+        return MenuBarLayout(style: .glyphs, cornerRadius: M.ringSide / 2, size: CGSize(width: max(0, x - M.ringSpacing), height: M.height), cells: cells)
+    }
+
+    // MARK: - Liquid
+
+    /// A dot in the middle of every slot. The drop is the marker, with the name of the workspace in it
+    private static func liquid(
+        _ snapshot: MenuBarSnapshot,
+        _ config: MenuBarConfig,
+        _ focusAmount: (String) -> Double,
+        _ measure: Measure,
+    ) -> MenuBarLayout {
+        typealias M = MenuBarMetrics
+        let top = (M.height - M.liquidDrop) / 2
+        var cells: [Cell] = []
+        var x: CGFloat = 0
+        for workspace in snapshot.workspaces {
+            let frame = CGRect(x: x, y: top, width: M.liquidSlot, height: M.liquidDrop)
+            cells.append(cell(workspace, config, frame: frame, font: .chipName, focus: focusAmount(workspace.name), measure))
+            x = frame.maxX
+        }
+        return MenuBarLayout(style: .liquid, cornerRadius: M.liquidDrop / 2, size: CGSize(width: x, height: M.height), cells: cells)
+    }
+
+    private static func cell(
+        _ workspace: MenuBarSnapshot.Workspace,
+        _ config: MenuBarConfig,
+        frame: CGRect,
+        font: MenuBarFont,
+        focus: Double,
+        _ measure: Measure,
+    ) -> Cell {
+        Cell(
+            workspace: workspace.name,
+            frame: frame,
+            name: Text(string: workspace.name, font: font, frame: measure(workspace.name, font).centered(in: frame)),
+            isOccupied: workspace.isOccupied,
+            isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
+            focus: focus,
+        )
+    }
+
     // MARK: - Shared
 
     /// - Parameter mode: the binding mode to show in the marker, if any
@@ -282,6 +428,66 @@ extension MenuBarLayout {
                     cornerRadius: mode == nil ? M.focusSquareCornerRadius : M.modeSquareCornerRadius,
                     isOutlined: snapshot.isFocusedWorkspaceFullscreen,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
+                )
+            case .dots:
+                // The pill slides and stretches like the one of the pills. In a binding mode it grows taller, like
+                // the square, to hold the initial
+                let width = start.width + (end.width - start.width) * progress
+                let height = mode == nil ? end.height : M.modeSquare
+                let frame = CGRect(x: midX - width / 2, y: end.midY - height / 2, width: width, height: height)
+                marker = Marker(
+                    frame: frame,
+                    cornerRadius: height / 2,
+                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
+                )
+            case .underline:
+                // The edge on the side of the move leaves first and the other one catches up: the bar stretches
+                // towards the next workspace, then shrinks into it
+                func bar(_ slot: CGRect) -> CGRect {
+                    CGRect(x: slot.midX - M.underlineWidth / 2, y: M.underlineTop, width: M.underlineWidth, height: M.underlineHeight)
+                }
+                let (from, to) = (bar(start), bar(end))
+                let lead = min(1, progress * 1.7)
+                let trail = max(0, (progress - 0.4) / 0.6)
+                let isRight = to.minX >= from.minX
+                let minX = from.minX + (to.minX - from.minX) * (isRight ? trail : lead)
+                let maxX = from.maxX + (to.maxX - from.maxX) * (isRight ? lead : trail)
+                // The initial of the binding mode takes the place of the name of the workspace, like in the chips
+                let nameArea = end.offsetBy(dx: 0, dy: -M.underlineLift)
+                marker = Marker(
+                    frame: CGRect(x: minX, y: to.minY, width: maxX - minX, height: to.height),
+                    cornerRadius: M.underlineHeight / 2,
+                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: nameArea, measure) },
+                )
+            case .glyphs:
+                // The glyphs fade into each other (see Cell.focus): the marker only matters in a binding mode, where
+                // the target becomes a disc that holds the initial
+                let side = mode == nil ? M.ringSide : M.modeSquare
+                let frame = CGRect(x: end.midX - side / 2, y: end.midY - side / 2, width: side, height: side)
+                marker = Marker(
+                    frame: frame,
+                    cornerRadius: side / 2,
+                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
+                )
+            case .liquid:
+                // The drop leads, and its trail follows it later: stretched in between, one round drop again at the end
+                let trailProgress = pow(progress, 2.4)
+                let trailMidX = start.midX + (end.midX - start.midX) * trailProgress
+                let frame = CGRect(x: midX - M.liquidDrop / 2, y: end.midY - M.liquidDrop / 2, width: M.liquidDrop, height: M.liquidDrop)
+                marker = Marker(
+                    frame: frame,
+                    cornerRadius: M.liquidDrop / 2,
+                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },
+                    trail: abs(trailMidX - midX) < 0.5 ? nil : CGRect(
+                        x: trailMidX - M.liquidTrail / 2,
+                        y: end.midY - M.liquidTrail / 2,
+                        width: M.liquidTrail,
+                        height: M.liquidTrail,
+                    ),
                 )
         }
     }

@@ -26,7 +26,14 @@ final class MenuBarController: NSObject {
         draw: { [weak self] in self?.draw($0) },
     )
 
-    private static let slideDuration: Duration = .milliseconds(180)
+    /// The drop of 'liquid' and the bar of 'underline' stretch on their way: they need longer for it to be seen
+    private static func slideDuration(_ theme: MenuBarTheme?) -> Duration {
+        switch theme {
+            case .liquid: .milliseconds(340)
+            case .underline: .milliseconds(260)
+            default: .milliseconds(180)
+        }
+    }
     private static let frameInterval: Duration = .milliseconds(16)
 
     override private init() {}
@@ -102,7 +109,7 @@ final class MenuBarController: NSObject {
         // whenever the layout draws the initial of the mode (MenuBarLayout.needsColor)
         let mayShowMode = state.config.showMode && state.snapshot.nonMainMode != nil
         // A palette has fixed colors: the item follows the menu bar by hand
-        let followsBar = !MenuBarPalette.isTemplate(state.config.colors.applying(state.config.palette, isDark: true), needsColor: mayShowMode)
+        let followsBar = !MenuBarPalette.isTemplate(state.config.colors.applying(state.config.palette, seed: state.config.paletteSeed, isDark: true), needsColor: mayShowMode)
         return MenuBarDrawKey(
             state: state,
             transition: transition,
@@ -133,7 +140,7 @@ final class MenuBarController: NSObject {
     /// The frame of the slide for this instant. Ends the slide once it has arrived
     private func currentTransition() -> MenuBarFocusTransition? {
         guard let slide else { return nil }
-        let elapsed = (ContinuousClock.now - slide.start) / Self.slideDuration
+        let elapsed = (ContinuousClock.now - slide.start) / Self.slideDuration(state?.config.theme)
         guard elapsed < 1 else {
             self.slide = nil
             return nil

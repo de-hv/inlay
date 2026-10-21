@@ -97,7 +97,7 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where layout.style == .chips {
+        for index in layout.cells.indices where layout.style == .chips || layout.style == .dots {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
         if let marker = layout.marker {
@@ -114,6 +114,10 @@ enum MenuBarRenderer {
         switch layout.style {
             case .chips: drawChips(layout, palette, in: cg)
             case .square: drawSquare(layout, palette, in: cg)
+            case .dots: drawDots(layout, palette, in: cg)
+            case .underline: drawUnderline(layout, palette, in: cg)
+            case .glyphs: drawGlyphs(layout, palette, in: cg)
+            case .liquid: drawLiquid(layout, palette, in: cg)
         }
     }
 
@@ -179,6 +183,143 @@ enum MenuBarRenderer {
         } else {
             cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.focused)
         }
+    }
+
+    // MARK: - Dots
+
+    private static func drawDots(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        for cell in layout.cells {
+            // The slot widens while the pill arrives, but its dot stays round: only the pill stretches.
+            // A disc says "something is here", a ring says "nothing yet"
+            let dot = CGRect(x: cell.frame.midX - M.dotSide / 2, y: cell.frame.midY - M.dotSide / 2, width: M.dotSide, height: M.dotSide)
+            if cell.isOccupied {
+                cg.fill(roundedRect(dot, M.dotSide / 2), palette.nameColor(of: cell))
+            } else {
+                cg.strokeBorder(dot, M.dotSide / 2, lineWidth: M.dotLineWidth, palette.nameColor(of: cell))
+            }
+        }
+        guard let marker = layout.marker else { return }
+        let path = roundedRect(marker.frame, marker.cornerRadius)
+        cg.fill(path, .black, blendMode: .destinationOut)
+        if let initial = marker.initial {
+            draw(marker, initial, palette, in: cg)
+        } else if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.dotLineWidth, palette.focused)
+        } else {
+            cg.fill(path, palette.focused)
+        }
+    }
+
+    // MARK: - Underline
+
+    private static func drawUnderline(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        let initial = layout.marker?.initial
+        for cell in layout.cells {
+            // The focused name takes the color of the bar. In a binding mode the initial takes its place
+            draw(cell.name, palette.nameColor(of: cell).opacity(1 - cell.focus))
+            if initial == nil, cell.focus > 0 {
+                draw(cell.name, palette.focused.opacity(cell.focus))
+            }
+        }
+        guard let marker = layout.marker else { return }
+        let color = initial == nil ? palette.focused : palette.modeMarker
+        if let initial { draw(initial, color) }
+        if marker.isOutlined {
+            // A hollow bar, a bit taller so that its hole can be seen
+            let frame = marker.frame.insetBy(dx: 0, dy: -0.75)
+            cg.strokeBorder(frame, frame.height / 2, lineWidth: 1, color)
+        } else {
+            cg.fill(roundedRect(marker.frame, marker.cornerRadius), color)
+        }
+    }
+
+    // MARK: - Glyphs
+
+    private static func drawGlyphs(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        let isOutlined = layout.marker?.isOutlined == true
+        for cell in layout.cells {
+            let center = CGPoint(x: cell.frame.midX, y: cell.frame.midY)
+            func circle(_ side: CGFloat) -> CGRect { CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side) }
+            // The glyph of the workspace fades out while the target of the focus grows over it
+            let rest = palette.nameColor(of: cell).opacity(1 - cell.focus)
+            if cell.isOccupied {
+                cg.fill(roundedRect(circle(M.ringDiscSide), M.ringDiscSide / 2), rest)
+            } else {
+                cg.strokeBorder(circle(M.ringEmptySide), M.ringEmptySide / 2, lineWidth: M.ringLineWidth, rest)
+            }
+            guard cell.focus > 0 else { continue }
+            let ring = M.ringEmptySide + (M.ringSide - M.ringEmptySide) * cell.focus
+            let color = palette.focused.opacity(cell.focus)
+            cg.strokeBorder(circle(ring), ring / 2, lineWidth: M.ringLineWidth, color)
+            // A fullscreen window leaves the target hollow, like the outlined marker of the other themes
+            if !isOutlined {
+                cg.fill(roundedRect(circle(M.ringCenterSide), M.ringCenterSide / 2), color)
+            }
+        }
+        guard let marker = layout.marker, let initial = marker.initial else { return }
+        let clearance = marker.frame.insetBy(dx: -M.markerClearance, dy: -M.markerClearance)
+        cg.fill(roundedRect(clearance, clearance.height / 2), .black, blendMode: .destinationOut)
+        draw(marker, initial, palette, in: cg)
+    }
+
+    // MARK: - Liquid
+
+    private static func drawLiquid(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        for cell in layout.cells {
+            let side = cell.isOccupied ? M.liquidOccupiedDot : M.liquidEmptyDot
+            let dot = CGRect(x: cell.frame.midX - side / 2, y: cell.frame.midY - side / 2, width: side, height: side)
+            cg.fill(roundedRect(dot, side / 2), palette.nameColor(of: cell))
+        }
+        guard let marker = layout.marker else { return }
+        let color = marker.initial == nil ? palette.focused : palette.modeMarker
+        // Filled one by one: where they overlap, the winding of one path could cut a hole in another
+        let drop = dropPaths(marker.frame, trail: marker.trail)
+        for path in drop { cg.fill(path, .black, blendMode: .destinationOut) }
+        if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, color)
+        } else {
+            for path in drop { cg.fill(path, color) }
+        }
+        if let initial = marker.initial {
+            if !marker.isOutlined { cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker) }
+            switch (marker.isOutlined, palette.modeInitial) {
+                case (true, _): draw(initial, palette.modeMarker)
+                case (false, let color?): draw(initial, color)
+                case (false, nil): draw(initial, .black, blendMode: .destinationOut)
+            }
+            return
+        }
+        // The drop carries the name of the workspace it is closest to: the one it leaves, then the one it reaches
+        guard let cell = layout.cells.max(by: { $0.focus < $1.focus }) else { return }
+        var name = cell.name
+        name.frame.origin = CGPoint(x: marker.frame.midX - name.frame.width / 2, y: marker.frame.midY - name.frame.height / 2)
+        switch (marker.isOutlined, palette.focusedName) {
+            case (true, _): draw(name, palette.focused)
+            case (false, let color?): draw(name, color)
+            case (false, nil): draw(name, .black, blendMode: .destinationOut)
+        }
+    }
+
+    /// The drop and its trail joined by a neck that gets thinner as they move apart: two circles on the same line,
+    /// and the curves between their tops and between their bottoms
+    private static func dropPaths(_ drop: CGRect, trail: CGRect?) -> [CGPath] {
+        guard let trail else { return [CGPath(ellipseIn: drop, transform: nil)] }
+        let path = CGMutablePath()
+        let (dropRadius, trailRadius) = (drop.height / 2, trail.height / 2)
+        let distance = abs(drop.midX - trail.midX)
+        let neck = trailRadius * max(0.35, 1 - distance / (4 * drop.width))
+        let midX = (drop.midX + trail.midX) / 2
+        let y = drop.midY
+        path.move(to: CGPoint(x: trail.midX, y: y - trailRadius))
+        path.addQuadCurve(to: CGPoint(x: drop.midX, y: y - dropRadius), control: CGPoint(x: midX, y: y - neck))
+        path.addLine(to: CGPoint(x: drop.midX, y: y + dropRadius))
+        path.addQuadCurve(to: CGPoint(x: trail.midX, y: y + trailRadius), control: CGPoint(x: midX, y: y + neck))
+        path.closeSubpath()
+        return [CGPath(ellipseIn: trail, transform: nil), path, CGPath(ellipseIn: drop, transform: nil)]
     }
 
     // MARK: - Binding mode

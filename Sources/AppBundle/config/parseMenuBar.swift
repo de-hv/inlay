@@ -3,12 +3,14 @@ import Common
 /// [menu-bar] table of the config
 struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
-    var theme: MenuBarTheme = .pills
+    var theme: MenuBarTheme = .liquid
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
     /// [theme] palette: it gives the colors that are 'auto'. Not a key of [menu-bar]: copied from the config. See: MenuBarStore
     var palette: ThemePalette = .system
+    /// [theme] seed, as a color: the one that the 'material' palette is made from. Copied from the config too
+    var paletteSeed: Rgba = MaterialPalette.baselineSeed
 
     /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
     var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
@@ -24,6 +26,18 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     case square
     /// Only the focused workspace
     case minimal
+    /// A dot per workspace, without names, and the focused one stretched into a pill: the page indicator of iOS,
+    /// that many waybar setups copy
+    case dots
+    /// The names, and a bar under the focused one that stretches towards the next one and catches up with it:
+    /// the border-bottom of the workspaces of waybar
+    case underline
+    /// A ring for an empty workspace, a disc for one with windows and a target for the focused one: the Nerd Font
+    /// icons of many waybar setups, drawn by Inlay
+    case glyphs
+    /// A dot per workspace, and a drop over the focused one that flows to the next one leaving a trail behind:
+    /// the "gooey" effect of the bars made with eww, AGS or Quickshell
+    case liquid
 }
 
 /// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore

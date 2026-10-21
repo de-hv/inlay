@@ -81,6 +81,8 @@ enum Strings {
         static let paletteFooter = "A palette colors the menu bar item and the borders, with a light and a dark variant that follow the appearance of the system. It gives the colors you haven't changed in Menu Bar and Borders."
         static func paletteOverridden(_ keys: [String]) -> String { "Your config sets \(keys.joined(separator: ", ")): \(keys.count == 1 ? "it wins" : "they win") over the palette." }
         static let usePalette = "Use the Palette"
+        static let seed = "Seed"
+        static let seedDetail = "Material You is made from this color, the way matugen makes it from a wallpaper. 'system-accent' follows the accent color of macOS."
         static let defaultValue = "default"
         static let gaps = "Gaps"
         static let reset = "Reset"

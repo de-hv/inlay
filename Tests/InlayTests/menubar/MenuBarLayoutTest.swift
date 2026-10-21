@@ -65,6 +65,135 @@ extension InlayTests {
             assertEquals(middle.size.width, end.size.width)
         }
 
+        // MARK: - Dots
+
+        @Test func testDots() {
+            typealias M = MenuBarMetrics
+            let layout = layout(MenuBarConfig(theme: .dots))
+            assertEquals(layout.style, .dots)
+            // A dot per workspace, the focused one a pill, side by side
+            assertEquals(layout.cells.map(\.frame.width), [M.dotSide, M.dotFocusedWidth, M.dotSide, M.dotSide])
+            assertEquals(layout.size, CGSize(width: 3 * M.dotSide + M.dotFocusedWidth + 3 * M.dotSpacing, height: M.height))
+            for cell in layout.cells {
+                assertEquals(cell.frame.height, M.dotSide)
+                assertEquals(cell.frame.midY, M.height / 2)
+            }
+            assertEquals(layout.marker?.frame, layout.cells[1].frame)
+            assertEquals(layout.marker?.cornerRadius, M.dotSide / 2)
+            assertNil(layout.marker?.initial)
+        }
+
+        /// In a binding mode the pill grows taller to hold the initial, and the item keeps its width
+        @Test func testDotsInABindingMode() throws {
+            typealias M = MenuBarMetrics
+            var snapshot = snapshot
+            snapshot.mode = "resize"
+            let main = layout(MenuBarConfig(theme: .dots, showMode: true))
+            let mode = layout(MenuBarConfig(theme: .dots, showMode: true), snapshot)
+            let marker = try #require(mode.marker)
+            assertEquals(marker.frame.size, CGSize(width: M.dotFocusedWidth, height: M.modeSquare))
+            assertEquals(marker.frame.midY, M.height / 2)
+            assertEquals(marker.initial?.string, "R")
+            assertEquals(mode.size, main.size)
+        }
+
+        // MARK: - Underline
+
+        @Test func testUnderline() throws {
+            typealias M = MenuBarMetrics
+            let layout = layout(MenuBarConfig(theme: .underline))
+            assertEquals(layout.style, .underline)
+            // The names are 8 pt wide: the slots are as wide as the minimum
+            assertEquals(layout.cells.map(\.frame.width), [M.underlineSlot, M.underlineSlot, M.underlineSlot, M.underlineSlot])
+            // The names go up to make room for the bar
+            for cell in layout.cells {
+                assertEquals(cell.name.frame.midY, M.height / 2 - M.underlineLift)
+            }
+            let marker = try #require(layout.marker)
+            let focused = layout.cells[1].frame
+            assertEquals(marker.frame, CGRect(x: focused.midX - M.underlineWidth / 2, y: M.underlineTop, width: M.underlineWidth, height: M.underlineHeight))
+            assertEquals(marker.frame.maxY < M.height, true)
+        }
+
+        /// The bar leaves by the edge on the side of the move: it stretches towards the next workspace, and the
+        /// other edge catches up later
+        @Test func testUnderlineStretches() throws {
+            typealias M = MenuBarMetrics
+            let config = MenuBarConfig(theme: .underline)
+            let from = layout(config, MenuBarSnapshot(workspaces: snapshot.workspaces, focusedWorkspace: "4")).marker?.frame
+            let to = layout(config).marker?.frame
+            let (start, end) = try (#require(from), #require(to))
+            // From 4 to 2: to the left
+            let early = try #require(layout(config, transition: .init(from: "4", progress: 0.3)).marker?.frame)
+            assertEquals(early.maxX, start.maxX)
+            assertEquals(early.minX < start.minX && early.minX > end.minX, true)
+            let late = try #require(layout(config, transition: .init(from: "4", progress: 0.8)).marker?.frame)
+            assertEquals(late.minX, end.minX)
+            assertEquals(late.maxX < start.maxX && late.maxX > end.maxX, true)
+            assertEquals(late.width > M.underlineWidth, true)
+        }
+
+        /// In a binding mode its initial takes the place of the name of the focused workspace
+        @Test func testUnderlineInABindingMode() throws {
+            typealias M = MenuBarMetrics
+            var snapshot = snapshot
+            snapshot.mode = "service"
+            let layout = layout(MenuBarConfig(theme: .underline, showMode: true), snapshot)
+            let initial = try #require(layout.marker?.initial)
+            assertEquals(initial.string, "S")
+            assertEquals(initial.frame.midX, layout.cells[1].frame.midX)
+            assertEquals(initial.frame.midY, layout.cells[1].name.frame.midY)
+        }
+
+        // MARK: - Glyphs
+
+        @Test func testGlyphs() throws {
+            typealias M = MenuBarMetrics
+            let layout = layout(MenuBarConfig(theme: .glyphs))
+            assertEquals(layout.style, .glyphs)
+            assertEquals(layout.size, CGSize(width: 4 * M.ringSide + 3 * M.ringSpacing, height: M.height))
+            assertEquals(layout.cells.map(\.focus), [0, 1, 0, 0])
+            assertEquals(layout.marker?.frame, layout.cells[1].frame)
+            // The focus fades from one glyph to the other: halfway, both are half focused
+            let middle = self.layout(MenuBarConfig(theme: .glyphs), transition: .init(from: "4", progress: 0.5))
+            assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
+            // In a binding mode the target becomes a disc that holds the initial
+            var snapshot = snapshot
+            snapshot.mode = "resize"
+            let mode = try #require(self.layout(MenuBarConfig(theme: .glyphs, showMode: true), snapshot).marker)
+            assertEquals(mode.frame.size, CGSize(width: M.modeSquare, height: M.modeSquare))
+            assertEquals(mode.cornerRadius, M.modeSquare / 2)
+            assertEquals(mode.initial?.string, "R")
+        }
+
+        // MARK: - Liquid
+
+        @Test func testLiquid() throws {
+            typealias M = MenuBarMetrics
+            let layout = layout(MenuBarConfig(theme: .liquid))
+            assertEquals(layout.style, .liquid)
+            assertEquals(layout.size, CGSize(width: 4 * M.liquidSlot, height: M.height))
+            let marker = try #require(layout.marker)
+            assertEquals(marker.frame.size, CGSize(width: M.liquidDrop, height: M.liquidDrop))
+            assertEquals(marker.frame.midX, layout.cells[1].frame.midX)
+            // At rest there is no trail
+            assertNil(marker.trail)
+        }
+
+        /// The drop leads and its trail follows it, behind it: they meet again at the end
+        @Test func testLiquidLeavesATrail() throws {
+            let config = MenuBarConfig(theme: .liquid)
+            let start = try #require(layout(config, MenuBarSnapshot(workspaces: snapshot.workspaces, focusedWorkspace: "4")).marker?.frame)
+            for progress in [0.25, 0.5, 0.75] {
+                let marker = try #require(layout(config, transition: .init(from: "4", progress: progress)).marker)
+                let trail = try #require(marker.trail, "\(progress)")
+                // From 4 to 2: the drop is on the left of its trail, and the trail hasn't gone past where it started
+                assertEquals(marker.frame.midX < trail.midX, true, additionalMsg: "\(progress)")
+                assertEquals(trail.midX <= start.midX, true, additionalMsg: "\(progress)")
+            }
+            assertNil(layout(config, transition: .init(from: "4", progress: 1)).marker?.trail)
+        }
+
         // MARK: - Chips
 
         @Test func testChips() {
@@ -508,16 +637,12 @@ extension InlayTests {
                 }
             }
             // Only what is one color is a template: no fixed colors. A binding mode in the marker is still one color
-            assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), [
-                "chips-default-template.png", "chips-fullscreen-template.png", "chips-mode-fullscreen-template.png",
-                "chips-mode-template.png", "chips-no-dim-template.png",
-                "minimal-default-template.png", "minimal-fullscreen-template.png", "minimal-mode-fullscreen-template.png",
-                "minimal-mode-template.png",
-                "needs-accessibility-template.png", "paused-template.png",
-                "pills-default-template.png", "pills-fullscreen-template.png", "pills-mode-fullscreen-template.png", "pills-mode-template.png",
-                "square-default-template.png", "square-fullscreen-template.png", "square-mode-fullscreen-template.png",
-                "square-mode-template.png",
-            ])
+            let oneColor = MenuBarTheme.allCases.flatMap { theme in
+                ["default", "fullscreen", "mode-fullscreen", "mode"].map { "\(theme.rawValue)-\($0)" }
+            }
+            let slides = ["pills", "dots", "underline", "liquid"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
+            let templates = (oneColor + slides + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
+            assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), templates.sorted())
             // The item is as wide in a binding mode as in the main mode, in every theme
             for theme in MenuBarTheme.allCases {
                 let main = try #require(NSImage(contentsOf: directory.appending(path: "\(theme.rawValue)-default-dark.png")))

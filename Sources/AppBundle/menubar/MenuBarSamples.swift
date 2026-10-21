@@ -19,8 +19,14 @@ enum MenuBarSamples {
 
     /// The item drawn the way the menu bar draws it, but with the color of the menu bar text baked in
     @MainActor
-    static func image(_ config: MenuBarConfig, snapshot: MenuBarSnapshot = snapshot, isDarkBar: Bool, scale: CGFloat) -> NSImage? {
-        let layout = MenuBarLayout.make(snapshot, config, measure: MenuBarFont.size)
+    static func image(
+        _ config: MenuBarConfig,
+        snapshot: MenuBarSnapshot = snapshot,
+        transition: MenuBarFocusTransition? = nil,
+        isDarkBar: Bool,
+        scale: CGFloat,
+    ) -> NSImage? {
+        let layout = MenuBarLayout.make(snapshot, config, transition: transition, measure: MenuBarFont.size)
         // Never a template: nobody is going to pick black or white for it
         let palette = MenuBarPalette.resolve(
             config,
@@ -58,37 +64,48 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     var needsAccessibility = MenuBarSamples.snapshot
     needsAccessibility.status = .needsAccessibility
 
-    var variants: [(name: String, config: MenuBarConfig, snapshot: MenuBarSnapshot)] = []
-    for theme in MenuBarTheme.allCases {
-        variants.append(("\(theme.rawValue)-default", MenuBarConfig(theme: theme), MenuBarSamples.snapshot))
-        variants.append(("\(theme.rawValue)-custom", MenuBarConfig(theme: theme, colors: custom), MenuBarSamples.snapshot))
-        variants.append(("\(theme.rawValue)-mode", MenuBarConfig(theme: theme, showMode: true), resize))
-        variants.append(("\(theme.rawValue)-mode-accent", MenuBarConfig(theme: theme, showMode: true, colors: MenuBarColors(accent: .systemAccent)), resize))
-        variants.append(("\(theme.rawValue)-mode-custom", MenuBarConfig(theme: theme, showMode: true, colors: custom), resize))
-        variants.append(("\(theme.rawValue)-mode-fullscreen", MenuBarConfig(theme: theme, showMode: true), resizeFullscreen))
-        variants.append(("\(theme.rawValue)-fullscreen", MenuBarConfig(theme: theme), fullscreen))
+    var variants: [(name: String, config: MenuBarConfig, snapshot: MenuBarSnapshot, transition: MenuBarFocusTransition?)] = []
+    func append(_ name: String, _ config: MenuBarConfig, _ snapshot: MenuBarSnapshot, _ transition: MenuBarFocusTransition? = nil) {
+        variants.append((name, config, snapshot, transition))
     }
-    variants.append(("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot))
-    variants.append(("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot))
+    for theme in MenuBarTheme.allCases {
+        append("\(theme.rawValue)-default", MenuBarConfig(theme: theme), MenuBarSamples.snapshot)
+        append("\(theme.rawValue)-custom", MenuBarConfig(theme: theme, colors: custom), MenuBarSamples.snapshot)
+        append("\(theme.rawValue)-mode", MenuBarConfig(theme: theme, showMode: true), resize)
+        append("\(theme.rawValue)-mode-accent", MenuBarConfig(theme: theme, showMode: true, colors: MenuBarColors(accent: .systemAccent)), resize)
+        append("\(theme.rawValue)-mode-custom", MenuBarConfig(theme: theme, showMode: true, colors: custom), resize)
+        append("\(theme.rawValue)-mode-fullscreen", MenuBarConfig(theme: theme, showMode: true), resizeFullscreen)
+        append("\(theme.rawValue)-fullscreen", MenuBarConfig(theme: theme), fullscreen)
+    }
+    append("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot)
+    append("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot)
     // The palettes of [theme], in the default theme
     for palette in ThemePalette.allCases where palette != .system {
-        variants.append(("pills-palette-\(palette.rawValue)", MenuBarConfig(palette: palette), MenuBarSamples.snapshot))
+        append("pills-palette-\(palette.rawValue)", MenuBarConfig(palette: palette), MenuBarSamples.snapshot)
     }
-    variants.append(("paused", MenuBarConfig(), paused))
-    variants.append(("needs-accessibility", MenuBarConfig(), needsAccessibility))
+    // Material You from another seed
+    append("pills-palette-material-seed", MenuBarConfig(palette: .material, paletteSeed: Rgba(hex: "#B5651D").orDie()), MenuBarSamples.snapshot)
+    // The focus on its way from workspace 5 to workspace 2, in the themes whose marker changes shape as it goes
+    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid] {
+        for percent in [20, 40, 60, 80] {
+            append("\(theme.rawValue)-slide-\(percent)", MenuBarConfig(theme: theme), MenuBarSamples.snapshot, .init(from: "5", progress: Double(percent) / 100))
+        }
+    }
+    append("paused", MenuBarConfig(), paused)
+    append("needs-accessibility", MenuBarConfig(), needsAccessibility)
 
     let padding: CGFloat = 8
     var rendered: [(name: String, bitmap: NSBitmapImageRep)] = []
     defer { _ = try? contactSheet(rendered)?.write(to: directory.appending(path: "_sheet.png")) }
-    for (name, config, snapshot) in variants {
+    for (name, config, snapshot, transition) in variants {
         // What the menu bar gets when the item is one color: a template image, black with different opacities
-        let layout = MenuBarLayout.make(snapshot, config, measure: MenuBarFont.size)
+        let layout = MenuBarLayout.make(snapshot, config, transition: transition, measure: MenuBarFont.size)
         let palette = MenuBarPalette.resolve(config, style: layout.style, isDarkBar: true, systemAccent: .systemAccent, needsColor: layout.needsColor)
         if palette.isTemplate, let template = MenuBarRenderer.bitmap(layout, palette, scale: scale)?.representation(using: .png, properties: [:]) {
             try template.write(to: directory.appending(path: "\(name)-template.png"))
         }
         for isDarkBar in [true, false] {
-            guard let item = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: scale) else { continue }
+            guard let item = MenuBarSamples.image(config, snapshot: snapshot, transition: transition, isDarkBar: isDarkBar, scale: scale) else { continue }
             // Over something like a menu bar
             let size = CGSize(width: item.size.width + 2 * padding, height: item.size.height + 2)
             guard let bitmap = NSBitmapImageRep.rgba(pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale), scale: scale),

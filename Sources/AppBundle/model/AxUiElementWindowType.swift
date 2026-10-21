@@ -104,6 +104,12 @@ extension AxUiElementMock {
         _ activationPolicy: NSApplication.ActivationPolicy,
         _ windowLevel: MacOsWindowLevel?,
     ) -> Bool {
+        // A sheet (Zen/Firefox "Save image" panel) is attached to its parent window and moves with it.
+        // Inlay must never move it: hiding it in a corner drags the parent window along
+        if get(Ax.roleAttr) == kAXSheetRole {
+            return false
+        }
+
         if windowLevel != .normalWindow &&
             // Slowly roll out windowLevel for applications for which we have the appropriate dumps
             (id == .slack || id == .chrome || id?.isFirefox == true || id == .braveBrowser || id == .screenstudio || id == .cleanshotx || id == .iterm2 || id == .outlook || id == .codex || id == .wisprFlow)

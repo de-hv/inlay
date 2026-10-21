@@ -172,7 +172,7 @@ func reloadConfigFromUi(warningsAsErrors: Bool) {
         guard let token: RunSessionGuard = .isServerEnabled else { return }
         try await runLightSession(.menuBarButton, token) {
             let args: ReloadConfigCmdArgs = ReloadConfigCmdArgs(rawArgs: []).copy(\.warningsAsErrors, warningsAsErrors)
-            _ = await reloadConfig_nonCancellable(args: args)
+            _ = await reloadConfig_nonCancellable(args: args, notice: .always)
         }
     }
 }

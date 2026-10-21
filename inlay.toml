@@ -79,6 +79,8 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     outer.right =      8
     outer.top =        8
     outer.bottom =     8
+    # A single tiling window takes the whole screen, without the outer gaps and without a border
+    smart = true
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    TILING
@@ -132,6 +134,11 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
     workspace-switch = 'horizontal'
 
+# A notice in the corner of the screen when the config is reloaded: 'diff' (with the keys that changed),
+# 'simple' or 'off'. See: inlay config --explain notifications
+[notifications]
+    on-reload = 'diff'
+
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    BORDERS
 # └──────────────────────────────────────────────────────────────────────────────┘
@@ -151,6 +158,9 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
     glow = false
     # In points (1 ... 40)
     glow-radius = 12
+    # No border around the only tiling window of a workspace, also with the gaps around it. With
+    # [gaps] smart = true a single window has no border anyway
+    hide-when-single = false
 
     # The color of the border of the focused window while a binding mode is active
     [borders.mode-colors]

@@ -665,6 +665,7 @@ struct BordersSettingsView: View {
                 ToggleRow(model: model, title: Strings.Settings.glow, detail: Strings.Settings.glowDetail, key: .bordersGlow)
                 SliderRow(model: model, title: Strings.Settings.glowRadius, key: .bordersGlowRadius, range: BordersConfig.glowRadiusRange)
                     .disabled(!model.bool(.bordersGlow))
+                ToggleRow(model: model, title: Strings.Settings.hideWhenSingle, detail: Strings.Settings.hideWhenSingleDetail, key: .bordersHideWhenSingle)
             }
             Section {
                 ColorRow(model: model, title: Strings.Settings.activeWindow, key: .bordersActiveColor, allowsAuto: false)
@@ -754,6 +755,9 @@ struct GapsSettingsView: View {
                 tableHeader(Strings.Settings.outerGaps, SettingsKey.gapsOuterTop)
             } footer: {
                 footnote(Strings.Settings.outerGapsFooter)
+            }
+            Section(Strings.Settings.singleWindow) {
+                ToggleRow(model: model, title: Strings.Settings.smartGaps, detail: Strings.Settings.smartGapsDetail, key: .gapsSmart)
             }
         }
     }

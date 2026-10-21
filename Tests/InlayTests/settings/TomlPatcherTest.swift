@@ -603,7 +603,7 @@ extension InlayTests {
                 .menuBarEnabled, .menuBarTheme,
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
-                .bordersGlow, .bordersGlowRadius,
+                .bordersGlow, .bordersGlowRadius, .bordersHideWhenSingle, .gapsSmart,
             ] {
                 let value: TomlValue = switch key.defaultValue {
                     // The opposite of what the file has, which isn't always the default

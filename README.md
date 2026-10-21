@@ -40,7 +40,9 @@ revision (installing without options, `inlay.toml` as the shipped config, the qu
 `inlay uninstall`, `inlay config --explain` and the reload of a config saved by hand): tried in an isolated
 environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
 the focused workspace, the menu without icons, the Settings window that fits small screens, the config folder
-linked by `install.sh` and `inlay uninstall` removing the config.
+linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the smart gaps and the
+border hidden around a single window (`gaps.smart`, `borders.hide-when-single`) and the notice after a reload of
+the config (`[notifications]`).
 
 Known limitations of this version:
 
@@ -277,6 +279,19 @@ auto-reload-config = true   # the default is false: reload with 'inlay reload-co
 
 ![Illustration, animated: on the left the config file, on the right the Borders tab of Settings (a real render). The line 'width = 4' of the file is changed to 'width = 8' and the Width slider of Settings moves to 8 pt; then the slider is moved to 2 pt and the line of the file becomes 'width = 2'](docs/images/settings-sync.gif)
 
+**A reload says what it changed.** After *Reload Config* in the menu, a save picked up by `auto-reload-config`, or
+`inlay reload-config` and a key binding when the file changed since the last load, a notice shows up for a moment in the top right corner of the screen of the focus:
+`inlay.toml reloaded` and the keys that changed, with the old and the new value (`borders.width 4 → 8`). Comments
+and formatting don't count, and after four keys it says how many more. With warnings it stays longer and says how
+many; a config with errors shows its window instead. It never takes the focus: the mouse over it keeps it, and a
+click dismisses it. There is no notice at startup, nor for a change made in Settings, which shows it already.
+`--no-gui` skips it.
+
+```toml
+[notifications]
+    on-reload = 'diff'   # 'diff' | 'simple' (only the name of the file) | 'off'
+```
+
 **Problems are never silent.** If the config has errors or warnings, `inlay reload-config` prints them, a
 window lists the errors, and the menu of the menu bar item shows "Config contains errors…" or "Config contains
 warnings…". A key binding that macOS refuses to register (another app may own the same keys) is reported the
@@ -311,6 +326,17 @@ the monitor (`outer.*`). A key that is omitted is 0. A value can also depend on 
 ![Illustration, animated: a screen with three tiled windows and borders of 4 points, drawn with four configs in turn. With all the gaps at 0 the borders of neighbors overlap and the screen cuts them; with 8 points, the values of the shipped config, the borders touch; with 16 points there is air between them; and with inner.horizontal = 48 and outer.top = 56 only the gap between the columns and the gap under the menu bar grow](docs/images/gaps.gif)
 
 The window borders are drawn in the gaps: see [Window borders](#window-borders) for how the two fit together.
+
+**Smart gaps** (`smart`, `false` by default; `true` in the shipped config): a workspace with a single tiling
+window has no outer gaps and no border, and the window takes the whole visible part of the screen, under the menu
+bar and above the Dock. The gaps and the border come back as soon as a second tiling window joins it, sliding like
+any other change of the layout. Floating windows don't count, and keep their borders. It is also in
+**Settings › Gaps**.
+
+```toml
+[gaps]
+    smart = true   # a single tiling window: no outer gaps
+```
 
 ### Tiling
 
@@ -641,6 +667,7 @@ color comes from the state the manager already knows, with no focus heuristics. 
 | `floating-color` | color | `'#BF5AF2'` |
 | `glow` | `true`, `false` | `false` |
 | `glow-radius` | 1 … 40 (points) | `12` |
+| `hide-when-single` | `true`, `false` | `false` |
 | `[borders.mode-colors]` `<mode>` | color | empty table |
 
 **The colors.** The image above shows them all.
@@ -700,6 +727,16 @@ the window, which macOS draws, stays round.
 ```
 
 <p align="center"><img src="docs/images/borders-glow.png" alt="Real render, detail of the border of the focused window with glow = false, and with glow = true and glow-radius = 6, 12 (the default) and 24: an orange halo outside of the border that reaches farther as the radius grows, over the gap and the edge of the neighboring window" width="880"></p>
+
+**`hide-when-single`**: no border around the tiling window of a workspace that has only one, fullscreen or not:
+there is no other window to tell it from. The border comes back as soon as a second tiling window joins it.
+Floating windows keep theirs. It is for a single window that keeps the outer gaps: [smart gaps](#gaps) already
+remove the border along with the gaps. It is also in **Settings › Borders**.
+
+```toml
+[borders]
+    hide-when-single = true
+```
 
 **Borders and gaps**: the border takes a part of the [gap](#gaps).
 

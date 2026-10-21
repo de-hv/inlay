@@ -56,6 +56,7 @@ extension SettingsKey {
     static let bordersFloatingColor = SettingsKey(["borders"], "floating-color", default: .string("#BF5AF2"))
     static let bordersGlow = SettingsKey(["borders"], "glow", default: .bool(false))
     static let bordersGlowRadius = SettingsKey(["borders"], "glow-radius", default: .int(12))
+    static let bordersHideWhenSingle = SettingsKey(["borders"], "hide-when-single", default: .bool(false))
 
     // Gaps. The fallback of an omitted gap is 0. A gap per monitor (`[{ monitor.main = 16 }, 8]`) is defined by hand
     static let gapsInnerHorizontal = SettingsKey(["gaps", "inner"], "horizontal", default: .int(0))
@@ -64,6 +65,7 @@ extension SettingsKey {
     static let gapsOuterBottom = SettingsKey(["gaps", "outer"], "bottom", default: .int(0))
     static let gapsOuterLeft = SettingsKey(["gaps", "outer"], "left", default: .int(0))
     static let gapsOuterRight = SettingsKey(["gaps", "outer"], "right", default: .int(0))
+    static let gapsSmart = SettingsKey(["gaps"], "smart", default: .bool(false))
 
     /// [borders.mode-colors]: the color of the border of the focused window while the binding mode is active.
     /// No default: a mode without a color keeps the normal colors

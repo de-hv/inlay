@@ -72,6 +72,8 @@ extension BordersSnapshot {
     /// and from what the window was taken for when it was detected.
     ///
     /// The fullscreen window keeps its border, pulled inside of the screen where the outer gaps leave no room for it.
+    /// The single tiling window of a workspace has no border with 'borders.hide-when-single', and with 'gaps.smart'
+    /// (it fills the screen, with no gaps around it for a border).
     ///
     /// Left out: the tiling windows that a fullscreen window covers, the windows in the macOS native fullscreen,
     /// the minimized ones, the ones of hidden apps, popups, the dialogs and sheets that float on their own,
@@ -94,9 +96,12 @@ extension BordersSnapshot {
             let area = monitor.visibleRectPaddedByOuterGaps
             // The border is drawn outside of the frame: around a window that fills the screen it needs to be pulled in
             let room = monitor.visibleRect.insetBy(config.borders.width)
+            let hidesTiling = workspace.hasSingleTilingWindow && (config.borders.hideWhenSingle || config.gaps.smart)
             // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the whole monitor.
             // The other tiling windows are behind it, and their borders would stick out in the outer gaps
-            if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
+            if hidesTiling {
+                // Nothing to tell the window from: no border, fullscreen or not
+            } else if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
                 // While it grows, the border goes with it. See: WindowAnimator
                 let rect = WindowAnimator.shared.currentFrame(fullscreen.windowId)
                     .map { Rect(topLeftX: $0.minX, topLeftY: $0.minY, width: $0.width, height: $0.height) }

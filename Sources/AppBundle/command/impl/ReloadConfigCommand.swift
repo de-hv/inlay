@@ -23,9 +23,25 @@ struct ReloadConfigResult {
     let stderr: String
 }
 
+/// The text of the config that was applied last. What the notice of the next reload compares with. See: ReloadNotice
+@MainActor private var appliedConfigText: String? = nil
+
+/// When a reload shows its notice. See: ReloadNoticePanel
+enum ReloadNoticeTrigger {
+    /// At startup, and after the settings window writes the file: the window already shows the change
+    case never
+    /// The file is different from the config that was applied last. 'reload-config' runs in key bindings that
+    /// have nothing to do with the file (the 'esc' that leaves a binding mode), and the save of the file is what
+    /// the notice is about
+    case ifChanged
+    /// "Reload Config" in the menu: the user asked, so the notice answers, also with "No setting changed"
+    case always
+}
+
 @MainActor func reloadConfig_nonCancellable(
     args: ReloadConfigCmdArgs = ReloadConfigCmdArgs(rawArgs: []),
     forceConfigUrl: URL? = nil,
+    notice: ReloadNoticeTrigger = .ifChanged,
 ) async -> ReloadConfigResult {
     let result = readConfig(forceConfigUrl: forceConfigUrl)
     let parseResult = result.parseConfigResult
@@ -33,7 +49,9 @@ struct ReloadConfigResult {
     let isApplied = parseResult.allowReloadConfig && !args.dryRun
 
     var hotkeyWarnings: [ConfigParseDiagnostic] = []
+    let previousText = appliedConfigText
     if isApplied {
+        appliedConfigText = result.text
         resetHotKeys()
         config = parseResult.config
         configUrl = result.configUrl
@@ -61,6 +79,23 @@ struct ReloadConfigResult {
                 MessageModel.shared.message = Message(body: msg, containsWarnings: containsWarnings)
             default:
                 MessageModel.shared.message = nil
+        }
+        // The window of the diagnostics tells about a config that has errors. The notice is for the one that loads
+        let showsNotice = switch notice {
+            case .never: false
+            case .ifChanged: result.text != previousText
+            case .always: true
+        }
+        if isApplied && showsNotice && errors.isEmpty && !(warningsAsErrors && !warnings.isEmpty),
+           let notice = ReloadNotice(
+               style: config.notifications.onReload,
+               fileName: result.configUrl.lastPathComponent,
+               oldText: previousText,
+               newText: result.text,
+               warningCount: warnings.count,
+           )
+        {
+            ReloadNoticePanel.shared.show(notice)
         }
     }
     if !args.dryRun {

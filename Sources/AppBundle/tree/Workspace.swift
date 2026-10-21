@@ -62,7 +62,20 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     }
 
     override func getWeight(_ targetOrientation: Orientation) -> CGFloat {
-        workspaceMonitor.visibleRectPaddedByOuterGaps.getDimension(targetOrientation)
+        tilingArea.getDimension(targetOrientation)
+    }
+
+    /// The area that the tiling windows share: the visible part of the monitor without the outer gaps.
+    /// With 'gaps.smart', a single tiling window takes the whole visible part, without the outer gaps
+    @MainActor
+    var tilingArea: Rect {
+        hasSingleTilingWindow && config.gaps.smart ? workspaceMonitor.visibleRect : workspaceMonitor.visibleRectPaddedByOuterGaps
+    }
+
+    /// The workspace has exactly one tiling window. See: 'gaps.smart' and 'borders.hide-when-single'
+    @MainActor
+    var hasSingleTilingWindow: Bool {
+        rootTilingContainer.allLeafWindowsRecursive.count == 1
     }
 
     override func setWeight(_ targetOrientation: Orientation, _ newValue: CGFloat) {

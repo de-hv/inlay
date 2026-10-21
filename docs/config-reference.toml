@@ -175,6 +175,13 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): outer.right = 0
     outer.right = 0
 
+    # Smart gaps: a workspace with a single tiling window has no outer gaps and no border, and the window takes
+    # the whole visible part of the monitor (under the menu bar, above the Dock). The gaps and the border come back
+    # as soon as a second tiling window joins it. Floating windows don't count, and keep their borders
+    # Possible values: true|false
+    # Fallback value (if you omit the key): smart = false
+    smart = false
+
 # The environment of the programs that Inlay starts (exec-and-forget, exec-on-workspace-change).
 # They also get INLAY_WINDOW_ID, INLAY_WORKSPACE, INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE
 # (and the same variables under their AEROSPACE_* names)
@@ -349,6 +356,22 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): workspace-switch = 'horizontal'
     workspace-switch = 'horizontal'
 
+# The notices that Inlay shows for a moment, in the top right corner of the screen
+[notifications]
+    # The notice after the config is reloaded: from the menu, or on save with auto-reload-config. A 'reload-config'
+    # of a key binding or of the CLI shows it only if the file changed since the last load (the 'esc' that leaves a
+    # binding mode reloads the config). Not at startup, nor after a change made in the Settings window, which shows it.
+    # A config with errors shows its errors in a window instead.
+    # - 'diff': the name of the file and the keys that changed, with the old and the new value
+    #   ('borders.width 4 -> 8'). Comments and formatting don't count. Up to 4 keys, then '+N more'
+    # - 'simple': only the name of the file
+    # - 'off': no notice
+    # With warnings it stays longer and says how many. The mouse over it keeps it; a click dismisses it.
+    # The Settings window doesn't edit it
+    # Possible values: 'diff' | 'simple' | 'off'
+    # Fallback value (if you omit the key): on-reload = 'diff'
+    on-reload = 'diff'
+
 # The borders of the windows
 [borders]
     # Draw a border around every normal window of the visible workspaces, tiling or floating.
@@ -415,6 +438,13 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Possible values: 1 ... 40
     # Fallback value (if you omit the key): glow-radius = 12
     glow-radius = 12
+
+    # No border around the tiling window of a workspace that has only one, fullscreen or not: there is no other
+    # window to tell it from. It comes back as soon as a second tiling window joins it. Floating windows keep theirs.
+    # For a single window with the outer gaps around it: gaps.smart already removes the border along with the gaps
+    # Possible values: true|false
+    # Fallback value (if you omit the key): hide-when-single = false
+    hide-when-single = false
 
     # The color of the border of the focused window while a binding mode is active: the name of the mode =
     # the color. It wins over active-color and floating-color. A mode without an entry keeps the normal color

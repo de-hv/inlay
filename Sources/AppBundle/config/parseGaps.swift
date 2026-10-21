@@ -3,6 +3,9 @@ import Common
 struct Gaps: ConvenienceMutable, Equatable, Sendable {
     var inner: Inner
     var outer: Outer
+    /// A workspace with a single tiling window has no outer gaps and no border: the window takes the whole visible area
+    /// of the monitor
+    var smart: Bool = false
 
     static let zero = Gaps(inner: .zero, outer: .zero)
     /// What the sliders of the settings window offer. The config takes any value
@@ -87,6 +90,7 @@ struct ResolvedGaps {
 let gapsParser: [String: any ParserProtocol<Gaps>] = [
     "inner": Parser(\.inner, parseInner),
     "outer": Parser(\.outer, parseOuter),
+    "smart": Parser(\.smart, parseBool),
 ]
 
 let gapsInnerParser: [String: any ParserProtocol<Gaps.Inner>] = [

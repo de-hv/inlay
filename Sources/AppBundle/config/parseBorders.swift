@@ -22,6 +22,8 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var glow: Bool = false
     /// The blur radius of the glow, in points: about how far from the border the glow reaches
     var glowRadius: CGFloat = 12
+    /// No border around the tiling window of a workspace that has only one: there is no other window to tell it from
+    var hideWhenSingle: Bool = false
 
     static let widthRange = 1 ... 20
     static let cornerRadiusRange = 0 ... 40
@@ -39,6 +41,7 @@ let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "mode-colors": Parser(\.modeColors, parseModeColors),
     "glow": Parser(\.glow, parseBool),
     "glow-radius": Parser(\.glowRadius, parsePoints("glow-radius", BordersConfig.glowRadiusRange)),
+    "hide-when-single": Parser(\.hideWhenSingle, parseBool),
 ]
 
 func parseBorders(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> BordersConfig {

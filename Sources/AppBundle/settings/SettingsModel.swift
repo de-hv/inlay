@@ -214,7 +214,7 @@ final class SettingsModel {
         if !reloadsConfig { return }
         Task.startUnstructured { @MainActor in
             try await runLightSession(.menuBarButton, .forceRun) {
-                _ = await reloadConfig_nonCancellable()
+                _ = await reloadConfig_nonCancellable(notice: .never)
             }
         }
     }

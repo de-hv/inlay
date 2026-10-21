@@ -60,6 +60,16 @@ enum Strings {
         }
     }
 
+    /// The notice that tells that the config was reloaded. See: ReloadNoticePanel
+    enum Notice {
+        static func reloaded(_ fileName: String) -> String { "\(fileName) reloaded" }
+        static let noChanges = "No setting changed"
+        static let added = "added"
+        static let removed = "removed"
+        static func more(_ count: Int) -> String { "+\(count) more" }
+        static func warnings(_ count: Int) -> String { count == 1 ? "1 warning: see the menu" : "\(count) warnings: see the menu" }
+    }
+
     enum Settings {
         static let windowTitle = "\(inlayAppName) Settings"
         static let general = "General"
@@ -173,6 +183,8 @@ enum Strings {
         static let glow = "Glow"
         static let glowDetail = "A halo of the color of the border around the focused window."
         static let glowRadius = "Glow radius"
+        static let hideWhenSingle = "Hide with a single window"
+        static let hideWhenSingleDetail = "No border around the only tiling window of a workspace, also with gaps around it. Smart gaps remove it anyway."
         static let activeWindow = "Active window"
         static let inactiveWindows = "Inactive windows"
         static let floatingWindow = "Focused floating window"
@@ -200,6 +212,9 @@ enum Strings {
         static let innerGapsFooter = "The borders are drawn in the gaps, outside of the windows: with inner gaps less than twice the width of the border, the borders of two windows touch."
         static let outerGapsFooter = "Between the windows and the edges of the screen. With outer gaps less than the width of the border, the edge of the screen cuts the border."
         static let actualSize = "Actual size"
+        static let singleWindow = "Single Window"
+        static let smartGaps = "Smart gaps"
+        static let smartGapsDetail = "The only tiling window of a workspace takes the whole screen, without outer gaps nor border."
 
         // Why a control is disabled
         static let definedByHand = "Defined by hand in the config file"

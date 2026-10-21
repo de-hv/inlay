@@ -311,8 +311,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - catppuccin (Mocha and Latte), tokyo-night (Night and Day), gruvbox, nord, rose-pine (Main and Dawn),
     #   dracula (Dracula and Alucard), everforest
     # Possible values: system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest
-    # Fallback value (if you omit the key): palette = 'system'
-    palette = 'system'
+    # Fallback value (if you omit the key): palette = 'catppuccin'
+    palette = 'catppuccin'
 
 # The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
 # - a window opens (it grows from the center of its tile, from 80% of its size, while its neighbor makes room) or closes,

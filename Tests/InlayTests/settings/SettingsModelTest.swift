@@ -54,7 +54,7 @@ extension InlayTests {
             assertEquals(model.isSet(.menuBarTheme), false)
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // The same as an empty [menu-bar] table
-            assertEquals(model.menuBarConfig, MenuBarConfig())
+            assertEquals(model.menuBarConfig, MenuBarConfig(palette: .catppuccin))
         }
 
         @Test func testReadsTheFile() throws {
@@ -73,7 +73,7 @@ extension InlayTests {
             assertEquals(model.bool(.startAtLogin), true)
             assertEquals(model.isSet(.menuBarTheme), true)
             assertEquals(model.isSet(.menuBarDimEmpty), false)
-            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())))
+            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())), palette: .catppuccin)
             assertEquals(model.menuBarConfig, expected)
         }
 
@@ -83,7 +83,7 @@ extension InlayTests {
             let model = try model("config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\n[mode.main.binding]\n")
             assertEquals(model.unavailableReason, nil)
             assertEquals(model.menuBarTheme, .chips)
-            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips))
+            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips, palette: .catppuccin))
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // Another control: the file is edited as it is
             model.set(.menuBarShowMode, .bool(true))
@@ -347,7 +347,7 @@ extension InlayTests {
 
             let broken = try self.model("[menu-bar\n")
             assertEquals(broken.unavailableReason, "inlay.toml has errors. Fix them to change the settings from here.")
-            assertEquals(broken.menuBarConfig, MenuBarConfig())
+            assertEquals(broken.menuBarConfig, MenuBarConfig(palette: .catppuccin))
         }
 
         @Test func testNeedsAccessibility() throws {

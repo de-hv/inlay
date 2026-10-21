@@ -4,7 +4,7 @@ import Foundation
 /// [theme] table of the config
 struct ThemeConfig: ConvenienceMutable, Equatable, Sendable {
     /// The colors of the menu bar item and of the borders, from a palette of the Hyprland world
-    var palette: ThemePalette = .system
+    var palette: ThemePalette = .catppuccin
 }
 
 /// A set of colors for the menu bar item and the borders, with a light and a dark variant: the one of the appearance of

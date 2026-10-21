@@ -126,7 +126,7 @@ final class SettingsModel {
         )
     }
 
-    var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? .system }
+    var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? ThemeConfig().palette }
 
     /// 'chips-icons', the theme of a previous version, is 'chips', like for the parser
     var menuBarTheme: MenuBarTheme {

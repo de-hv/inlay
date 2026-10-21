@@ -25,6 +25,25 @@ enum Strings {
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
         static let paused = "\(inlayAppName) is paused"
         static let copyVersionToolTip = "Click to copy the version"
+        static let on = "On"
+        static let off = "Off"
+
+        /// The label at the top of the card
+        enum Status {
+            static let running = "Tiling on"
+            static let paused = "Paused"
+            static let needsAccessibility = "No permission"
+        }
+
+        /// The short labels of the row of buttons of the card. Their tooltips are the whole names
+        enum Tile {
+            static let reload = "Reload"
+            static let config = "Config"
+            static let pause = "Pause"
+            static let resume = "Resume"
+            static let settings = "Settings"
+            static let quit = "Quit"
+        }
         static var version: String { "\(inlayAppName) \(inlayAppVersion)" }
         static var versionToCopy: String { "\(inlayAppName) v\(inlayAppVersion) \(gitHash)" }
     }

@@ -510,7 +510,7 @@ the theme is treated as `'chips'` and the key is ignored. Picking a theme in Set
 `'catppuccin'`, `'tokyo-night'`, `'gruvbox'`, `'nord'`, `'rose-pine'`, `'dracula'` or `'everforest'`. Each one has
 a light and a dark variant, and the one of the appearance of the system applies (it changes with it). A palette
 only gives the colors you left at their default: the ones of `[menu-bar.colors]` that are `'auto'`, and the
-three colors of `[borders]`; a color you wrote there wins. `'system'`, the default, is no palette. The
+three colors of `[borders]`; a color you wrote there wins. `'catppuccin'` is the default; `'system'` is no palette. The
 **Themes** tab of Settings picks it.
 
 ```toml
@@ -566,14 +566,17 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   The button never gets to see the mouse (a transparent view on top of it takes it), and the menu pops up
   below the item without highlighting it: no rounded background behind the item. A ⌘-drag still moves the
   item along the bar.
-- The menu is short on purpose. At the top, **the windows of the focused workspace**, by the name of their app
-  and without icons (a click focuses one). Then it toggles the focused window between floating and tiling, and
-  has what concerns Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a
-  click copies it, with the commit) and *Quit*. Switching workspaces, moving a window to another workspace,
-  fullscreen, the layout and the binding modes are not in it: they are done with the key bindings. The theme
-  and the palette are in the **Themes** tab of Settings. **The menu does not show the key bindings
-  of your config** next to its items. Its own shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open.
-  When the last load of the config had errors or warnings, an item at the top says so and shows them.
+- The menu is **one card**, short on purpose, in the material of the menus of macOS: it follows light and dark
+  mode by itself. At the top, *Inlay* and its state (*Tiling on*, *Paused* or *No permission*). Then **the
+  windows of the focused workspace**, by the name of their app and without icons, with a dot in the focused
+  color of the palette on the focused one. They are only shown: a click on them does nothing. Then a switch
+  that toggles the focused window between floating and tiling, a row of four buttons for what concerns Inlay
+  itself (*Reload*, *Config* that opens inlay.toml, *Pause/Resume* and *Settings*), the version (a click
+  copies it, with the commit) and *Quit*. Switching workspaces, focusing or moving a window, fullscreen, the
+  layout and the binding modes are not in it: they are done with the key bindings. The theme and the palette
+  are in the **Themes** tab of Settings. **The menu does not show the key bindings of your config**. Its own
+  shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open. When the last load of the config had errors or
+  warnings, a row at the top says so and shows them.
 - The shipped config defines **6 persistent workspaces** (1–6), which are the ones the item always shows. Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config

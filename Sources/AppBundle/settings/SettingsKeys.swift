@@ -34,7 +34,7 @@ extension SettingsKey {
     static let animationsWorkspaceSwitch = SettingsKey(["animations"], "workspace-switch", default: .string(WorkspaceSwitch.horizontal.rawValue))
 
     // Theme
-    static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.system.rawValue))
+    static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.catppuccin.rawValue))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))

@@ -22,6 +22,9 @@ func setUpWorkspacesForTests() {
     config.enableNormalizationOppositeOrientationForNestedContainers = false // Make layout tests more predictable
     config.defaultRootContainerOrientation = .horizontal // Make default layout predictable
     config.gaps = .zero // The built-in config has gaps, to leave room for the borders. Make the frames predictable
+    // The built-in config has the catppuccin palette. The colors of [borders] and [menu-bar.colors] as they are:
+    // the palettes are tested in ThemeConfigTest
+    config.theme.palette = .system
     // Only WindowAnimatorTest turns the animations on: the other tests expect the frames right away
     WindowAnimator.shared.isEnabledInTests = false
     WindowAnimator.shared.cancelAll()

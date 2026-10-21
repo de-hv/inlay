@@ -8,7 +8,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testParse() {
-            assertEquals(parseConfig("config-version = 2").config.theme.palette, .system)
+            assertEquals(parseConfig("config-version = 2").config.theme.palette, .catppuccin)
             assertEquals(defaultConfig.theme, ThemeConfig())
             for palette in ThemePalette.allCases {
                 let result = parseConfig("theme.palette = '\(palette.rawValue)'")

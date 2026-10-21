@@ -1,10 +1,16 @@
 import AppKit
 import Common
+import SwiftUI
 
-/// The menu of the menu bar item. It is rebuilt from the model every time it opens
+/// The menu of the menu bar item: one card, rebuilt from the model every time it opens. See: MenuBarCardView
+///
+/// It is still an NSMenu: macOS closes it, gives it the material of the menus, in the appearance of the system, and
+/// pops it up below the item. Its shortcuts are hidden items, so they only exist while the menu is open
 @MainActor
 final class MenuBarMenu: NSObject, NSMenuDelegate {
     let menu = NSMenu()
+    /// What the card shows, as of the last time the menu opened
+    private(set) var card: MenuBarCard?
 
     override init() {
         super.init()
@@ -15,124 +21,146 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         MenuBarStore.shared.refresh()
-        guard let snapshot = MenuBarStore.shared.state?.snapshot else { return }
+        guard let state = MenuBarStore.shared.state else { return }
+        let card = MenuBarCard.fromModel(state)
+        self.card = card
         menu.removeAllItems()
-        switch snapshot.status {
-            case .needsAccessibility:
-                menu.addItem(item(Strings.Menu.needsAccessibility, #selector(promptForAccessibility), symbol: "exclamationmark.triangle"))
-            case .paused:
-                menu.addItem(item(Strings.Menu.paused, nil, isEnabled: false))
-                menu.addItem(.separator())
-                addConfigItems(snapshot, to: menu)
-            case .running:
-                if let title = Strings.Menu.configProblems(ServerState.shared.lastConfigLoad) {
-                    menu.addItem(item(title, #selector(showConfigWarnings), symbol: "exclamationmark.triangle.fill"))
-                    menu.addItem(.separator())
-                }
-                addWindowsOfFocusedWorkspace(snapshot, to: menu)
-                menu.addItem(.separator())
-                addFocusedWindow(snapshot, to: menu)
-                menu.addItem(.separator())
-                addConfigItems(snapshot, to: menu)
-        }
-        menu.addItem(.separator())
-        let version = item(Strings.Menu.version, #selector(copyVersion))
-        version.toolTip = Strings.Menu.copyVersionToolTip
-        menu.addItem(version)
-        menu.addItem(item(Strings.Menu.quit, #selector(quit), key: "q"))
-    }
-
-    // MARK: - Sections
-
-    /// The windows of the focused workspace, by the name of their app, without icons: a click focuses one
-    private func addWindowsOfFocusedWorkspace(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        menu.addItem(.sectionHeader(title: Strings.Menu.workspace(snapshot.focusedWorkspace)))
-        let windows = focus.workspace.allLeafWindowsRecursive
-        if windows.isEmpty {
-            menu.addItem(item(Strings.Menu.noWindows, nil, isEnabled: false))
-            return
-        }
-        let focusedId = focus.windowOrNil?.windowId
-        for window in windows {
-            let item = commandItem(window.app.name ?? "?", "focus --window-id \(window.windowId)")
-            item.state = window.windowId == focusedId ? .on : .off
+        let view = NSHostingView(rootView: MenuBarCardView(card: card) { [weak self, weak menu] action in
+            menu?.cancelTracking()
+            // After the menu is gone: Settings, for one, opens a window
+            Task.startUnstructured { @MainActor in self?.perform(action) }
+        })
+        view.frame.size = view.fittingSize
+        let item = NSMenuItem(title: inlayAppName, action: nil, keyEquivalent: "")
+        item.view = view
+        item.setAccessibilityLabel(inlayAppName)
+        menu.addItem(item)
+        for shortcut in card.shortcuts {
+            let item = NSMenuItem(title: shortcut.action.title(card), action: #selector(runShortcut(_:)), keyEquivalent: shortcut.key)
+            item.target = self
+            item.representedObject = shortcut.action
+            item.isEnabled = card.isEnabled(shortcut.action)
+            item.isHidden = true
+            item.allowsKeyEquivalentWhenHidden = true
             menu.addItem(item)
         }
     }
 
-    /// The only thing of the focused window that the menu changes. The rest is done with the key bindings
-    private func addFocusedWindow(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        let window = snapshot.focusedWindow
-        let floating = commandItem(Strings.Menu.floating, "layout floating tiling", symbol: "macwindow.on.rectangle", isEnabled: window != nil)
-        floating.state = window?.isFloating == true ? .on : .off
-        menu.addItem(floating)
+    @objc private func runShortcut(_ sender: NSMenuItem) {
+        guard let action = sender.representedObject as? MenuBarCardAction else { return }
+        perform(action)
     }
 
-    private func addConfigItems(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        let isPaused = snapshot.status == .paused
-        menu.addItem(item(Strings.Menu.reloadConfig, #selector(reloadConfig), symbol: "arrow.clockwise", key: "r", isEnabled: !isPaused))
-        menu.addItem(item(Strings.Menu.openConfig, #selector(openConfig), symbol: "doc.text"))
-        menu.addItem(item(isPaused ? Strings.Menu.resume : Strings.Menu.pause, #selector(togglePause), symbol: isPaused ? "play.circle" : "pause.circle", key: "e"))
-        menu.addItem(item(Strings.Menu.settings, #selector(openSettings), symbol: "slider.horizontal.3", key: ","))
-    }
-
-    // MARK: - Items
-
-    private func item(_ title: String, _ action: Selector?, symbol: String? = nil, key: String = "", isEnabled: Bool = true) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
-        if let symbol { item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) }
-        item.target = self
-        item.isEnabled = isEnabled
-        return item
-    }
-
-    /// An item that runs a command. The key bindings of the config aren't shown: the menu doesn't repeat them
-    private func commandItem(_ title: String, _ command: String, symbol: String? = nil, isEnabled: Bool = true) -> NSMenuItem {
-        let item = item(title, #selector(runCommand(_:)), symbol: symbol, isEnabled: isEnabled)
-        item.representedObject = command
-        return item
-    }
-
-    // MARK: - Actions
-
-    @objc private func runCommand(_ sender: NSMenuItem) {
-        guard let command = sender.representedObject as? String else { return }
-        runMenuBarCommand(command)
-    }
-
-    @objc private func togglePause() {
-        runMenuBarCommand("enable toggle", force: true)
-    }
-
-    @objc private func reloadConfig() {
-        reloadConfigFromUi(warningsAsErrors: false)
-    }
-
-    @objc private func showConfigWarnings() {
-        reloadConfigFromUi(warningsAsErrors: true)
-    }
-
-    @objc private func openConfig() {
-        openConfigInEditor()
-    }
-
-    @objc private func openSettings() {
-        SettingsWindowController.shared.show()
-    }
-
-    @objc private func promptForAccessibility() {
-        ServerState.shared.axPermissionStatus = .waitingWithPrompt
-    }
-
-    @objc private func copyVersion() {
-        Strings.Menu.versionToCopy.copyToClipboard()
-    }
-
-    @objc private func quit() {
-        Task.startUnstructured { @MainActor in
-            terminationHandler?.beforeTermination()
-            terminateApp()
+    func perform(_ action: MenuBarCardAction) {
+        switch action {
+            case .toggleFloating:
+                runMenuBarCommand("layout floating tiling")
+            case .reloadConfig:
+                reloadConfigFromUi(warningsAsErrors: false)
+            case .showConfigProblems:
+                reloadConfigFromUi(warningsAsErrors: true)
+            case .openConfig:
+                openConfigInEditor()
+            case .togglePause:
+                runMenuBarCommand("enable toggle", force: true)
+            case .openSettings:
+                SettingsWindowController.shared.show()
+            case .promptForAccessibility:
+                ServerState.shared.axPermissionStatus = .waitingWithPrompt
+            case .copyVersion:
+                Strings.Menu.versionToCopy.copyToClipboard()
+            case .quit:
+                Task.startUnstructured { @MainActor in
+                    terminationHandler?.beforeTermination()
+                    terminateApp()
+                }
         }
+    }
+}
+
+// MARK: - The card
+
+/// What the card of the menu does. The key bindings of the config aren't shown: the menu doesn't repeat them
+enum MenuBarCardAction: Hashable, Sendable {
+    case toggleFloating
+    case reloadConfig
+    case showConfigProblems
+    case openConfig
+    case togglePause
+    case openSettings
+    case promptForAccessibility
+    case copyVersion
+    case quit
+
+    /// The whole name: the tooltip, what VoiceOver reads, and the title of the hidden item of a shortcut
+    func title(_ card: MenuBarCard) -> String {
+        switch self {
+            case .toggleFloating: Strings.Menu.floating
+            case .reloadConfig: Strings.Menu.reloadConfig
+            case .showConfigProblems: card.configProblems ?? ""
+            case .openConfig: Strings.Menu.openConfig
+            case .togglePause: card.status == .paused ? Strings.Menu.resume : Strings.Menu.pause
+            case .openSettings: Strings.Menu.settings
+            case .promptForAccessibility: Strings.Menu.needsAccessibility
+            case .copyVersion: Strings.Menu.version
+            case .quit: Strings.Menu.quit
+        }
+    }
+}
+
+/// What the card of the menu shows. Derived from the model when the menu opens
+struct MenuBarCard: Equatable {
+    struct Window: Equatable {
+        var app: String
+        var isFocused: Bool
+    }
+
+    struct Shortcut: Equatable {
+        var action: MenuBarCardAction
+        var key: String
+    }
+
+    var status: MenuBarSnapshot.Status
+    /// The errors and the warnings of the last load of the config. nil if it had none
+    var configProblems: String? = nil
+    var workspace: String
+    /// The windows of the focused workspace, by the name of their app. Only shown: a window is focused with the keys
+    var windows: [Window] = []
+    /// nil without a focused window
+    var isFloating: Bool? = nil
+    /// The marker of the focused window, and the switch when it is on: the focused color of the palette
+    var accent: Rgba
+
+    /// The row of buttons. Without the permission there is nothing to do but to grant it
+    var buttons: [MenuBarCardAction] {
+        status == .needsAccessibility ? [] : [.reloadConfig, .openConfig, .togglePause, .openSettings]
+    }
+
+    var shortcuts: [Shortcut] {
+        let buttons: [Shortcut] = self.buttons.isEmpty ? [] : [.init(action: .reloadConfig, key: "r"), .init(action: .togglePause, key: "e"), .init(action: .openSettings, key: ",")]
+        return buttons + [.init(action: .quit, key: "q")]
+    }
+
+    func isEnabled(_ action: MenuBarCardAction) -> Bool {
+        switch action {
+            case .reloadConfig: status != .paused
+            case .toggleFloating: isFloating != nil
+            default: true
+        }
+    }
+
+    @MainActor
+    static func fromModel(_ state: MenuBarState) -> MenuBarCard {
+        let snapshot = state.snapshot
+        let colors = state.config.colors.applying(state.config.palette, isDark: isSystemAppearanceDark)
+        let accent = (colors.focused == .auto ? colors.accent : colors.focused).resolve(auto: .systemAccent, systemAccent: .systemAccent)
+        var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace, accent: accent)
+        guard snapshot.status == .running else { return card }
+        card.configProblems = Strings.Menu.configProblems(ServerState.shared.lastConfigLoad)
+        let focusedId = focus.windowOrNil?.windowId
+        card.windows = focus.workspace.allLeafWindowsRecursive.map { Window(app: $0.app.name ?? "?", isFocused: $0.windowId == focusedId) }
+        card.isFloating = snapshot.focusedWindow?.isFloating
+        return card
     }
 }
 

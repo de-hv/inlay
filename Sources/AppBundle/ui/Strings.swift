@@ -4,8 +4,8 @@ import Common
 /// The interface is in English for now, like the CLI
 enum Strings {
     enum Menu {
-        static let workspaces = "Workspaces"
-        static let empty = "Empty"
+        static func workspace(_ name: String) -> String { "Workspace \(name)" }
+        static let noWindows = "No windows"
         static let floating = "Float Focused Window"
         static let reloadConfig = "Reload Config"
         static let openConfig = "Open \(configFileName)…"
@@ -30,7 +30,7 @@ enum Strings {
     }
 
     enum Item {
-        static let toolTip = "Right-click to open the \(inlayAppName) menu"
+        static let toolTip = "Click to open the \(inlayAppName) menu"
         static let accessibilityHelp = "Opens the \(inlayAppName) menu"
         static func accessibilityDescription(_ snapshot: MenuBarSnapshot) -> String {
             switch snapshot.status {
@@ -46,6 +46,13 @@ enum Strings {
         static let general = "General"
         static let menuBar = "Menu Bar"
         static let borders = "Borders"
+        static let themes = "Themes"
+        static let workspaceIndicator = "Workspace Indicator"
+        static let palette = "Palette"
+        static let paletteFooter = "A palette colors the menu bar item and the borders, with a light and a dark variant that follow the appearance of the system. It gives the colors you haven't changed in Menu Bar and Borders."
+        static func paletteOverridden(_ keys: [String]) -> String { "Your config sets \(keys.joined(separator: ", ")): \(keys.count == 1 ? "it wins" : "they win") over the palette." }
+        static let usePalette = "Use the Palette"
+        static let defaultValue = "default"
         static let gaps = "Gaps"
         static let reset = "Reset"
 

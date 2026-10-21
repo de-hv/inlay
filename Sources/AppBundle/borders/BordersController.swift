@@ -30,6 +30,7 @@ final class BordersController {
     private var placedScreens: [BorderScreen] = []
     private var settleTasks: [Task<Void, Never>] = []
     private var observers: [any NSObjectProtocol] = []
+    private var appearanceObservation: NSKeyValueObservation? = nil
 
     /// The delays of the checks that follow a refresh. The apps move their windows asynchronously
     static let settleDelays: [Duration] = [.milliseconds(120), .milliseconds(600)]
@@ -46,6 +47,10 @@ final class BordersController {
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { BordersController.shared.screensDidChange() }
         })
+        // Light or dark: a palette has a variant for each (see ThemePalette)
+        appearanceObservation = NSApp.observe(\.effectiveAppearance) { _, _ in
+            MainActor.assumeIsolated { BordersController.shared.refresh() }
+        }
         // 'system-accent'
         observers.append(center.addObserver(forName: NSColor.systemColorsDidChangeNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { BordersController.shared.systemColorsDidChange() }

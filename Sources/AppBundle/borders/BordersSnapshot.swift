@@ -130,6 +130,14 @@ extension BordersSnapshot {
         let borders = config.borders
         // Paused ('enable off') or not started yet: Inlay doesn't manage the windows, so it doesn't decorate them
         guard borders.enabled, state.isEnabled, state.axPermissionStatus == .granted else { return .empty }
-        return resolve(candidatesFromModel(), borders, mode: activeMode, systemAccent: .systemAccent)
+        // The palette of [theme] gives the colors left at their default, in the variant of the appearance of the system
+        return resolve(candidatesFromModel(), borders.applying(config.theme.palette, isDark: isSystemAppearanceDark), mode: activeMode, systemAccent: .systemAccent)
     }
+}
+
+/// The appearance of the system: dark or light. Dark without an app (the tests)
+@MainActor
+var isSystemAppearanceDark: Bool {
+    guard let app = NSApp else { return true }
+    return app.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
 }

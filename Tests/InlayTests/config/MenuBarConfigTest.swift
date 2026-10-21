@@ -11,7 +11,7 @@ extension InlayTests {
             assertEquals(result.errors, [])
             let menuBar = result.config.menuBar
             assertEquals(menuBar.enabled, true)
-            assertEquals(menuBar.theme, .chips)
+            assertEquals(menuBar.theme, .pills)
             assertEquals(menuBar.dimEmptyWorkspaces, true)
             assertEquals(menuBar.showMode, true)
             assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
@@ -53,7 +53,7 @@ extension InlayTests {
         }
 
         @Test func testThemes() {
-            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["chips", "square", "minimal"])
+            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "square", "minimal"])
             for theme in MenuBarTheme.allCases {
                 let result = parseConfig("config-version = 2\nmenu-bar.theme = '\(theme.rawValue)'")
                 assertEquals(result.errors, [])
@@ -84,15 +84,15 @@ extension InlayTests {
             let both = parseConfig("config-version = 2\nmenu-bar.theme = 'chips-icons'\nmenu-bar.show-app-icons = true")
             assertEquals(both.strErrors, [])
             assertEquals(both.warnings.count, 2)
-            assertEquals(both.config.menuBar, MenuBarConfig())
+            assertEquals(both.config.menuBar, MenuBarConfig(theme: .chips))
             // Warnings don't keep the config from being applied
             assertEquals(both.allowReloadConfig, true)
         }
 
         @Test func testErrors() {
             assertEquals(
-                parseConfig("menu-bar.theme = 'pills'").strErrors,
-                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'pills'. Possible values: (chips|square|minimal)"],
+                parseConfig("menu-bar.theme = 'bubbles'").strErrors,
+                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal)"],
             )
             assertEquals(parseConfig("menu-bar.them = 'chips'").strErrors, ["[ERROR] menu-bar.them: Unknown key"])
             assertEquals(parseConfig("menu-bar.colors.focus = 'auto'").strErrors, ["[ERROR] menu-bar.colors.focus: Unknown key"])

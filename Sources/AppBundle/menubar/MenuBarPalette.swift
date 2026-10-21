@@ -31,7 +31,8 @@ struct MenuBarPalette: Equatable, Sendable {
         allowsTemplate: Bool = true,
     ) -> MenuBarPalette {
         typealias M = MenuBarMetrics
-        let colors = config.colors
+        // The palette of [theme] gives the colors that are 'auto', in the variant of the menu bar
+        let colors = config.colors.applying(config.palette, isDark: isDarkBar)
         // The marker of a binding mode only has a color of its own if 'accent' gives it one
         let isTemplate = allowsTemplate && Self.isTemplate(colors, needsColor: needsColor)
         // A template image is drawn in black: only its alpha channel matters

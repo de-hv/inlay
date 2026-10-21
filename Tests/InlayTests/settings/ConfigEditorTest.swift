@@ -133,10 +133,10 @@ extension InlayTests {
             let text = "[menu-bar]\ntheme = 'chips'\n"
             assertEquals(ConfigEditor.patch(text, [theme]).okOrNil, "[menu-bar]\ntheme = 'square'\n")
             // A value the config doesn't accept is never written
-            let pills = ConfigEdit(path: theme.path, value: .string("pills"))
+            let pills = ConfigEdit(path: theme.path, value: .string("bubbles"))
             assertEquals(
                 ConfigEditor.patch(text, [pills]).errorOrNil,
-                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'pills'. Possible values: (chips|square|minimal)"),
+                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal)"),
             )
             let color = ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#12345"))
             assertEquals(ConfigEditor.patch(text, [color]).okOrNil, nil)
@@ -176,7 +176,7 @@ extension InlayTests {
             assertEquals(config.config.startAtLogin, false)
             // The comments are still there, and nothing else has changed
             assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count)
-            assertEquals(patched.contains("    # chips|square|minimal\n    theme = 'square'\n"), true)
+            assertEquals(patched.contains("    # pills|chips|square|minimal\n    theme = 'square'\n"), true)
             assertEquals(patched.contains("        focused = '#D19A66'\n"), true)
         }
 
@@ -193,7 +193,7 @@ extension InlayTests {
             assertEquals(read(other), builtIn)
 
             // A failed edit doesn't touch the file
-            let bad = ConfigEdit(path: theme.path, value: .string("pills"))
+            let bad = ConfigEdit(path: theme.path, value: .string("bubbles"))
             assertEquals(ConfigEditor.apply([bad], to: .init(url: file, text: read(file) ?? "", exists: true)).okOrNil == nil, true)
             assertEquals(read(file), "# The built-in config\n[menu-bar]\ntheme = 'square'\n")
             assertEquals(ConfigEditor.apply([ConfigEdit(path: theme.path, value: nil)], to: .init(url: file, text: read(file) ?? "", exists: true)).errorOrNil, nil)

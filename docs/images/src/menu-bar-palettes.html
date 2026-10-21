@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>The palettes of the menu bar item</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 610px; }
+  .row { margin-top: 12px; } .row .cap { margin: 0 0 6px; }
+  .pair { display: grid; grid-template-columns: 404px 404px; gap: 16px; }
+  .pair > div { border-radius: 8px; overflow: hidden; height: 36px; } .pair > div:first-child { background: #383d5c; } .pair > div:last-child { background: #e6e6e6; }
+  .item { display: block; }
+</style></head>
+<body class="png">
+<div class="sheet"><span class="tag real">Real render</span>
+  <h1>[theme] palette</h1>
+  <div class="sub">The pills theme in every palette: the dark variant on a dark menu bar, the light one on a light menu bar. The borders take the same colors.</div>
+  <div class="row"><div class="cap"><code>palette = 'catppuccin'</code> &nbsp;Catppuccin</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-catppuccin-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-catppuccin-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'tokyo-night'</code> &nbsp;Tokyo Night</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-tokyo-night-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-tokyo-night-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'gruvbox'</code> &nbsp;Gruvbox</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-gruvbox-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-gruvbox-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'nord'</code> &nbsp;Nord</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-nord-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-nord-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'rose-pine'</code> &nbsp;Rosé Pine</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-rose-pine-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-rose-pine-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'dracula'</code> &nbsp;Dracula</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-dracula-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-dracula-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>palette = 'everforest'</code> &nbsp;Everforest</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/pills-palette-everforest-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/pills-palette-everforest-light.png" style="height:36px"></div></div></div>
+</div>
+<script>fillToml();</script>
+</body></html>

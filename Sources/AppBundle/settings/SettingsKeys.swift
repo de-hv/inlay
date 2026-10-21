@@ -33,9 +33,12 @@ extension SettingsKey {
     static let animationsDuration = SettingsKey(["animations"], "duration", default: .int(180))
     static let animationsWorkspaceSwitch = SettingsKey(["animations"], "workspace-switch", default: .string(WorkspaceSwitch.horizontal.rawValue))
 
+    // Theme
+    static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.system.rawValue))
+
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))
-    static let menuBarTheme = SettingsKey(["menu-bar"], "theme", default: .string(MenuBarTheme.chips.rawValue))
+    static let menuBarTheme = SettingsKey(["menu-bar"], "theme", default: .string(MenuBarTheme.pills.rawValue))
     static let menuBarDimEmpty = SettingsKey(["menu-bar"], "dim-empty-workspaces", default: .bool(true))
     static let menuBarShowMode = SettingsKey(["menu-bar"], "show-mode", default: .bool(true))
     static let menuBarAccent = SettingsKey(["menu-bar", "colors"], "accent", default: .string(ConfigColor.autoLiteral))

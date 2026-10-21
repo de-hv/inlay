@@ -2,13 +2,13 @@
 <html lang="en"><head><meta charset="utf-8"><title>The menu of the menu bar item</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 452px; }
+  body { width: 880px; height: 400px; }
   .bar { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: #2b2f4c; border-radius: 14px 14px 0 0; }
   .bar .slot { position: absolute; right: 150px; top: 3px; height: 24px; padding: 0 2px; border-radius: 6px; background: rgba(255,255,255,.16); }
   .bar .slot img { height: 24px; display: block; filter: invert(1); }
   .bar .clock { position: absolute; right: 22px; top: 6px; font-size: 13px; font-weight: 500; color: #fff; }
   .tag { top: auto; right: auto; left: 28px; bottom: 26px; }
-  .intro { position: absolute; left: 28px; top: 112px; width: 330px; }
+  .intro { position: absolute; left: 28px; top: 250px; width: 300px; }
   .intro h1 { font-size: 17px; font-weight: 700; } .intro p { color: #a3a5b3; font-size: 12.5px; margin-top: 4px; }
   .menu { position: absolute; left: 528px; top: 38px; width: 324px; padding: 6px; border-radius: 13px; color: #f2f2f7; font-size: 13px; background: #2a2a31;
     box-shadow: 0 0 0 .5px rgba(255,255,255,.22) inset, 0 16px 40px rgba(0,0,0,.5); }
@@ -22,25 +22,25 @@
   .menu .anchor { position: relative; height: 0; }
   .note2 { position: absolute; right: 100%; top: 4px; margin-right: 34px; width: 330px; text-align: right; font-size: 12px; font-weight: 400; color: #a3a5b3; line-height: 1.4; }
   .note2 b { color: #e9e9f0; font-size: 12.5px; } .note2 code { color: #ffd27a; font-size: 11.5px; }
+  .menu .pills { display: flex; gap: 5px; padding: 6px 10px 8px; }
+  .menu .pill { height: 22px; min-width: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.14); color: #e9e9f0; }
+  .menu .pill.f { min-width: 40px; background: #f2f2f7; color: #1d1d22; } .menu .pill.e { background: none; color: #6e6e78; }
+  .menu .ico { width: 16px; height: 16px; border-radius: 4px; flex: none; }
   .note2::after { content: ""; position: absolute; left: 100%; top: 9px; margin-left: 8px; width: 20px; height: 1px; background: #5c5e6e; }
 </style></head>
 <body class="png">
-<div class="bar"><div class="slot"><img src="render/menu-bar-6x/chips-default-template.png"></div><span class="clock">Mon 12 Oct&nbsp;&nbsp;9:41</span></div>
+<div class="bar"><div class="slot"><img src="render/menu-bar-6x/pills-default-template.png"></div><span class="clock">Mon 12 Oct&nbsp;&nbsp;9:41</span></div>
 <span class="tag illu">Illustration</span>
-<div class="intro"><h1>The menu</h1><p>A <b>right click</b> (or ctrl-click) on the item opens it. The left click does nothing: the item is informational.</p></div>
+<div class="intro"><h1>The menu</h1><p>A <b>click</b> on the item opens it. The right button does nothing.</p></div>
 <div class="menu">
-<div class="hd">Workspaces<div class="note2"><b>Workspaces</b><br>All of them, with the names of their apps. Choosing one switches to it.</div></div>
-<div class="it"><span class="ck"></span><span class="n">1</span><span class="t">Terminal</span></div>
-<div class="it"><span class="ck">✓</span><span class="n">2</span><span class="t">Editor</span></div>
-<div class="it"><span class="ck"></span><span class="n">3</span><span class="t">Browser</span></div>
-<div class="it"><span class="ck"></span><span class="n">4</span><span class="t">Chat, Mail</span></div>
-<div class="it"><span class="ck"></span><span class="n">5</span><span class="t">Assistant</span></div>
-<div class="it"><span class="ck"></span><span class="n">6</span><span class="t"><span class="dimt">Empty</span></span></div>
+<div class="hd">Workspace 2<div class="note2"><b>Its windows</b><br>The ones of the focused workspace. A click focuses one.</div></div>
+<div class="it"><span class="ck">✓</span><span class="t">Editor</span></div>
+<div class="it"><span class="ck"></span><span class="t">Terminal</span></div>
 <div class="sep"></div>
 <div class="anchor"><div class="note2"><b>Focused window</b><br>Floating or tiling. The rest is for the key bindings.</div></div>
 <div class="it"><span class="ck"></span><span class="t">Float Focused Window</span></div>
 <div class="sep"></div>
-<div class="anchor"><div class="note2"><b>Config, pause and Settings</b><br>Pausing hands the windows back to macOS.</div></div>
+<div class="anchor"><div class="note2"><b>Config, pause and Settings</b><br>Pausing hands the windows back to macOS. The themes are in Settings.</div></div>
 <div class="it"><span class="ck"></span><span class="t">Reload Config</span><span class="sc">⌘R</span></div>
 <div class="it"><span class="ck"></span><span class="t">Open inlay.toml…</span></div>
 <div class="it"><span class="ck"></span><span class="t">Pause Inlay</span><span class="sc">⌘E</span></div>

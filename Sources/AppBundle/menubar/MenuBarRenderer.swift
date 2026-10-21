@@ -125,7 +125,7 @@ enum MenuBarRenderer {
         for cell in layout.cells {
             // Only the workspaces with windows get a chip, so the background itself says "something is here"
             if cell.isOccupied {
-                cg.fill(roundedRect(cell.frame, M.chipCornerRadius), palette.occupiedBackground)
+                cg.fill(roundedRect(cell.frame, layout.cornerRadius), palette.occupiedBackground)
             }
             draw(cell.name, palette.nameColor(of: cell))
         }

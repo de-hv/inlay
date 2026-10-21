@@ -29,7 +29,7 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                     menu.addItem(item(title, #selector(showConfigWarnings), symbol: "exclamationmark.triangle.fill"))
                     menu.addItem(.separator())
                 }
-                addWorkspaces(snapshot, to: menu)
+                addWindowsOfFocusedWorkspace(snapshot, to: menu)
                 menu.addItem(.separator())
                 addFocusedWindow(snapshot, to: menu)
                 menu.addItem(.separator())
@@ -44,12 +44,18 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
 
     // MARK: - Sections
 
-    private func addWorkspaces(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
-        menu.addItem(.sectionHeader(title: Strings.Menu.workspaces))
-        for workspace in snapshot.workspaces {
-            let item = commandItem(workspace.name, "workspace \(workspace.name)")
-            item.attributedTitle = Self.workspaceTitle(workspace)
-            item.state = workspace.name == snapshot.focusedWorkspace ? .on : .off
+    /// The windows of the focused workspace, by the name of their app, without icons: a click focuses one
+    private func addWindowsOfFocusedWorkspace(_ snapshot: MenuBarSnapshot, to menu: NSMenu) {
+        menu.addItem(.sectionHeader(title: Strings.Menu.workspace(snapshot.focusedWorkspace)))
+        let windows = focus.workspace.allLeafWindowsRecursive
+        if windows.isEmpty {
+            menu.addItem(item(Strings.Menu.noWindows, nil, isEnabled: false))
+            return
+        }
+        let focusedId = focus.windowOrNil?.windowId
+        for window in windows {
+            let item = commandItem(window.app.name ?? "?", "focus --window-id \(window.windowId)")
+            item.state = window.windowId == focusedId ? .on : .off
             menu.addItem(item)
         }
     }
@@ -85,24 +91,6 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         let item = item(title, #selector(runCommand(_:)), symbol: symbol, isEnabled: isEnabled)
         item.representedObject = command
         return item
-    }
-
-    /// "4  Telegram, WhatsApp" or "6  Empty". Text only: the names of the apps, without their icons
-    static func workspaceTitle(_ workspace: MenuBarSnapshot.Workspace) -> NSAttributedString {
-        let size = NSFont.menuFont(ofSize: 0).pointSize
-        // Monospaced digits keep the names of the apps in one column
-        let title = NSMutableAttributedString(
-            string: workspace.name + "\u{2003}",
-            attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: size, weight: .medium)],
-        )
-        let font = NSFont.menuFont(ofSize: size)
-        if workspace.apps.isEmpty {
-            title.append(NSAttributedString(string: Strings.Menu.empty, attributes: [.font: font, .foregroundColor: NSColor.secondaryLabelColor]))
-        } else {
-            let names = workspace.apps.map(\.name).joinTruncating(separator: ", ", length: 40)
-            title.append(NSAttributedString(string: names, attributes: [.font: font]))
-        }
-        return title
     }
 
     // MARK: - Actions

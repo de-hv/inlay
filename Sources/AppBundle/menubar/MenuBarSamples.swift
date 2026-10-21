@@ -68,8 +68,12 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
         variants.append(("\(theme.rawValue)-mode-fullscreen", MenuBarConfig(theme: theme, showMode: true), resizeFullscreen))
         variants.append(("\(theme.rawValue)-fullscreen", MenuBarConfig(theme: theme), fullscreen))
     }
-    variants.append(("chips-no-dim", MenuBarConfig(dimEmptyWorkspaces: false), MenuBarSamples.snapshot))
-    variants.append(("chips-accent-focused", MenuBarConfig(colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot))
+    variants.append(("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot))
+    variants.append(("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot))
+    // The palettes of [theme], in the default theme
+    for palette in ThemePalette.allCases where palette != .system {
+        variants.append(("pills-palette-\(palette.rawValue)", MenuBarConfig(palette: palette), MenuBarSamples.snapshot))
+    }
     variants.append(("paused", MenuBarConfig(), paused))
     variants.append(("needs-accessibility", MenuBarConfig(), needsAccessibility))
 

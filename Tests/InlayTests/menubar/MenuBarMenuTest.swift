@@ -27,8 +27,9 @@ extension InlayTests {
 
         // MARK: - The items
 
-        /// The menu is short: the workspaces, the one thing it changes of the focused window, the config and Inlay
-        /// itself. Moving windows, the layout and the binding modes are for the key bindings
+        /// The menu: the windows of the focused workspace, the one thing it changes of the focused window, the config
+        /// and Inlay itself. Switching workspaces, moving windows, the layout, the binding modes and the themes are for
+        /// the key bindings and the settings window
         @Test func testItems() throws {
             let workspace = focus.workspace
             assertEquals(TestWindow.new(id: 1, parent: workspace.rootTilingContainer).focusWindow(), true)
@@ -37,7 +38,7 @@ extension InlayTests {
 
             let items = openMenu()
             assertEquals(titles(items), [
-                "Workspaces", "2 Empty", "\(workspace.name) \(TestApp.shared.rawAppBundleId ?? "")",
+                "Workspace \(workspace.name)", TestApp.shared.rawAppBundleId ?? "",
                 "---",
                 "Float Focused Window",
                 "---",
@@ -45,27 +46,18 @@ extension InlayTests {
                 "---",
                 "Inlay-Debug 0.0.0-dev", "Quit Inlay-Debug",
             ])
-            // No submenu: the whole menu is what is seen when it opens
+            // No submenu, no view of its own: the whole menu is what is seen when it opens
             assertEquals(items.filter(\.hasSubmenu).map(\.title), [])
-            assertEquals(
-                items.compactMap { $0.representedObject as? String },
-                ["workspace 2", "workspace \(workspace.name)", "layout floating tiling"],
-            )
-            assertEquals(items.filter { $0.state == .on }.compactMap { $0.representedObject as? String }, ["workspace \(workspace.name)"])
+            assertEquals(items.filter { $0.view != nil }.count, 0)
+            assertEquals(items.compactMap { $0.representedObject as? String }, ["focus --window-id 1", "layout floating tiling"])
+            assertEquals(items.filter { $0.state == .on }.compactMap { $0.representedObject as? String }, ["focus --window-id 1"])
+            // The windows have no icon
+            assertEquals(items.first { $0.representedObject as? String == "focus --window-id 1" }?.image == nil, true)
         }
 
-        /// The rows of the workspaces are text: the name of the workspace and the names of its apps, without icons
-        @Test func testWorkspaceRowsHaveNoIcons() {
-            let apps = [MenuBarSnapshot.App(name: "Telegram"), MenuBarSnapshot.App(name: "WhatsApp")]
-            let occupied = MenuBarMenu.workspaceTitle(.init(name: "4", isOccupied: true, apps: apps))
-            assertEquals(occupied.string, "4\u{2003}Telegram, WhatsApp")
-            let empty = MenuBarMenu.workspaceTitle(.init(name: "6", isOccupied: false))
-            assertEquals(empty.string, "6\u{2003}Empty")
-            for title in [occupied, empty] {
-                assertEquals(title.containsAttachments, false)
-            }
-            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
-            assertEquals(openMenu().filter { $0.representedObject as? String == "workspace \(focus.workspace.name)" }.map { $0.image == nil }, [true])
+        /// A workspace without windows says so
+        @Test func testAnEmptyWorkspace() {
+            assertEquals(titles(openMenu()).contains("No windows"), true)
         }
 
         /// The key bindings of the config aren't shown next to the items, even when one runs the command of the item

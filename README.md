@@ -488,7 +488,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'chips'`, `'square'`, `'minimal'` | `'chips'` |
+| `theme` | `'pills'`, `'chips'`, `'square'`, `'minimal'` | `'pills'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `true` |
 | `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
@@ -497,14 +497,28 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 
 ```toml
 [menu-bar]
-    theme = 'chips'   # 'chips' | 'square' | 'minimal'
+    theme = 'pills'   # 'pills' | 'chips' | 'square' | 'minimal'
 ```
 
-<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the three themes of the menu bar item, each on a dark and on a light menu bar. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-themes.png" alt="Real render of the four themes of the menu bar item, each on a dark and on a light menu bar. 'pills', the default: round workspaces and 2, the focused one, a wider pill. 'chips': the numbers 1 to 6 as chips, 2 with a solid background. 'square': the numbers, and a filled square in place of the focused workspace. 'minimal': only the chip of the focused workspace, 2" width="880"></p>
 
 The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
 still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,
 the theme is treated as `'chips'` and the key is ignored. Picking a theme in Settings removes both.
+
+**`[theme] palette`**: the colors of the item **and** of the borders, from a palette of the Hyprland world:
+`'catppuccin'`, `'tokyo-night'`, `'gruvbox'`, `'nord'`, `'rose-pine'`, `'dracula'` or `'everforest'`. Each one has
+a light and a dark variant, and the one of the appearance of the system applies (it changes with it). A palette
+only gives the colors you left at their default: the ones of `[menu-bar.colors]` that are `'auto'`, and the
+three colors of `[borders]`; a color you wrote there wins. `'system'`, the default, is no palette. The
+**Themes** tab of Settings picks it.
+
+```toml
+[theme]
+    palette = 'catppuccin'   # system | catppuccin | tokyo-night | gruvbox | nord | rose-pine | dracula | everforest
+```
+
+<p align="center"><img src="docs/images/menu-bar-palettes.png" alt="Real render of the pills theme in the seven palettes, the dark variant on a dark menu bar and the light one on a light menu bar: Catppuccin with a mauve focused pill, Tokyo Night blue, Gruvbox yellow, Nord frost blue, Rosé Pine rose, Dracula purple and Everforest green" width="880"></p>
 
 **`dim-empty-workspaces`, `show-mode`**: what the item shows besides the names. With
 `enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI.
@@ -543,21 +557,21 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 **The item and its menu**
 
-<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a right click on the item opens, from top to bottom: Workspaces (1 to 6 with the names of their apps as text, without icons, 2 checked, 6 'Empty'), Float Focused Window, then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
+<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a click on the item opens, from top to bottom: Workspace 2 with its windows (Editor checked, Terminal), by the name of their app; Float Focused Window; then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
 
 
-- The item is **informational only**: the left click does nothing (it does not switch workspace or open the
-  menu). The **right click** (or ctrl-click) opens the menu: the workspaces, *Float Focused Window*, the
-  config, pause and Settings. With VoiceOver, "pressing" the item (VO-space) opens the menu. To switch workspace: the
-  key bindings, the CLI or the *Workspaces* section of the menu. The left click does not highlight the item
-  either: the button never gets to see the mouse (a transparent view on top of it takes it). The menu pops up
-  below the item without highlighting it either: no rounded background behind the item, with the left or the
-  right click. A ⌘-drag still moves the item along the bar.
-- The menu is short on purpose. It lists the workspaces with the names of the apps that have windows in each
-  one, as text and without icons (choosing one switches to it), toggles the focused window between floating and tiling, and has what concerns
-  Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a click
-  copies it, with the commit) and *Quit*. Moving a window to another workspace, fullscreen, the layout and the
-  binding modes are not in it: they are done with the key bindings. **The menu does not show the key bindings
+- A **click** on the item (the left button) opens the menu: the windows of the focused workspace, *Float
+  Focused Window*, the config, pause and Settings. The right button and a ctrl-click do nothing. With
+  VoiceOver, "pressing" the item (VO-space) opens the menu. To switch workspace: the key bindings or the CLI.
+  The button never gets to see the mouse (a transparent view on top of it takes it), and the menu pops up
+  below the item without highlighting it: no rounded background behind the item. A ⌘-drag still moves the
+  item along the bar.
+- The menu is short on purpose. At the top, **the windows of the focused workspace**, by the name of their app
+  and without icons (a click focuses one). Then it toggles the focused window between floating and tiling, and
+  has what concerns Inlay itself: *Reload Config*, *Open inlay.toml…*, *Pause/Resume Inlay*, *Settings…*, the version (a
+  click copies it, with the commit) and *Quit*. Switching workspaces, moving a window to another workspace,
+  fullscreen, the layout and the binding modes are not in it: they are done with the key bindings. The theme
+  and the palette are in the **Themes** tab of Settings. **The menu does not show the key bindings
   of your config** next to its items. Its own shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open.
   When the last load of the config had errors or warnings, an item at the top says so and shows them.
 - The shipped config defines **6 persistent workspaces** (1–6), which are the ones the item always shows. Any
@@ -573,22 +587,26 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 ### The Settings window
 
-Six tabs, **General**, **Tiling**, **Gaps**, **Animations**, **Menu Bar** and **Borders**. Next to every control is the key it writes. These are the
+Seven tabs, **General**, **Themes**, **Tiling**, **Gaps**, **Animations**, **Menu Bar** and **Borders**. Next to every control is the key it writes. These are the
 tabs with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Configuration, with the path of the file, Show in Finder and Open, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: a preview of the menu bar item on a dark and on a light bar and of three windows with their borders; Workspace Indicator, the four styles of the item as thumbnails (pills, the default, chips, square, minimal); and Palette, eight cards with their colors (System, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Dracula and Everforest)" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-tiling.png"><img src="docs/images/settings-tiling.png" alt="Real render of the Tiling tab of Settings: New Windows, with Placement (Dwindle or After Focused) and Window to split (Focused or Cursor); and Arrangement, with Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Tiling</sub></td><td align="center"><sub>Gaps</sub></td></tr>
+<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Themes</sub></td><td align="center"><sub>Tiling</sub></td></tr>
 <tr>
+<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-animations.png"><img src="docs/images/settings-animations.png" alt="Real render of the Animations tab of Settings: Windows, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; and Workspaces, with Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch)" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the three themes as thumbnails with 'chips' selected, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
+</tr>
+<tr><td align="center"><sub>Gaps</sub></td><td align="center"><sub>Animations</sub></td><td align="center"><sub>Menu Bar</sub></td></tr>
+<tr>
 <td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>Animations</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Borders</sub></td></tr>
+<tr><td align="center"><sub>Borders</sub></td></tr>
 </table>
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): only the content

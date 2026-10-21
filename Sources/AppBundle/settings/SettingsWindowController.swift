@@ -58,6 +58,7 @@ final class SettingsWindowController: NSObject {
         if let visibleFrame { tabs.visibleFrame = visibleFrame }
         tabs.tabStyle = .toolbar
         tabs.addTab(Strings.Settings.general, symbol: "gearshape", GeneralSettingsView(model: model))
+        tabs.addTab(Strings.Settings.themes, symbol: "paintpalette", ThemesSettingsView(model: model))
         tabs.addTab(Strings.Settings.tiling, symbol: "rectangle.split.2x2", TilingSettingsView(model: model))
         tabs.addTab(Strings.Settings.gaps, symbol: "rectangle.split.3x1", GapsSettingsView(model: model))
         tabs.addTab(Strings.Settings.animations, symbol: "wand.and.stars", AnimationsSettingsView(model: model))

@@ -75,7 +75,7 @@ extension InlayTests {
         @Test func testEveryTabFitsOrScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
             let window = try window(visibleHeight: 600)
             let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Tiling", "Gaps", "Animations", "Menu Bar", "Borders"])
+            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Themes", "Tiling", "Gaps", "Animations", "Menu Bar", "Borders"])
             var scrolling: [String] = []
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index

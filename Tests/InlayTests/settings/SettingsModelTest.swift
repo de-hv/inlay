@@ -46,7 +46,7 @@ extension InlayTests {
             assertEquals(model.string(.startupLayout), "grid")
             assertEquals(model.string(.splitTarget), "focused")
             assertEquals(model.int(.minWindowSize), 100)
-            assertEquals(model.string(.menuBarTheme), "chips")
+            assertEquals(model.string(.menuBarTheme), "pills")
             assertEquals(model.bool(.menuBarEnabled), true)
             assertEquals(model.color(.menuBarAccent), .auto)
             assertEquals(model.color(.menuBarFocused), .auto)
@@ -83,7 +83,7 @@ extension InlayTests {
             let model = try model("config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\n[mode.main.binding]\n")
             assertEquals(model.unavailableReason, nil)
             assertEquals(model.menuBarTheme, .chips)
-            assertEquals(model.menuBarConfig, MenuBarConfig())
+            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips))
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // Another control: the file is edited as it is
             model.set(.menuBarShowMode, .bool(true))
@@ -108,7 +108,7 @@ extension InlayTests {
 
             model.reset(.menuBarTheme)
             assertEquals(text, "start-at-login = true\n\n# My config\n[mode.main.binding]\n\n[menu-bar]\n")
-            assertEquals(model.menuBarTheme, .chips)
+            assertEquals(model.menuBarTheme, .pills)
             assertEquals(model.isSet(.menuBarTheme), false)
         }
 
@@ -362,10 +362,10 @@ extension InlayTests {
 
         @Test func testInvalidValueIsNotWritten() throws {
             let model = try model("[mode.main.binding]\n")
-            model.set(.menuBarTheme, .string("pills"))
+            model.set(.menuBarTheme, .string("bubbles"))
             assertEquals(text, "[mode.main.binding]\n")
-            assertEquals(model.errorMessage?.contains("Can't parse menu bar theme 'pills'"), true)
-            assertEquals(model.menuBarTheme, .chips)
+            assertEquals(model.errorMessage?.contains("Can't parse menu bar theme 'bubbles'"), true)
+            assertEquals(model.menuBarTheme, .pills)
             // The next change that works clears the error
             model.set(.menuBarTheme, .string("minimal"))
             assertEquals(model.errorMessage, nil)

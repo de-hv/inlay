@@ -26,8 +26,43 @@ extension InlayTests {
             focusedWorkspace: "2",
         )
 
-        private func layout(_ config: MenuBarConfig = MenuBarConfig(), _ snapshot: MenuBarSnapshot? = nil, transition: MenuBarFocusTransition? = nil) -> MenuBarLayout {
+        private func layout(_ config: MenuBarConfig = MenuBarConfig(theme: .chips), _ snapshot: MenuBarSnapshot? = nil, transition: MenuBarFocusTransition? = nil) -> MenuBarLayout {
             MenuBarLayout.make(snapshot ?? self.snapshot, config, transition: transition, measure: Self.measure)
+        }
+
+        // MARK: - Pills
+
+        @Test func testPills() {
+            let layout = layout(MenuBarConfig(theme: .pills))
+            assertEquals(layout.style, .chips)
+            // Round: the radius is half of the height
+            assertEquals(layout.cornerRadius, MenuBarMetrics.chipSide / 2)
+            // The focused workspace is a wider pill, the others are round
+            let widths = layout.cells.map(\.frame.width)
+            let focused = try! #require(layout.cells.firstIndex { $0.workspace == snapshot.focusedWorkspace })
+            assertEquals(widths[focused], MenuBarMetrics.pillFocusedWidth)
+            for (index, width) in widths.enumerated() where index != focused {
+                assertEquals(width, MenuBarMetrics.chipSide)
+            }
+            // The marker is the focused pill
+            assertEquals(layout.marker?.frame, layout.cells[focused].frame)
+            assertEquals(layout.marker?.cornerRadius, MenuBarMetrics.chipSide / 2)
+            // Side by side, with the spacing of the pills
+            for (a, b) in zip(layout.cells, layout.cells.dropFirst()) {
+                assertEquals(b.frame.minX - a.frame.maxX, MenuBarMetrics.pillSpacing)
+            }
+        }
+
+        /// While the marker slides, the pill it leaves shrinks and the one it goes to grows: the item keeps its width
+        @Test func testPillsStretchWhileTheMarkerSlides() {
+            let end = layout(MenuBarConfig(theme: .pills))
+            let middle = layout(MenuBarConfig(theme: .pills), transition: .init(from: "4", progress: 0.5))
+            let from = try! #require(middle.cells.first { $0.workspace == "4" })
+            let to = try! #require(middle.cells.first { $0.workspace == snapshot.focusedWorkspace })
+            let half = (MenuBarMetrics.chipSide + MenuBarMetrics.pillFocusedWidth) / 2
+            assertEquals(from.frame.width, half)
+            assertEquals(to.frame.width, half)
+            assertEquals(middle.size.width, end.size.width)
         }
 
         // MARK: - Chips
@@ -55,7 +90,7 @@ extension InlayTests {
         }
 
         @Test func testChipsWithTheRealFont() {
-            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(), measure: MenuBarFont.size)
+            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(theme: .chips), measure: MenuBarFont.size)
             // The size of the Chips style of Aeromenu with six workspaces
             assertEquals(layout.size, CGSize(width: 114.5, height: 22))
             assertEquals(layout.cells.map(\.frame.width), [17, 17, 17, 17, 17, 17])
@@ -72,7 +107,7 @@ extension InlayTests {
         }
 
         @Test func testDimEmptyWorkspaces() {
-            assertEquals(layout(MenuBarConfig(dimEmptyWorkspaces: false)).cells.map(\.isDimmed), [false, false, false, false])
+            assertEquals(layout(MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false)).cells.map(\.isDimmed), [false, false, false, false])
         }
 
         @Test func testFullscreen() {
@@ -84,13 +119,13 @@ extension InlayTests {
         /// 'show-mode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
         /// of Aeromenu did. Nothing is added next to the chips
         @Test func testModeInTheFocusedChip() {
-            let main = layout(MenuBarConfig(showMode: true))
+            let main = layout(MenuBarConfig(theme: .chips, showMode: true))
             assertEquals(main.marker?.initial, nil)
             snapshot.mode = "resize"
             // Off with show-mode = false
-            assertEquals(layout(MenuBarConfig(showMode: false)).marker?.initial, nil)
-            assertEquals(layout(MenuBarConfig(showMode: false)).needsColor, false)
-            let layout = layout(MenuBarConfig(showMode: true))
+            assertEquals(layout(MenuBarConfig(theme: .chips, showMode: false)).marker?.initial, nil)
+            assertEquals(layout(MenuBarConfig(theme: .chips, showMode: false)).needsColor, false)
+            let layout = layout(MenuBarConfig(theme: .chips, showMode: true))
             // The same chip, with the initial in the middle of it
             assertEquals(layout.marker, .init(
                 frame: CGRect(x: 19.5, y: 2.5, width: 17, height: 17),
@@ -111,12 +146,12 @@ extension InlayTests {
             snapshot.workspaces[1].name = "web"
             snapshot.focusedWorkspace = "web"
             snapshot.mode = "service"
-            let layout = layout(MenuBarConfig(showMode: true))
+            let layout = layout(MenuBarConfig(theme: .chips, showMode: true))
             // 3 characters of 7 pt and 3 pt on each side. The initial is in the middle of the chip
             assertEquals(layout.marker?.frame, CGRect(x: 19.5, y: 2.5, width: 27, height: 17))
             assertEquals(layout.marker?.initial?.frame.midX, 33)
             snapshot.mode = "main"
-            assertEquals(self.layout(MenuBarConfig(showMode: true)).size, layout.size)
+            assertEquals(self.layout(MenuBarConfig(theme: .chips, showMode: true)).size, layout.size)
         }
 
         @Test func testModeAndFullscreen() {
@@ -132,7 +167,7 @@ extension InlayTests {
         /// The initial goes with the marker while it slides to the focused workspace
         @Test func testModeWhileTheMarkerSlides() {
             snapshot.mode = "resize"
-            let middle = layout(MenuBarConfig(showMode: true), transition: .init(from: "4", progress: 0.5))
+            let middle = layout(MenuBarConfig(theme: .chips, showMode: true), transition: .init(from: "4", progress: 0.5))
             assertEquals(middle.marker?.frame, CGRect(x: 39, y: 2.5, width: 17, height: 17))
             assertEquals(middle.marker?.initial?.frame, CGRect(x: 43, y: 4.5, width: 9, height: 13))
         }
@@ -246,17 +281,17 @@ extension InlayTests {
 
         // MARK: - Pressing the item
 
-        /// The item only informs: the left button does nothing, wherever it clicks
-        @Test func testOnlyTheRightButtonAndCtrlClickOpenTheMenu() {
+        /// The left button opens the menu, wherever it clicks. The right button and a ctrl-click do nothing
+        @Test func testOnlyTheLeftButtonOpensTheMenu() {
             func opensMenu(_ type: NSEvent.EventType?, control: Bool = false, age: TimeInterval? = 0.01) -> Bool {
                 MenuBarController.opensMenu(eventType: type, isControlPressed: control, eventAge: age)
             }
-            assertEquals(opensMenu(.leftMouseUp), false)
-            assertEquals(opensMenu(.leftMouseDown), false)
-            assertEquals(opensMenu(.rightMouseUp), true)
-            assertEquals(opensMenu(.rightMouseDown), true)
-            assertEquals(opensMenu(.leftMouseUp, control: true), true)
-            assertEquals(opensMenu(.rightMouseUp, control: true), true)
+            assertEquals(opensMenu(.leftMouseUp), true)
+            assertEquals(opensMenu(.leftMouseDown), true)
+            assertEquals(opensMenu(.rightMouseUp), false)
+            assertEquals(opensMenu(.rightMouseDown), false)
+            assertEquals(opensMenu(.leftMouseUp, control: true), false)
+            assertEquals(opensMenu(.rightMouseUp, control: true), false)
             // Pressed through the accessibility API (VoiceOver): there is no event, or the current one is an old one
             assertEquals(opensMenu(nil, age: nil), true)
             assertEquals(opensMenu(.leftMouseUp, age: 30), true)
@@ -267,7 +302,7 @@ extension InlayTests {
     @Suite struct MenuBarPaletteTest {
         private let accent = Rgba(red: 1, green: 0.5, blue: 0)
 
-        private func palette(_ config: MenuBarConfig = MenuBarConfig(), style: MenuBarLayout.Style = .chips, dark: Bool = true, needsColor: Bool = false) -> MenuBarPalette {
+        private func palette(_ config: MenuBarConfig = MenuBarConfig(theme: .chips), style: MenuBarLayout.Style = .chips, dark: Bool = true, needsColor: Bool = false) -> MenuBarPalette {
             MenuBarPalette.resolve(config, style: style, isDarkBar: dark, systemAccent: accent, needsColor: needsColor)
         }
 
@@ -286,7 +321,7 @@ extension InlayTests {
                 assertEquals(palette.modeMarker, .black)
                 assertEquals(palette.modeInitial, nil)
             }
-            assertEquals(palette(MenuBarConfig(dimEmptyWorkspaces: false)).emptyName, Rgba.black.withAlpha(0.72))
+            assertEquals(palette(MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false)).emptyName, Rgba.black.withAlpha(0.72))
         }
 
         /// The binding mode in the marker doesn't take the item out of the template, like in Aeromenu.
@@ -298,7 +333,7 @@ extension InlayTests {
                 assertEquals(palette.modeMarker, .black)
                 assertEquals(palette.modeInitial, nil)
             }
-            let white = MenuBarConfig(colors: MenuBarColors(accent: .rgba(.white)))
+            let white = MenuBarConfig(theme: .chips, colors: MenuBarColors(accent: .rgba(.white)))
             assertEquals(palette(white).isTemplate, true)
             assertEquals(palette(white, needsColor: true).isTemplate, false)
         }
@@ -312,7 +347,7 @@ extension InlayTests {
 
         @Test func testAccentColorsTheMarkerOfAMode() {
             // The rest has the same look, but with the color of the menu bar text baked in
-            let config = MenuBarConfig(colors: MenuBarColors(accent: .systemAccent))
+            let config = MenuBarConfig(theme: .chips, colors: MenuBarColors(accent: .systemAccent))
             let dark = palette(config, dark: true, needsColor: true)
             assertEquals(dark.isTemplate, false)
             assertEquals(dark.base, .white)
@@ -331,14 +366,14 @@ extension InlayTests {
             assertEquals(light.modeMarker, accent)
             // Black over a light color
             let yellow = Rgba(hex: "#FFE66D").orDie()
-            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(accent: .rgba(yellow))), needsColor: true).modeInitial, .black)
+            assertEquals(palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(accent: .rgba(yellow))), needsColor: true).modeInitial, .black)
         }
 
         /// 'accent' is 'auto': the marker of a mode has the fixed color of 'focused', and the initial contrasts with it
         @Test func testTheMarkerOfAModeFollowsFocused() {
             let navy = Rgba(hex: "#1E3A8A").orDie()
             for dark in [true, false] {
-                let palette = palette(MenuBarConfig(colors: MenuBarColors(focused: .rgba(navy))), dark: dark, needsColor: true)
+                let palette = palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .rgba(navy))), dark: dark, needsColor: true)
                 assertEquals(palette.modeMarker, navy)
                 assertEquals(palette.modeInitial, .white)
             }
@@ -348,7 +383,7 @@ extension InlayTests {
             let orange = Rgba(hex: "#D19A66").orDie()
             let gray = Rgba(hex: "#ABB2BF").orDie()
             let translucent = Rgba(hex: "#CDD6F466").orDie()
-            let config = MenuBarConfig(colors: MenuBarColors(accent: .rgba(.white), focused: .rgba(orange), occupied: .rgba(gray), empty: .rgba(translucent)))
+            let config = MenuBarConfig(theme: .chips, colors: MenuBarColors(accent: .rgba(.white), focused: .rgba(orange), occupied: .rgba(gray), empty: .rgba(translucent)))
             for dark in [true, false] {
                 // A fixed color doesn't adapt to the menu bar
                 let palette = palette(config, dark: dark)
@@ -371,16 +406,16 @@ extension InlayTests {
 
         @Test func testOneFixedColorIsEnoughToLeaveTheTemplate() {
             let navy = Rgba(hex: "#1E3A8A").orDie()
-            let focused = palette(MenuBarConfig(colors: MenuBarColors(focused: .rgba(navy))))
+            let focused = palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .rgba(navy))))
             assertEquals(focused.isTemplate, false)
             assertEquals(focused.focusedName, .white)
             // The colors that stay 'auto' follow the menu bar
             assertEquals(focused.occupiedName, Rgba.white.withAlpha(0.72))
-            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(focused: .rgba(navy))), dark: false).occupiedName, Rgba.black.withAlpha(0.72))
-            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(occupied: .rgba(navy)))).isTemplate, false)
-            assertEquals(palette(MenuBarConfig(colors: MenuBarColors(empty: .rgba(navy)))).isTemplate, false)
+            assertEquals(palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .rgba(navy))), dark: false).occupiedName, Rgba.black.withAlpha(0.72))
+            assertEquals(palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(occupied: .rgba(navy)))).isTemplate, false)
+            assertEquals(palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(empty: .rgba(navy)))).isTemplate, false)
 
-            let systemAccent = palette(MenuBarConfig(colors: MenuBarColors(focused: .systemAccent)))
+            let systemAccent = palette(MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)))
             assertEquals(systemAccent.isTemplate, false)
             assertEquals(systemAccent.focused, accent)
         }
@@ -392,8 +427,8 @@ extension InlayTests {
         }
 
         @Test func testTemplateImage() throws {
-            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(), measure: MenuBarFont.size)
-            let palette = MenuBarPalette.resolve(MenuBarConfig(), style: .chips, isDarkBar: true, systemAccent: .white)
+            let layout = MenuBarLayout.make(MenuBarSamples.snapshot, MenuBarConfig(theme: .chips), measure: MenuBarFont.size)
+            let palette = MenuBarPalette.resolve(MenuBarConfig(theme: .chips), style: .chips, isDarkBar: true, systemAccent: .white)
             let image = try #require(MenuBarRenderer.image(layout, palette, scale: 2))
             assertEquals(image.isTemplate, true)
             assertEquals(image.size, CGSize(width: 114.5, height: 22))
@@ -415,7 +450,7 @@ extension InlayTests {
         }
 
         @Test func testColorImage() throws {
-            let config = MenuBarConfig(colors: MenuBarColors(focused: .rgba(Rgba(red: 1, green: 0, blue: 0))))
+            let config = MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .rgba(Rgba(red: 1, green: 0, blue: 0))))
             let layout = MenuBarLayout.make(MenuBarSamples.snapshot, config, measure: MenuBarFont.size)
             let palette = MenuBarPalette.resolve(config, style: .chips, isDarkBar: true, systemAccent: .white)
             assertEquals(try #require(MenuBarRenderer.image(layout, palette, scale: 2)).isTemplate, false)
@@ -430,7 +465,7 @@ extension InlayTests {
         @Test func testModeInTheChip() throws {
             var snapshot = MenuBarSamples.snapshot
             snapshot.mode = "resize"
-            let config = MenuBarConfig(showMode: true)
+            let config = MenuBarConfig(theme: .chips, showMode: true)
             let layout = MenuBarLayout.make(snapshot, config, measure: MenuBarFont.size)
             let palette = MenuBarPalette.resolve(config, style: .chips, isDarkBar: true, systemAccent: .white, needsColor: layout.needsColor)
             assertEquals(try #require(MenuBarRenderer.image(layout, palette, scale: 2)).isTemplate, true)
@@ -450,7 +485,7 @@ extension InlayTests {
                 }
             }
             // With a color in 'accent', the chip has that color and the initial is white over it
-            let accent = MenuBarConfig(showMode: true, colors: MenuBarColors(accent: .rgba(Rgba(red: 1, green: 0, blue: 0))))
+            let accent = MenuBarConfig(theme: .chips, showMode: true, colors: MenuBarColors(accent: .rgba(Rgba(red: 1, green: 0, blue: 0))))
             let colored = MenuBarPalette.resolve(accent, style: .chips, isDarkBar: true, systemAccent: .white, needsColor: true)
             let coloredBitmap = try #require(MenuBarRenderer.bitmap(layout, colored, scale: 2))
             let color = try #require(coloredBitmap.colorAt(x: 43, y: 20))
@@ -479,6 +514,7 @@ extension InlayTests {
                 "minimal-default-template.png", "minimal-fullscreen-template.png", "minimal-mode-fullscreen-template.png",
                 "minimal-mode-template.png",
                 "needs-accessibility-template.png", "paused-template.png",
+                "pills-default-template.png", "pills-fullscreen-template.png", "pills-mode-fullscreen-template.png", "pills-mode-template.png",
                 "square-default-template.png", "square-fullscreen-template.png", "square-mode-fullscreen-template.png",
                 "square-mode-template.png",
             ])

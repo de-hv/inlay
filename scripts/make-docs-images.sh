@@ -49,7 +49,7 @@ for width in 2 8; do
   sed "s/^    width = 4\$/    width = $width/" inlay.toml >"$WORK/width-$width.toml"
   "$APP" --render-settings "$WORK/settings-width-$width" "$WORK/width-$width.toml" >/dev/null
 done
-for tab in general tiling gaps animations menu-bar borders; do
+for tab in general themes tiling gaps animations menu-bar borders; do
   if wanted "settings-$tab"; then cp "$WORK/settings/settings-$tab.png" "$OUT/settings-$tab.png"; echo "settings-$tab.png"; fi
 done
 
@@ -64,11 +64,12 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 # --- PNG: name:width:height (in points; rendered at 2x) ---
 PAGES=(
   hero:1280:800
-  menu-bar-themes:880:326
+  menu-bar-themes:880:388
+  menu-bar-palettes:880:610
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500
-  menu:880:452
+  menu:880:400
   borders-states:880:586
   borders-width:880:290
   borders-corner-radius:880:310

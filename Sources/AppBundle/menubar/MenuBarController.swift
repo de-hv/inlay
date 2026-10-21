@@ -2,7 +2,7 @@ import AppKit
 import Common
 
 /// Owns the menu bar item: draws the published `MenuBarState` into it, and opens the menu.
-/// The item only informs: a click in a workspace doesn't switch to it. See: opensMenu
+/// A click of the left button opens the menu, wherever it is on the item. See: opensMenu
 ///
 /// It only reads the model through `MenuBarStore`. See: publishUiState
 @MainActor
@@ -101,7 +101,8 @@ final class MenuBarController: NSObject {
         // whatever AppKit does to the appearance, it can't ask for a new image. `mayShowMode` is true at least
         // whenever the layout draws the initial of the mode (MenuBarLayout.needsColor)
         let mayShowMode = state.config.showMode && state.snapshot.nonMainMode != nil
-        let followsBar = !MenuBarPalette.isTemplate(state.config.colors, needsColor: mayShowMode)
+        // A palette has fixed colors: the item follows the menu bar by hand
+        let followsBar = !MenuBarPalette.isTemplate(state.config.colors.applying(state.config.palette, isDark: true), needsColor: mayShowMode)
         return MenuBarDrawKey(
             state: state,
             transition: transition,
@@ -157,7 +158,8 @@ final class MenuBarController: NSObject {
     /// A mouse event older than this isn't what pressed the item
     nonisolated private static let staleEventAge: TimeInterval = 1
 
-    /// The menu opens with the right button and with a ctrl-click. A plain click of the left button does nothing.
+    /// The menu opens with a plain click of the left button. The right button and a ctrl-click (the right click of
+    /// a one-button mouse) do nothing.
     ///
     /// The item can also be pressed without the mouse: by VoiceOver and by the other clients of the accessibility API.
     /// That opens the menu, the only thing there is to do with the item. Such a press comes with no event of its own:
@@ -168,7 +170,8 @@ final class MenuBarController: NSObject {
     nonisolated static func opensMenu(eventType: NSEvent.EventType?, isControlPressed: Bool, eventAge: TimeInterval?) -> Bool {
         guard let eventType, let eventAge, eventAge < staleEventAge else { return true }
         return switch eventType {
-            case .leftMouseUp, .leftMouseDown: isControlPressed
+            case .leftMouseUp, .leftMouseDown: !isControlPressed
+            case .rightMouseUp, .rightMouseDown: false
             default: true
         }
     }
@@ -191,8 +194,8 @@ final class MenuBarController: NSObject {
 
 /// Covers the button of the menu bar item, and keeps the mouse away from it.
 ///
-/// A button highlights itself while the mouse is held down on it, whatever its action does afterwards. The item only
-/// informs: a click that does nothing must not look like it did something. So the button never sees the mouse go down,
+/// A button highlights itself while the mouse is held down on it, whatever its action does afterwards: a click that
+/// does nothing (the right button) must not look like it did something. So the button never sees the mouse go down,
 /// and the click is reported once the mouse goes up. If that opens the menu (see MenuBarController.opensMenu),
 /// the item isn't highlighted either while the menu is open. See: MenuBarController.openMenu
 ///

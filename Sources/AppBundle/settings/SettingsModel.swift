@@ -122,10 +122,17 @@ final class SettingsModel {
                 occupied: color(.menuBarOccupied),
                 empty: color(.menuBarEmpty),
             ),
+            palette: palette,
         )
     }
 
-    var menuBarTheme: MenuBarTheme { MenuBarTheme(rawValue: string(.menuBarTheme)) ?? .chips }
+    var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? .system }
+
+    /// 'chips-icons', the theme of a previous version, is 'chips', like for the parser
+    var menuBarTheme: MenuBarTheme {
+        let raw = string(.menuBarTheme)
+        return raw == "chips-icons" ? .chips : MenuBarTheme(rawValue: raw) ?? MenuBarConfig().theme
+    }
 
     // MARK: - Writing
 

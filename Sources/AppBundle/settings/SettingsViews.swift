@@ -396,6 +396,195 @@ struct AnimationsSettingsView: View {
     }
 }
 
+// MARK: - The menu bar item, drawn for the window
+
+/// The item as Inlay draws it, for a dark or a light menu bar. See: MenuBarSamples.image
+private struct MenuBarItemImage: View {
+    let config: MenuBarConfig
+    var snapshot: MenuBarSnapshot = MenuBarSamples.snapshot
+    let isDarkBar: Bool
+    let zoom: CGFloat
+
+    var body: some View {
+        if let image = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: 2 * max(1, zoom)) {
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: image.size.width * zoom, height: image.size.height * zoom)
+        }
+    }
+}
+
+/// A dark or a light menu bar, behind the item
+private func menuBarBackground(_ isDarkBar: Bool) -> LinearGradient {
+    let colors = isDarkBar
+        ? [Color(red: 0.21, green: 0.24, blue: 0.33), Color(red: 0.27, green: 0.27, blue: 0.42)]
+        : [Color(red: 0.93, green: 0.93, blue: 0.94), Color(red: 0.87, green: 0.87, blue: 0.89)]
+    return LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
+}
+
+// MARK: - Themes
+
+/// The look of the item and of the borders: the style of the workspace indicator ([menu-bar] theme) and the palette
+/// of colors ([theme] palette)
+struct ThemesSettingsView: View {
+    let model: SettingsModel
+
+    /// The colors that a palette gives, when the config leaves them at their default
+    private static let paletteKeys: [SettingsKey] = [
+        .menuBarFocused, .menuBarOccupied, .menuBarEmpty, .menuBarAccent,
+        .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
+    ]
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
+            Section {
+                preview
+            }
+            Section(Strings.Settings.workspaceIndicator) {
+                HStack(spacing: 8) {
+                    ForEach(MenuBarTheme.allCases, id: \.self) { theme in
+                        styleButton(theme)
+                    }
+                }
+                .disabled(model.disabledReason(.menuBarTheme) != nil)
+                if let reason = model.disabledReason(.menuBarTheme), model.unavailableReason == nil {
+                    Text(reason).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                    ForEach(ThemePalette.allCases, id: \.self) { palette in
+                        paletteButton(palette)
+                    }
+                }
+                .disabled(model.disabledReason(.themePalette) != nil)
+            } header: {
+                tableHeader(Strings.Settings.palette, SettingsKey.themePalette)
+            } footer: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(Strings.Settings.paletteFooter)
+                    let overriding = overridingKeys
+                    if model.palette != .system, !overriding.isEmpty {
+                        HStack(spacing: 8) {
+                            Text(Strings.Settings.paletteOverridden(overriding.map(\.path.key)))
+                            Button(Strings.Settings.usePalette) {
+                                for key in overriding { model.reset(key) }
+                            }
+                        }
+                    }
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// The colors written in the config, which win over the palette
+    private var overridingKeys: [SettingsKey] {
+        Self.paletteKeys.filter { model.isSet($0) && model.value($0) != $0.defaultValue }
+    }
+
+    /// The item in a dark and in a light menu bar, and three windows with their borders in the colors of the appearance
+    /// of the system
+    private var preview: some View {
+        let config = model.menuBarConfig
+        let isDark = isSystemAppearanceDark
+        let borders = BordersConfig()
+            .copy(\.activeColor, model.color(.bordersActiveColor))
+            .copy(\.inactiveColor, model.color(.bordersInactiveColor))
+            .copy(\.floatingColor, model.color(.bordersFloatingColor))
+            .applying(model.palette, isDark: isDark)
+        func color(_ config: ConfigColor) -> Color { Color(nsColor: config.resolve(auto: .white, systemAccent: .systemAccent).nsColor) }
+        let window = Color(white: isDark ? 0.13 : 0.96)
+        return VStack(spacing: 10) {
+            VStack(spacing: 0) {
+                ForEach([true, false], id: \.self) { isDarkBar in
+                    MenuBarItemImage(config: config, isDarkBar: isDarkBar, zoom: 1.6)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background(menuBarBackground(isDarkBar))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            HStack(spacing: 10) {
+                ForEach(Array([borders.activeColor, borders.inactiveColor, borders.floatingColor].enumerated()), id: \.offset) { _, border in
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(window)
+                        .frame(height: 56)
+                        .padding(3)
+                        .background(color(border), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+            }
+        }
+        .padding(12)
+        .background(menuBarBackground(isDark).opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .accessibilityLabel(Strings.Settings.livePreview)
+    }
+
+    private func styleButton(_ theme: MenuBarTheme) -> some View {
+        let isSelected = model.menuBarTheme == theme
+        return Button {
+            model.setTheme(theme)
+        } label: {
+            VStack(spacing: 6) {
+                MenuBarItemImage(config: MenuBarConfig(theme: theme, palette: model.palette), isDarkBar: true, zoom: 0.8)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 30)
+                    .background(menuBarBackground(true), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+                Text(theme == MenuBarConfig().theme ? "\(theme.rawValue) · \(Strings.Settings.defaultValue)" : theme.rawValue)
+                    .font(.system(size: 11, design: .monospaced))
+            }
+            .padding(6)
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(theme.rawValue)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// The colors of the palette in the appearance of the system: the focused workspace, the accent, the workspaces
+    /// with windows, the inactive border
+    private func paletteButton(_ palette: ThemePalette) -> some View {
+        let isSelected = model.palette == palette
+        let isDark = isSystemAppearanceDark
+        let swatches: [Color] = switch palette.colors(isDark: isDark) {
+            case let colors?: [colors.focused, colors.accent, colors.occupied, colors.inactiveBorder].map { Color(nsColor: $0.nsColor) }
+            case nil: [Color.accentColor, isDark ? .white : .black, .gray, Color(nsColor: Rgba(hex: "#8E8E93").orDie().nsColor)]
+        }
+        return Button {
+            model.set(.themePalette, .string(palette.rawValue))
+        } label: {
+            VStack(spacing: 6) {
+                HStack(spacing: 4) {
+                    ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
+                        Circle().fill(swatch).frame(width: 14, height: 14)
+                            .overlay { Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5) }
+                    }
+                }
+                Text(palette.title).font(.system(size: 11))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(palette.title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
 // MARK: - Menu bar
 
 struct MenuBarSettingsView: View {
@@ -406,17 +595,6 @@ struct MenuBarSettingsView: View {
             ErrorBanner(model: model)
             Section {
                 preview
-            }
-            Section(Strings.Settings.theme) {
-                HStack(spacing: 8) {
-                    ForEach(MenuBarTheme.allCases, id: \.self) { theme in
-                        themeButton(theme)
-                    }
-                }
-                .disabled(model.disabledReason(.menuBarTheme) != nil)
-                if let reason = model.disabledReason(.menuBarTheme), model.unavailableReason == nil {
-                    Text(reason).font(.footnote).foregroundStyle(.secondary)
-                }
             }
             Section(Strings.Settings.options) {
                 ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
@@ -447,10 +625,10 @@ struct MenuBarSettingsView: View {
         if config.showMode { snapshot.mode = "resize" }
         return VStack(spacing: 0) {
             ForEach([true, false], id: \.self) { isDarkBar in
-                item(config, snapshot, isDarkBar: isDarkBar, zoom: 2)
+                MenuBarItemImage(config: config, snapshot: snapshot, isDarkBar: isDarkBar, zoom: 2)
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
-                    .background(barBackground(isDarkBar))
+                    .background(menuBarBackground(isDarkBar))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -458,47 +636,6 @@ struct MenuBarSettingsView: View {
             Text(Strings.Settings.livePreview).font(.caption2).foregroundStyle(.white.opacity(0.6)).padding(6)
         }
         .accessibilityLabel(Strings.Settings.livePreview)
-    }
-
-    private func themeButton(_ theme: MenuBarTheme) -> some View {
-        let isSelected = model.menuBarTheme == theme
-        return Button {
-            model.setTheme(theme)
-        } label: {
-            VStack(spacing: 6) {
-                item(MenuBarConfig(theme: theme), MenuBarSamples.snapshot, isDarkBar: true, zoom: 0.8)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 30)
-                    .background(barBackground(true), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-                Text(theme.rawValue).font(.system(size: 11, design: .monospaced))
-            }
-            .padding(6)
-            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(theme.rawValue)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    @ViewBuilder
-    private func item(_ config: MenuBarConfig, _ snapshot: MenuBarSnapshot, isDarkBar: Bool, zoom: CGFloat) -> some View {
-        if let image = MenuBarSamples.image(config, snapshot: snapshot, isDarkBar: isDarkBar, scale: 2 * max(1, zoom)) {
-            Image(nsImage: image)
-                .resizable()
-                .interpolation(.high)
-                .frame(width: image.size.width * zoom, height: image.size.height * zoom)
-        }
-    }
-
-    private func barBackground(_ isDarkBar: Bool) -> LinearGradient {
-        let colors = isDarkBar
-            ? [Color(red: 0.21, green: 0.24, blue: 0.33), Color(red: 0.27, green: 0.27, blue: 0.42)]
-            : [Color(red: 0.93, green: 0.93, blue: 0.94), Color(red: 0.87, green: 0.87, blue: 0.89)]
-        return LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
     }
 }
 

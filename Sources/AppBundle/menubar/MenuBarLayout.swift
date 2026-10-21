@@ -6,6 +6,9 @@ enum MenuBarMetrics {
     static let height: CGFloat = 22
 
     static let chipSide: CGFloat = 17
+    /// The pills theme: round workspaces as tall as the chips, and the focused one this wide
+    static let pillFocusedWidth: CGFloat = 32
+    static let pillSpacing: CGFloat = 3
     static let chipCornerRadius: CGFloat = 4.5
     static let chipSpacing: CGFloat = 2.5
     static let chipPadding: CGFloat = 3
@@ -67,7 +70,7 @@ struct MenuBarFocusTransition: Equatable, Sendable {
 /// The origin is the top left corner, and y grows down
 struct MenuBarLayout: Equatable, Sendable {
     enum Style: Equatable, Sendable {
-        /// 'chips' and 'minimal' themes
+        /// 'chips', 'pills' and 'minimal' themes
         case chips
         case square
     }
@@ -115,6 +118,8 @@ struct MenuBarLayout: Equatable, Sendable {
     }
 
     var style: Style
+    /// The radius of the corners of the workspaces and of the marker, in the chips style
+    var cornerRadius: CGFloat = MenuBarMetrics.chipCornerRadius
     var size: CGSize
     var cells: [Cell] = []
     var marker: Marker? = nil
@@ -143,6 +148,7 @@ extension MenuBarLayout {
             }
         }
         var layout = switch config.theme {
+            case .pills: pills(snapshot, config, focusAmount, measure)
             case .chips: chips(snapshot, config, snapshot.workspaces, focusAmount, measure)
             case .minimal: chips(snapshot, config, snapshot.workspaces.filter { $0.name == snapshot.focusedWorkspace }, focusAmount, measure)
             case .square: square(snapshot, config, focusAmount, measure)
@@ -179,6 +185,39 @@ extension MenuBarLayout {
             x = frame.maxX + M.chipSpacing
         }
         return MenuBarLayout(style: .chips, size: CGSize(width: max(0, x - M.chipSpacing), height: M.height), cells: cells)
+    }
+
+    // MARK: - Pills
+
+    /// The chips, round, and the focused one wider. The width follows the focus while the marker slides, so the pills make
+    /// room for each other as it goes
+    private static func pills(
+        _ snapshot: MenuBarSnapshot,
+        _ config: MenuBarConfig,
+        _ focusAmount: (String) -> Double,
+        _ measure: Measure,
+    ) -> MenuBarLayout {
+        typealias M = MenuBarMetrics
+        let top = (M.height - M.chipSide) / 2
+        var cells: [Cell] = []
+        var x: CGFloat = 0
+        for workspace in snapshot.workspaces {
+            let nameSize = measure(workspace.name, .chipName)
+            let focus = focusAmount(workspace.name)
+            let narrow = max(M.chipSide, nameSize.width + 2 * M.chipPadding)
+            let wide = max(M.pillFocusedWidth, nameSize.width + 2 * M.chipSide / 2)
+            let frame = CGRect(x: x, y: top, width: narrow + (wide - narrow) * focus, height: M.chipSide)
+            cells.append(Cell(
+                workspace: workspace.name,
+                frame: frame,
+                name: Text(string: workspace.name, font: .chipName, frame: nameSize.centered(in: frame)),
+                isOccupied: workspace.isOccupied,
+                isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
+                focus: focus,
+            ))
+            x = frame.maxX + M.pillSpacing
+        }
+        return MenuBarLayout(style: .chips, cornerRadius: M.chipSide / 2, size: CGSize(width: max(0, x - M.pillSpacing), height: M.height), cells: cells)
     }
 
     // MARK: - Square
@@ -230,7 +269,7 @@ extension MenuBarLayout {
                 let frame = CGRect(x: midX - width / 2, y: end.minY, width: width, height: end.height)
                 marker = Marker(
                     frame: frame,
-                    cornerRadius: M.chipCornerRadius,
+                    cornerRadius: cornerRadius,
                     isOutlined: snapshot.isFocusedWorkspaceFullscreen,
                     // The chip is at least as wide as it is tall, so one character always fits
                     initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },

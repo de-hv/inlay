@@ -23,6 +23,7 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     model.refresh()
     let tabs: [(String, AnyView)] = [
         ("general", AnyView(GeneralSettingsView(model: model))),
+        ("themes", AnyView(ThemesSettingsView(model: model))),
         ("tiling", AnyView(TilingSettingsView(model: model))),
         ("gaps", AnyView(GapsSettingsView(model: model))),
         ("animations", AnyView(AnimationsSettingsView(model: model))),

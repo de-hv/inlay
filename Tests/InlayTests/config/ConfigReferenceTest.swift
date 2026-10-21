@@ -27,6 +27,7 @@ extension InlayTests {
                 ("menu-bar.colors", Array(menuBarColorsParserTable.keys)),
                 ("borders", Array(bordersParserTable.keys)),
                 ("animations", Array(animationsParserTable.keys)),
+                ("theme", Array(themeParserTable.keys)),
                 ("on-window-detected", Array(windowDetectedParser.keys)),
                 ("on-window-detected.if", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode

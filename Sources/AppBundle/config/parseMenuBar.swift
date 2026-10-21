@@ -3,16 +3,21 @@ import Common
 /// [menu-bar] table of the config
 struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
-    var theme: MenuBarTheme = .chips
+    var theme: MenuBarTheme = .pills
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
+    /// [theme] palette: it gives the colors that are 'auto'. Not a key of [menu-bar]: copied from the config. See: MenuBarStore
+    var palette: ThemePalette = .system
 
     /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
     var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 }
 
 enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
+    /// Round workspaces, and the focused one stretched into a wider pill, like the workspace indicator of GNOME and of
+    /// many Hyprland setups
+    case pills
     /// The workspaces alone. The Chips style of Aeromenu
     case chips
     /// The Square style of Aeromenu without its layout icon: the names, and a square in place of the focused workspace

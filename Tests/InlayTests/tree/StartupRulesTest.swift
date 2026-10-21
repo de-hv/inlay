@@ -87,9 +87,11 @@ extension InlayTests {
             assertEquals(macosPopupWindowsContainer.children.map { ($0 as! Window).windowId }, [7])
             for workspace in Workspace.all { assertEquals(tiling(workspace.name), [], additionalMsg: workspace.name) }
 
-            // And the dialog of an app with a workspace is the business of the rule of the app, as before
+            // And the dialog of an app with a workspace goes with the rule of the app to its workspace,
+            // but its 'layout tiling' doesn't tile it: a Save panel can't take the size of a tile
             try await open(8, Self.chrome, type: .dialog, in: Workspace.get(byName: "5"))
-            assertEquals(tiling("3"), [8])
+            assertEquals(tiling("3"), [])
+            assertEquals(floating("3"), [1, 2, 3, 4, 5, 8])
         }
 
         /// The window of an app without a workspace floats until the keys that move a window to a workspace

@@ -68,6 +68,11 @@ struct LayoutCommand: Command {
                     case .tilingContainer:
                         return .succ // Nothing to do
                     case .floatingWindowsContainer(let container):
+                        // A rule that tiles every window of an app ('layout tiling' in 'on-window-detected') would also
+                        // tile its dialogs (Save, Open...). They can't be resized into a tile, so they stay floating
+                        if env.isWindowDetectedCallback, await window.isDialogNow() {
+                            return .succ
+                        }
                         window.lastFloatingSize = (try? await window.getAxSize(.nonCancellable)) ?? window.lastFloatingSize
                         guard let workspace = container.nodeWorkspace else { return .fail(io.err(bugPrompt())) }
                         do {
@@ -88,6 +93,20 @@ struct LayoutCommand: Command {
 }
 
 @MainActor var global_layoutForNextDetectedWindow: LayoutCmdArgs.LayoutDescription? = nil
+
+extension Window {
+    /// The type is asked again: a window that was being restored (wake, unlock) may have had incomplete
+    /// accessibility attributes when it was registered, and been taken for a dialog
+    @MainActor
+    fileprivate func isDialogNow() async -> Bool {
+        if let macWindow = self as? MacWindow,
+           let type = try? await macWindow.macApp.getAxUiElementWindowType(windowId, getWindowLevel(for: windowId), .nonCancellable)
+        {
+            detectedType = type
+        }
+        return detectedType == .dialog
+    }
+}
 
 @MainActor private func changeTilingLayout(
     _ io: CmdIo,

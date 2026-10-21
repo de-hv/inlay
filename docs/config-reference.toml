@@ -500,6 +500,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 # The rules are checked in the order of the file, and the first one that matches wins, unless it has
 # 'check-further-callbacks = true'. 'inlay run-callback on-window-detected --for-every-window' runs the
 # rules again for all the open windows
+# 'layout tiling' in a rule doesn't tile the windows that Inlay detects as dialogs (the Save and Open panels,
+# alerts): they stay floating, so a rule can tile every window of an app. A 'layout tiling' of your own,
+# like the 'f' key of the service mode, still tiles them
 # See: https://nikitabobko.github.io/AeroSpace/guide#on-window-detected-callback
 # Fallback value (if you omit the tables): no rules
 [[on-window-detected]]

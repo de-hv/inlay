@@ -3,6 +3,8 @@ import Common
 struct CmdEnv {
     var windowId: UInt32? = nil
     var workspaceName: String? = nil
+    /// The commands run by an 'on-window-detected' rule. See: LayoutCommand, 'layout tiling' doesn't tile dialogs there
+    var isWindowDetectedCallback: Bool = false
 
     static let defaultEnv: CmdEnv = .init()
 

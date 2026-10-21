@@ -337,8 +337,10 @@ func onWindowDetected(_ env: CmdEnv, _ io: CmdIo, _ window: Window) async -> Int
         appName: window.app.name,
     ))
     var lastExitCode = Int32ExitCode.succ
+    var env = env.withWindowId(window.windowId)
+    env.isWindowDetectedCallback = true
     for callback in config.onWindowDetected where await callback.matches(window) {
-        lastExitCode = await callback.run.run(env.withWindowId(window.windowId), io)
+        lastExitCode = await callback.run.run(env, io)
         if !callback.checkFurtherCallbacks {
             return lastExitCode
         }

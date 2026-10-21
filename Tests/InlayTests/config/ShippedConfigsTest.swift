@@ -61,13 +61,13 @@ extension InlayTests {
         /// What the built-in config gives to somebody who installs Inlay without a config of their own
         @Test func testBuiltInConfig_workspacesAndBindings() throws {
             let config = try parse("inlay.toml").config
-            assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6"])
+            assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6", "7"])
             assertEquals(config.modes.keys.sorted(), ["main", "resize", "service"])
             func runs(_ binding: String, _ command: String, mode: String = mainModeId) -> Bool {
                 let bound = config.modes[mode]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
                 return bound?.commands.strictEquals(parseCommand(command).cmdOrDie) == true
             }
-            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p"], 1 ... 6) {
+            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p", "u"], 1 ... 7) {
                 assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
                 // The window also stops floating: the windows of the apps without a workspace open floating
                 assertEquals(runs("cmd-alt-shift-\(key)", "layout tiling; move-node-to-workspace \(workspace)"), true, additionalMsg: key)
@@ -115,7 +115,11 @@ extension InlayTests {
             assertTrue(last.run.strictEquals(parseCommand("layout floating").cmdOrDie))
             // The first rule that matches is the only one that runs: the order of the file is the order of the rules
             assertEquals(config.onWindowDetected.filter(\.checkFurtherCallbacks).count, 0)
-            assertEquals(config.workspaceToMonitorForceAssignment.keys.sorted(), ["1", "2", "3", "4", "5", "6"])
+            assertEquals(config.workspaceToMonitorForceAssignment.keys.sorted(), ["1", "2", "3", "4", "5", "6", "7"])
+            // 7 is the empty workspace: no rule sends an app to it, and it stays on the main display with 1 to 5
+            let targets = config.onWindowDetected.flatMap { $0.run.flatten().filterIsInstance(of: MoveNodeToWorkspaceCommand.self) }
+            assertEquals(targets.compactMap { $0.args.target.val.workspaceNameOrNil()?.raw }.contains("7"), false)
+            assertEquals(config.workspaceToMonitorForceAssignment["7"], config.workspaceToMonitorForceAssignment["1"])
         }
 
         @Test func testI3LikeExample() throws {

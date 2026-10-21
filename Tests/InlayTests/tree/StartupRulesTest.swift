@@ -30,7 +30,7 @@ extension InlayTests {
             config.automaticallyUnhideMacosHiddenApps = true
             check(Workspace.get(byName: "1").focusWorkspace())
             Workspace.garbageCollectUnusedWorkspaces()
-            assertEquals(Workspace.all.map(\.name), ["1", "2", "3", "4", "5", "6"])
+            assertEquals(Workspace.all.map(\.name), ["1", "2", "3", "4", "5", "6", "7"])
             assertEquals(config.onWindowDetected.count, 29)
         }
 
@@ -157,7 +157,7 @@ extension InlayTests {
             try await $refreshSessionEvent.withValue(.startup) { try await open(4, Self.zed) }
             try await restOfTheSession()
             try await open(5, Self.claude) // A new window, long after the startup
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [4], [2], [], [5], []])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [4], [2], [], [5], [], []])
             assertEquals(floating("1"), [3])
         }
 
@@ -198,7 +198,7 @@ extension InlayTests {
             try await restOfTheSession()
             // The user moves the browser next to the terminal
             assertEquals(await parseCommand("move-node-to-workspace --window-id 2 1").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], []])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1, 2], [], [], [], [], [], []])
             assertEquals(floating("1"), [3])
 
             let edited = try temporaryConfig(
@@ -273,11 +273,11 @@ extension InlayTests {
             try await open(3, Self.notes, minimized: true)
             try await restOfTheSession()
             assertEquals(macosMinimizedWindowsContainer.children.map { ($0 as! Window).windowId }.sorted(), [2, 3])
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [], []])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [], [], []])
             window(2).isMacosMinimizedForTest = false
             window(3).isMacosMinimizedForTest = false
             try await restOfTheSession()
-            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [2], [], [], []])
+            assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [2], [], [], [], []])
             // The app without a workspace floats, as it did when it opened
             assertEquals(floating("1"), [3])
         }

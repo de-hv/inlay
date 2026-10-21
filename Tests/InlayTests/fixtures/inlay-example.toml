@@ -48,7 +48,7 @@ default-root-container-layout = 'tiles'
 
 # Workspaces que existen siempre, aunque estén vacíos. Son los que la barra
 # dibuja atenuados.
-persistent-workspaces = ['1', '2', '3', '4', '5', '6']
+persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 
 # El cursor acompaña al foco.
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']

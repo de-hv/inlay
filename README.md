@@ -216,7 +216,7 @@ shell: `install.sh` warns when it sees it set.)
 
 **The shipped config is [`inlay.toml`](./inlay.toml), at the root of the repo.** It is the file that
 `install.sh` copies, and a copy of it travels inside the app as the fallback for when there is no config at
-all. It is a real config rather than a neutral sample: 6 persistent workspaces, key bindings on
+all. It is a real config rather than a neutral sample: 7 persistent workspaces, key bindings on
 `cmd-alt-ctrl-…` and `cmd-alt-shift-…`, the `service` and `resize` modes and `on-window-detected` rules that
 send each app to its workspace. Make it yours by editing your copy, or keep your config in a folder of your
 own and link it (the question of `install.sh`, or `--config-link`).
@@ -624,7 +624,9 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   are in the **Themes** tab of Settings. **The menu does not show the key bindings of your config**. Its own
   shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open. When the last load of the config had errors or
   warnings, a row at the top says so and shows them.
-- The shipped config defines **6 persistent workspaces** (1–6), which are the ones the item always shows. Any
+- The shipped config defines **7 persistent workspaces** (1–7), which are the ones the item always shows.
+  7 is the empty one: no rule sends an app to it, so there is (almost) always a free workspace, on the main
+  display (`cmd-alt-ctrl-u`, and `cmd-alt-shift-u` to move a window there). Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
   file**, line by line and without touching comments or the rest of the file, and reloads the config. If the

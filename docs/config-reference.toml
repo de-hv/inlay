@@ -340,12 +340,37 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # The color that the 'material' palette is made from. The other palettes ignore it. Material You keeps its
     # hue and picks the colors by their lightness: the focused workspace and the active border, the accent and
     # the floating border, and the grays. With the fallback value it gives the colors of the Material 3 baseline.
-    # 'system-accent' makes it from the accent color of macOS, and follows it when it changes
+    # 'system-accent' makes it from the accent color of macOS, and follows it when it changes.
+    # 'wallpaper' makes it from the main color of the wallpaper of the main screen, like matugen: it is read when the
+    # config loads and every time the wallpaper changes (no timer: Inlay watches the store of the wallpapers of macOS).
+    # A wallpaper that isn't an image (the Aerial videos) gives the fallback seed
     # Possible values:
     # - '#RRGGBB'. The alpha of '#RRGGBBAA' is ignored
     # - 'system-accent'. System Settings -> Appearance -> Accent color
+    # - 'wallpaper'
     # Fallback value (if you omit the key): seed = '#6750A4'
     seed = '#6750A4'
+
+    # The wallpaper of every palette that has none of its own in [theme.wallpapers]. It is put on every screen when the
+    # palette changes ('inlay theme set', Settings > Themes, or the file), never at startup, so a wallpaper picked in
+    # System Settings stays until the next change of palette. Without it (and without one of the palette), switching
+    # palettes leaves the wallpaper alone. A path that doesn't exist makes Inlay ask for another one, which it writes
+    # here, or keep the one on the screen. '~' is the home folder
+    # Fallback value (if you omit the key): no wallpaper
+    # wallpaper = '~/walls/default.jpg'
+
+    # Shell commands that run when the colors change: another palette, the other variant (the appearance of the
+    # system), or a new seed. Not at startup. They get the colors in effect, '#RRGGBB', in INLAY_THEME_FOCUSED,
+    # INLAY_THEME_OCCUPIED, INLAY_THEME_EMPTY, INLAY_THEME_ACCENT, INLAY_THEME_ACTIVE_BORDER, INLAY_THEME_INACTIVE_BORDER
+    # and INLAY_THEME_FLOATING_BORDER; and INLAY_THEME (the palette), INLAY_THEME_VARIANT ('dark' or 'light'),
+    # INLAY_THEME_SEED (with 'material') and INLAY_THEME_WALLPAPER (if there is one). Use them to theme Ghostty,
+    # Neovim and the rest with the same colors
+    # Fallback value (if you omit the key): on-change = []
+    on-change = []
+
+    # The wallpaper of a palette: the name of the palette = the path of the image. It wins over [theme] wallpaper
+    [theme.wallpapers]
+        # gruvbox = '~/walls/autumn.jpg'
 
 # The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
 # - a window opens (it grows from the center of its tile, from 80% of its size, while its neighbor makes room) or closes,
@@ -381,6 +406,38 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Possible values: 'horizontal' | 'vertical' | 'auto' | 'off'
     # Fallback value (if you omit the key): workspace-switch = 'horizontal'
     workspace-switch = 'horizontal'
+
+    # How the movement is spread over the duration: a cubic Bézier curve, like the 'bezier' of Hyprland and the
+    # cubic-bezier() of CSS. The presets:
+    # - 'ease-out'. Quick to leave, gentle to arrive: the curve of Inlay before there were curves
+    # - 'linear', 'ease', 'ease-in-out'. The ones of CSS
+    # - 'snappy'. Fast, and a soft landing
+    # - 'overshot'. It goes a bit past its frame and comes back: the popin of a Hyprland setup
+    # or the name of a curve of [animations.curves]. A curve that overshoots also resizes the window past its tile
+    # for a moment: some apps (browsers, Electron) are slow to redraw that
+    # Fallback value (if you omit the key): curve = 'ease-out'
+    curve = 'ease-out'
+
+    # The curve and the duration of a new window, that grows from the center of its tile: { curve = '...', duration = ... },
+    # both optional. Fallback value (if you omit the key): the curve and the duration of [animations]
+    # open = { curve = 'overshot', duration = 220 }
+
+    # The same for the windows that make room for a new one, take the space of one that closed, or move with 'swap'
+    # or 'move'. Fallback value (if you omit the key): the curve and the duration of [animations]
+    # move = { curve = 'snappy' }
+
+    # The same for the 'fullscreen' command, in and out. Fallback value (if you omit the key): the curve and the
+    # duration of [animations]
+    # fullscreen = { curve = 'ease-in-out', duration = 240 }
+
+    # The same for switching workspaces: the windows that slide out and in. Fallback value (if you omit the key):
+    # the curve and the duration of [animations]
+    # workspace = { curve = 'snappy', duration = 160 }
+
+    # Curves of your own: the name = [x1, y1, x2, y2], the control points of the curve. x1 and x2 must be in
+    # 0 ... 1; y1 and y2 can be below 0 or above 1 (an overshoot). A name of a preset is replaced by yours
+    [animations.curves]
+        # bounce = [0.34, 1.56, 0.64, 1]
 
 # The notices that Inlay shows for a moment, in the top right corner of the screen
 [notifications]

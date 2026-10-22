@@ -62,6 +62,11 @@ enum ReloadNoticeTrigger {
         // must not add Inlay to the login items: the config of the user decides
         if forceConfigUrl == nil { syncStartAtLogin() }
         syncFocusFollowsMouse(config)
+        // The theme of the config of the user: not the built-in config that is loaded first
+        if forceConfigUrl == nil {
+            WallpaperSeed.shared.sync()
+            ThemeController.shared.configDidLoad()
+        }
     }
 
     var errors = parseResult.errors.map { $0.description(.error) }

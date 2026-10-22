@@ -11,18 +11,103 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
     var duration: Int = 180
     /// How switching workspaces slides the windows. See: WorkspaceSlide
     var workspaceSwitch: WorkspaceSwitch = .horizontal
+    /// The name of the timing curve of every animation: one of AnimationCurve.presets or of `curves`
+    var curve: String = "ease-out"
+    /// [animations.curves]: name -> curve. The curves of the user, by name, on top of the presets
+    var curves: [String: AnimationCurve] = [:]
+    /// The curve and the duration of each kind of animation, when they aren't the ones of `curve` and `duration`
+    var open: AnimationStep = AnimationStep()
+    var move: AnimationStep = AnimationStep()
+    var fullscreen: AnimationStep = AnimationStep()
+    var workspace: AnimationStep = AnimationStep()
 
     static let durationRange = 0 ... 500
 
     /// The duration in effect: 0 if the animations are off
     var effectiveDuration: Duration { enabled ? .milliseconds(duration) : .zero }
+
+    func step(_ kind: AnimationKind) -> AnimationStep {
+        switch kind {
+            case .open: open
+            case .move: move
+            case .fullscreen: fullscreen
+            case .workspace: workspace
+        }
+    }
+
+    /// The duration of that kind of animation: its own, or `duration`. 0 if the animations are off
+    func effectiveDuration(_ kind: AnimationKind) -> Duration {
+        enabled ? .milliseconds(step(kind).duration ?? duration) : .zero
+    }
+
+    /// The curve of that kind of animation: its own, or `curve`. A name that isn't a curve is an error of the config,
+    /// so it doesn't get here; ease-out just in case
+    func effectiveCurve(_ kind: AnimationKind) -> AnimationCurve {
+        let name = step(kind).curve ?? curve
+        return curves[name] ?? AnimationCurve.presets[name] ?? .easeOut
+    }
+}
+
+/// What makes the windows move. See: WindowAnimator.setFrame
+enum AnimationKind: String, CaseIterable, Sendable {
+    /// A new window grows from the center of its tile
+    case open
+    /// The windows make room for a new one, take the space of one that closed, or are moved with 'swap' or 'move'
+    case move
+    /// The 'fullscreen' command, in and out
+    case fullscreen
+    /// Switching workspaces: the windows slide out and in
+    case workspace
+}
+
+/// The curve and the duration of a kind of animation. nil: the ones of the [animations] table
+struct AnimationStep: ConvenienceMutable, Equatable, Sendable {
+    var curve: String? = nil
+    var duration: Int? = nil
 }
 
 let animationsParserTable: [String: any ParserProtocol<AnimationsConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "duration": Parser(\.duration, parseDuration),
     "workspace-switch": Parser(\.workspaceSwitch, parseWorkspaceSwitch),
+    "curve": Parser(\.curve, parseString),
+    "curves": Parser(\.curves, parseCurves),
+    "open": Parser(\.open, parseStep),
+    "move": Parser(\.move, parseStep),
+    "fullscreen": Parser(\.fullscreen, parseStep),
+    "workspace": Parser(\.workspace, parseStep),
 ]
+
+let animationStepParserTable: [String: any ParserProtocol<AnimationStep>] = [
+    "curve": Parser(\.curve, { raw, backtrace in parseString(raw, backtrace).map(Optional.some) }),
+    "duration": Parser(\.duration, { raw, backtrace in parseDuration(raw, backtrace).map(Optional.some) }),
+]
+
+private func parseStep(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> AnimationStep {
+    parseTable(raw, AnimationStep(), animationStepParserTable, backtrace, &c)
+}
+
+/// name = [x1, y1, x2, y2]. X1 and X2 must be in 0 ... 1, so that the time only goes forward. Y1 and Y2 can overshoot
+private func parseCurves(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: AnimationCurve] {
+    guard case .dict(let table) = raw else {
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        return [:]
+    }
+    var result: [String: AnimationCurve] = [:]
+    for (name, value) in table {
+        let numbers = value.asArrayOrNil?.compactMap(\.asDoubleOrNil) ?? []
+        guard value.asArrayOrNil?.count == 4, numbers.count == 4 else {
+            c.errors.append(.init(backtrace + .key(name), "A curve is four numbers: [x1, y1, x2, y2]"))
+            continue
+        }
+        guard (0 ... 1).contains(numbers[0]), (0 ... 1).contains(numbers[2]) else {
+            c.errors.append(.init(backtrace + .key(name), "x1 and x2 of a curve must be in [0, 1] range"))
+            continue
+        }
+        result[name] = AnimationCurve(x1: numbers[0], y1: numbers[1], x2: numbers[2], y2: numbers[3])
+    }
+    return result
+}
 
 /// How switching workspaces slides the windows of the screen. They never cross another screen. See: WorkspaceSlide
 enum WorkspaceSwitch: String, CaseIterable, Equatable, Sendable {
@@ -47,7 +132,18 @@ private func parseWorkspaceSwitch(_ raw: OrderedJson, _ backtrace: ConfigBacktra
 }
 
 func parseAnimations(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> AnimationsConfig {
-    parseTable(raw, AnimationsConfig(), animationsParserTable, backtrace, &c)
+    let result = parseTable(raw, AnimationsConfig(), animationsParserTable, backtrace, &c)
+    // The names are checked once the whole table is read: [animations.curves] can come after the keys that use it
+    let names = Set(AnimationCurve.presets.keys).union(result.curves.keys)
+    let possible = names.sorted().joined(separator: ", ")
+    var uses: [(ConfigBacktrace, String)] = [(backtrace + .key("curve"), result.curve)]
+    for kind in AnimationKind.allCases {
+        if let name = result.step(kind).curve { uses.append((backtrace + .key(kind.rawValue) + .key("curve"), name)) }
+    }
+    for (place, name) in uses where !names.contains(name) {
+        c.errors.append(.init(place, "Unknown curve '\(name)'. Possible values: \(possible), or a curve of [animations.curves]"))
+    }
+    return result
 }
 
 private func parseDuration(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {

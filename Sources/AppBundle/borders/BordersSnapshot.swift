@@ -136,7 +136,7 @@ extension BordersSnapshot {
         // Paused ('enable off') or not started yet: Inlay doesn't manage the windows, so it doesn't decorate them
         guard borders.enabled, state.isEnabled, state.axPermissionStatus == .granted else { return .empty }
         // The palette of [theme] gives the colors left at their default, in the variant of the appearance of the system
-        return resolve(candidatesFromModel(), borders.applying(config.theme.palette, seed: config.theme.seedColor(systemAccent: .systemAccent), isDark: isSystemAppearanceDark), mode: activeMode, systemAccent: .systemAccent)
+        return resolve(candidatesFromModel(), borders.applying(config.theme.palette, seed: config.theme.seedColor(systemAccent: .systemAccent, wallpaper: WallpaperSeed.shared.color), isDark: isSystemAppearanceDark), mode: activeMode, systemAccent: .systemAccent)
     }
 }
 

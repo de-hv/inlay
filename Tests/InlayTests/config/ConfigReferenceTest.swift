@@ -39,6 +39,7 @@ extension InlayTests {
         private let freeFormTables = [
             "mode", "mode.*.binding", "borders.mode-colors", "exec.env-vars",
             "key-mapping.key-notation-to-key-code", "workspace-to-monitor-force-assignment",
+            "animations.curves", "theme.wallpapers",
         ]
 
         /// 'mode.main.binding.alt-h' -> 'mode.*.binding.*'. nil: the name itself, in a free-form table (not a key of the parser)

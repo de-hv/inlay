@@ -6,7 +6,34 @@ struct ThemeConfig: ConvenienceMutable, Equatable, Sendable {
     /// The colors of the menu bar item and of the borders, from a palette of the Hyprland world
     var palette: ThemePalette = .oneDark
     /// The color that the 'material' palette is made from. The other palettes ignore it
-    var seed: ConfigColor = .rgba(MaterialPalette.baselineSeed)
+    var seed: ThemeSeed = .color(.rgba(MaterialPalette.baselineSeed))
+    /// The wallpaper of every palette that has none of its own in `wallpapers`. nil: switching palettes leaves the
+    /// wallpaper alone. See: ThemeController
+    var wallpaper: String? = nil
+    /// [theme.wallpapers]: the name of a palette -> its wallpaper
+    var wallpapers: [String: String] = [:]
+    /// Shell commands that run when the colors change: another palette, the other variant (light or dark), or a new
+    /// seed. They get the colors in INLAY_THEME_* variables. See: ThemeController
+    var onChange: [String] = []
+
+    /// The wallpaper of the palette: its own, or the one of every palette
+    func wallpaper(of palette: ThemePalette) -> String? { wallpapers[palette.rawValue] ?? wallpaper }
+}
+
+/// The color that 'material' is made from
+enum ThemeSeed: Equatable, Sendable, CustomStringConvertible {
+    case color(ConfigColor)
+    /// The main color of the wallpaper of the main screen. See: WallpaperSeed
+    case wallpaper
+
+    static let wallpaperLiteral = "wallpaper"
+
+    var description: String {
+        switch self {
+            case .color(let color): color.description
+            case .wallpaper: Self.wallpaperLiteral
+        }
+    }
 }
 
 /// A set of colors for the menu bar item and the borders, with a light and a dark variant: the one of the appearance of
@@ -115,14 +142,47 @@ struct PaletteColors: Equatable, Sendable {
 }
 
 extension ThemeConfig {
-    /// The seed as a color: 'system-accent' is the accent color of the system
-    func seedColor(systemAccent: Rgba) -> Rgba { seed.resolve(auto: MaterialPalette.baselineSeed, systemAccent: systemAccent).withAlpha(1) }
+    /// The seed as a color: 'system-accent' is the accent color of the system, and 'wallpaper' the main color of the
+    /// wallpaper (the baseline seed while it isn't known)
+    func seedColor(systemAccent: Rgba, wallpaper: Rgba? = nil) -> Rgba {
+        switch seed {
+            case .color(let color): color.resolve(auto: MaterialPalette.baselineSeed, systemAccent: systemAccent).withAlpha(1)
+            case .wallpaper: (wallpaper ?? MaterialPalette.baselineSeed).withAlpha(1)
+        }
+    }
 }
 
 let themeParserTable: [String: any ParserProtocol<ThemeConfig>] = [
     "palette": Parser(\.palette, parseThemePalette),
-    "seed": Parser(\.seed, parseConfigColor(allowAuto: false)),
+    "seed": Parser(\.seed, parseThemeSeed),
+    "wallpaper": Parser(\.wallpaper, { raw, backtrace in parseString(raw, backtrace).map(Optional.some) }),
+    "wallpapers": Parser(\.wallpapers, parseThemeWallpapers),
+    "on-change": Parser(\.onChange, parseArrayOfStrings),
 ]
+
+private func parseThemeSeed(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<ThemeSeed> {
+    if raw.asStringOrNil == ThemeSeed.wallpaperLiteral { return .success(.wallpaper) }
+    return parseConfigColor(allowAuto: false)(raw, backtrace)
+        .map { .color($0) }
+        .mapError { error in .init(backtrace, error.message + ", '\(ThemeSeed.wallpaperLiteral)'") }
+}
+
+/// The keys are the names of the palettes
+private func parseThemeWallpapers(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: String] {
+    guard case .dict(let table) = raw else {
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        return [:]
+    }
+    var result: [String: String] = [:]
+    for (palette, value) in table {
+        guard ThemePalette(rawValue: palette) != nil else {
+            c.errors.append(.init(backtrace + .key(palette), "Unknown palette '\(palette)'. Possible values: \(ThemePalette.unionLiteral)"))
+            continue
+        }
+        if let path = parseString(value, backtrace + .key(palette)).getOrNil(appendErrorTo: &c.errors) { result[palette] = path }
+    }
+    return result
+}
 
 func parseTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> ThemeConfig {
     parseTable(raw, ThemeConfig(), themeParserTable, backtrace, &c)

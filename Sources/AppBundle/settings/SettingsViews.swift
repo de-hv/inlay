@@ -107,8 +107,12 @@ private struct ColorRow: View {
 
     var body: some View {
         SettingsRow(model: model, title: title, detail: detail, key: key, showsTable: false) {
-            Text(isUnset ? Strings.Settings.notSet : model.string(key))
-                .font(.system(size: 12, design: .monospaced))
+            if themeColor != nil {
+                SourceBadge(isCustom: !isFromTheme)
+            }
+            Text(isFromTheme ? model.palette.title : isUnset ? Strings.Settings.notSet : model.string(key))
+                .font(.system(size: 12, design: isFromTheme ? .default : .monospaced))
+                .foregroundStyle(isFromTheme ? .secondary : .primary)
                 .lineLimit(1)
                 .fixedSize()
                 .frame(minWidth: 100, alignment: .trailing)
@@ -125,17 +129,33 @@ private struct ColorRow: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .fixedSize()
-            Button(Strings.Settings.reset) { model.reset(key) }
-                .buttonStyle(.link)
-                .disabled(!model.isSet(key))
+            if themeColor == nil {
+                Button(Strings.Settings.reset) { model.reset(key) }
+                    .buttonStyle(.link)
+                    .disabled(!model.isSet(key))
+            } else {
+                // Only a color of the user's own can go back to the theme. The same width either way: the rows line up
+                Button(Strings.Settings.useTheme) { model.reset(key) }
+                    .buttonStyle(.link)
+                    .opacity(isFromTheme ? 0 : 1)
+                    .disabled(isFromTheme)
+                    .accessibilityHidden(isFromTheme)
+            }
         }
     }
 
     private var isUnset: Bool { fallback != nil && !model.isSet(key) }
 
-    /// 'auto' is shown as the color of the text of a dark menu bar
+    /// The color that the palette gives to the key. nil without a palette, or for a key that it doesn't color
+    private var themeColor: Rgba? { model.paletteColor(key) }
+
+    /// The palette gives the color: the user hasn't set one of their own
+    private var isFromTheme: Bool { themeColor != nil && !model.manualColorKeys.contains(key) }
+
+    /// The color of the palette, or 'auto' as the color of the text of a dark menu bar
     private var rgba: Rgba {
-        model.color(isUnset ? fallback ?? key : key).resolve(auto: .white, systemAccent: .systemAccent)
+        if isFromTheme, let themeColor { return themeColor }
+        return model.color(isUnset ? fallback ?? key : key).resolve(auto: .white, systemAccent: .systemAccent)
     }
 
     private var selection: Binding<Color> {
@@ -147,6 +167,21 @@ private struct ColorRow: View {
                 if new.hex != rgba.hex { model.setDebounced(key, .string(new.hex)) }
             },
         )
+    }
+}
+
+/// Where a color comes from: the theme (the palette), or the user ("Custom")
+private struct SourceBadge: View {
+    let isCustom: Bool
+
+    var body: some View {
+        Text(isCustom ? Strings.Settings.customBadge : Strings.Settings.themeBadge)
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .foregroundStyle(isCustom ? Color.orange : Color.secondary)
+            .background((isCustom ? Color.orange : Color.secondary).opacity(0.14), in: Capsule())
+            .accessibilityLabel(isCustom ? Strings.Settings.customBadge : Strings.Settings.themeBadge)
     }
 }
 
@@ -430,65 +465,199 @@ private func menuBarBackground(_ isDarkBar: Bool) -> LinearGradient {
 struct ThemesSettingsView: View {
     let model: SettingsModel
 
-    /// The colors that a palette gives, when the config leaves them at their default
-    private static let paletteKeys: [SettingsKey] = [
-        .menuBarFocused, .menuBarOccupied, .menuBarEmpty, .menuBarAccent,
-        .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
-    ]
-
     var body: some View {
         SettingsPage {
             ErrorBanner(model: model)
+            // What it looks like, and where the colors come from: on top of every section
             Section {
-                preview
-            }
-            Section(Strings.Settings.workspaceIndicator) {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                    ForEach(MenuBarTheme.allCases, id: \.self) { theme in
-                        styleButton(theme)
-                    }
-                }
-                .disabled(model.disabledReason(.menuBarTheme) != nil)
-                if let reason = model.disabledReason(.menuBarTheme), model.unavailableReason == nil {
-                    Text(reason).font(.footnote).foregroundStyle(.secondary)
+                HStack(alignment: .top, spacing: 12) {
+                    preview.frame(maxWidth: .infinity)
+                    themeStatus.frame(width: 210)
                 }
             }
             Section {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
-                    ForEach(ThemePalette.allCases, id: \.self) { palette in
-                        paletteButton(palette)
-                    }
+                Picker("", selection: Binding(get: { model.themesSection }, set: { section in
+                    model.themesSection = section
+                    // The page grows or shrinks under the picker: the new part is read from its top
+                    NotificationCenter.default.post(name: .settingsPageScrollToTop, object: nil)
+                })) {
+                    Text(Strings.Settings.paletteSection).tag(ThemesSection.palette)
+                    Text(Strings.Settings.indicatorSection).tag(ThemesSection.indicator)
+                    Text(Strings.Settings.colorsSection).tag(ThemesSection.colors)
                 }
-                .disabled(model.disabledReason(.themePalette) != nil)
-                // Only Material You is made from a color
-                if model.palette == .material {
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            switch model.themesSection {
+                case .palette: paletteSection
+                case .indicator: indicatorSection
+                case .colors: colorsSection
+            }
+        }
+        // A new form for each part: the scroll position of the form of the previous part doesn't carry over
+        .id(model.themesSection)
+    }
+
+    // MARK: Palette
+
+    @ViewBuilder
+    private var paletteSection: some View {
+        Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                chip(
+                    Strings.Settings.systemPalette,
+                    swatches: swatches(.system),
+                    isSelected: model.palette == .system,
+                    isBase: false,
+                ) { pick(.system) }
+                chip(
+                    Strings.Settings.materialFromWallpaper,
+                    swatches: swatches(.material),
+                    isSelected: model.palette == .material && seedIsWallpaper && !model.hasCustomColors,
+                    isBase: model.palette == .material && seedIsWallpaper && model.hasCustomColors,
+                ) { pick(.material, seed: ThemeSeed.wallpaperLiteral) }
+                chip(
+                    Strings.Settings.materialFromColor,
+                    swatches: swatches(.material),
+                    isSelected: model.palette == .material && !seedIsWallpaper && !model.hasCustomColors,
+                    isBase: model.palette == .material && !seedIsWallpaper && model.hasCustomColors,
+                ) { pick(.material, seed: seedIsWallpaper ? MaterialPalette.baselineSeed.hex : nil) }
+            }
+            .disabled(model.disabledReason(.themePalette) != nil)
+            if model.palette == .material {
+                if seedIsWallpaper {
+                    Text(Strings.Settings.seedFromWallpaperDetail(WallpaperSeed.shared.color?.hex))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
                     ColorRow(model: model, title: Strings.Settings.seed, detail: Strings.Settings.seedDetail, key: .themeSeed, allowsAuto: false)
                 }
-            } header: {
-                tableHeader(Strings.Settings.palette, SettingsKey.themePalette)
-            } footer: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(Strings.Settings.paletteFooter)
-                    let overriding = overridingKeys
-                    if model.palette != .system, !overriding.isEmpty {
-                        HStack(spacing: 8) {
-                            Text(Strings.Settings.paletteOverridden(overriding.map(\.path.key)))
-                            Button(Strings.Settings.usePalette) {
-                                for key in overriding { model.reset(key) }
-                            }
-                        }
-                    }
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+        } header: {
+            Text(Strings.Settings.madeForYou)
+        }
+        Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
+                ForEach(ThemePalette.allCases.filter { $0 != .system && $0 != .material }, id: \.self) { palette in
+                    chip(
+                        palette.title,
+                        swatches: swatches(palette),
+                        isSelected: model.palette == palette && !model.hasCustomColors,
+                        isBase: model.palette == palette && model.hasCustomColors,
+                    ) { pick(palette) }
+                }
+            }
+            .disabled(model.disabledReason(.themePalette) != nil)
+        } header: {
+            tableHeader(Strings.Settings.palettes, SettingsKey.themePalette)
+        } footer: {
+            footnote(Strings.Settings.paletteFooter)
         }
     }
 
-    /// The colors written in the config, which win over the palette
-    private var overridingKeys: [SettingsKey] {
-        Self.paletteKeys.filter { model.isSet($0) && model.value($0) != $0.defaultValue }
+    private var seedIsWallpaper: Bool { model.string(.themeSeed) == ThemeSeed.wallpaperLiteral }
+
+    // MARK: Indicator
+
+    @ViewBuilder
+    private var indicatorSection: some View {
+        Section {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                ForEach(MenuBarTheme.allCases, id: \.self) { theme in
+                    styleButton(theme)
+                }
+            }
+            .disabled(model.disabledReason(.menuBarTheme) != nil)
+            if let reason = model.disabledReason(.menuBarTheme), model.unavailableReason == nil {
+                Text(reason).font(.footnote).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text(Strings.Settings.workspaceIndicator)
+        } footer: {
+            footnote(Strings.Settings.indicatorShapeFooter)
+        }
+        Section(Strings.Settings.options) {
+            ToggleRow(model: model, title: Strings.Settings.dimEmpty, detail: Strings.Settings.dimEmptyDetail, key: .menuBarDimEmpty)
+            ToggleRow(model: model, title: Strings.Settings.showMode, detail: Strings.Settings.showModeDetail, key: .menuBarShowMode)
+        }
+    }
+
+    // MARK: Colors
+
+    @ViewBuilder
+    private var colorsSection: some View {
+        Section {
+            ColorRow(model: model, title: Strings.Settings.activeWorkspaceColor, key: .menuBarFocused, allowsAuto: true)
+            ColorRow(model: model, title: Strings.Settings.inactiveWorkspaceColor, key: .menuBarOccupied, allowsAuto: true)
+            ColorRow(model: model, title: Strings.Settings.emptyWorkspaceColor, key: .menuBarEmpty, allowsAuto: true)
+            ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: true)
+        } header: {
+            tableHeader(Strings.Settings.indicatorColors, SettingsKey.menuBarFocused)
+        }
+        Section {
+            ColorRow(model: model, title: Strings.Settings.activeWindow, key: .bordersActiveColor, allowsAuto: false)
+            ColorRow(model: model, title: Strings.Settings.inactiveWindows, key: .bordersInactiveColor, allowsAuto: false)
+            ColorRow(model: model, title: Strings.Settings.floatingWindow, key: .bordersFloatingColor, allowsAuto: false)
+        } header: {
+            tableHeader(Strings.Settings.borderColors, SettingsKey.bordersActiveColor)
+        } footer: {
+            footnote(Strings.Settings.indicatorColorsFooter)
+        }
+    }
+
+    private func footnote(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Where the colors come from: a theme, the user, or the system. Green, orange or gray, always on top
+    private var themeStatus: some View {
+        let manual = model.manualColorKeys
+        let (color, symbol, title, detail): (Color, String, String, String) = switch true {
+            case model.palette == .system:
+                (.secondary, "circle.dashed", Strings.Settings.noThemeTitle, Strings.Settings.noThemeInUse)
+            case manual.isEmpty:
+                (.green, "checkmark.circle.fill", Strings.Settings.themeTitle(model.palette.title), Strings.Settings.themeInUseDetail)
+            default:
+                (.orange, "paintpalette.fill", Strings.Settings.custom, Strings.Settings.customInUse(manual.map(Strings.Settings.colorName), base: model.palette.title))
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color)
+            Text(detail)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if model.palette != .system && !manual.isEmpty {
+                Button(Strings.Settings.useOnlyTheme(model.palette.title)) { model.resetManualColors() }
+                    .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Picking a theme while some colors are the user's own asks first: the theme takes them over
+    /// - Parameter seed: also writes [theme] seed (Material You)
+    private func pick(_ palette: ThemePalette, seed: String? = nil) {
+        let manual = model.manualColorKeys
+        guard palette != .system, !manual.isEmpty else {
+            model.setPalette(palette, seed: seed, resettingColors: false)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = Strings.Settings.replaceCustomTitle(palette.title)
+        alert.informativeText = Strings.Settings.replaceCustomDetail(manual.map(Strings.Settings.colorName))
+        alert.addButton(withTitle: Strings.Settings.useTheme)
+        alert.addButton(withTitle: Strings.Settings.keepCustom)
+        if alert.runModal() == .alertFirstButtonReturn {
+            model.setPalette(palette, seed: seed, resettingColors: true)
+        }
     }
 
     /// The item in a dark and in a light menu bar, and three windows with their borders in the colors of the appearance
@@ -555,36 +724,45 @@ struct ThemesSettingsView: View {
 
     /// The colors of the palette in the appearance of the system: the focused workspace, the accent, the workspaces
     /// with windows, the inactive border
-    private func paletteButton(_ palette: ThemePalette) -> some View {
-        let isSelected = model.palette == palette
+    private func swatches(_ palette: ThemePalette) -> [Color] {
         let isDark = isSystemAppearanceDark
-        let swatches: [Color] = switch palette.colors(isDark: isDark, seed: model.paletteSeed) {
+        return switch palette.colors(isDark: isDark, seed: model.paletteSeed) {
             case let colors?: [colors.focused, colors.accent, colors.occupied, colors.inactiveBorder].map { Color(nsColor: $0.nsColor) }
             case nil: [Color.accentColor, isDark ? .white : .black, .gray, Color(nsColor: Rgba(hex: "#8E8E93").orDie().nsColor)]
         }
-        return Button {
-            model.set(.themePalette, .string(palette.rawValue))
-        } label: {
-            VStack(spacing: 6) {
-                HStack(spacing: 4) {
+    }
+
+    /// A palette as a small card. Selected: the theme in use. Base (dashed): the palette that gives the colors the user
+    /// hasn't set, while no theme is selected
+    private func chip(_ title: String, swatches: [Color], isSelected: Bool, isBase: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                HStack(spacing: 3) {
                     ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
-                        Circle().fill(swatch).frame(width: 14, height: 14)
+                        Circle().fill(swatch).frame(width: 10, height: 10)
                             .overlay { Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5) }
                     }
                 }
-                Text(palette.title).font(.system(size: 11))
+                Text(isBase ? Strings.Settings.baseOf(title) : title)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 7)
+            .padding(.horizontal, 4)
             .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isSelected ? 2 : 1)
+                    .strokeBorder(
+                        isSelected ? Color.accentColor : isBase ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.25),
+                        style: StrokeStyle(lineWidth: isSelected ? 2 : 1, dash: isBase ? [4, 3] : []),
+                    )
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(palette.title)
+        .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
@@ -600,20 +778,13 @@ struct MenuBarSettingsView: View {
             Section {
                 preview
             }
-            Section(Strings.Settings.options) {
-                ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
-                ToggleRow(model: model, title: Strings.Settings.dimEmpty, detail: Strings.Settings.dimEmptyDetail, key: .menuBarDimEmpty)
-                ToggleRow(model: model, title: Strings.Settings.showMode, detail: Strings.Settings.showModeDetail, key: .menuBarShowMode)
-            }
             Section {
-                ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.focused, key: .menuBarFocused, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.occupied, key: .menuBarOccupied, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.emptyColor, key: .menuBarEmpty, allowsAuto: true)
+                ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
             } header: {
-                tableHeader(Strings.Settings.colors, SettingsKey.menuBarFocused)
+                Text(Strings.Settings.options)
             } footer: {
-                Text(Strings.Settings.colorsFooter)
+                // The shape, its options and the colors are with the palette, in one place
+                Text(Strings.Settings.indicatorInThemes)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -655,7 +826,7 @@ struct BordersSettingsView: View {
             Section {
                 preview
             }
-            Section(Strings.Settings.windowBorders) {
+            Section {
                 ToggleRow(model: model, title: Strings.Settings.showBorders, key: .bordersEnabled)
                 SliderRow(model: model, title: Strings.Settings.width, key: .bordersWidth, range: BordersConfig.widthRange)
                 ToggleRow(model: model, title: Strings.Settings.squareCorners, detail: Strings.Settings.squareCornersDetail, key: .bordersSquareCorners)
@@ -670,13 +841,13 @@ struct BordersSettingsView: View {
                 SliderRow(model: model, title: Strings.Settings.glowRadius, key: .bordersGlowRadius, range: BordersConfig.glowRadiusRange)
                     .disabled(!model.bool(.bordersGlow))
                 ToggleRow(model: model, title: Strings.Settings.hideWhenSingle, detail: Strings.Settings.hideWhenSingleDetail, key: .bordersHideWhenSingle)
-            }
-            Section {
-                ColorRow(model: model, title: Strings.Settings.activeWindow, key: .bordersActiveColor, allowsAuto: false)
-                ColorRow(model: model, title: Strings.Settings.inactiveWindows, key: .bordersInactiveColor, allowsAuto: false)
-                ColorRow(model: model, title: Strings.Settings.floatingWindow, key: .bordersFloatingColor, allowsAuto: false)
             } header: {
-                tableHeader(Strings.Settings.colors, SettingsKey.bordersActiveColor)
+                Text(Strings.Settings.windowBorders)
+            } footer: {
+                Text(Strings.Settings.colorsInThemes)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             Section {
                 // One row per binding mode of the config file. See: SettingsModel.colorableModes

@@ -8,6 +8,8 @@ struct FrameAnimation: Equatable, Sendable {
     var to: CGRect
     var start: ContinuousClock.Instant
     var duration: Duration
+    /// How the movement is spread over the duration. See: [animations] curve
+    var curve: AnimationCurve = .easeOut
 
     /// 0 when it starts, 1 once it is over
     func progress(at now: ContinuousClock.Instant) -> Double {
@@ -19,11 +21,8 @@ struct FrameAnimation: Equatable, Sendable {
 
     /// Where the window is at that instant. Exactly `to` once it is over
     func frame(at now: ContinuousClock.Instant) -> CGRect {
-        isFinished(at: now) ? to : Self.interpolate(from, to, Self.ease(progress(at: now)))
+        isFinished(at: now) ? to : Self.interpolate(from, to, curve.value(progress(at: now)))
     }
-
-    /// Ease out: quick to leave, gentle to arrive. The same curve as the focus marker of the menu bar item
-    static func ease(_ progress: Double) -> Double { 1 - pow(1 - progress, 3) }
 
     static func interpolate(_ from: CGRect, _ to: CGRect, _ progress: Double) -> CGRect {
         func mix(_ a: CGFloat, _ b: CGFloat) -> CGFloat { a + (b - a) * progress }
@@ -92,7 +91,7 @@ final class WindowAnimator {
         let previous = shownWorkspaces
         shownWorkspaces = shown
         let mode = config.animations.workspaceSwitch
-        guard mode != .off, duration > .zero else { return [:] }
+        guard mode != .off, duration(.workspace) > .zero else { return [:] }
         let order = Workspace.all.map(\.name)
         let screens = monitors.map { CGRect($0.rect) }
         var slidingOut: [String: CGSize] = [:]
@@ -124,24 +123,28 @@ final class WindowAnimator {
             return
         }
         slideOutEnds[window.windowId] = end
-        start(window, FrameAnimation(from: from, to: from.offsetBy(dx: distance.width, dy: distance.height), start: now, duration: duration), now: now)
+        let to = from.offsetBy(dx: distance.width, dy: distance.height)
+        start(window, FrameAnimation(from: from, to: to, start: now, duration: duration(.workspace), curve: curve(.workspace)), now: now)
     }
 
     /// The window is sliding out of the screen: it is hidden once it is out
     func isSlidingOut(_ windowId: UInt32) -> Bool { slideOutEnds[windowId] != nil }
 
-    private var duration: Duration {
+    private func duration(_ kind: AnimationKind) -> Duration {
         if isUnitTest && !isEnabledInTests { return .zero }
         if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { return .zero }
-        return config.animations.effectiveDuration
+        return config.animations.effectiveDuration(kind)
     }
+
+    private func curve(_ kind: AnimationKind) -> AnimationCurve { config.animations.effectiveCurve(kind) }
 
     /// Puts a tiling window in the frame of the layout: right away, or sliding there if the layout is animated.
     ///
     /// - Parameter previous: the frame that the previous layout gave to the window. The window slides from there,
     ///   or grows from the center of its tile if it is new (Window.isEntering), or comes in from the side of the screen
     ///   if its workspace is being switched to (see beginLayout), or goes on from where it is if it is already sliding
-    func setFrame(_ window: Window, _ rect: Rect, previous: Rect?) {
+    /// - Parameter isFullscreen: the window goes into fullscreen or out of it. See: [animations] fullscreen
+    func setFrame(_ window: Window, _ rect: Rect, previous: Rect?, isFullscreen: Bool = false) {
         let target = CGRect(rect)
         let now: ContinuousClock.Instant = .now
         let current = animations[window.windowId]
@@ -151,8 +154,9 @@ final class WindowAnimator {
         if let current, current.animation.to == target { return }
         // Shown again while it was sliding out: it isn't hidden
         slideOutEnds[window.windowId] = nil
-        let duration = duration
         let slide = window.nodeWorkspace.flatMap { slidingIn[$0.name] }
+        let kind: AnimationKind = slide != nil ? .workspace : isEntering ? .open : isFullscreen ? .fullscreen : .move
+        let duration = duration(kind)
         let from = current.map { $0.animation.frame(at: now) }
             ?? (isEntering ? Self.entryFrame(target) : slide.map { target.offsetBy(dx: $0.width, dy: $0.height) } ?? previous.map(CGRect.init))
         guard isAnimatedLayoutRequested || slide != nil, duration > .zero, let from, from != target else {
@@ -161,7 +165,7 @@ final class WindowAnimator {
             return
         }
         DebugStats.count("animation.started")
-        start(window, FrameAnimation(from: from, to: target, start: now, duration: duration), now: now)
+        start(window, FrameAnimation(from: from, to: target, start: now, duration: duration, curve: curve(kind)), now: now)
     }
 
     private func start(_ window: Window, _ animation: FrameAnimation, now: ContinuousClock.Instant) {

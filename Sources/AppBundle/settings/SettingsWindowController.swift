@@ -89,11 +89,23 @@ final class SettingsTabViewController: NSTabViewController {
     /// The part of the screen that the window may use
     var visibleFrame: (NSWindow) -> CGRect? = { ($0.screen ?? NSScreen.main)?.visibleFrame }
 
+    private var scrollToTopObserver: (any NSObjectProtocol)?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        scrollToTopObserver = NotificationCenter.default.addObserver(forName: .settingsPageScrollToTop, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.selectedPage?.scrollToTop() }
+        }
+    }
+
     func addTab(_ title: String, symbol: String, _ view: some View) {
         let page = SettingsPageController(NSHostingController(rootView: AnyView(view)))
         page.title = title
         page.onContentSizeChange = { [weak self, weak page] in
-            if let self, let page, page === self.selectedPage { self.fitWindow(animate: false) }
+            guard let self, let page, page === self.selectedPage else { return }
+            // The form tells it in the middle of a layout pass of the window. Resizing the window right there leaves
+            // the content view with the margins of the old size (under the toolbar, or with a gap): after the pass
+            self.fitWindowAfterLayout()
         }
         let item = NSTabViewItem(viewController: page)
         item.label = title
@@ -113,16 +125,43 @@ final class SettingsTabViewController: NSTabViewController {
         fitWindow(animate: window.isVisible)
     }
 
+    /// The title bar and the toolbar. Measured once, before the window is resized: right after a resize, and until the
+    /// next layout pass, `contentLayoutRect` still has the old height, and a chrome worked out from it is wrong by the
+    /// difference (the content then ends up taller than the window, under the toolbar, or shorter, with a gap)
+    private var chromeHeight: CGFloat? = nil
+    /// A resize makes the form and the scroll view change their frames, which asks for a resize again
+    private var isFitting = false
+
+    private var isFitScheduled = false
+
+    /// fitWindow, once the layout pass that is going on is over
+    func fitWindowAfterLayout() {
+        if isFitScheduled { return }
+        isFitScheduled = true
+        RunLoop.main.perform(inModes: [.common]) { [weak self] in
+            MainActor.assumeIsolated {
+                self?.isFitScheduled = false
+                self?.fitWindow(animate: false)
+            }
+        }
+    }
+
     /// Gives the window the size of the selected tab, without leaving the screen. See: SettingsWindowSizing
     func fitWindow(animate: Bool) {
-        guard let window = unsafe view.window, let content = selectedPage?.contentSize, content.height > 0 else { return }
+        guard !isFitting, let window = unsafe view.window, let content = selectedPage?.contentSize, content.height > 0 else { return }
+        let chrome = chromeHeight ?? (window.frame.height - window.contentLayoutRect.height)
+        chromeHeight = chrome
         let frame = SettingsWindowSizing.frame(
             current: window.frame,
-            chromeHeight: window.frame.height - window.contentLayoutRect.height,
+            chromeHeight: chrome,
             content: content,
             visible: visibleFrame(window),
         )
-        if frame != window.frame { window.setFrame(frame, display: true, animate: animate) }
+        if frame != window.frame {
+            isFitting = true
+            defer { isFitting = false }
+            window.setFrame(frame, display: true, animate: animate)
+        }
     }
 }
 
@@ -152,6 +191,41 @@ final class SettingsPageController: NSViewController {
     /// The size that the form asks for
     var contentSize: CGSize { hosting.preferredContentSize }
 
+
+
+    /// Until then, every change of the size of the form or of the window shows the top of the form again:
+    /// the form and the window take their new sizes in several steps after a part of the tab replaces another one
+    private var keepsTopUntil: ContinuousClock.Instant? = nil
+    private var clipObserver: (any NSObjectProtocol)?
+
+    /// Shows the top of the form, now and while the form and the window settle
+    func scrollToTop() {
+        keepsTopUntil = .now + .milliseconds(500)
+        settleScroll()
+    }
+
+    /// The scroll position stays where the form is: never past its end, never above its top. A form that got
+    /// shorter, or a window that got taller, would otherwise leave its top out of sight with nothing to scroll back
+    private func settleScroll() {
+        guard let scrollView = view as? NSScrollView, let form = scrollView.documentView else { return }
+        let keepsTop = keepsTopUntil.map { .now < $0 } ?? false
+        func settle(_ scrollView: NSScrollView) {
+            let clip = scrollView.contentView
+            let documentHeight = scrollView.documentView?.frame.height ?? 0
+            let maxY = max(0, documentHeight - clip.bounds.height)
+            let y = keepsTop ? (clip.isFlipped ? 0 : maxY) : min(max(clip.bounds.origin.y, 0), maxY)
+            if y != clip.bounds.origin.y {
+                clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: y))
+                scrollView.reflectScrolledClipView(clip)
+            }
+        }
+        func inner(_ view: NSView) -> [NSScrollView] {
+            view.subviews.flatMap { subview in (subview as? NSScrollView).map { [$0] } ?? inner(subview) }
+        }
+        settle(scrollView)
+        inner(form).forEach(settle)
+    }
+
     override func loadView() {
         let scrollView = NSScrollView()
         scrollView.drawsBackground = false
@@ -172,7 +246,15 @@ final class SettingsPageController: NSViewController {
         // AppKit resizes the view of the form when the size that the form asks for changes
         form.postsFrameChangedNotifications = true
         frameObserver = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: form, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.onContentSizeChange?() }
+            MainActor.assumeIsolated {
+                self?.onContentSizeChange?()
+                self?.settleScroll()
+            }
+        }
+        // The window got taller or shorter
+        scrollView.contentView.postsFrameChangedNotifications = true
+        clipObserver = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: scrollView.contentView, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.settleScroll() }
         }
     }
 
@@ -203,4 +285,9 @@ enum SettingsWindowSizing {
         }
         return frame
     }
+}
+
+extension Notification.Name {
+    /// A part of a tab took the place of another one (Themes › Palette, Indicator, Colors): its top is shown
+    static let settingsPageScrollToTop = Notification.Name("inlay.settings.scrollToTop")
 }

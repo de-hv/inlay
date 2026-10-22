@@ -60,6 +60,19 @@ enum Strings {
         }
     }
 
+    /// The theme as a whole: palette, wallpaper and hooks. See: ThemeController, ThemeCommand
+    enum Theme {
+        static func missingWallpaper(_ palette: String) -> String { "The wallpaper of \(palette) doesn't exist" }
+        static func missingWallpaperDetail(_ path: String) -> String { "\(path) can't be found. Choose another one for the theme, or keep the wallpaper that is on the screen." }
+        static let chooseWallpaper = "Choose…"
+        static let keepWallpaper = "Keep Current"
+        static func chooseWallpaperMessage(_ palette: String) -> String { "The wallpaper of \(palette). It is written in \(configFileName)." }
+        static func paletteSet(_ palette: String) -> String { "Palette: \(palette)" }
+        static func manualColorsNote(_ keys: [String]) -> String {
+            "Colors written by hand win over the palette: \(keys.joined(separator: ", ")). 'inlay theme set <palette> --reset-colors' removes them."
+        }
+    }
+
     /// The notice that tells that the config was reloaded. See: ReloadNoticePanel
     enum Notice {
         static func reloaded(_ fileName: String) -> String { "\(fileName) reloaded" }
@@ -78,9 +91,58 @@ enum Strings {
         static let themes = "Themes"
         static let workspaceIndicator = "Workspace Indicator"
         static let palette = "Palette"
-        static let paletteFooter = "A palette colors the menu bar item and the borders, with a light and a dark variant that follow the appearance of the system. It gives the colors you haven't changed in Menu Bar and Borders."
-        static func paletteOverridden(_ keys: [String]) -> String { "Your config sets \(keys.joined(separator: ", ")): \(keys.count == 1 ? "it wins" : "they win") over the palette." }
-        static let usePalette = "Use the Palette"
+        static let paletteFooter = "A palette colors the menu bar item and the borders, with a light and a dark variant that follow the appearance of the system. It gives every color you haven't set yourself in Colors."
+        static let paletteSection = "Palette"
+        static let indicatorSection = "Indicator"
+        static let colorsSection = "Colors"
+        static let madeForYou = "Made for You"
+        static let palettes = "Palettes"
+        static let systemPalette = "System"
+        static let materialFromWallpaper = "Material · Wallpaper"
+        static let materialFromColor = "Material · Color"
+        static let borderColors = "Border Colors"
+        static let indicatorInThemes = "The shape of the indicator, its options and its colors are in Themes."
+        static let indicatorShapeFooter = "The shape of the item in the menu bar. Its colors are in Colors."
+        static let colorsInThemes = "The colors of the indicator and of the borders are in Themes › Colors, next to the palette that gives them."
+        static let noThemeTitle = "No theme"
+        static func themeTitle(_ palette: String) -> String { "Theme: \(palette)" }
+        static let themeInUseDetail = "Every color comes from the palette."
+        static func seedFromWallpaperDetail(_ hex: String?) -> String {
+            "The main color of the wallpaper of the main screen, like matugen" + (hex.map { ": \($0)." } ?? ". It is read when the config loads.")
+        }
+        static let indicatorColors = "Indicator Colors"
+        static let indicatorColorsFooter = "Each color starts as the one of the theme. Changing one makes it yours: the theme no longer applies to it, until “Use Theme”."
+        static let activeWorkspaceColor = "Active workspace"
+        static let inactiveWorkspaceColor = "Inactive workspaces (with windows)"
+        static let emptyWorkspaceColor = "Empty workspaces"
+        static let themeBadge = "Theme"
+        static let customBadge = "Custom"
+        static let custom = "Custom"
+        static let useTheme = "Use Theme"
+        static let keepCustom = "Keep Custom Colors"
+        static let noThemeInUse = "The colors of the system, and the ones you set."
+        static func customInUse(_ colors: [String], base: String) -> String {
+            "Custom colors: \(colors.joined(separator: ", ")). No theme applies to them; the rest come from \(base)."
+        }
+        static func useOnlyTheme(_ palette: String) -> String { "Use \(palette) for Every Color" }
+        static func baseOf(_ palette: String) -> String { "\(palette) · base" }
+        static func replaceCustomTitle(_ palette: String) -> String { "Use the \(palette) theme?" }
+        static func replaceCustomDetail(_ colors: [String]) -> String {
+            "Your custom colors (\(colors.joined(separator: ", "))) are removed from \(configFileName), so that the theme gives every color."
+        }
+        /// The name of a color that a palette gives, as the user knows it
+        static func colorName(_ key: SettingsKey) -> String {
+            switch key {
+                case .menuBarFocused: "active workspace"
+                case .menuBarOccupied: "inactive workspaces"
+                case .menuBarEmpty: "empty workspaces"
+                case .menuBarAccent: "binding mode"
+                case .bordersActiveColor: "active border"
+                case .bordersInactiveColor: "inactive borders"
+                case .bordersFloatingColor: "floating border"
+                default: key.label
+            }
+        }
         static let seed = "Seed"
         static let seedDetail = "Material You is made from this color, the way matugen makes it from a wallpaper. 'system-accent' follows the accent color of macOS."
         static let defaultValue = "default"
@@ -165,13 +227,8 @@ enum Strings {
         static let dimEmptyDetail = "Workspaces without windows are drawn fainter."
         static let showMode = "Show the binding mode"
         static let showModeDetail = "Its initial in the marker of the focused workspace, when the mode isn't main."
-        static let colors = "Colors"
-        static let accent = "Accent"
-        static let accentDetail = "The marker of a binding mode. “auto”: the same as Focused."
-        static let focused = "Focused"
-        static let occupied = "With windows"
-        static let emptyColor = "Empty"
-        static let colorsFooter = "“auto” follows the menu bar: white on a dark one, black on a light one. “Reset” removes the key from the config file."
+        static let accent = "Binding mode"
+        static let accentDetail = "The marker of the focused workspace while a binding mode (resize, service) is active."
 
         // Borders
         static let windowBorders = "Window Borders"

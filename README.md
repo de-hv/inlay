@@ -45,6 +45,8 @@ border hidden around a single window (`gaps.smart`, `borders.hide-when-single`) 
 the config (`[notifications]`), and the four themes and seven palettes taken from Hyprland setups (`dots`,
 `underline`, `glyphs`, `liquid`; `kanagawa`, `oxocarbon`, `ayu`, `one-dark`, `mono`, `material` and its `seed`,
 `flexoki`): they are checked with tests and renders, including the frames of their animations.
+The same goes for the curves of the animations, `seed = 'wallpaper'`, `inlay theme set` with its wallpaper
+and its hooks, and the custom colors of Settings › Themes: tests and renders only.
 
 Known limitations of this version:
 
@@ -506,6 +508,24 @@ it doesn't let it change their opacity or scale without disabling SIP: the anima
 windows, nothing more. A window that is slow to resize (some browsers, Electron apps) skips frames, but it
 always ends in its exact place.
 
+**Curves**: how the movement is spread over the duration, a cubic Bézier curve like the `bezier` of Hyprland. The
+presets are `ease-out` (the default, and the curve of before), `linear`, `ease`, `ease-in-out`, `snappy` and
+`overshot` (the window goes a bit past its frame and comes back); `[animations.curves]` adds your own. Each kind
+of animation can have its own curve and duration: `open` (a new window), `move` (the others make room or take the
+space, `swap`, `move`), `fullscreen` and `workspace`.
+
+```toml
+[animations]
+    curve = 'ease-out'
+    open = { curve = 'overshot', duration = 220 }
+    workspace = { curve = 'snappy', duration = 160 }
+
+    [animations.curves]
+        bounce = [0.34, 1.56, 0.64, 1]   # x1, y1, x2, y2. x1 and x2 in 0 ... 1
+```
+
+A curve that overshoots also resizes the window past its tile for a moment: some apps are slow to redraw that.
+
 ## Menu bar and settings
 
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
@@ -562,6 +582,52 @@ role (the focused workspace and the active border, the accent and the floating b
 seed gives the colors of the Material 3 baseline, and `seed = 'system-accent'` makes the palette from the accent
 color of macOS. It is an approximation of Material in CIELAB: the colors are close to the ones of matugen, not
 equal. The other palettes ignore `seed`.
+
+**`seed = 'wallpaper'`** makes it from the main color of the wallpaper of the main screen, like matugen: the hue
+that covers the most of the image, weighted by how colorful it is. It is read when the config loads and every time
+the wallpaper changes: Inlay watches the store of the wallpapers of macOS, with no timer, and reads a thumbnail of
+64×64 points (a few milliseconds). A wallpaper that isn't an image (the Aerial videos) gives the default seed.
+
+**Themes: `inlay theme set <palette>`** switches the palette from the terminal (`inlay theme list` lists them, and
+the one in use). A theme is the palette and, optionally, its wallpaper and the commands that theme your other apps:
+
+```toml
+[theme]
+    palette = 'one-dark'
+    wallpaper = '~/walls/default.jpg'       # the one of every palette (optional)
+    on-change = ['~/.config/ghostty/set-theme.sh']
+
+    [theme.wallpapers]                      # the ones of some palettes, which win
+        gruvbox = '~/walls/autumn.jpg'
+```
+
+- **The wallpaper** is put on every screen when the palette changes (`theme set`, Settings › Themes or the file),
+  never at startup: a wallpaper picked in System Settings stays until the next change of palette. Without one,
+  switching palettes leaves the wallpaper alone. If the file doesn't exist anymore, Inlay asks: *Choose…* picks
+  another image and writes it in the config (in `[theme.wallpapers]` if it was the one of the palette), *Keep
+  Current* leaves the wallpaper on the screen.
+- **The hooks** of `on-change` run when the colors change: another palette, the other variant (light or dark), a
+  new seed. They get the colors in effect as `INLAY_THEME_FOCUSED`, `INLAY_THEME_OCCUPIED`, `INLAY_THEME_EMPTY`,
+  `INLAY_THEME_ACCENT`, `INLAY_THEME_ACTIVE_BORDER`, `INLAY_THEME_INACTIVE_BORDER`, `INLAY_THEME_FLOATING_BORDER`
+  ('#RRGGBB'), and `INLAY_THEME`, `INLAY_THEME_VARIANT`, `INLAY_THEME_SEED` and `INLAY_THEME_WALLPAPER`.
+- **Colors set by hand win** over the palette. `inlay theme set <palette>` keeps them and says which ones;
+  `--reset-colors` removes them, so that the palette gives every color.
+
+**Settings › Themes** is where the look is decided, in one place. On top, always: the live preview and a card that
+says where the colors come from, green *Theme: One Dark* (every color comes from the palette), orange *Custom*
+(some colors are your own, the rest come from the palette, and a button gives them all back to it) or gray *No
+theme*. Below it, three parts, one at a time:
+
+- **Palette**: *Made for You* (System, Material · Wallpaper, Material · Color, with the seed when it is a color) and
+  the other palettes in a compact grid. While some colors are your own no palette is selected: the one that gives
+  the rest is drawn dashed, as the *base*, and picking a palette asks first, since it removes your colors.
+- **Indicator**: the eight shapes of the menu bar item, and its options (*Dim empty workspaces*, *Show the binding
+  mode*).
+- **Colors**: every color that a palette gives, the ones of the indicator (active, inactive and empty workspaces,
+  binding mode) and the ones of the borders (active, inactive, floating). Each one starts as the one of the theme
+  (a *Theme* badge); changing it makes it yours (*Custom*), and *Use Theme* gives it back.
+
+The Menu Bar and Borders tabs keep the rest of their options; the colors are only in Themes.
 
 <p align="center"><img src="docs/images/menu-bar-palettes.png" alt="Real render of the pills theme in the fourteen palettes, the dark variant on a dark menu bar and the light one on a light menu bar: Catppuccin with a mauve focused pill, Tokyo Night blue, Gruvbox yellow, Nord frost blue, Rosé Pine rose, Dracula purple, Everforest green, Kanagawa blue, Oxocarbon magenta, Ayu yellow and orange, One Dark blue, Mono white and black, Material You lavender and purple, Flexoki orange; and Material You with seed '#B5651D', in peach and brown" width="880"></p>
 
@@ -645,18 +711,18 @@ tabs with the shipped config (click one to see it at full size):
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Configuration, with the path of the file, Show in Finder and Open, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: a preview of the menu bar item on a dark and on a light bar and of three windows with their borders; Workspace Indicator, the eight styles of the item as thumbnails in two rows (pills, chips, square, minimal, dots, underline, glyphs and liquid, the default); and Palette, fifteen cards with their colors in three rows (System, Catppuccin, Tokyo Night, Gruvbox, Nord, Rosé Pine, Dracula, Everforest, Kanagawa, Oxocarbon, Ayu, One Dark, Mono, Material You and Flexoki). With Material You, a row below them picks its seed" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: the live preview of the menu bar item and of three windows with their borders, next to a card that says which theme gives the colors; a segmented control with Palette, Indicator and Colors; and the Palette part: Made for You (System, Material · Wallpaper, Material · Color) and the other thirteen palettes in a compact grid of six columns" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-tiling.png"><img src="docs/images/settings-tiling.png" alt="Real render of the Tiling tab of Settings: New Windows, with Placement (Dwindle or After Focused) and Window to split (Focused or Cursor); and Arrangement, with Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Themes</sub></td><td align="center"><sub>Tiling</sub></td></tr>
 <tr>
 <td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-animations.png"><img src="docs/images/settings-animations.png" alt="Real render of the Animations tab of Settings: Windows, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; and Workspaces, with Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch)" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the switches Show the menu bar item, Dim empty workspaces and Show the binding mode, and the four colors of [menu-bar.colors], each with its value, a color well and Reset" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar tab of Settings: a live preview of the item on a dark and on a light bar, the switch Show the menu bar item, and a note that the shape, the options and the colors of the indicator are in Themes" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>Gaps</sub></td><td align="center"><sub>Animations</sub></td><td align="center"><sub>Menu Bar</sub></td></tr>
 <tr>
-<td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider at 4 pt, the Square corners switch, the Corner radius slider at 16 pt, the Glow switch and the Glow radius slider at 12 pt, the three colors of [borders], and a row per binding mode (resize and service, both 'not set') for [borders.mode-colors]" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders tab of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider, the Square corners switch, the Corner radius slider, the Glow switch and the Glow radius slider, Hide with a single window, a note that the colors are in Themes, and a row per binding mode (resize and service, both not set) for [borders.mode-colors]" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>Borders</sub></td></tr>
 </table>
@@ -675,7 +741,8 @@ How the window and the file follow each other is in [Configuration](#configurati
 
 Inlay draws a colored border around each managed window (tiled or floating) of the visible workspaces. The
 color comes from the state the manager already knows, with no focus heuristics. It is configured in the
-`[borders]` table (`inlay config --explain borders` documents it), or in the **Borders** tab of Settings.
+`[borders]` table (`inlay config --explain borders` documents it), or in the **Borders** tab of Settings (its three
+colors, in **Themes › Colors**).
 
 <p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (active-color) and the others with a gray one (inactive-color); a focused floating window with a purple border (floating-color); the focused window with a green border in the resize mode, from [borders.mode-colors]; only the focused window with a border, with inactive-color = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
 

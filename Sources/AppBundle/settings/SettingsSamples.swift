@@ -21,16 +21,20 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now.addingTimeInterval(-120), url: url, errorCount: 0, warningCount: 0, isApplied: true)
     let model = SettingsModel { .success(.init(url: url, text: text, exists: true)) }
     model.refresh()
-    let tabs: [(String, AnyView)] = [
-        ("general", AnyView(GeneralSettingsView(model: model))),
-        ("themes", AnyView(ThemesSettingsView(model: model))),
-        ("tiling", AnyView(TilingSettingsView(model: model))),
-        ("gaps", AnyView(GapsSettingsView(model: model))),
-        ("animations", AnyView(AnimationsSettingsView(model: model))),
-        ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
-        ("borders", AnyView(BordersSettingsView(model: model))),
+    // The Themes tab once per part of it
+    let tabs: [(String, AnyView, ThemesSection)] = [
+        ("general", AnyView(GeneralSettingsView(model: model)), .palette),
+        ("themes", AnyView(ThemesSettingsView(model: model)), .palette),
+        ("themes-indicator", AnyView(ThemesSettingsView(model: model)), .indicator),
+        ("themes-colors", AnyView(ThemesSettingsView(model: model)), .colors),
+        ("tiling", AnyView(TilingSettingsView(model: model)), .palette),
+        ("gaps", AnyView(GapsSettingsView(model: model)), .palette),
+        ("animations", AnyView(AnimationsSettingsView(model: model)), .palette),
+        ("menu-bar", AnyView(MenuBarSettingsView(model: model)), .palette),
+        ("borders", AnyView(BordersSettingsView(model: model)), .palette),
     ]
-    for (name, view) in tabs {
+    for (name, view, section) in tabs {
+        model.themesSection = section
         let hosting = NSHostingView(rootView: view)
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
         window.contentView = hosting

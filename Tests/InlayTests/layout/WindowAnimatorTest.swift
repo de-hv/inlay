@@ -42,12 +42,15 @@ extension InlayTests {
             assertTrue(half.minX > 50 && half.minX < 100)
             var last = -1.0
             for step in 0 ... 20 {
-                let value = FrameAnimation.ease(Double(step) / 20)
+                let progress = Double(step) / 20
+                let value = AnimationCurve.easeOut.value(progress)
                 assertTrue(value >= last)
+                // The curve of Inlay before there were curves, exactly
+                assertTrue(abs(value - (1 - pow(1 - progress, 3))) < 1e-6)
                 last = value
             }
-            assertEquals(FrameAnimation.ease(0), 0)
-            assertEquals(FrameAnimation.ease(1), 1)
+            assertEquals(AnimationCurve.easeOut.value(0), 0)
+            assertEquals(AnimationCurve.easeOut.value(1), 1)
             // No duration: already there
             assertEquals(FrameAnimation(from: from, to: to, start: start, duration: .zero).frame(at: start), to)
         }

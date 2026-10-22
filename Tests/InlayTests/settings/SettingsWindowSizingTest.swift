@@ -104,6 +104,67 @@ extension InlayTests {
             assertEquals(scrolling.contains("General"), false)
         }
 
+        /// Themes shows one part at a time. The part that comes is shown from its top, wherever the page was scrolled
+        @Test func testSwitchingThePartOfThemesShowsItsTop() throws {
+            setUpWorkspacesForTests()
+            ServerState.shared.axPermissionStatus = .granted
+            let text = try String(contentsOf: defaultConfigUrl, encoding: .utf8)
+            let model = SettingsModel { .success(.init(url: URL(filePath: "/nonexistent/inlay.toml"), text: text, exists: true)) }
+            model.refresh()
+            let window = SettingsWindowController(model: model).makeWindow { _ in CGRect(x: 0, y: 0, width: 1512, height: 600) }
+            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            tabs.selectedTabViewItemIndex = 1
+            model.themesSection = .colors
+            RunLoop.current.run(until: .now.addingTimeInterval(0.1))
+            window.layoutIfNeeded()
+            let page = try #require(tabs.tabViewItems[1].viewController as? SettingsPageController)
+            let scrollView = try #require(page.view as? NSScrollView)
+            // Colors is taller than such a screen: the page scrolls. Scrolled down, as the user would
+            scrollView.contentView.scroll(to: NSPoint(x: 0, y: 120))
+            assertEquals(scrollView.contentView.bounds.origin.y, 120)
+            model.themesSection = .indicator
+            NotificationCenter.default.post(name: .settingsPageScrollToTop, object: nil)
+            RunLoop.current.run(until: .now.addingTimeInterval(0.1))
+            assertEquals(scrollView.contentView.bounds.origin.y, 0)
+
+            // Scrolled, and then the window gets taller than the form: the top can't stay out of sight
+            scrollView.contentView.scroll(to: NSPoint(x: 0, y: 120))
+            window.setContentSize(NSSize(width: window.contentLayoutRect.width, height: 1200))
+            RunLoop.current.run(until: .now.addingTimeInterval(0.6))
+            window.layoutIfNeeded()
+            assertEquals(scrollView.contentView.bounds.origin.y, 0)
+        }
+
+        /// The parts of Themes have different heights: the window follows them, and the scroll view of the tab fills
+        /// the window below the toolbar every time (it used to keep the height of the previous part, anchored at the
+        /// bottom: a gap under the toolbar, or the top of the form under it)
+        @Test func testTheScrollViewFillsTheWindowWhenThePartOfThemesChanges() throws {
+            setUpWorkspacesForTests()
+            ServerState.shared.axPermissionStatus = .granted
+            let text = try String(contentsOf: defaultConfigUrl, encoding: .utf8)
+            let model = SettingsModel { .success(.init(url: URL(filePath: "/nonexistent/inlay.toml"), text: text, exists: true)) }
+            model.refresh()
+            let window = SettingsWindowController(model: model).makeWindow { _ in CGRect(x: 0, y: 0, width: 1512, height: 2000) }
+            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            tabs.selectedTabViewItemIndex = 1
+            // On the screen, and nothing but the run loop lays it out: like the real window
+            window.orderFront(nil)
+            defer { window.orderOut(nil) }
+            RunLoop.current.run(until: .now.addingTimeInterval(0.2))
+            let page = try #require(tabs.tabViewItems[1].viewController as? SettingsPageController)
+            var heights: Set<CGFloat> = []
+            for section in [ThemesSection.indicator, .colors, .palette, .indicator] {
+                model.themesSection = section
+                RunLoop.current.run(until: .now.addingTimeInterval(0.3))
+                heights.insert(window.frame.height)
+                let scrollView = try #require(page.view as? NSScrollView)
+                assertEquals(scrollView.convert(scrollView.bounds, to: nil), window.contentLayoutRect, additionalMsg: "\(section)")
+                // Nothing to scroll: the form starts at the top of the scroll view
+                assertEquals(scrollView.contentView.bounds.origin.y, 0, additionalMsg: "\(section)")
+            }
+            assertEquals(heights.count > 1, true) // The window did change its height
+        }
+
         @Test func testOnABigScreenTheWindowIsAsTallAsTheTab() throws {
             let window = try window(visibleHeight: 2000)
             let tabs = try #require(window.contentViewController as? SettingsTabViewController)

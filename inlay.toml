@@ -124,8 +124,18 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 # material|flexoki. See: inlay config --explain theme
 [theme]
     palette = 'one-dark'
-    # The color that 'material' (Material You) is made from: '#RRGGBB' or 'system-accent'
+    # The color that 'material' (Material You) is made from: '#RRGGBB', 'system-accent' or 'wallpaper' (the main color
+    # of the wallpaper, like matugen)
     seed = '#6750A4'
+    # The wallpaper of every palette, put on the screens when the palette changes ('inlay theme set <palette>').
+    # Without it, switching palettes leaves the wallpaper alone. See: inlay config --explain theme.wallpaper
+    # wallpaper = '~/walls/default.jpg'
+    # Commands that run when the colors change, with them in INLAY_THEME_* variables (inlay config --explain theme.on-change)
+    on-change = []
+
+    # The wallpaper of a palette, which wins over the one of every palette
+    [theme.wallpapers]
+        # gruvbox = '~/walls/autumn.jpg'
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                  ANIMATIONS
@@ -138,6 +148,10 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     duration = 180
     # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
     workspace-switch = 'horizontal'
+    # The timing curve: ease-out | linear | ease | ease-in-out | snappy | overshot, or one of [animations.curves].
+    # Each kind of animation can have its own: open, move, fullscreen and workspace (inlay config --explain animations)
+    curve = 'ease-out'
+    # open = { curve = 'overshot', duration = 220 }
 
 # A notice in the corner of the screen when the config is reloaded: 'diff' (with the keys that changed),
 # 'simple' or 'off'. See: inlay config --explain notifications

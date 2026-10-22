@@ -27,6 +27,9 @@ final class SettingsModel {
     /// the floating colors for good, which is what those two keys are for. (It can still be written by hand)
     private(set) var colorableModes: [String] = []
 
+    /// The part of the Themes tab on the screen. Only the window remembers it, not the config
+    var themesSection: ThemesSection = .palette
+
     /// The values chosen in the window that aren't in the file yet: a slider being dragged, a color being picked
     private var pending: [SettingsKey: TomlValue] = [:]
     @ObservationIgnored private var root: [String: Any] = [:]
@@ -130,7 +133,53 @@ final class SettingsModel {
     var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? ThemeConfig().palette }
 
     /// [theme] seed, the color that 'material' is made from
-    var paletteSeed: Rgba { ThemeConfig(seed: color(.themeSeed)).seedColor(systemAccent: .systemAccent) }
+    var paletteSeed: Rgba {
+        let seed: ThemeSeed = string(.themeSeed) == ThemeSeed.wallpaperLiteral ? .wallpaper : .color(color(.themeSeed))
+        return ThemeConfig(seed: seed).seedColor(systemAccent: .systemAccent, wallpaper: WallpaperSeed.shared.color)
+    }
+
+    /// The colors that the config sets by hand: the palette doesn't give them. See: ManualColors
+    var manualColorKeys: [SettingsKey] {
+        ManualColors.keys.filter { isSet($0) && value($0) != $0.defaultValue }
+    }
+
+    /// A palette is in use, and some colors are the user's own instead of its ones: no theme applies to them
+    var hasCustomColors: Bool { palette != .system && !manualColorKeys.isEmpty }
+
+    /// The color that the palette gives to the key, in the appearance of the system. nil for 'system', and for a key
+    /// that a palette doesn't color
+    func paletteColor(_ key: SettingsKey) -> Rgba? {
+        guard let colors = palette.colors(isDark: isSystemAppearanceDark, seed: paletteSeed) else { return nil }
+        return switch key {
+            case .menuBarFocused: colors.focused
+            case .menuBarOccupied: colors.occupied
+            case .menuBarEmpty: colors.empty
+            case .menuBarAccent: colors.accent
+            case .bordersActiveColor: colors.activeBorder
+            case .bordersInactiveColor: colors.inactiveBorder
+            case .bordersFloatingColor: colors.floatingBorder
+            default: nil
+        }
+    }
+
+    /// Picks a palette in one write. With `resettingColors`, the colors set by hand are removed: the palette gives every color.
+    /// - Parameter seed: the [theme] seed to write with it (Material You). nil: the seed stays as it is
+    func setPalette(_ palette: ThemePalette, seed: String? = nil, resettingColors: Bool) {
+        let manual = resettingColors ? manualColorKeys : []
+        var edits = [ConfigEdit(path: SettingsKey.themePalette.path, value: .string(palette.rawValue))]
+        var keys: [SettingsKey] = [.themePalette]
+        if let seed {
+            edits.append(ConfigEdit(path: SettingsKey.themeSeed.path, value: .string(seed)))
+            keys.append(.themeSeed)
+        }
+        write(edits + manual.map { ConfigEdit(path: $0.path, value: nil) }, keys: keys + manual)
+    }
+
+    /// Removes every color set by hand, in one write: the palette gives them all again
+    func resetManualColors() {
+        let manual = manualColorKeys
+        write(manual.map { ConfigEdit(path: $0.path, value: nil) }, keys: manual)
+    }
 
     /// 'chips-icons', the theme of a previous version, is 'chips', like for the parser
     var menuBarTheme: MenuBarTheme {
@@ -222,4 +271,14 @@ final class SettingsModel {
             }
         }
     }
+}
+
+/// The parts of the Themes tab of the settings window, one at a time
+enum ThemesSection: Hashable, Sendable {
+    /// The palettes: where the colors come from
+    case palette
+    /// The shape of the workspace indicator, and its options
+    case indicator
+    /// Every color that a palette gives: the indicator and the borders, theme or the user's own
+    case colors
 }

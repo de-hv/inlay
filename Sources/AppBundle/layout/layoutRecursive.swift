@@ -79,13 +79,14 @@ extension TreeNode {
                         window.layoutFullscreen(context, previous: previous)
                     } else {
                         // Out of fullscreen: it shrinks back to its tile from the whole screen, if the layout is animated
+                        let wasFullscreen = lastAppliedLayoutPhysicalRect == nil && window.fullscreenFrame != nil
                         let previous = lastAppliedLayoutPhysicalRect ?? window.fullscreenFrame
                         window.fullscreenFrame = nil
                         lastAppliedLayoutPhysicalRect = physicalRect
                         window.isFullscreen = false
                         DebugStats.count("layout.tiling-window-frame")
                         // Right away, or sliding there if the layout is animated
-                        WindowAnimator.shared.setFrame(window, physicalRect, previous: previous)
+                        WindowAnimator.shared.setFrame(window, physicalRect, previous: previous, isFullscreen: wasFullscreen)
                     }
                 }
             case .tilingContainer(let container):
@@ -151,7 +152,7 @@ extension Window {
             ? context.workspace.workspaceMonitor.visibleRect
             : context.workspace.workspaceMonitor.visibleRectPaddedByOuterGaps
         fullscreenFrame = monitorRect
-        WindowAnimator.shared.setFrame(self, monitorRect, previous: previous)
+        WindowAnimator.shared.setFrame(self, monitorRect, previous: previous, isFullscreen: true)
     }
 }
 

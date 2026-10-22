@@ -93,7 +93,7 @@ final class MenuBarStore {
     func refresh() {
         let new = MenuBarState(snapshot: .fromModel(), config: config.menuBar
             .copy(\.palette, config.theme.palette)
-            .copy(\.paletteSeed, config.theme.seedColor(systemAccent: .systemAccent)))
+            .copy(\.paletteSeed, config.theme.seedColor(systemAccent: .systemAccent, wallpaper: WallpaperSeed.shared.color)))
         if new == state {
             DebugStats.count("menu-bar.snapshot.same")
             return

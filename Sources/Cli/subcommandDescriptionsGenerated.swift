@@ -42,6 +42,7 @@ let subcommandDescriptions = [
     ["  swap", "Swaps the focused window with another window."],
     ["  test-not", "Negative condition evaluation utility"],
     ["  test", "Condition evaluation utility"],
+    ["  theme", "Switch the palette (and its wallpaper and hooks), or list the palettes"],
     ["  trigger-binding", "Trigger Inlay binding as if it was pressed by user"],
     ["  true", "Return true value"],
     ["  uninstall", "Quit Inlay and remove it and its config (--purge: also preferences and backups)"],

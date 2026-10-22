@@ -169,6 +169,10 @@ let test_help_generated = """
     USAGE: test [-h|--help] <lhs> = <rhs>
        OR: test [-h|--help] <lhs> ~= <rhs>
     """
+let theme_help_generated = """
+    USAGE: theme [-h|--help] set <palette> [--reset-colors]
+       OR: theme [-h|--help] list
+    """
 let trigger_binding_help_generated = """
     USAGE: trigger-binding [-h|--help] --mode <mode-id> [--] <binding>
     """

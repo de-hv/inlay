@@ -25,17 +25,22 @@ extension InlayTests {
 
         /// [theme] seed: the color that 'material' is made from
         @Test func testParseSeed() {
-            assertEquals(ThemeConfig().seed, .rgba(MaterialPalette.baselineSeed))
-            assertEquals(parseConfig("theme.seed = '#B5651D'").config.theme.seed, .rgba(Rgba(hex: "#B5651D").orDie()))
-            assertEquals(parseConfig("theme.seed = 'system-accent'").config.theme.seed, .systemAccent)
+            assertEquals(ThemeConfig().seed, .color(.rgba(MaterialPalette.baselineSeed)))
+            assertEquals(parseConfig("theme.seed = '#B5651D'").config.theme.seed, .color(.rgba(Rgba(hex: "#B5651D").orDie())))
+            assertEquals(parseConfig("theme.seed = 'system-accent'").config.theme.seed, .color(.systemAccent))
+            assertEquals(parseConfig("theme.seed = 'wallpaper'").config.theme.seed, .wallpaper)
             assertEquals(
                 parseConfig("theme.seed = 'auto'").strErrors,
-                ["[ERROR] theme.seed: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'"],
+                ["[ERROR] theme.seed: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent', 'wallpaper'"],
             )
             // 'system-accent' is the accent color of the system, and the alpha doesn't count
             let accent = Rgba(hex: "#FF9500").orDie()
-            assertEquals(ThemeConfig(seed: .systemAccent).seedColor(systemAccent: accent), accent)
-            assertEquals(ThemeConfig(seed: .rgba(Rgba(hex: "#B5651D80").orDie())).seedColor(systemAccent: accent), Rgba(hex: "#B5651D").orDie())
+            assertEquals(ThemeConfig(seed: .color(.systemAccent)).seedColor(systemAccent: accent), accent)
+            assertEquals(ThemeConfig(seed: .color(.rgba(Rgba(hex: "#B5651D80").orDie()))).seedColor(systemAccent: accent), Rgba(hex: "#B5651D").orDie())
+            // 'wallpaper' is the color of the wallpaper, and the baseline seed while it isn't known
+            let wallpaper = Rgba(hex: "#3A6B5E").orDie()
+            assertEquals(ThemeConfig(seed: .wallpaper).seedColor(systemAccent: accent, wallpaper: wallpaper), wallpaper)
+            assertEquals(ThemeConfig(seed: .wallpaper).seedColor(systemAccent: accent), MaterialPalette.baselineSeed)
         }
 
         /// The baseline seed gives the colors of the Material 3 baseline. Another seed keeps its hue, and the

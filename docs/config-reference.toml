@@ -177,7 +177,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # Smart gaps: a workspace with a single tiling window has no outer gaps and no border, and the window takes
     # the whole visible part of the monitor (under the menu bar, above the Dock). The gaps and the border come back
-    # as soon as a second tiling window joins it. Floating windows don't count, and keep their borders
+    # as soon as a second tiling window joins it. 'fullscreen' keeps it so: the single window still has no gaps.
+    # Floating windows don't count, and keep their borders
     # Possible values: true|false
     # Fallback value (if you omit the key): smart = false
     smart = false

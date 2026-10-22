@@ -353,8 +353,8 @@ The window borders are drawn in the gaps: see [Window borders](#window-borders) 
 **Smart gaps** (`smart`, `false` by default; `true` in the shipped config): a workspace with a single tiling
 window has no outer gaps and no border, and the window takes the whole visible part of the screen, under the menu
 bar and above the Dock. The gaps and the border come back as soon as a second tiling window joins it, sliding like
-any other change of the layout. Floating windows don't count, and keep their borders. It is also in
-**Settings › Gaps**.
+any other change of the layout. `fullscreen` keeps it that way: the single window goes on filling the screen
+without gaps. Floating windows don't count, and keep their borders. It is also in **Settings › Gaps**.
 
 ```toml
 [gaps]

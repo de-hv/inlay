@@ -148,7 +148,9 @@ extension Window {
     /// - Parameter previous: the frame of the window before, for an animated layout. nil: right away
     @MainActor
     fileprivate func layoutFullscreen(_ context: LayoutContext, previous: Rect?) {
-        let monitorRect = noOuterGapsInFullscreen
+        // With 'gaps.smart' the only tiling window of the workspace has no outer gaps already: fullscreen keeps it so
+        let isSingleWithSmartGaps = config.gaps.smart && !isFloating && context.workspace.hasSingleTilingWindow
+        let monitorRect = noOuterGapsInFullscreen || isSingleWithSmartGaps
             ? context.workspace.workspaceMonitor.visibleRect
             : context.workspace.workspaceMonitor.visibleRectPaddedByOuterGaps
         fullscreenFrame = monitorRect

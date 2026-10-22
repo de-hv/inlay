@@ -53,6 +53,19 @@ extension InlayTests {
             assertRects([1: (0, 0, 1920, 1079)])
         }
 
+        @Test func testSmartGaps_fullscreenKeepsASingleWindowWithoutGaps() async throws {
+            config.gaps.smart = true
+            try await openWindow(1)
+            try await run("fullscreen")
+            assertFrame(1, workspace.workspaceMonitor.visibleRect)
+
+            // With a second window the gaps are back, and fullscreen keeps the outer ones
+            try await run("fullscreen off")
+            try await openWindow(2)
+            try await run("fullscreen")
+            assertFrame(2, workspace.workspaceMonitor.visibleRectPaddedByOuterGaps)
+        }
+
         @Test func testSmartGaps_aSingleWindowHasNoBorder() async throws {
             config.gaps.smart = true
             try await openWindow(1)
@@ -117,6 +130,19 @@ extension InlayTests {
             let result = await parseCommand(command).cmdOrDie.run(.defaultEnv, .emptyStdin)
             assertEquals(result.exitCode.rawValue, 0, additionalMsg: command)
             try await workspace.layoutWorkspace()
+        }
+
+        /// The frame of one window
+        private func assertFrame(_ id: UInt32, _ expected: Rect, sourceLocation: SourceLocation = #_sourceLocation) {
+            guard let actual = (Window.get(byId: id) as? TestWindow)?.rect else {
+                Issue.record("Window \(id) isn't laid out", sourceLocation: sourceLocation)
+                return
+            }
+            assertEquals(
+                [actual.topLeftX, actual.topLeftY, actual.width, actual.height],
+                [expected.topLeftX, expected.topLeftY, expected.width, expected.height],
+                sourceLocation: sourceLocation,
+            )
         }
 
         /// The frames of all the tiling windows of the workspace: id -> (x, y, width, height)

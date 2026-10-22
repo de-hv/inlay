@@ -73,25 +73,35 @@ git clone <this repo> inlay && cd inlay
 ./install.sh
 ```
 
-No option is needed. `install.sh`:
+No option is needed. First `install.sh` **checks every requirement** (macOS, the Command Line Tools, Swift,
+`codesign`) and, if something is missing, lists it all at once with the command that fixes it
+(`xcode-select --install`, which it offers to run). Then it **says what it is going to do**: where it builds,
+installs and links, which signature the app gets and what happens to your config. `Continue? [Y/n]`: Enter
+goes on (`--yes` skips the question). Then, in five numbered steps (`[1/5]`…`[5/5]`), it:
 
 1. builds `Inlay.app` and signs it with a local identity, so that macOS keeps the Accessibility permission
-   across rebuilds (see [Signing](#signing));
-2. installs it in `/Applications` (or in `~/Applications` if there are no permissions) and links the `inlay`
-   CLI in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`;
-3. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **if you
+   across rebuilds (see [Signing](#signing)). In a terminal **one line, redrawn in place, says how far the
+   build is** (`132/214`, a progress bar and the time); the whole output goes to
+   `~/Library/Logs/Inlay/install-<date>.log` (the last 10 are kept). If the build fails, it prints the end of
+   that output, without the progress lines. `--verbose` shows everything as it comes, as does a pipe or a log;
+2. installs it in `/Applications` (or in `~/Applications` if there are no permissions);
+3. links the `inlay` CLI in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`;
+4. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **if you
    have no Inlay config yet**. A config that already exists is yours: see
-   [A config that you already have](#a-config-that-you-already-have);
-4. **asks, every time, whether you want to use a config folder of your own through a symbolic link** (one
-   you keep in a dotfiles repo, for example). Enter means no and keeps what you have. See
+   [A config that you already have](#a-config-that-you-already-have). Then it **asks, every time, where your
+   config should live**: where it is (the first option, what Enter picks) or in a folder of your own through a
+   symbolic link (one you keep in a dotfiles repo, for example). See
    [Your own config folder](#your-own-config-folder). Without a terminal to ask on (stdin is not a TTY) it
-   asks nothing;
-5. checks the config with the parser of the app it has just installed and prints its errors and warnings
-   (they never stop the installation);
-6. **opens Inlay** and says so, with what to do the first time (see
-   [Before opening Inlay](#before-opening-inlay)).
+   asks nothing. It checks the config with the parser of the app it has just installed and prints its errors
+   and warnings (they never stop the installation);
+5. **opens Inlay**.
 
-<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it installs Inlay.app, links the CLI, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks 'Use a config folder of your own? [y/N]', gets 'y', lists the folder it found, ~/.dotfiles/inlay, which has an inlay.toml, takes it with Enter, links ~/.config/inlay to that folder, checks the config, explains the Accessibility permission and opens Inlay" width="880"></p>
+It ends with a **summary**: the app and its signature, the CLI link (and whether it is in your `PATH`), the
+config and what the parser said of it, whether Inlay is running, and what to do next: the keys of your config
+that go to the workspaces, `inlay config --explain`, the menu bar item, and the Accessibility permission the
+first time (see [Before opening Inlay](#before-opening-inlay)).
+
+<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it checks the requirements, says what it is going to do and asks to continue, builds, installs Inlay.app and links the CLI in numbered steps, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks where the config should live and gets ~/.dotfiles/inlay, links ~/.config/inlay to that folder, checks the config, opens Inlay and ends with a summary and what to do next" width="880"></p>
 
 It can be run as many times as needed: it updates what is installed, quitting the running copy first.
 
@@ -99,10 +109,12 @@ It can be run as many times as needed: it updates what is installed, quitting th
 |---|---|
 | `--reset-config` | Replaces your config by the `inlay.toml` of the repo, whatever is in it, and keeps yours next to it as `inlay.toml.backup-<date>`. See [A config that you already have](#a-config-that-you-already-have) |
 | `--config-link FOLDER` | Links `~/.config/inlay` to `FOLDER` instead of asking, with the rules of [Your own config folder](#your-own-config-folder). Also on a reinstall |
+| `-y`, `--yes` | Does not ask before starting. The questions about the config are still asked |
 | `--no-prompt` | Asks nothing and keeps the config as it is |
 | `--import-aerospace` | If you have no Inlay config, start from your `~/.aerospace.toml` instead of `inlay.toml` |
 | `--no-open` | Does not open Inlay when done |
 | `--adhoc-signing` | Ad hoc signature instead of the local identity (see [Signing](#signing)) |
+| `--verbose` | Shows the output of the build as it comes, instead of the line that says how far it is |
 | `INSTALL_DIR=…` | Folder where the app is installed |
 | `INLAY_BIN_DIR=…` | Folder where the CLI is linked |
 
@@ -117,27 +129,29 @@ two neighboring windows touch.
 On every run, also when you already have a config, `install.sh` asks:
 
 ```
-? Use a config folder of your own? [y/N] y
-    Found:
-       1  ~/.dotfiles/inlay                has inlay.toml
-       2  ~/dotfiles/inlay                 no inlay.toml
-? Folder (a number or a path · Tab completes · Enter = 1):
+? Where should your config live?  ↑↓ · Enter
+  ❯ Keep ~/.config/inlay           where it is now · 481 lines
+    Link ~/.dotfiles/inlay         has inlay.toml
+    Link ~/dotfiles/.config/inlay  no inlay.toml: gets a copy of the repo's
+    Another folder...              type its path
 ```
 
-Enter (or `n`) keeps what you have. With `y` it lists the folders of a dotfiles repo that it finds and asks for
-a **folder**: the number of one of them, or a path (`~` is expanded, and Tab completes it). Then it makes
-**`~/.config/inlay` a symbolic link to that folder**. Inlay reads and writes the `inlay.toml` in it; nothing
-else in the folder is touched. A path that doesn't work (a typo, a file, a folder you don't want to fill) is
-asked again, and Enter with nothing keeps your config as it is. In a terminal the output has colors; with
-`NO_COLOR` set, or in a pipe or a log, it is plain text.
+Move with the arrows (or `j`/`k`, or the number of an option) and press Enter; Enter alone keeps what you have.
+The list has the folders of a dotfiles repo that it finds; "Another folder..." asks for a path (`~` is
+expanded, and Tab completes it). The folder you pick becomes the target of **a symbolic link,
+`~/.config/inlay`**. Inlay reads and writes the `inlay.toml` in it; nothing else in the folder is touched. A
+typed path that doesn't work (a typo, a file, a folder you don't want to fill) is asked again, and Enter with
+nothing keeps your config as it is. In a terminal the output has colors and the list is a menu; with
+`NO_COLOR` set it is a numbered list, and in a pipe or a log it is plain text.
 
 | What it finds | What it does |
 |---|---|
-| The folder does not exist | Says so, suggests a folder of the list with the same name if there is one, and asks again. With `--config-link`, links nothing: your config stays as it is (on a new install, the copy of `inlay.toml` in `~/.config/inlay/`) |
-| The folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and it asks for another folder (with `--config-link`, nothing is linked) |
+| A typed folder does not exist | Says so, suggests a folder of the list with the same name if there is one, and asks again. With `--config-link`, links nothing: your config stays as it is (on a new install, the copy of `inlay.toml` in `~/.config/inlay/`) |
+| A folder of the list has no `inlay.toml` | The list says so, and picking it copies the `inlay.toml` of the repo into it |
+| A typed folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and it asks for another folder (with `--config-link`, nothing is linked) |
 | You had a real `~/.config/inlay` | It is not deleted: it is renamed to `~/.config/inlay.backup-<date>`, and the script says so |
-| `~/.config/inlay` is already a link | The question says it (`currently linked to …`), and Enter changes nothing. Linking another folder replaces only the link: the folder it pointed to is not touched |
-| Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | It keeps working and Enter leaves it alone. With `y`, the folder that holds your file is offered as the path, and the old `~/.config/inlay` becomes the backup |
+| `~/.config/inlay` is already a link | The first option is `Keep the link`, and says where it points. Linking another folder replaces only the link: the folder it pointed to is not touched |
+| Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | It keeps working and Enter leaves it alone. The folder that holds your file is in the list, and picking it makes the old `~/.config/inlay` the backup |
 | Your config is `~/.inlay.toml` | The question is skipped: Inlay reads one file or the other, never both |
 
 `--config-link FOLDER` does the same without asking (a folder without `inlay.toml` is only filled in when
@@ -155,12 +169,17 @@ one next to the new one as `inlay.toml.backup-<date>` (`inlay.toml.backup-202610
   has edited it, so it is replaced by the current `inlay.toml` and the script says so. This is what updates a
   Mac that was installed when the default config was still the one of AeroSpace: `alt-…` key bindings and
   no rule that sends a window to a workspace, so every window stayed in the workspace on the screen.
-- **You pass `--reset-config`.** Whatever the config is, it is replaced by the `inlay.toml` of the repo.
+- **You pass `--reset-config`**, or answer `Use the repo's inlay.toml` to the question about what your config
+  lacks. Whatever the config is, it is replaced by the `inlay.toml` of the repo.
 
-Any other config is **kept as it is**, and the script warns about it: what is new in the `inlay.toml` of the
-repo (key bindings, rules, options) is not in it. It also tells if the config has no `on-window-detected`
-rule, and prints the two commands that matter: `./install.sh --reset-config` to switch to the config of the
-repo, and a `diff` to compare them. A config changed from the Settings window counts as edited: it is kept.
+Any other config is **kept as it is**, and the script **lists the settings of the `inlay.toml` of the repo that
+yours doesn't have** (up to 8, and how many more), with their table: `+ [gaps]  smart = true`. A key binding
+counts as present when your config has its command under another key. It also tells if the config has no
+`on-window-detected` rule. When something is missing and there is a terminal, it asks `What now?`: keep yours
+(Enter), show the whole diff (in `less`), or use the `inlay.toml` of the repo, keeping yours as
+`inlay.toml.backup-<date>`. A config in a linked folder can only be kept: edit it in your folder. Without a
+terminal it prints the two commands that matter: `./install.sh --reset-config` and a `diff`. A config changed
+from the Settings window counts as edited: it is kept.
 
 A config that is reached through a **symbolic link** (a linked folder, or a linked file) is always taken for
 your own, whatever is in it: it is never replaced on its own. `--reset-config` never writes, moves or deletes
@@ -908,14 +927,26 @@ rest every `per-sec` should be 0. The one that is not tells what is going on:
 ## Uninstallation
 
 ```sh
-inlay uninstall           # quits Inlay and removes the app, the CLI link, the login item and your config
-inlay uninstall --purge   # also the preferences of the app and the config backups of install.sh
+inlay uninstall           # pick what to remove in a list, see what is removed and what is kept, confirm
+inlay uninstall --purge   # everything starts checked in the list (but the Accessibility entry)
+inlay uninstall --yes     # no questions: the app, the CLI link, the login item and your config
 ```
 
-<p align="center"><img src="docs/images/terminal-uninstall.png" alt="Real output of 'inlay uninstall' in a terminal: it lists what it removes (/Applications/Inlay.app and its login item, ~/.local/bin/inlay and ~/.config/inlay, a symbolic link of which only the link is removed), says what is kept, asks 'Remove Inlay? [y/N]', gets 'y', removes the app, the CLI link and the link of the config, and says how to go back to AeroSpace" width="880"></p>
+<p align="center"><img src="docs/images/terminal-uninstall.png" alt="Real output of 'inlay uninstall' in a terminal: a list of checkboxes with the app, the CLI link, the config (checked here) and the Accessibility entry; then what is removed (the app, the CLI link and ~/.config/inlay, a symbolic link of which only the link goes), what is kept (~/.dotfiles/inlay) and what is never touched; it asks for confirmation, gets 'y', removes them and says how to go back to AeroSpace" width="880"></p>
 
-It lists what it is going to remove and asks for confirmation; `--yes` skips the question (and is required
-when there is no terminal to answer on). It works whether Inlay is running or not: a running Inlay is quit
+First it asks **what to remove**, in a list of checkboxes (Space checks and unchecks, `a` all of them, Enter is
+done): the app and its login item, the CLI link, your config, the config backups of `install.sh`, the
+preferences and runtime files of the app, and its Accessibility entry. Only what exists is listed. **The app
+and the CLI link start checked; your config does not**: check it to remove it. With `--purge` everything starts
+checked but the Accessibility entry. Then it lists, in three groups, what is **removed** (with the size of the
+app), what is **kept** (including what a removed link points to) and what it **never touches** (the signing
+identity, and the Accessibility entry if it is not checked, each with how to remove it by hand), and asks
+`Remove what is listed under Removed? [y/N]`. Without a terminal that shows colors the list is one question per
+line.
+
+`--yes` skips both questions (and is required when there is no terminal to answer on): it removes the app, the
+CLI link, the login item and your config, and with `--purge` the preferences, the runtime files and the config
+backups too. It works whether Inlay is running or not: a running Inlay is quit
 first, and on quit it brings the windows of the non-visible workspaces back to the screen. The command
 removes the app that contains it, so it runs from a temporary copy of the uninstall script, which deletes
 itself at the end.
@@ -923,19 +954,16 @@ itself at the end.
 It removes the app that the `inlay` you ran belongs to, and the copies in `/Applications` and in
 `~/Applications`; with `INSTALL_DIR=…` it looks in that folder instead of those two.
 
-**Your config is always removed**: `~/.config/inlay` and `~/.inlay.toml`. The list that you confirm says
-exactly what goes:
+Your config is `~/.config/inlay` and `~/.inlay.toml`. When it is removed:
 
-- `~/.config/inlay` is a real folder: the folder and everything in it are deleted;
+- a real folder or file is **saved first in `~/inlay-config-<date>.tar.gz`**, and then deleted;
 - `~/.config/inlay` is a **symbolic link** to a folder of yours: **only the link is removed**. The folder it
   points to and its `inlay.toml` are never touched, and the list names that folder as kept;
 - a link inside of a real `~/.config/inlay` (an `inlay.toml` linked by a previous version) goes with the
   folder; the file it points to is never touched.
 
-`--purge` adds what is left behind: the preferences and the runtime files of the app, and the config backups
-that `install.sh` made outside of the config folder (`~/.config/inlay.backup-<date>`,
-`~/.inlay.toml.backup-<date>`; a backup that is a link is removed as a link). Without `--purge` they are kept,
-and the list names them.
+The config backups are the ones that `install.sh` made outside of the config folder
+(`~/.config/inlay.backup-<date>`, `~/.inlay.toml.backup-<date>`; a backup that is a link is removed as a link).
 
 `./uninstall.sh` in the repo does the same (it is the same script, with the same options), for when the CLI
 is not at hand.
@@ -943,8 +971,8 @@ is not at hand.
 It touches nothing of AeroSpace, AeroMenu or `borders`: to go back to them, open AeroSpace and AeroMenu and run
 `brew services start borders`.
 
-The Accessibility entry (`tccutil reset Accessibility com.davidhiguita.inlay`) and the signing identity (delete
-it in *Keychain Access* if you want) are not removed.
+The Accessibility entry is only removed when it is checked (`tccutil reset Accessibility
+com.davidhiguita.inlay`). The signing identity is never removed: delete it in *Keychain Access* if you want.
 
 ## Development
 

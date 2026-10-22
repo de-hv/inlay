@@ -2,29 +2,45 @@
 <html lang="en"><head><meta charset="utf-8"><title>inlay uninstall</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 462px; }
+  body { width: 880px; height: 700px; }
   .note { margin-top: 12px; font-size: 12px; color: #8f91a0; }
   .term pre { font-size: 11.5px; }
 </style></head>
 <body class="png">
 <div class="sheet"><span class="tag real">Real output</span>
   <h1>inlay uninstall</h1>
-  <div class="sub">It lists what it removes and asks first. Your config goes too; when <code class="key">~/.config/inlay</code> is a symbolic link to a folder of yours, only the link does.</div>
+  <div class="sub">You pick what goes in a list (your config starts unchecked: here it was checked), see what is removed, what is kept and what is never touched, and confirm. When <code class="key">~/.config/inlay</code> is a symbolic link to a folder of yours, only the link goes.</div>
   <div style="margin-top:16px"><div class="term"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay — zsh</span></div>
 <pre class="mono"><span class="p">❯</span> <span class="cmd">inlay uninstall</span>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">This removes Inlay:</b>
-    - /Applications/Inlay.app (and its login item)
-    - ~/.local/bin/inlay
-    - ~/.config/inlay (your config: a symbolic link. Only the link is removed:
-      what it points to, ~/dotfiles/inlay, is kept)
-    Kept: the preferences of the app (--purge removes them too).
-  <span style="color:#79e0ee">?</span> <b style="color:#fff;font-weight:600">Remove Inlay?</b> <span class="dim">[y/N]</span> <span class="in">y</span>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">/Applications/Inlay.app is not in the login items any more</b>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">Removing /Applications/Inlay.app</b>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">Removed ~/.local/bin/inlay</b>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">Removed the link ~/.config/inlay (what it pointed to was not touched)</b>
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <b style="color:#fff;font-weight:600">Done</b>
-    To go back to AeroSpace: open AeroSpace and AeroMenu, and run 'brew services start borders'.</pre></div></div>
+  <span style="color:#fff;font-weight:600">Uninstall Inlay 0.1.0</span>
+
+  <span style="color:#79e0ee">?</span> <span style="color:#fff;font-weight:600">What should be removed?</span>  <span style="color:#70748a">↑↓ · Space checks · a all · Enter</span>
+    <span style="color:#7ee2a8">[x]</span> App and login item   <span style="color:#70748a">/Applications/Inlay.app · 15 MB</span>
+    <span style="color:#7ee2a8">[x]</span> CLI link             <span style="color:#70748a">~/.local/bin/inlay</span>
+    <span style="color:#7ee2a8">[x]</span> Your config          <span style="color:#70748a">~/.config/inlay · a link to ~/.dotfiles/inlay</span>
+    <span style="color:#70748a">[ ]</span> Accessibility entry  <span style="color:#70748a">tccutil reset Accessibility</span>
+
+  <span style="color:#ff8a8a">Removed</span>
+   <span style="color:#ff8a8a">✗</span> /Applications/Inlay.app                <span style="color:#70748a">15 MB · and its login item</span>
+   <span style="color:#ff8a8a">✗</span> ~/.local/bin/inlay                     <span style="color:#70748a">the CLI: only the link</span>
+   <span style="color:#ff8a8a">✗</span> ~/.config/inlay                        <span style="color:#70748a">your config: only the link</span>
+
+  <span style="color:#7ee2a8">Kept</span>
+   <span style="color:#7ee2a8">✓</span> ~/.dotfiles/inlay                      <span style="color:#70748a">what ~/.config/inlay points to</span>
+
+  <span style="color:#70748a">Not touched · do it by hand if you want</span>
+   <span style="color:#70748a">·</span> Accessibility entry                    <span style="color:#70748a">tccutil reset Accessibility com.davidhiguita.inlay</span>
+   <span style="color:#70748a">·</span> Signing identity                       <span style="color:#70748a">Keychain Access &gt; &quot;Inlay Local Code Signing&quot;</span>
+
+  <span style="color:#79e0ee">?</span> <span style="color:#fff;font-weight:600">Remove what is listed under Removed?</span> <span style="color:#70748a">[y/N]</span> y
+
+  <span style="color:#7ee2a8">✓</span> Removed /Applications/Inlay.app <span style="color:#70748a">· and its login item</span>
+  <span style="color:#7ee2a8">✓</span> Removed ~/.local/bin/inlay
+  <span style="color:#7ee2a8">✓</span> Removed the link ~/.config/inlay <span style="color:#70748a">· what it pointed to was not touched</span>
+
+<span style="color:#7ee2a8;font-weight:600">==&gt;</span> <span style="color:#fff;font-weight:600">Inlay was removed.</span>
+    <span style="color:#70748a">To install it again: ./install.sh in the Inlay repo.</span>
+    <span style="color:#70748a">To go back to AeroSpace: open AeroSpace and AeroMenu, and run &#x27;brew services start borders&#x27;.</span></pre></div></div>
   <div class="note">The output of <code>inlay uninstall</code> in an isolated test run (another <code>HOME</code> and install folder), with the paths of that sandbox written as the default ones.</div>
 </div>
 <script>fillToml();</script>

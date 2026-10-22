@@ -711,7 +711,7 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   warnings, a row at the top says so and shows them.
 - The shipped config defines **7 persistent workspaces** (1–7), which are the ones the item always shows.
   7 is the empty one: no rule sends an app to it, so there is (almost) always a free workspace, on the main
-  display (`cmd-alt-ctrl-u`, and `cmd-alt-shift-u` to move a window there). Any
+  display (`cmd-alt-ctrl-7`, and `cmd-alt-shift-7` to move a window there). Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
   file**, line by line and without touching comments or the rest of the file, and reloads the config. If the

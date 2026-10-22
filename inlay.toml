@@ -63,7 +63,7 @@ automatically-unhide-macos-hidden-apps = false
 #   "5" = AI          cmd-alt-ctrl-o  (cmd-alt-shift-o)
 #   "6" = Other       cmd-alt-ctrl-p  (cmd-alt-shift-p)   every app without a workspace,
 #                                                         on the secondary display if there is one
-#   "7" = Empty       cmd-alt-ctrl-u  (cmd-alt-shift-u)   no app goes there on its own: a workspace
+#   "7" = Empty       cmd-alt-ctrl-7  (cmd-alt-shift-7)   no app goes there on its own: a workspace
 #                                                         that is (almost) always free, on the main display
 #
 # cmd-alt-ctrl / cmd-alt-shift rather than anything shorter, so no other app's
@@ -203,7 +203,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-ctrl-i = ['workspace 4', 'mode main'] # chats (slack, teams, whatsapp, telegram)
     cmd-alt-ctrl-o = ['workspace 5', 'mode main'] # AI
     cmd-alt-ctrl-p = ['workspace 6', 'mode main'] # everything else / secondary display
-    cmd-alt-ctrl-u = ['workspace 7', 'mode main'] # empty: no app goes there on its own
+    cmd-alt-ctrl-7 = ['workspace 7', 'mode main'] # empty: no app goes there on its own
 
     # Move window to workspace (same keys as above). It also becomes a tiling window: the windows of the
     # apps without a workspace open floating (see WORKSPACES ASSIGNMENT), and these keys put them in the
@@ -214,7 +214,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-shift-i = ['layout tiling', 'move-node-to-workspace 4'] # chats
     cmd-alt-shift-o = ['layout tiling', 'move-node-to-workspace 5'] # AI
     cmd-alt-shift-p = ['layout tiling', 'move-node-to-workspace 6'] # everything else / secondary
-    cmd-alt-shift-u = ['layout tiling', 'move-node-to-workspace 7'] # empty
+    cmd-alt-shift-7 = ['layout tiling', 'move-node-to-workspace 7'] # empty
 
     # focus
     cmd-alt-left  = 'focus left'

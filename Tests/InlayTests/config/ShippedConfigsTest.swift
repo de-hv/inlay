@@ -67,7 +67,7 @@ extension InlayTests {
                 let bound = config.modes[mode]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
                 return bound?.commands.strictEquals(parseCommand(command).cmdOrDie) == true
             }
-            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p", "u"], 1 ... 7) {
+            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p", "7"], 1 ... 7) {
                 assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
                 // The window also stops floating: the windows of the apps without a workspace open floating
                 assertEquals(runs("cmd-alt-shift-\(key)", "layout tiling; move-node-to-workspace \(workspace)"), true, additionalMsg: key)

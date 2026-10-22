@@ -6,7 +6,7 @@ let settingsWidth: CGFloat = 600
 
 /// The content of a tab: a form as tall as its rows. The window shows all of it, or scrolls it when the screen
 /// is too small for that. See: SettingsPageController
-private struct SettingsPage<Content: View>: View {
+struct SettingsPage<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -33,19 +33,70 @@ private struct SettingsRow<Control: View>: View {
 
     var body: some View {
         let disabledReason = model.disabledReason(key)
+        let showsKeysAlways = model.bool(.settingsShowKeys)
         LabeledContent {
             HStack(spacing: 10) {
-                // The window and the file are the same thing: every row shows the key it writes
-                Text(showsTable ? key.label : key.path.key)
-                    .font(.system(size: 10.5, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .fixedSize()
+                // The window and the file are the same thing: the row tells the key it writes, when asked to.
+                // Always: in the row. On demand: a tag right before the control, over the row, so that nothing moves
+                if showsKeysAlways {
+                    KeyLabel(model: model, key: key, showsTable: showsTable)
+                }
                 control().disabled(disabledReason != nil)
+            }
+            .overlay(alignment: .leading) {
+                if !showsKeysAlways && model.showsKey(key) {
+                    // A frame without width, and the tag past its leading edge: no alignment guide, which would move
+                    // the control, and no size, which would change the row
+                    KeyLabel(model: model, key: key, showsTable: showsTable)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color(nsColor: .windowBackgroundColor)))
+                        .overlay { Capsule().strokeBorder(Color.secondary.opacity(0.3), lineWidth: 0.5) }
+                        .fixedSize()
+                        .frame(width: 0, alignment: .trailing)
+                        .offset(x: -10)
+                }
             }
         } label: {
             Text(title)
             if let text = disabledReason ?? detail { Text(text) }
+        }
+        .onHover { model.hover(key, $0) }
+        .settingsHighlight(model, title)
+    }
+}
+
+/// The name of a key, next to its control. A click copies its line of the config: `width = 4`
+private struct KeyLabel: View {
+    let model: SettingsModel
+    let key: SettingsKey
+    var showsTable: Bool = true
+
+    var body: some View {
+        Button {
+            "\(TomlPatcher.keyLiteral(key.path.key)) = \(model.value(key).literal)".copyToClipboard()
+        } label: {
+            Text(showsTable ? key.label : key.path.key)
+                .font(.system(size: 10.5, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .buttonStyle(.plain)
+        .help(Strings.Settings.copyKey)
+    }
+}
+
+extension View {
+    /// The row that a search of the sidebar led to stands out for a moment. See: SettingsModel.highlightedTitle
+    @MainActor
+    func settingsHighlight(_ model: SettingsModel, _ title: String) -> some View {
+        background {
+            if model.highlightedTitle == title {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.accentColor.opacity(0.18))
+                    .padding(-4)
+            }
         }
     }
 }
@@ -65,7 +116,8 @@ private struct ToggleRow: View {
     }
 }
 
-/// A number of points. The slider shows its value while it is dragged, and writes it when it is released
+/// A number. The slider shows its value while it is dragged, and writes it when it is released. The field next to it
+/// takes an exact value, and its arrows go a step up or down
 private struct SliderRow: View {
     let model: SettingsModel
     let title: String
@@ -75,22 +127,111 @@ private struct SliderRow: View {
     var step: Int = 1
     /// false: the header of the section already names the table of the key
     var showsTable: Bool = true
-    /// The value as the slider shows it
-    var format: (Int) -> String = Strings.Settings.points
+    var unit: String = Strings.Settings.pointsUnit
 
     var body: some View {
         SettingsRow(model: model, title: title, detail: detail, key: key, showsTable: showsTable) {
+            // No tick marks: a continuous slider, rounded to the step. A mark under it tells the default
             Slider(
-                value: Binding(get: { Double(model.int(key)) }, set: { model.preview(key, .int(Int($0.rounded()))) }),
+                value: Binding(get: { Double(model.int(key)) }, set: { model.preview(key, .int(snap($0))) }),
                 in: Double(range.lowerBound) ... Double(range.upperBound),
-                step: Double(step),
             ) { isEditing in
                 if !isEditing { model.commit(key) }
             }
-            .frame(width: 160)
-            Text(format(model.int(key)))
+            .frame(width: 140)
+            .overlay(alignment: .bottomLeading) { DefaultMark(fraction: defaultFraction) }
+            NumberField(
+                value: Binding(get: { model.int(key) }, set: { model.set(key, .int(clamp($0))) }),
+                stepped: Binding(get: { model.int(key) }, set: { model.setDebounced(key, .int(clamp($0))) }),
+                range: range,
+                step: step,
+                unit: unit,
+            )
+        }
+    }
+
+    private func clamp(_ value: Int) -> Int { min(max(value, range.lowerBound), range.upperBound) }
+    private func snap(_ value: Double) -> Int { clamp(Int((value / Double(step)).rounded()) * step) }
+
+    private var defaultFraction: Double? {
+        guard case .int(let value) = key.defaultValue, range.upperBound > range.lowerBound else { return nil }
+        return Double(value - range.lowerBound) / Double(range.upperBound - range.lowerBound)
+    }
+}
+
+/// A fraction shown in percent: [tiling] split-ratio
+private struct PercentSliderRow: View {
+    let model: SettingsModel
+    let title: String
+    var detail: String? = nil
+    let key: SettingsKey
+    let range: ClosedRange<Int>
+
+    var body: some View {
+        SettingsRow(model: model, title: title, detail: detail, key: key) {
+            Slider(
+                value: Binding(get: { model.float(key) * 100 }, set: { model.preview(key, .float(Double(clamp(Int($0.rounded()))) / 100)) }),
+                in: Double(range.lowerBound) ... Double(range.upperBound),
+            ) { isEditing in
+                if !isEditing { model.commit(key) }
+            }
+            .frame(width: 140)
+            .overlay(alignment: .bottomLeading) { DefaultMark(fraction: 0.5) }
+            NumberField(
+                value: Binding(get: { percent }, set: { model.set(key, .float(Double(clamp($0)) / 100)) }),
+                stepped: Binding(get: { percent }, set: { model.setDebounced(key, .float(Double(clamp($0)) / 100)) }),
+                range: range,
+                step: 5,
+                unit: "%",
+            )
+        }
+    }
+
+    private var percent: Int { Int((model.float(key) * 100).rounded()) }
+    private func clamp(_ value: Int) -> Int { min(max(value, range.lowerBound), range.upperBound) }
+}
+
+/// The default value, as a small mark under the track of a slider
+private struct DefaultMark: View {
+    let fraction: Double?
+    /// The knob never reaches the ends of the track: half of its width is left on each side
+    private static let inset: CGFloat = 10
+
+    var body: some View {
+        if let fraction {
+            GeometryReader { geometry in
+                Capsule()
+                    .fill(Color.secondary.opacity(0.7))
+                    .frame(width: 2, height: 4)
+                    .offset(x: Self.inset + (geometry.size.width - 2 * Self.inset) * fraction - 1, y: geometry.size.height - 1)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+/// An exact value, typed or stepped. `value` is written when the field is done, `stepped` at every click of the arrows
+private struct NumberField: View {
+    let value: Binding<Int>
+    let stepped: Binding<Int>
+    let range: ClosedRange<Int>
+    let step: Int
+    let unit: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            TextField("", value: value, format: .number.grouping(.never))
+                .textFieldStyle(.roundedBorder)
+                .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 52, alignment: .trailing)
+                .frame(width: 46)
+                .labelsHidden()
+            Stepper("", value: stepped, in: range, step: step)
+                .labelsHidden()
+            Text(unit)
+                .foregroundStyle(.secondary)
+                .frame(width: 22, alignment: .leading)
         }
     }
 }
@@ -170,6 +311,48 @@ private struct ColorRow: View {
     }
 }
 
+/// The color of a binding mode, [borders.mode-colors]. Without one, the mode uses the active color: the swatch
+/// shows it striped, and "Set Color…" starts from it
+private struct ModeColorRow: View {
+    let model: SettingsModel
+    let mode: String
+
+    private var key: SettingsKey { .bordersModeColor(mode) }
+
+    var body: some View {
+        let isSet = model.isSet(key)
+        SettingsRow(model: model, title: mode, detail: isSet ? model.string(key) : Strings.Settings.usesActiveColor, key: key, showsTable: false) {
+            if isSet {
+                ColorPicker("", selection: selection, supportsOpacity: true)
+                    .labelsHidden()
+                Button(Strings.Settings.remove) { model.reset(key) }
+            } else {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(Color(nsColor: inherited.nsColor).opacity(0.35))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1.5, dash: [3, 2]))
+                    }
+                    .frame(width: 38, height: 20)
+                    .accessibilityHidden(true)
+                Button(Strings.Settings.setColor) { model.set(key, .string(inherited.hex)) }
+            }
+        }
+    }
+
+    /// The color of the active border: the one of the palette, or the one of the config
+    private var inherited: Rgba {
+        model.paletteColor(.bordersActiveColor) ?? model.color(.bordersActiveColor).resolve(auto: .white, systemAccent: .systemAccent)
+    }
+
+    private var selection: Binding<Color> {
+        Binding(
+            get: { Color(nsColor: model.color(key).resolve(auto: .white, systemAccent: .systemAccent).nsColor) },
+            set: { color in model.setDebounced(key, .string(Rgba(NSColor(color)).hex)) },
+        )
+    }
+}
+
 /// Where a color comes from: the theme (the palette), or the user ("Custom")
 private struct SourceBadge: View {
     let isCustom: Bool
@@ -202,7 +385,7 @@ private struct StatusDot: View {
     }
 }
 
-private struct ErrorBanner: View {
+struct ErrorBanner: View {
     let model: SettingsModel
     var body: some View {
         if let message = model.errorMessage ?? model.unavailableReason {
@@ -252,6 +435,17 @@ struct GeneralSettingsView: View {
                     Text(filePath).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
                 }
                 ToggleRow(model: model, title: Strings.Settings.autoReload, detail: Strings.Settings.autoReloadDetail, key: .autoReloadConfig)
+                pickerRow(
+                    model,
+                    Strings.Settings.reloadNotice,
+                    detail: Strings.Settings.reloadNoticeDetail,
+                    key: .notificationsOnReload,
+                    options: [
+                        (ReloadNoticeStyle.diff.rawValue, Strings.Settings.reloadNoticeDiff),
+                        (ReloadNoticeStyle.simple.rawValue, Strings.Settings.reloadNoticeSimple),
+                        (ReloadNoticeStyle.off.rawValue, Strings.Settings.off),
+                    ],
+                )
                 LabeledContent {
                     Button(Strings.Settings.reloadNow) { reloadConfigFromUi(warningsAsErrors: false) }
                         .disabled(!model.isAccessibilityGranted || model.isPaused)
@@ -262,6 +456,20 @@ struct GeneralSettingsView: View {
                         Text(loadStatus)
                     }
                 }
+                LabeledContent {
+                    Button(Strings.Settings.exportButton) { export() }
+                        .disabled(model.target == nil)
+                } label: {
+                    Text(Strings.Settings.export)
+                    Text(Strings.Settings.exportDetail)
+                }
+                .settingsHighlight(model, Strings.Settings.export)
+            }
+            Section(Strings.Settings.menuBar) {
+                ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
+            }
+            Section(Strings.Settings.thisWindow) {
+                ToggleRow(model: model, title: Strings.Settings.showKeys, detail: Strings.Settings.showKeysDetail, key: .settingsShowKeys)
             }
             Section(Strings.Settings.permissions) {
                 LabeledContent {
@@ -280,8 +488,25 @@ struct GeneralSettingsView: View {
                 Text("\(Strings.Menu.version) · \(Strings.Settings.footer)")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+
+    /// Asks where to save the complete config, and writes it there. The config of the user isn't touched
+    private func export() {
+        guard let text = model.exportText else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = Strings.Settings.exportFileName
+        panel.allowedContentTypes = [.init(filenameExtension: "toml") ?? .plainText]
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try Data(text.utf8).write(to: url, options: .atomic)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            model.errorMessage = Strings.Settings.exportFailed(error.localizedDescription)
         }
     }
 
@@ -338,6 +563,14 @@ struct TilingSettingsView: View {
                         (SplitTarget.focused.rawValue, Strings.Settings.focusedWindow),
                         (SplitTarget.cursor.rawValue, Strings.Settings.cursor),
                     ],
+                )
+                .disabled(!isDwindle)
+                PercentSliderRow(
+                    model: model,
+                    title: Strings.Settings.splitRatio,
+                    detail: Strings.Settings.splitRatioDetail,
+                    key: .splitRatio,
+                    range: 10 ... 90,
                 )
                 .disabled(!isDwindle)
             }
@@ -399,7 +632,7 @@ struct AnimationsSettingsView: View {
                     key: .animationsDuration,
                     range: AnimationsConfig.durationRange,
                     step: 10,
-                    format: Strings.Settings.milliseconds,
+                    unit: Strings.Settings.millisecondsUnit,
                 )
                 .disabled(!model.bool(.animationsEnabled))
             }
@@ -470,10 +703,7 @@ struct ThemesSettingsView: View {
             ErrorBanner(model: model)
             // What it looks like, and where the colors come from: on top of every section
             Section {
-                HStack(alignment: .top, spacing: 12) {
-                    preview.frame(maxWidth: .infinity)
-                    themeStatus.frame(width: 210)
-                }
+                ThemePreview(model: model)
             }
             Section {
                 Picker("", selection: Binding(get: { model.themesSection }, set: { section in
@@ -504,21 +734,24 @@ struct ThemesSettingsView: View {
     private var paletteSection: some View {
         Section {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                chip(
-                    Strings.Settings.systemPalette,
-                    swatches: swatches(.system),
+                PaletteTile(
+                    model: model,
+                    palette: .system,
+                    title: Strings.Settings.systemPalette,
                     isSelected: model.palette == .system,
                     isBase: false,
                 ) { pick(.system) }
-                chip(
-                    Strings.Settings.materialFromWallpaper,
-                    swatches: swatches(.material),
+                PaletteTile(
+                    model: model,
+                    palette: .material,
+                    title: Strings.Settings.materialFromWallpaper,
                     isSelected: model.palette == .material && seedIsWallpaper && !model.hasCustomColors,
                     isBase: model.palette == .material && seedIsWallpaper && model.hasCustomColors,
                 ) { pick(.material, seed: ThemeSeed.wallpaperLiteral) }
-                chip(
-                    Strings.Settings.materialFromColor,
-                    swatches: swatches(.material),
+                PaletteTile(
+                    model: model,
+                    palette: .material,
+                    title: Strings.Settings.materialFromColor,
                     isSelected: model.palette == .material && !seedIsWallpaper && !model.hasCustomColors,
                     isBase: model.palette == .material && !seedIsWallpaper && model.hasCustomColors,
                 ) { pick(.material, seed: seedIsWallpaper ? MaterialPalette.baselineSeed.hex : nil) }
@@ -537,21 +770,46 @@ struct ThemesSettingsView: View {
             Text(Strings.Settings.madeForYou)
         }
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 6), spacing: 6) {
-                ForEach(ThemePalette.allCases.filter { $0 != .system && $0 != .material }, id: \.self) { palette in
-                    chip(
-                        palette.title,
-                        swatches: swatches(palette),
-                        isSelected: model.palette == palette && !model.hasCustomColors,
-                        isBase: model.palette == palette && model.hasCustomColors,
-                    ) { pick(palette) }
+            // Two rows at a time: the others scroll, inside of the section
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    TileGrid(items: ThemePalette.allCases.filter { $0 != .system && $0 != .material }, columns: 4) { palette in
+                        PaletteTile(
+                            model: model,
+                            palette: palette,
+                            title: palette.title,
+                            isSelected: model.palette == palette && !model.hasCustomColors,
+                            isBase: model.palette == palette && model.hasCustomColors,
+                        ) { pick(palette) }
+                        .id(palette)
+                    }
+                    .padding(.trailing, 10)
                 }
+                .scrollIndicators(.visible)
+                .frame(height: 2 * PaletteTile.height + 8)
+                // The palette in use is in sight when the part opens
+                .onAppear { proxy.scrollTo(model.palette, anchor: .center) }
             }
             .disabled(model.disabledReason(.themePalette) != nil)
         } header: {
             tableHeader(Strings.Settings.palettes, SettingsKey.themePalette)
         } footer: {
             footnote(Strings.Settings.paletteFooter)
+        }
+        Section {
+            WallpaperRow(model: model)
+            LabeledContent {
+                Button(Strings.Settings.open) { openConfigInEditor() }
+            } label: {
+                Text(Strings.Settings.hooks)
+                Text(model.config.theme.onChange.isEmpty ? Strings.Settings.noHooks : model.config.theme.onChange.joined(separator: "\n"))
+                    .font(.system(size: 11, design: .monospaced))
+            }
+            .settingsHighlight(model, Strings.Settings.hooks)
+        } header: {
+            Text(Strings.Settings.wallpaperAndHooks)
+        } footer: {
+            footnote(Strings.Settings.wallpaperAndHooksFooter)
         }
     }
 
@@ -562,7 +820,7 @@ struct ThemesSettingsView: View {
     @ViewBuilder
     private var indicatorSection: some View {
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                 ForEach(MenuBarTheme.allCases, id: \.self) { theme in
                     styleButton(theme)
                 }
@@ -576,9 +834,29 @@ struct ThemesSettingsView: View {
         } footer: {
             footnote(Strings.Settings.indicatorShapeFooter)
         }
+        if model.menuBarTheme == .labels {
+            Section {
+                ForEach(model.labelWorkspaces, id: \.self) { workspace in
+                    LabelRow(model: model, workspace: workspace)
+                }
+                if model.labelWorkspaces.isEmpty {
+                    Text(Strings.Settings.noPersistentWorkspaces).foregroundStyle(.secondary)
+                }
+            } header: {
+                HStack(spacing: 8) {
+                    Text(Strings.Settings.labels)
+                    Text("[menu-bar.labels] [menu-bar.symbols]")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            } footer: {
+                footnote(Strings.Settings.labelsFooter)
+            }
+        }
         Section(Strings.Settings.options) {
             ToggleRow(model: model, title: Strings.Settings.dimEmpty, detail: Strings.Settings.dimEmptyDetail, key: .menuBarDimEmpty)
             ToggleRow(model: model, title: Strings.Settings.showMode, detail: Strings.Settings.showModeDetail, key: .menuBarShowMode)
+            ToggleRow(model: model, title: Strings.Settings.perMonitor, detail: Strings.Settings.perMonitorDetail, key: .menuBarPerMonitor)
         }
     }
 
@@ -609,42 +887,14 @@ struct ThemesSettingsView: View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(.secondary)
+            .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Where the colors come from: a theme, the user, or the system. Green, orange or gray, always on top
-    private var themeStatus: some View {
-        let manual = model.manualColorKeys
-        let (color, symbol, title, detail): (Color, String, String, String) = switch true {
-            case model.palette == .system:
-                (.secondary, "circle.dashed", Strings.Settings.noThemeTitle, Strings.Settings.noThemeInUse)
-            case manual.isEmpty:
-                (.green, "checkmark.circle.fill", Strings.Settings.themeTitle(model.palette.title), Strings.Settings.themeInUseDetail)
-            default:
-                (.orange, "paintpalette.fill", Strings.Settings.custom, Strings.Settings.customInUse(manual.map(Strings.Settings.colorName), base: model.palette.title))
-        }
-        return VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(color)
-            Text(detail)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if model.palette != .system && !manual.isEmpty {
-                Button(Strings.Settings.useOnlyTheme(model.palette.title)) { model.resetManualColors() }
-                    .controlSize(.small)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 
     /// Picking a theme while some colors are the user's own asks first: the theme takes them over
     /// - Parameter seed: also writes [theme] seed (Material You)
     private func pick(_ palette: ThemePalette, seed: String? = nil) {
+        model.hoveredPalette = nil
         let manual = model.manualColorKeys
         guard palette != .system, !manual.isEmpty else {
             model.setPalette(palette, seed: seed, resettingColors: false)
@@ -660,50 +910,16 @@ struct ThemesSettingsView: View {
         }
     }
 
-    /// The item in a dark and in a light menu bar, and three windows with their borders in the colors of the appearance
-    /// of the system
-    private var preview: some View {
-        let config = model.menuBarConfig
-        let isDark = isSystemAppearanceDark
-        let borders = BordersConfig()
-            .copy(\.activeColor, model.color(.bordersActiveColor))
-            .copy(\.inactiveColor, model.color(.bordersInactiveColor))
-            .copy(\.floatingColor, model.color(.bordersFloatingColor))
-            .applying(model.palette, seed: model.paletteSeed, isDark: isDark)
-        func color(_ config: ConfigColor) -> Color { Color(nsColor: config.resolve(auto: .white, systemAccent: .systemAccent).nsColor) }
-        let window = Color(white: isDark ? 0.13 : 0.96)
-        return VStack(spacing: 10) {
-            VStack(spacing: 0) {
-                ForEach([true, false], id: \.self) { isDarkBar in
-                    MenuBarItemImage(config: config, isDarkBar: isDarkBar, zoom: 1.6)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(menuBarBackground(isDarkBar))
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-            HStack(spacing: 10) {
-                ForEach(Array([borders.activeColor, borders.inactiveColor, borders.floatingColor].enumerated()), id: \.offset) { _, border in
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(window)
-                        .frame(height: 56)
-                        .padding(3)
-                        .background(color(border), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-                }
-            }
-        }
-        .padding(12)
-        .background(menuBarBackground(isDark).opacity(0.35), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .accessibilityLabel(Strings.Settings.livePreview)
-    }
-
     private func styleButton(_ theme: MenuBarTheme) -> some View {
         let isSelected = model.menuBarTheme == theme
+        let config = MenuBarSamples.withSampleLabels(
+            MenuBarConfig(theme: theme, labels: model.menuBarConfig.labels, symbols: model.menuBarConfig.symbols, palette: model.palette, paletteSeed: model.paletteSeed),
+        )
         return Button {
             model.setTheme(theme)
         } label: {
             VStack(spacing: 6) {
-                MenuBarItemImage(config: MenuBarConfig(theme: theme, palette: model.palette, paletteSeed: model.paletteSeed), isDarkBar: true, zoom: 0.8)
+                MenuBarItemImage(config: config, isDarkBar: true, zoom: 0.8)
                     .frame(maxWidth: .infinity)
                     .frame(height: 30)
                     .background(menuBarBackground(true), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -721,39 +937,186 @@ struct ThemesSettingsView: View {
         .accessibilityLabel(theme.rawValue)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+}
 
-    /// The colors of the palette in the appearance of the system: the focused workspace, the accent, the workspaces
-    /// with windows, the inactive border
-    private func swatches(_ palette: ThemePalette) -> [Color] {
-        let isDark = isSystemAppearanceDark
-        return switch palette.colors(isDark: isDark, seed: model.paletteSeed) {
-            case let colors?: [colors.focused, colors.accent, colors.occupied, colors.inactiveBorder].map { Color(nsColor: $0.nsColor) }
-            case nil: [Color.accentColor, isDark ? .white : .black, .gray, Color(nsColor: Rgba(hex: "#8E8E93").orDie().nsColor)]
-        }
-    }
+/// Rows of tiles, all as wide. Not lazy: the rows after a lazy grid were reported out of their place once the page
+/// was scrolled, and couldn't be clicked there. See: inspectSettingsWindow
+private struct TileGrid<Item: Hashable, Tile: View>: View {
+    let items: [Item]
+    let columns: Int
+    @ViewBuilder let tile: (Item) -> Tile
 
-    /// A palette as a small card. Selected: the theme in use. Base (dashed): the palette that gives the colors the user
-    /// hasn't set, while no theme is selected
-    private func chip(_ title: String, swatches: [Color], isSelected: Bool, isBase: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 5) {
-                HStack(spacing: 3) {
-                    ForEach(Array(swatches.enumerated()), id: \.offset) { _, swatch in
-                        Circle().fill(swatch).frame(width: 10, height: 10)
-                            .overlay { Circle().strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5) }
+    var body: some View {
+        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+            ForEach(Array(stride(from: 0, to: items.count, by: columns)), id: \.self) { start in
+                let row = Array(items[start ..< min(start + columns, items.count)])
+                GridRow {
+                    ForEach(row, id: \.self) { tile($0) }
+                    ForEach(0 ..< columns - row.count, id: \.self) { _ in
+                        Color.clear.frame(height: 1)
                     }
                 }
+            }
+        }
+    }
+}
+
+/// The colors of a palette, or of the config with a palette, in a variant: what the previews draw
+@MainActor
+private struct PreviewColors {
+    var menuBar: MenuBarConfig
+    var active: Rgba
+    var inactive: Rgba
+    var floating: Rgba
+
+    /// - Parameter palette: the palette to show instead of the one of the config, without the colors of the user
+    init(_ model: SettingsModel, palette: ThemePalette? = nil, isDark: Bool) {
+        let palette = palette ?? model.palette
+        let isOwn = palette == model.palette
+        let borders = BordersConfig()
+            .copy(\.activeColor, isOwn ? model.color(.bordersActiveColor) : BordersConfig().activeColor)
+            .copy(\.inactiveColor, isOwn ? model.color(.bordersInactiveColor) : BordersConfig().inactiveColor)
+            .copy(\.floatingColor, isOwn ? model.color(.bordersFloatingColor) : BordersConfig().floatingColor)
+            .applying(palette, seed: model.paletteSeed, isDark: isDark)
+        func resolve(_ color: ConfigColor) -> Rgba { color.resolve(auto: isDark ? .white : .black, systemAccent: .systemAccent) }
+        menuBar = isOwn ? model.menuBarConfig : model.menuBarConfig.copy(\.colors, MenuBarColors()).copy(\.palette, palette)
+        active = resolve(borders.activeColor)
+        inactive = resolve(borders.inactiveColor)
+        floating = resolve(borders.floatingColor)
+    }
+}
+
+/// The item in the menu bar and three windows with their borders, in one variant of the palette, with where the
+/// colors come from on top of it: green (a theme), orange (custom colors) or gray (no theme)
+private struct ThemePreview: View {
+    let model: SettingsModel
+
+    var body: some View {
+        let isDark = model.previewIsDark
+        let hovered = model.hoveredPalette
+        let colors = PreviewColors(model, palette: hovered, isDark: isDark)
+        VStack(spacing: 0) {
+            MenuBarItemImage(config: MenuBarSamples.withSampleLabels(colors.menuBar), isDarkBar: isDark, zoom: 1.6)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(menuBarBackground(isDark))
+            HStack(spacing: 12) {
+                ForEach(Array([colors.active, colors.inactive, colors.floating].enumerated()), id: \.offset) { _, border in
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color(white: isDark ? 0.13 : 0.97))
+                        .frame(height: 64)
+                        .padding(3)
+                        .background(Color(nsColor: border.nsColor), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 44)
+        }
+        .background(desktop(isDark))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(alignment: .bottom) { statusBar(hovered: hovered) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Strings.Settings.livePreview)
+    }
+
+    private func desktop(_ isDark: Bool) -> LinearGradient {
+        let colors = isDark
+            ? [Color(red: 0.18, green: 0.2, blue: 0.31), Color(red: 0.29, green: 0.26, blue: 0.45)]
+            : [Color(red: 0.84, green: 0.86, blue: 0.92), Color(red: 0.93, green: 0.89, blue: 0.95)]
+        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    /// The source of the colors, and the variant shown
+    private func statusBar(hovered: ThemePalette?) -> some View {
+        let manual = model.manualColorKeys
+        let (color, title, detail): (Color, String, String) = switch true {
+            case hovered != nil: (.accentColor, hovered?.title ?? "", Strings.Settings.previewOnly)
+            case model.palette == .system: (.secondary, Strings.Settings.noThemeTitle, Strings.Settings.noThemeInUse)
+            case manual.isEmpty: (.green, model.palette.title, Strings.Settings.themeInUseDetail)
+            default: (.orange, Strings.Settings.custom, Strings.Settings.customInUse(manual.map(Strings.Settings.colorName), base: model.palette.title))
+        }
+        return HStack(spacing: 8) {
+            HStack(spacing: 5) {
+                Circle().fill(color).frame(width: 7, height: 7)
+                Text(title).font(.system(size: 11, weight: .semibold))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(.black.opacity(0.45), in: Capsule())
+            .foregroundStyle(.white)
+            Text(detail)
+                .font(.system(size: 11))
+                .foregroundStyle(model.previewIsDark ? Color.white.opacity(0.85) : Color.black.opacity(0.7))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(detail)
+            Spacer(minLength: 4)
+            if hovered == nil, model.palette != .system, !manual.isEmpty {
+                Button(Strings.Settings.resetToTheme) { model.resetManualColors() }
+                    .controlSize(.small)
+                    .help(Strings.Settings.useOnlyTheme(model.palette.title))
+            }
+            // Over a dark capsule, in the dark appearance: it reads the same over both variants of the preview
+            Picker("", selection: Binding(get: { model.previewIsDark }, set: { model.previewVariantIsDark = $0 })) {
+                Text(Strings.Settings.dark).tag(true)
+                Text(Strings.Settings.light).tag(false)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .controlSize(.small)
+            .fixedSize()
+            .environment(\.colorScheme, .dark)
+            .padding(3)
+            .background(.black.opacity(0.45), in: Capsule())
+            .help(Strings.Settings.variantHelp)
+        }
+        .padding(8)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+/// A palette as a small desktop: its menu bar item and two windows with their borders. Hovering it shows it in the
+/// preview, without writing it. Selected: the theme in use. Base (dashed): the palette that gives the colors the user
+/// hasn't set, while no theme is selected
+private struct PaletteTile: View {
+    let model: SettingsModel
+    let palette: ThemePalette
+    let title: String
+    let isSelected: Bool
+    let isBase: Bool
+    let action: () -> Void
+
+    static let height: CGFloat = 86
+
+    var body: some View {
+        let isDark = model.previewIsDark
+        let colors = PreviewColors(model, palette: palette, isDark: isDark)
+        Button(action: action) {
+            VStack(spacing: 5) {
+                VStack(spacing: 0) {
+                    MenuBarItemImage(config: MenuBarSamples.withSampleLabels(colors.menuBar), isDarkBar: isDark, zoom: 0.55)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 16)
+                        .background(menuBarBackground(isDark).opacity(0.9))
+                    HStack(spacing: 4) {
+                        window(colors.active)
+                        window(colors.inactive)
+                    }
+                    .padding(5)
+                }
+                .background(isDark ? Color(white: 0.2) : Color(white: 0.88))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 Text(isBase ? Strings.Settings.baseOf(title) : title)
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-            .padding(.horizontal, 4)
-            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .padding(5)
+            .frame(height: Self.height)
+            .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .strokeBorder(
                         isSelected ? Color.accentColor : isBase ? Color.orange.opacity(0.8) : Color.secondary.opacity(0.25),
                         style: StrokeStyle(lineWidth: isSelected ? 2 : 1, dash: isBase ? [4, 3] : []),
@@ -762,55 +1125,101 @@ struct ThemesSettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { isInside in
+            if isInside {
+                model.hoveredPalette = palette
+            } else if model.hoveredPalette == palette {
+                model.hoveredPalette = nil
+            }
+        }
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
+
+    private func window(_ border: Rgba) -> some View {
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(Color(white: model.previewIsDark ? 0.12 : 0.98))
+            .frame(height: 24)
+            .padding(2)
+            .background(Color(nsColor: border.nsColor), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+    }
 }
 
-// MARK: - Menu bar
-
-struct MenuBarSettingsView: View {
+/// [theme] wallpaper: the image that goes on every screen when the palette changes
+private struct WallpaperRow: View {
     let model: SettingsModel
 
     var body: some View {
-        SettingsPage {
-            ErrorBanner(model: model)
-            Section {
-                preview
-            }
-            Section {
-                ToggleRow(model: model, title: Strings.Settings.showItem, detail: Strings.Settings.showItemDetail, key: .menuBarEnabled)
-            } header: {
-                Text(Strings.Settings.options)
-            } footer: {
-                // The shape, its options and the colors are with the palette, in one place
-                Text(Strings.Settings.indicatorInThemes)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        let key = SettingsKey.themeWallpaper
+        let path = model.string(key)
+        SettingsRow(model: model, title: Strings.Settings.wallpaper, detail: path.isEmpty ? Strings.Settings.noWallpaper : path, key: key) {
+            Button(Strings.Settings.choose) { choose() }
+            if model.isSet(key) {
+                Button(Strings.Settings.remove) { model.reset(key) }
             }
         }
     }
 
-    /// The item as the window leaves it, in a dark and in a light menu bar: a fixed color doesn't adapt to the menu bar.
-    /// The sample is in the 'resize' mode when the mode is shown, so its initial can be seen in the marker
-    private var preview: some View {
-        let config = model.menuBarConfig
-        var snapshot = MenuBarSamples.snapshot
-        if config.showMode { snapshot.mode = "resize" }
-        return VStack(spacing: 0) {
-            ForEach([true, false], id: \.self) { isDarkBar in
-                MenuBarItemImage(config: config, snapshot: snapshot, isDarkBar: isDarkBar, zoom: 2)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(menuBarBackground(isDarkBar))
+    private func choose() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.set(.themeWallpaper, .string((url.path as NSString).abbreviatingWithTildeInPath))
+    }
+}
+
+/// The name and the symbol of a workspace in the 'labels' theme. An empty field removes its key
+private struct LabelRow: View {
+    let model: SettingsModel
+    let workspace: String
+
+    /// Symbols that fit the usual workspaces
+    private static let suggestions = [
+        "terminal", "chevron.left.forwardslash.chevron.right", "globe", "bubble.left", "sparkles", "envelope", "music.note",
+        "doc.text", "folder", "paintbrush", "gamecontroller", "film", "calendar", "checklist", "square.grid.2x2", "star",
+    ]
+
+    var body: some View {
+        let labelKey = SettingsKey.menuBarLabel(workspace)
+        let symbolKey = SettingsKey.menuBarSymbol(workspace)
+        let symbol = model.string(symbolKey)
+        let isValid = symbol.isEmpty || NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil
+        LabeledContent {
+            HStack(spacing: 6) {
+                TextField("", text: Binding(get: { model.string(labelKey) }, set: { model.setDebounced(labelKey, .string($0)) }), prompt: Text(Strings.Settings.labelPlaceholder(workspace)))
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
+                    .multilineTextAlignment(.leading)
+                    .frame(width: 130)
+                    .disabled(model.disabledReason(labelKey) != nil)
+                Image(systemName: symbol.isEmpty ? "square.dashed" : isValid ? symbol : "questionmark.square.dashed")
+                    .frame(width: 20)
+                    .foregroundStyle(symbol.isEmpty ? Color.secondary : isValid ? Color.primary : Color.orange)
+                    .help(isValid ? symbol : Strings.Settings.unknownSymbol(symbol))
+                TextField("", text: Binding(get: { symbol }, set: { model.setDebounced(symbolKey, .string($0)) }), prompt: Text(Strings.Settings.symbolPlaceholder))
+                    .textFieldStyle(.roundedBorder)
+                    .labelsHidden()
+                    .multilineTextAlignment(.leading)
+                    .font(.system(size: 11, design: .monospaced))
+                    .frame(width: 170)
+                    .disabled(model.disabledReason(symbolKey) != nil)
+                Menu {
+                    ForEach(Self.suggestions, id: \.self) { name in
+                        Button { model.set(symbolKey, .string(name)) } label: { Label(name, systemImage: name) }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help(Strings.Settings.suggestedSymbols)
             }
+        } label: {
+            Text(workspace).font(.system(size: 13, weight: .semibold, design: .rounded))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(alignment: .topLeading) {
-            Text(Strings.Settings.livePreview).font(.caption2).foregroundStyle(.white.opacity(0.6)).padding(6)
-        }
-        .accessibilityLabel(Strings.Settings.livePreview)
     }
 }
 
@@ -847,12 +1256,13 @@ struct BordersSettingsView: View {
                 Text(Strings.Settings.colorsInThemes)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             Section {
                 // One row per binding mode of the config file. See: SettingsModel.colorableModes
                 ForEach(model.colorableModes, id: \.self) { mode in
-                    ColorRow(model: model, title: mode, key: .bordersModeColor(mode), allowsAuto: false, fallback: .bordersActiveColor)
+                    ModeColorRow(model: model, mode: mode)
                 }
                 if model.colorableModes.isEmpty {
                     Text(Strings.Settings.noModes).foregroundStyle(.secondary)
@@ -863,6 +1273,7 @@ struct BordersSettingsView: View {
                 Text(Strings.Settings.modeColorsFooter)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -945,6 +1356,7 @@ struct GapsSettingsView: View {
         Text(text)
             .font(.footnote)
             .foregroundStyle(.secondary)
+            .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 

@@ -29,6 +29,7 @@ extension InlayTests {
                 ("animations", Array(animationsParserTable.keys)),
                 ("theme", Array(themeParserTable.keys)),
                 ("notifications", Array(notificationsParserTable.keys)),
+                ("settings", Array(settingsWindowParserTable.keys)),
                 ("on-window-detected", Array(windowDetectedParser.keys)),
                 ("on-window-detected.if", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode
@@ -39,7 +40,7 @@ extension InlayTests {
         private let freeFormTables = [
             "mode", "mode.*.binding", "borders.mode-colors", "exec.env-vars",
             "key-mapping.key-notation-to-key-code", "workspace-to-monitor-force-assignment",
-            "animations.curves", "theme.wallpapers",
+            "animations.curves", "theme.wallpapers", "menu-bar.labels", "menu-bar.symbols",
         ]
 
         /// 'mode.main.binding.alt-h' -> 'mode.*.binding.*'. nil: the name itself, in a free-form table (not a key of the parser)
@@ -157,7 +158,8 @@ extension InlayTests {
             let menuBar = try reference.explain("menu-bar").get()
             assertEquals(menuBar.contains("[menu-bar]\n"), true)
             assertEquals(menuBar.contains("[menu-bar.colors]\n"), true)
-            assertEquals(menuBar.hasSuffix("        empty = 'auto'"), true)
+            assertEquals(menuBar.contains("        empty = 'auto'\n"), true)
+            assertEquals(menuBar.contains("[menu-bar.symbols]"), true)
 
             // Dotted keys inside a table, and a prefix of them
             let gaps = try reference.explain("gaps").get()

@@ -136,7 +136,7 @@ extension InlayTests {
             let pills = ConfigEdit(path: theme.path, value: .string("bubbles"))
             assertEquals(
                 ConfigEditor.patch(text, [pills]).errorOrNil,
-                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid)"),
+                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid|labels)"),
             )
             let color = ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#12345"))
             assertEquals(ConfigEditor.patch(text, [color]).okOrNil, nil)
@@ -176,7 +176,7 @@ extension InlayTests {
             assertEquals(config.config.startAtLogin, false)
             // The comments are still there, and nothing else has changed
             assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count)
-            assertEquals(patched.contains("    # pills|chips|square|minimal|dots|underline|glyphs|liquid\n    theme = 'square'\n"), true)
+            assertEquals(patched.contains("    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels\n    theme = 'square'\n"), true)
             assertEquals(patched.contains("        focused = '#D19A66'\n"), true)
         }
 

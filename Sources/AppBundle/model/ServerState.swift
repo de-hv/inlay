@@ -29,4 +29,6 @@ struct ConfigLoadStatus: Equatable, Sendable {
     var warningCount: Int
     /// false if the errors were too severe to apply the config. The previous config stays in effect then
     var isApplied: Bool
+    /// The errors, then the warnings, as the window of the diagnostics shows them
+    var problems: [String] = []
 }

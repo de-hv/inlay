@@ -12,6 +12,8 @@ extension InlayTests {
                 case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
                 case .modeInitial: CGSize(width: 8, height: 12)
                 case .chipModeInitial: CGSize(width: 9, height: 13)
+                // A symbol that exists is 12 pt wide. 'nope' doesn't exist
+                case .symbol: string == "nope" ? .zero : CGSize(width: 12, height: 11)
             }
         }
 
@@ -640,8 +642,8 @@ extension InlayTests {
             let oneColor = MenuBarTheme.allCases.flatMap { theme in
                 ["default", "fullscreen", "mode-fullscreen", "mode"].map { "\(theme.rawValue)-\($0)" }
             }
-            let slides = ["pills", "dots", "underline", "liquid"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
-            let templates = (oneColor + slides + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
+            let slides = ["pills", "dots", "underline", "liquid", "labels"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
+            let templates = (oneColor + slides + MenuBarTheme.allCases.map { "\($0.rawValue)-per-monitor" } + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
             assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), templates.sorted())
             // The item is as wide in a binding mode as in the main mode, in every theme
             for theme in MenuBarTheme.allCases {

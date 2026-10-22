@@ -16,7 +16,7 @@ extension InlayTests {
             let snapshot = MenuBarSnapshot.fromModel()
             assertEquals(snapshot, MenuBarSnapshot(
                 status: .running,
-                workspaces: [.init(name: "setUpWorkspacesForTests", isOccupied: false)],
+                workspaces: [.init(name: "setUpWorkspacesForTests", isOccupied: false, isVisible: true)],
                 focusedWorkspace: "setUpWorkspacesForTests",
                 isFocusedWorkspaceFullscreen: false,
                 mode: "main",
@@ -41,7 +41,7 @@ extension InlayTests {
                 .init(name: "1", isOccupied: false),
                 // An app with several windows is listed once
                 .init(name: "2", isOccupied: true, apps: [app]),
-                .init(name: "3", isOccupied: false),
+                .init(name: "3", isOccupied: false, isVisible: true),
                 .init(name: "9", isOccupied: true, apps: [app]),
             ])
             assertEquals(snapshot.focusedWorkspace, "3")

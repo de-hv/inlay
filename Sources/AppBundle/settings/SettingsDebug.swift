@@ -59,7 +59,7 @@ private func inspectSettingsWindow(_ window: NSWindow, config: URL) -> Int {
         }
         return false
     }
-    guard let tabs = window.contentViewController as? SettingsTabViewController, let root = unsafe window.contentView?.superview else { return 1 }
+    guard let tabs = (window.contentViewController as? SettingsRootViewController)?.pages, let root = unsafe window.contentView?.superview else { return 1 }
     var problems = 0
     for index in tabs.tabViewItems.indices {
         tabs.selectedTabViewItemIndex = index
@@ -100,11 +100,19 @@ private func inspectSettingsWindow(_ window: NSWindow, config: URL) -> Int {
             let isHit = hit.map { $0 === control || $0.isDescendant(of: control) } ?? false
             // A disabled control gives the click to what is behind it. That is how it must be
             let isReachable = area.contains(frame) && (isHit || !control.isEnabled)
-            if !isReachable { problems += 1 }
-            print("  \(isReachable ? "ok  " : "FAIL") \(type(of: control)) \(text(frame)) \(control.isEnabled ? "enabled" : "disabled")" +
+            if !isReachable {
+                problems += 1
+                if let document = page?.documentView {
+                    print("        in the page: \(text(control.convert(control.bounds, to: document))), the page is \(text(document.bounds))")
+                }
+            }
+            let title = (control as? NSButton)?.title.takeIf { !$0.isEmpty }.map { " '\($0)'" } ?? ""
+            print("  \(isReachable ? "ok  " : "FAIL") \(type(of: control))\(title) \(text(frame)) \(control.isEnabled ? "enabled" : "disabled")" +
                 "\(wasScrolledAway ? ", after scrolling to it" : "") inside=\(area.contains(frame)) " +
                 "click=\(isHit ? "itself" : hit.map { String(describing: type(of: $0)) } ?? "nothing")")
-            guard let segmented = control as? NSSegmentedControl, segmented.isEnabled, segmented.segmentCount > 1 else { continue }
+            // The controls that only change the window, not the config, aren't picked: they rebuild the page under the inspection
+            guard let segmented = control as? NSSegmentedControl, segmented.isEnabled, segmented.segmentCount > 1,
+                  !windowOnlySegments.contains(segmented.label(forSegment: 0) ?? "") else { continue }
             let before = try? String(contentsOf: config, encoding: .utf8)
             segmented.selectedSegment = (segmented.selectedSegment + 1) % segmented.segmentCount
             if let action = segmented.action { segmented.sendAction(action, to: segmented.target) }

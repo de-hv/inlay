@@ -49,7 +49,7 @@ for width in 2 8; do
   sed "s/^    width = 4\$/    width = $width/" inlay.toml >"$WORK/width-$width.toml"
   "$APP" --render-settings "$WORK/settings-width-$width" "$WORK/width-$width.toml" >/dev/null
 done
-for tab in general themes tiling gaps animations menu-bar borders; do
+for tab in general themes tiling gaps animations borders workspaces shortcuts window-themes; do
   if wanted "settings-$tab"; then cp "$WORK/settings/settings-$tab.png" "$OUT/settings-$tab.png"; echo "settings-$tab.png"; fi
 done
 

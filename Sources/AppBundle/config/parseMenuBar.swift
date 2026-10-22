@@ -7,6 +7,12 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
+    /// The workspaces grouped by the monitor they are on, and a hollow marker on the one that another monitor shows
+    var perMonitor: Bool = false
+    /// [menu-bar.labels]. Workspace -> the name that the 'labels' theme shows in the focused workspace. Only that theme uses it
+    var labels: [String: String] = [:]
+    /// [menu-bar.symbols]. Workspace -> the SF Symbol that the 'labels' theme draws for it. Only that theme uses it
+    var symbols: [String: String] = [:]
     /// [theme] palette: it gives the colors that are 'auto'. Not a key of [menu-bar]: copied from the config. See: MenuBarStore
     var palette: ThemePalette = .system
     /// [theme] seed, as a color: the one that the 'material' palette is made from. Copied from the config too
@@ -38,6 +44,9 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// A dot per workspace, and a drop over the focused one that flows to the next one leaving a trail behind:
     /// the "gooey" effect of the bars made with eww, AGS or Quickshell
     case liquid
+    /// An SF Symbol per workspace ([menu-bar.symbols]), and the focused one stretched into a pill with its symbol
+    /// and its name ([menu-bar.labels]). A workspace without a symbol shows its name
+    case labels
 }
 
 /// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore
@@ -62,6 +71,9 @@ let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "dim-empty-workspaces": Parser(\.dimEmptyWorkspaces, parseBool),
     "show-mode": Parser(\.showMode, parseBool),
     "colors": Parser(\.colors, parseMenuBarColors),
+    "per-monitor": Parser(\.perMonitor, parseBool),
+    "labels": Parser(\.labels, parseWorkspaceStrings),
+    "symbols": Parser(\.symbols, parseWorkspaceStrings),
 ]
 
 let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
@@ -77,6 +89,21 @@ func parseMenuBar(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout C
 
 private func parseMenuBarColors(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarColors {
     parseTable(raw, MenuBarColors(), menuBarColorsParserTable, backtrace, &c)
+}
+
+/// [menu-bar.labels] and [menu-bar.symbols]: a string per workspace
+private func parseWorkspaceStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: String] {
+    guard case .dict(let table) = raw else {
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        return [:]
+    }
+    var result: [String: String] = [:]
+    for (workspace, value) in table {
+        if let string = parseString(value, backtrace + .key(workspace)).getOrNil(appendErrorTo: &c.errors), !string.isEmpty {
+            result[workspace] = string
+        }
+    }
+    return result
 }
 
 private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarTheme {

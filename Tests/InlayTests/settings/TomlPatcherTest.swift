@@ -604,6 +604,7 @@ extension InlayTests {
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
                 .bordersGlow, .bordersGlowRadius, .bordersHideWhenSingle, .gapsSmart,
+                .splitRatio, .persistentWorkspaces, .menuBarPerMonitor, .notificationsOnReload,
             ] {
                 let value: TomlValue = switch key.defaultValue {
                     // The opposite of what the file has, which isn't always the default
@@ -611,6 +612,7 @@ extension InlayTests {
                     case .int(let value): .int(value + 3)
                     case .float(let value): .float(value + 0.25)
                     case .string: .string("#123456")
+                    case .strings: .strings(["1", "two words", "3"])
                 }
                 let patched = set(defaultConfig, key.path, value)
                 assertEquals(value.matches(TomlPatcher.decodedValue(patched, key.path)), true, additionalMsg: key.label)

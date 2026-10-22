@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Common
 
 /// A fixed state of the menu bar, for the preview of the settings window and for `--render-menu-bar`
@@ -12,6 +13,30 @@ enum MenuBarSamples {
             .init(name: "4", isOccupied: true),
             .init(name: "5", isOccupied: true),
             .init(name: "6", isOccupied: false),
+        ],
+        focusedWorkspace: "2",
+        focusedWindow: .init(isFloating: false, isFullscreen: false),
+    )
+
+    /// The names and the symbols of the 'labels' theme for the sample workspaces. 6 has neither: it shows its name
+    static let labels = ["1": "Terminal", "2": "Code", "3": "Web", "4": "Chat", "5": "AI"]
+    static let symbols = ["1": "terminal", "2": "chevron.left.forwardslash.chevron.right", "3": "globe", "4": "bubble.left", "5": "sparkles"]
+
+    /// The config, with the sample labels and symbols if it is the 'labels' theme and it has none of its own
+    static func withSampleLabels(_ config: MenuBarConfig) -> MenuBarConfig {
+        guard config.theme == .labels, config.labels.isEmpty, config.symbols.isEmpty else { return config }
+        return config.copy(\.labels, labels).copy(\.symbols, symbols)
+    }
+
+    /// Two monitors: 1 to 4 on the left one, 5 and 6 on the right one, which shows 5
+    static let twoMonitors = MenuBarSnapshot(
+        workspaces: [
+            .init(name: "1", isOccupied: true, monitor: 0),
+            .init(name: "2", isOccupied: true, monitor: 0, isVisible: true),
+            .init(name: "3", isOccupied: true, monitor: 0),
+            .init(name: "4", isOccupied: false, monitor: 0),
+            .init(name: "5", isOccupied: true, monitor: 1, isVisible: true),
+            .init(name: "6", isOccupied: false, monitor: 1),
         ],
         focusedWorkspace: "2",
         focusedWindow: .init(isFloating: false, isFullscreen: false),
@@ -66,7 +91,7 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
 
     var variants: [(name: String, config: MenuBarConfig, snapshot: MenuBarSnapshot, transition: MenuBarFocusTransition?)] = []
     func append(_ name: String, _ config: MenuBarConfig, _ snapshot: MenuBarSnapshot, _ transition: MenuBarFocusTransition? = nil) {
-        variants.append((name, config, snapshot, transition))
+        variants.append((name, MenuBarSamples.withSampleLabels(config), snapshot, transition))
     }
     for theme in MenuBarTheme.allCases {
         append("\(theme.rawValue)-default", MenuBarConfig(theme: theme), MenuBarSamples.snapshot)
@@ -85,14 +110,20 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     }
     // Material You from another seed
     append("pills-palette-material-seed", MenuBarConfig(palette: .material, paletteSeed: Rgba(hex: "#B5651D").orDie()), MenuBarSamples.snapshot)
+    // 'per-monitor': the workspaces of each monitor together, and 5 shown by the other monitor
+    for theme in MenuBarTheme.allCases {
+        append("\(theme.rawValue)-per-monitor", MenuBarConfig(theme: theme, perMonitor: true), MenuBarSamples.twoMonitors)
+    }
     // The focus on its way from workspace 5 to workspace 2, in the themes whose marker changes shape as it goes
-    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid] {
+    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid, .labels] {
         for percent in [20, 40, 60, 80] {
             append("\(theme.rawValue)-slide-\(percent)", MenuBarConfig(theme: theme), MenuBarSamples.snapshot, .init(from: "5", progress: Double(percent) / 100))
         }
     }
     append("paused", MenuBarConfig(), paused)
     append("needs-accessibility", MenuBarConfig(), needsAccessibility)
+
+    try renderMenuCards(to: directory, scale: scale)
 
     let padding: CGFloat = 8
     var rendered: [(name: String, bitmap: NSBitmapImageRep)] = []
@@ -150,4 +181,34 @@ private func contactSheet(_ rendered: [(name: String, bitmap: NSBitmapImageRep)]
     }
     NSGraphicsContext.restoreGraphicsState()
     return sheet.representation(using: .png, properties: [:])
+}
+
+/// The card of the menu in a few states, in the dark and in the light appearance: `menu-<state>-<appearance>.png`
+@MainActor
+private func renderMenuCards(to directory: URL, scale: CGFloat) throws {
+    let accent = Rgba(hex: "#61AFEF").orDie()
+    var running = MenuBarCard(status: .running, workspace: "2", accent: accent)
+    running.windows = [.init(app: "Zed", isFocused: true), .init(app: "Code", isFocused: false)]
+    running.isFloating = false
+    running.focusedApp = "Zed"
+    running.windowLayout = .tiling
+    var mode = running
+    mode.mode = "resize"
+    mode.modeExitKey = "esc"
+    mode.configProblems = Strings.Menu.configProblems(ConfigLoadStatus(date: .now, url: newUserConfigUrl, errorCount: 0, warningCount: 1, isApplied: true))
+    mode.problemLines = ["[WARNING] animations.curve: Unknown curve 'bounce2'"]
+    let paused = MenuBarCard(status: .paused, workspace: "2", accent: accent)
+    for (name, card) in [("running", running), ("mode", mode), ("paused", paused)] {
+        for isDark in [true, false] {
+            let view = NSHostingView(rootView: MenuBarCardView(card: card) { _ in }
+                .background(isDark ? Color(white: 0.17) : Color(white: 0.94))
+                .environment(\.colorScheme, isDark ? .dark : .light))
+            view.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+            view.frame.size = view.fittingSize
+            view.layoutSubtreeIfNeeded()
+            guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
+            view.cacheDisplay(in: view.bounds, to: bitmap)
+            try bitmap.representation(using: .png, properties: [:])?.write(to: directory.appending(path: "menu-\(name)-\(isDark ? "dark" : "light").png"))
+        }
+    }
 }

@@ -2,7 +2,10 @@ import AppKit
 import Common
 import SwiftUI
 
-/// Shows the settings window: a tab per group of settings, in the toolbar, like the settings of every macOS app.
+/// The height of the pages of the settings window, whatever the page
+let settingsContentHeight: CGFloat = 640
+
+/// Shows the settings window: a sidebar with the pages and a search field, like System Settings, and the page next to it.
 ///
 /// Inlay has no Dock icon and is never the active app on its own, so the window is brought forward by hand
 @MainActor
@@ -14,6 +17,7 @@ final class SettingsWindowController: NSObject {
     /// What the model was last refreshed for. See: modelDidChange
     private var lastSeenState: [AnyHashable] = []
     private var screenObservers: [any NSObjectProtocol] = []
+    private var keyMonitor: Any?
 
     init(model: SettingsModel = SettingsModel()) {
         self.model = model
@@ -28,11 +32,18 @@ final class SettingsWindowController: NSObject {
         refresh()
         // The screen may not be the one of the last time
         tabs?.fitWindow(animate: false)
+        select(model.page)
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
     }
 
-    private var tabs: SettingsTabViewController? { window?.contentViewController as? SettingsTabViewController }
+    private var tabs: SettingsTabViewController? { (window?.contentViewController as? SettingsRootViewController)?.pages }
+
+    /// Shows a page, from the sidebar or from the outside
+    func select(_ page: SettingsPageID) {
+        model.page = page
+        tabs?.selectedTabViewItemIndex = SettingsPageID.allCases.firstIndex(of: page) ?? 0
+    }
 
     /// See: publishUiState. It's called very often, and the window only cares about the config and the state of the server
     func modelDidChange() {
@@ -56,19 +67,18 @@ final class SettingsWindowController: NSObject {
     func makeWindow(visibleFrame: ((NSWindow) -> CGRect?)? = nil) -> NSWindow {
         let tabs = SettingsTabViewController()
         if let visibleFrame { tabs.visibleFrame = visibleFrame }
-        tabs.tabStyle = .toolbar
-        tabs.addTab(Strings.Settings.general, symbol: "gearshape", GeneralSettingsView(model: model))
-        tabs.addTab(Strings.Settings.themes, symbol: "paintpalette", ThemesSettingsView(model: model))
-        tabs.addTab(Strings.Settings.tiling, symbol: "rectangle.split.2x2", TilingSettingsView(model: model))
-        tabs.addTab(Strings.Settings.gaps, symbol: "rectangle.split.3x1", GapsSettingsView(model: model))
-        tabs.addTab(Strings.Settings.animations, symbol: "wand.and.stars", AnimationsSettingsView(model: model))
-        tabs.addTab(Strings.Settings.menuBar, symbol: "menubar.rectangle", MenuBarSettingsView(model: model))
-        if SettingsFeatures.borders {
-            tabs.addTab(Strings.Settings.borders, symbol: "rectangle.dashed", BordersSettingsView(model: model))
+        // The sidebar picks the page: the tab view shows no tabs of its own
+        tabs.tabStyle = .unspecified
+        tabs.transitionOptions = []
+        tabs.leadingWidth = settingsSidebarWidth + 1
+        for page in SettingsPageID.allCases {
+            tabs.addTab(page.title, symbol: page.symbol, Self.view(of: page, model))
         }
-        let window = NSWindow(contentViewController: tabs)
+        let sidebar = NSHostingView(rootView: SettingsSidebar(model: model) { [weak self] page in self?.select(page) })
+        let root = SettingsRootViewController(sidebar: sidebar, pages: tabs)
+        let window = NSWindow(contentViewController: root)
         window.styleMask = [.titled, .closable]
-        window.title = Strings.Settings.windowTitle
+        window.title = model.page.title
         // Kept after closing, so it reopens where it was
         window.isReleasedWhenClosed = false
         tabs.fitWindow(animate: false)
@@ -80,7 +90,61 @@ final class SettingsWindowController: NSObject {
                 MainActor.assumeIsolated { tabs?.fitWindow(animate: false) }
             })
         }
+        installKeyMonitor(window)
+        self.window = window
         return window
+    }
+
+    @ViewBuilder
+    static func view(of page: SettingsPageID, _ model: SettingsModel) -> some View {
+        switch page {
+            case .general: GeneralSettingsView(model: model)
+            case .themes: ThemesSettingsView(model: model)
+            case .tiling: TilingSettingsView(model: model)
+            case .gaps: GapsSettingsView(model: model)
+            case .borders: BordersSettingsView(model: model)
+            case .animations: AnimationsSettingsView(model: model)
+            case .workspaces: WorkspacesSettingsView(model: model)
+            case .shortcuts: ShortcutsSettingsView(model: model)
+        }
+    }
+
+    /// ⌥ shows the keys of every row; ⌘Z and ⇧⌘Z undo and redo the changes of the window, unless a text field is being
+    /// edited (it has its own undo); ⌘F goes to the search field
+    private func installKeyMonitor(_ window: NSWindow) {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        let windowNumber = window.windowNumber
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { [weak self] event in
+            // The parts of the event that matter, so that the event itself doesn't cross into the main actor
+            let (isForWindow, isFlags, flags, key) = (
+                event.windowNumber == windowNumber,
+                event.type == .flagsChanged,
+                event.modifierFlags.intersection(.deviceIndependentFlagsMask),
+                event.charactersIgnoringModifiers?.lowercased(),
+            )
+            let isConsumed = MainActor.assumeIsolated { () -> Bool in
+                guard let self, isForWindow, let window = self.window else { return false }
+                if isFlags {
+                    self.model.isOptionHeld = flags == .option
+                    return false
+                }
+                let isEditingText = window.firstResponder is NSTextView
+                switch (flags, key) {
+                    case ([.command], "z") where !isEditingText:
+                        self.model.undo()
+                        return true
+                    case ([.command, .shift], "z") where !isEditingText:
+                        self.model.redo()
+                        return true
+                    default:
+                        return false
+                }
+            }
+            return isConsumed ? nil : event
+        }
+        NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.model.isOptionHeld = false }
+        }
     }
 }
 
@@ -88,6 +152,11 @@ final class SettingsWindowController: NSObject {
 final class SettingsTabViewController: NSTabViewController {
     /// The part of the screen that the window may use
     var visibleFrame: (NSWindow) -> CGRect? = { ($0.screen ?? NSScreen.main)?.visibleFrame }
+    /// The sidebar, on the leading side of the pages
+    var leadingWidth: CGFloat = 0
+    /// The window has the same height on every page, so that it doesn't jump from one to another: a page that is
+    /// taller scrolls. Less on a screen that hasn't room for it
+    var contentHeight: CGFloat = settingsContentHeight
 
     private var scrollToTopObserver: (any NSObjectProtocol)?
 
@@ -120,8 +189,7 @@ final class SettingsTabViewController: NSTabViewController {
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
         guard let window = unsafe view.window else { return }
-        // The toolbar style keeps the title of the window in sync with the tab. One title for all of them is enough
-        window.title = Strings.Settings.windowTitle
+        window.title = tabViewItem?.label ?? Strings.Settings.windowTitle
         fitWindow(animate: window.isVisible)
     }
 
@@ -154,7 +222,7 @@ final class SettingsTabViewController: NSTabViewController {
         let frame = SettingsWindowSizing.frame(
             current: window.frame,
             chromeHeight: chrome,
-            content: content,
+            content: CGSize(width: content.width + leadingWidth, height: contentHeight),
             visible: visibleFrame(window),
         )
         if frame != window.frame {
@@ -214,8 +282,9 @@ final class SettingsPageController: NSViewController {
             let documentHeight = scrollView.documentView?.frame.height ?? 0
             let maxY = max(0, documentHeight - clip.bounds.height)
             let y = keepsTop ? (clip.isFlipped ? 0 : maxY) : min(max(clip.bounds.origin.y, 0), maxY)
-            if y != clip.bounds.origin.y {
-                clip.scroll(to: NSPoint(x: clip.bounds.origin.x, y: y))
+            // Never sideways: the page is as wide as the window
+            if y != clip.bounds.origin.y || clip.bounds.origin.x != 0 {
+                clip.scroll(to: NSPoint(x: 0, y: y))
                 scrollView.reflectScrolledClipView(clip)
             }
         }

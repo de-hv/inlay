@@ -255,7 +255,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     enabled = true
 
     # The shape of the item. All the existing workspaces are shown, and the focused one is marked
-    # Possible values: pills|chips|square|minimal|dots|underline|glyphs|liquid
+    # Possible values: pills|chips|square|minimal|dots|underline|glyphs|liquid|labels
     # - pills.   Round workspaces, and the focused one a wider pill, like the workspace indicator of GNOME
     #            and of many Hyprland setups. Otherwise like chips.
     # - chips.   The workspaces alone. The ones with windows have a faint background,
@@ -274,6 +274,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #            In a binding mode the target becomes a disc with the initial of the mode.
     # - liquid.  A dot per workspace, and a drop with the name of the focused one, which flows to the next
     #            workspace leaving a trail behind. In a binding mode the drop shows the initial of the mode.
+    # - labels.  An SF Symbol per workspace ([menu-bar.symbols]), and the focused one a pill with its symbol
+    #            and its name ([menu-bar.labels]). A workspace without a symbol shows its name. Those two
+    #            tables only apply to this theme. In a binding mode the pill shows the initial of the mode.
     # ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')
     # Fallback value (if you omit the key): theme = 'liquid'
     theme = 'liquid'
@@ -294,6 +297,12 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Possible values: true|false
     # Fallback value (if you omit the key): show-mode = true
     show-mode = true
+
+    # Group the workspaces by monitor, from left to right, with a line between the monitors, and draw a hollow
+    # marker on the workspace that another monitor shows. With one monitor it changes nothing
+    # Possible values: true|false
+    # Fallback value (if you omit the key): per-monitor = false
+    per-monitor = false
 
     # Colors of the item.
     # Possible values:
@@ -320,6 +329,18 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
         # The workspaces without windows
         # Fallback value (if you omit the key): empty = 'auto'
         empty = 'auto'
+
+    # The 'labels' theme: the name of a workspace, shown in the focused one. The other themes ignore it.
+    # Without a name, the workspace shows its own name ('1')
+    [menu-bar.labels]
+        # 1 = 'Terminals'
+        # 2 = 'Code'
+
+    # The 'labels' theme: the SF Symbol of a workspace (the names of the SF Symbols app). The other themes
+    # ignore it. A workspace without a symbol, or with one that doesn't exist, shows its name
+    [menu-bar.symbols]
+        # 1 = 'terminal'
+        # 2 = 'chevron.left.forwardslash.chevron.right'
 
 # The colors of the menu bar item and of the borders, from a palette of the Hyprland world. See: Settings > Themes
 [theme]
@@ -451,10 +472,18 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - 'simple': only the name of the file
     # - 'off': no notice
     # With warnings it stays longer and says how many. The mouse over it keeps it; a click dismisses it.
-    # The Settings window doesn't edit it
+    # Settings > General edits it
     # Possible values: 'diff' | 'simple' | 'off'
     # Fallback value (if you omit the key): on-reload = 'diff'
     on-reload = 'diff'
+
+# The Settings window. It changes nothing else
+[settings]
+    # Every row of the window shows the key of the config that it writes. With 'false' a key shows while the
+    # mouse is over its row, or while the option key is held
+    # Possible values: true|false
+    # Fallback value (if you omit the key): show-keys = false
+    show-keys = false
 
 # The borders of the windows
 [borders]

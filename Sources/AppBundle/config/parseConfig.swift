@@ -122,7 +122,7 @@ struct Parser<S: ConvenienceMutable, T>: ParserProtocol {
 private let keyMappingConfigRootKey = "key-mapping"
 private let configVersionConfigRootKey = "config-version"
 private let modeConfigRootKey = "mode"
-private let persistentWorkspacesKey = "persistent-workspaces"
+let persistentWorkspacesKey = "persistent-workspaces"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
@@ -164,6 +164,7 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "animations": Parser(\.animations, parseAnimations),
     "theme": Parser(\.theme, parseTheme),
     "notifications": Parser(\.notifications, parseNotifications),
+    "settings": Parser(\.settingsWindow, parseSettingsWindow),
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 

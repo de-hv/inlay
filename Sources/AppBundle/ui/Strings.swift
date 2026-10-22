@@ -25,6 +25,26 @@ enum Strings {
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
         static let paused = "\(inlayAppName) is paused"
         static let copyVersionToolTip = "Click to copy the version"
+        static func focusedWindow(_ app: String) -> String { "Focused window · \(app)" }
+        static let noFocusedWindow = "No focused window"
+        static func layout(_ layout: MenuBarCard.WindowLayout) -> String {
+            switch layout {
+                case .tiling: "Tile the Focused Window"
+                case .floating: "Float the Focused Window"
+                case .fullscreen: "Make the Focused Window Fullscreen"
+            }
+        }
+        static func layoutShort(_ layout: MenuBarCard.WindowLayout) -> String {
+            switch layout {
+                case .tiling: "Tiling"
+                case .floating: "Floating"
+                case .fullscreen: "Fullscreen"
+            }
+        }
+        static func modeHelp(_ mode: String, _ exitKey: String?) -> String {
+            "Binding mode: \(mode)" + (exitKey.map { ". \($0) goes back to main" } ?? "")
+        }
+        static let details = "Details"
         static let on = "On"
         static let off = "Off"
 
@@ -248,7 +268,7 @@ enum Strings {
         static let inactiveWindows = "Inactive windows"
         static let floatingWindow = "Focused floating window"
         static let modeColors = "Mode Colors"
-        static let modeColorsFooter = "The border of the focused window while a binding mode is active. It wins over the active and the floating colors. “Reset” removes the color of the mode. The main mode has no color of its own: it is the active color."
+        static let modeColorsFooter = "The border of the focused window while a binding mode is active. It wins over the active and the floating colors. “Remove” takes the color away from the mode. The main mode has no color of its own: it is the active color."
         static let noModes = "The config defines no binding mode besides main."
         static let notSet = "not set"
         static let active = "Active"
@@ -274,6 +294,93 @@ enum Strings {
         static let singleWindow = "Single Window"
         static let smartGaps = "Smart gaps"
         static let smartGapsDetail = "The only tiling window of a workspace takes the whole screen, without outer gaps nor border."
+
+        // The sidebar and the search
+        static let windowsGroup = "Windows"
+        static let workflowGroup = "Workflow"
+        static let search = "Search"
+        static let clearSearch = "Clear the search"
+        static let noResults = "No setting matches the search."
+        static let lastChange = "Last change"
+        static let undone = "Undone"
+        static let undo = "Undo"
+        static let redo = "Redo"
+        static let defaultValueShort = "default"
+        static let cantUndoChangedFile = "\(configFileName) changed since the last change of this window: undoing would write those changes away."
+        static let copyKey = "Click to copy the line of the config"
+        static let thisWindow = "This Window"
+        static let showKeys = "Show the config keys"
+        static let showKeysDetail = "Every row shows the key it writes. Without it, a key shows while the mouse is over its row, or while ⌥ is held."
+        static let pointsUnit = "pt"
+        static let millisecondsUnit = "ms"
+
+        // General
+        static let reloadNotice = "Notice after a reload"
+        static let reloadNoticeDetail = "What the notice says when the config is reloaded: the keys that changed, only the name of the file, or nothing."
+        static let reloadNoticeDiff = "Changes"
+        static let reloadNoticeSimple = "Simple"
+        static let export = "Export complete config"
+        static let exportDetail = "A copy of your config with your comments, plus every key you left out with the value that applies. Your file isn't touched."
+        static let exportButton = "Export…"
+        static let exportFileName = "inlay-complete.toml"
+        static func exportHeader(_ date: String) -> String {
+            "# Exported from \(inlayAppName) \(inlayAppVersion) on \(date).\n" +
+                "# Your config with its comments, plus every key it left out, with the value that applies.\n\n"
+        }
+        static func exportFailed(_ reason: String) -> String { "Can't export the config: \(reason)" }
+
+        // Tiling
+        static let splitRatio = "Split ratio"
+        static let splitRatioDetail = "How much of its space the split window keeps. 50%: half and half."
+
+        // Themes
+        static let previewOnly = "Preview only: click to use it."
+        static let resetToTheme = "Reset to Theme"
+        static let dark = "Dark"
+        static let light = "Light"
+        static let variantHelp = "The variant of the palettes that the previews show. The one in use follows the appearance of the system."
+        static let wallpaperAndHooks = "Wallpaper and Hooks"
+        static let wallpaperAndHooksFooter = "The wallpaper goes on every screen when the palette changes. The hooks of [theme] on-change run when the colors change, and are edited in the file, like the wallpapers of single palettes ([theme.wallpapers])."
+        static let wallpaper = "Wallpaper"
+        static let noWallpaper = "None: switching palettes leaves the wallpaper alone."
+        static let choose = "Choose…"
+        static let remove = "Remove"
+        static let hooks = "Hooks"
+        static let noHooks = "None"
+        static let labels = "Labels"
+        static let labelsFooter = "Only the labels theme uses them: a symbol per workspace, and the name in the focused one. A workspace without a symbol shows its name. Symbols are SF Symbols names."
+        static func labelPlaceholder(_ workspace: String) -> String { "Name (\(workspace))" }
+        static let symbolPlaceholder = "SF Symbol"
+        static func unknownSymbol(_ name: String) -> String { "There is no SF Symbol named '\(name)'" }
+        static let suggestedSymbols = "Suggested symbols"
+        static let noPersistentWorkspaces = "The config has no persistent workspaces to name."
+        static let perMonitor = "Group by monitor"
+        static let perMonitorDetail = "The workspaces of each monitor together, from left to right, and a hollow marker on the one another monitor shows."
+
+        // Borders
+        static let usesActiveColor = "Uses the active color"
+        static let setColor = "Set Color…"
+
+        // Workspaces
+        static let workspacesPage = "Workspaces"
+        static let workspacesFooter = "The apps come from the on-window-detected rules of the config, the keys from the bindings of the main mode. The switch makes a workspace persistent: it always exists, and the item always shows it."
+        static let noWorkspaces = "The config defines no workspaces."
+        static let noAppsHere = "No app is sent here"
+        static func goToWorkspaceKey(_ key: String) -> String { "Go to the workspace: \(key)" }
+        static func moveToWorkspaceKey(_ key: String) -> String { "Move the focused window here: \(key)" }
+        static let persistentHelp = "Persistent: [persistent-workspaces]"
+        static let floatingApps = "Floating Apps"
+        static let floatingAppsFooter = "Their windows float: an on-window-detected rule makes them floating."
+        static let editRules = "Window rules"
+        static let editRulesDetail = "The rules that send the apps to their workspace are edited in the file."
+
+        // Shortcuts
+        static let shortcuts = "Shortcuts"
+        static let filterShortcuts = "Filter"
+        static let noShortcuts = "The config has no key bindings."
+        static let noMatchingShortcuts = "No key binding matches the filter."
+        static let shortcutsFooter = "The key bindings of the config, with the comment written after each one. They are edited in the file."
+        static let editShortcuts = "Edit the key bindings"
 
         // Why a control is disabled
         static let definedByHand = "Defined by hand in the config file"

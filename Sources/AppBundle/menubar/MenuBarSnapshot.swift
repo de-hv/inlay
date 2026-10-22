@@ -20,6 +20,10 @@ struct MenuBarSnapshot: Equatable, Sendable {
         var isOccupied: Bool
         /// The apps that have windows in the workspace. An app with several windows is listed once
         var apps: [App] = []
+        /// The monitor the workspace is on, or would be shown on: 0 for the leftmost one. See: MenuBarConfig.perMonitor
+        var monitor: Int = 0
+        /// A monitor shows it. The focused workspace is always visible
+        var isVisible: Bool = false
     }
 
     struct FocusedWindow: Equatable, Sendable {
@@ -28,7 +32,7 @@ struct MenuBarSnapshot: Equatable, Sendable {
     }
 
     var status: Status = .running
-    /// All the existing workspaces. The monitors aren't told apart
+    /// All the existing workspaces, in the order of the item. Their monitors are told apart only with 'per-monitor'
     var workspaces: [Workspace]
     var focusedWorkspace: String
     /// One of the windows of the focused workspace is fullscreen
@@ -48,6 +52,7 @@ extension MenuBarSnapshot {
         let focus = focus
         let focusedWorkspace = focus.workspace
         let windows = focusedWorkspace.allLeafWindowsRecursive
+        let monitors = sortedMonitorInfos.map(\.monitorAppKitNsScreenScreensId)
         let status: Status = switch true {
             case state.axPermissionStatus != .granted: .needsAccessibility
             case !state.isEnabled: .paused
@@ -63,6 +68,8 @@ extension MenuBarSnapshot {
                         .map { App(name: $0.app.name?.takeIf { !$0.isEmpty } ?? $0.app.rawAppBundleId ?? "?") }
                         .toOrderedSet()
                         .elements,
+                    monitor: monitors.firstIndex(of: workspace.workspaceMonitor.monitorAppKitNsScreenScreensId) ?? 0,
+                    isVisible: workspace.isVisible,
                 )
             },
             focusedWorkspace: focusedWorkspace.name,

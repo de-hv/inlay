@@ -106,11 +106,15 @@ enum ConfigEditor {
     /// Patches the text of the target and writes it. The caller reloads the config afterwards
     @MainActor
     static func apply(_ edits: [ConfigEdit], to target: Target) -> Result<Void, EditError> {
-        let text: String
         switch patch(target.text, edits) {
-            case .success(let patched): text = patched
-            case .failure(let error): return .failure(error)
+            case .success(let text): write(text, to: target)
+            case .failure(let error): .failure(error)
         }
+    }
+
+    /// Writes the whole text of the config. The caller reloads the config afterwards
+    @MainActor
+    static func write(_ text: String, to target: Target) -> Result<Void, EditError> {
         if text == target.text && target.exists { return .success(()) }
         do {
             try AtomicFileWriter.write(text, to: target.url)
@@ -118,6 +122,40 @@ enum ConfigEditor {
             return .success(())
         } catch {
             return .failure(.write(error))
+        }
+    }
+
+    /// The config of the user, complete: its own text, with its comments, and every key that it leaves out with the
+    /// value that applies, so that nothing is implicit. The keys come from the settings window and from the shipped
+    /// config. The key bindings and the window rules are the user's own: none is added
+    @MainActor
+    static func exportText(_ target: Target, shipped: String? = try? String(contentsOf: defaultConfigUrl, encoding: .utf8)) -> String {
+        var text = target.text
+        func add(_ path: TomlKeyPath, _ value: TomlValue) {
+            guard case .absent = TomlPatcher.locate(text, path), TomlPatcher.decodedValue(text, path) == nil else { return }
+            if let patched = try? TomlPatcher.set(text, path, value) { text = patched }
+        }
+        for key in SettingsKey.all where key.defaultValue != .string("") {
+            add(key.path, key.defaultValue)
+        }
+        if let shipped, let root = try? TomlPatcher.decode(shipped) {
+            for (path, value) in scalars(root, table: []) { add(path, value) }
+        }
+        let header = Strings.Settings.exportHeader(Date.now.formatted(date: .abbreviated, time: .shortened))
+        return header + text
+    }
+
+    /// The keys of a decoded document that the patcher can write, in a stable order. Not the key bindings, the window
+    /// rules or the key mapping: they are the user's own
+    private static func scalars(_ table: [String: Any], table path: [String]) -> [(TomlKeyPath, TomlValue)] {
+        let skipped: Set = ["mode", "on-window-detected", "key-mapping", "workspace-to-monitor-force-assignment"]
+        return table.keys.sorted().flatMap { key -> [(TomlKeyPath, TomlValue)] in
+            if path.isEmpty && skipped.contains(key) { return [] }
+            let value = table[key]
+            if let sub = value as? [String: Any] { return scalars(sub, table: path + [key]) }
+            let candidates: [TomlValue] = [.string(""), .bool(false), .int(0), .float(0), .strings([])]
+            guard let scalar = candidates.lazy.compactMap({ TomlValue(value, like: $0) }).first else { return [] }
+            return [(TomlKeyPath(path, key), scalar)]
         }
     }
 }

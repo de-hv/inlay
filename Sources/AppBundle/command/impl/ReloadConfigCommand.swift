@@ -111,6 +111,7 @@ enum ReloadNoticeTrigger {
             errorCount: errors.count,
             warningCount: warnings.count,
             isApplied: parseResult.allowReloadConfig,
+            problems: errors + warnings,
         )
         // Also when the config wasn't applied: the file is watched, so that fixing it loads it.
         // Without a config of the user, the place where it would be created is watched

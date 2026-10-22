@@ -396,8 +396,10 @@ extension InlayTests {
             model.refresh()
             let tabs: [(String, AnyView)] = [
                 ("general", AnyView(GeneralSettingsView(model: model))),
-                ("menu-bar", AnyView(MenuBarSettingsView(model: model))),
+                ("themes", AnyView(ThemesSettingsView(model: model))),
                 ("borders", AnyView(BordersSettingsView(model: model))),
+                ("workspaces", AnyView(WorkspacesSettingsView(model: model))),
+                ("shortcuts", AnyView(ShortcutsSettingsView(model: model))),
             ]
             for (name, view) in tabs {
                 let hosting = NSHostingView(rootView: view)

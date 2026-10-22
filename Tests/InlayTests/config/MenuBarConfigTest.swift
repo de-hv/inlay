@@ -53,7 +53,7 @@ extension InlayTests {
         }
 
         @Test func testThemes() {
-            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "square", "minimal", "dots", "underline", "glyphs", "liquid"])
+            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "square", "minimal", "dots", "underline", "glyphs", "liquid", "labels"])
             for theme in MenuBarTheme.allCases {
                 let result = parseConfig("config-version = 2\nmenu-bar.theme = '\(theme.rawValue)'")
                 assertEquals(result.errors, [])
@@ -92,7 +92,7 @@ extension InlayTests {
         @Test func testErrors() {
             assertEquals(
                 parseConfig("menu-bar.theme = 'bubbles'").strErrors,
-                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid)"],
+                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid|labels)"],
             )
             assertEquals(parseConfig("menu-bar.them = 'chips'").strErrors, ["[ERROR] menu-bar.them: Unknown key"])
             assertEquals(parseConfig("menu-bar.colors.focus = 'auto'").strErrors, ["[ERROR] menu-bar.colors.focus: Unknown key"])

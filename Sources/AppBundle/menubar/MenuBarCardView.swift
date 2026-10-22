@@ -24,13 +24,13 @@ struct MenuBarCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             header
-            if card.configProblems != nil { warning(.showConfigProblems, symbol: "exclamationmark.triangle.fill") }
+            if card.configProblems != nil { problems }
             switch card.status {
                 case .needsAccessibility: warning(.promptForAccessibility, symbol: "exclamationmark.triangle")
                 case .paused: EmptyView()
                 case .running:
                     windows
-                    floating
+                    windowControls
             }
             if !card.buttons.isEmpty { buttons }
             footer
@@ -48,10 +48,23 @@ struct MenuBarCardView: View {
                 .resizable()
                 .frame(width: 26, height: 26)
                 .accessibilityHidden(true)
-            Text(inlayAppName).font(.system(size: 14, weight: .bold))
+            Text(inlayAppName).font(.system(size: 14, weight: .bold)).lineLimit(1)
             Spacer(minLength: 8)
-            status
+            // In a binding mode Inlay is tiling: the mode is what is worth telling
+            if let mode = card.mode { modeChip(mode) } else { status }
         }
+    }
+
+    /// The binding mode, and the key that leaves it
+    private func modeChip(_ mode: String) -> some View {
+        Text(card.modeExitKey.map { "\(mode) · \($0)" } ?? mode)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(accent)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(accent.opacity(0.18)))
+            .help(Strings.Menu.modeHelp(mode, card.modeExitKey))
+            .accessibilityLabel(Strings.Menu.modeHelp(mode, card.modeExitKey))
     }
 
     private var status: some View {
@@ -107,31 +120,84 @@ struct MenuBarCardView: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(blockFill))
     }
 
-    private var floating: some View {
-        let isOn = card.isFloating == true
-        return Button { select(.toggleFloating) } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "macwindow.on.rectangle")
-                    .font(.system(size: 14))
-                    .frame(width: 18)
-                Text(Strings.Menu.floating).font(.system(size: 13))
-                Spacer(minLength: 8)
-                ZStack(alignment: isOn ? .trailing : .leading) {
-                    Capsule().fill(isOn ? accent : Color.primary.opacity(0.14))
-                    Circle()
-                        .fill(Color.white)
-                        .shadow(color: .black.opacity(0.25), radius: 1.5, y: 1)
-                        .padding(2)
+    /// The focused window: tiling, floating or fullscreen
+    private var windowControls: some View {
+        let isEnabled = card.isEnabled(.setLayout(.tiling))
+        return VStack(alignment: .leading, spacing: 7) {
+            Text(card.focusedApp.map(Strings.Menu.focusedWindow) ?? Strings.Menu.noFocusedWindow)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .padding(.horizontal, 4)
+            HStack(spacing: 2) {
+                ForEach(MenuBarCard.WindowLayout.allCases, id: \.self) { layout in
+                    segment(layout)
                 }
-                .frame(width: 34, height: 20)
             }
-            .padding(.horizontal, 4)
-            .contentShape(Rectangle())
+            .padding(2)
+            .background(RoundedRectangle(cornerRadius: 9).fill(Color.primary.opacity(0.1)))
+        }
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.5)
+    }
+
+    private func segment(_ layout: MenuBarCard.WindowLayout) -> some View {
+        let isSelected = card.windowLayout == layout
+        let action = MenuBarCardAction.setLayout(layout)
+        let isHovered = hover.action == action
+        return Button { if !isSelected { select(action) } } label: {
+            Text(Strings.Menu.layoutShort(layout))
+                .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .background(RoundedRectangle(cornerRadius: 7).fill(isSelected ? segmentFill : isHovered ? hoverFill.opacity(0.5) : .clear))
+                .contentShape(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
-        .disabled(!card.isEnabled(.toggleFloating))
-        .accessibilityLabel(Strings.Menu.floating)
-        .accessibilityValue(isOn ? Strings.Menu.on : Strings.Menu.off)
+        .onHover { hover.action = $0 ? action : nil }
+        .accessibilityLabel(action.title(card))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func smallButton(_ action: MenuBarCardAction, symbol: String? = nil, title: String) -> some View {
+        let isHovered = hover.action == action
+        return Button { select(action) } label: {
+            HStack(spacing: 4) {
+                if let symbol { Image(systemName: symbol).font(.system(size: 10)) }
+                Text(title).font(.system(size: 10.5, weight: .medium)).monospacedDigit()
+            }
+            .padding(.horizontal, 6)
+            .frame(minWidth: 18, minHeight: 20)
+            .background(RoundedRectangle(cornerRadius: 6).fill(isHovered ? hoverFill : blockFill))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .onHover { hover.action = $0 ? action : nil }
+        .help(action.title(card))
+        .accessibilityLabel(action.title(card))
+    }
+
+    /// The errors and the warnings of the last load of the config, in the menu itself
+    private var problems: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color(nsColor: .systemOrange))
+                Text(card.configProblems ?? "").font(.system(size: 12, weight: .semibold))
+            }
+            ForEach(Array(card.problemLines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 6) {
+                smallButton(.openConfig, symbol: "doc.text", title: Strings.Menu.Tile.config)
+                smallButton(.showConfigProblems, symbol: "list.bullet", title: Strings.Menu.details)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .systemOrange).opacity(0.14)))
     }
 
     private var buttons: some View {
@@ -205,6 +271,8 @@ struct MenuBarCardView: View {
     private var blockFill: Color { colorScheme == .dark ? .white.opacity(0.08) : .white.opacity(0.6) }
 
     private var hoverFill: Color { colorScheme == .dark ? .white.opacity(0.16) : .white.opacity(0.95) }
+
+    private var segmentFill: Color { colorScheme == .dark ? .white.opacity(0.2) : .white }
 
     private func symbol(_ action: MenuBarCardAction) -> String {
         switch action {

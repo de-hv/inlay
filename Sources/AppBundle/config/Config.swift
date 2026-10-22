@@ -57,6 +57,7 @@ struct Config: ConvenienceMutable {
     var animations: AnimationsConfig = AnimationsConfig()
     var theme: ThemeConfig = ThemeConfig()
     var notifications: NotificationsConfig = NotificationsConfig()
+    var settingsWindow: SettingsWindowConfig = SettingsWindowConfig()
 
     var onFocusChanged: Shell<any Command> = .empty
     // var onFocusedWorkspaceChanged: [any Command] = []

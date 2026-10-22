@@ -27,6 +27,11 @@ extension SettingsKey {
     static let startupLayout = SettingsKey(["tiling"], "startup-layout", default: .string(StartupLayout.grid.rawValue))
     static let splitTarget = SettingsKey(["tiling"], "split-target", default: .string(SplitTarget.focused.rawValue))
     static let minWindowSize = SettingsKey(["tiling"], "min-window-size", default: .int(100))
+    /// A float: the window shows it in percent
+    static let splitRatio = SettingsKey(["tiling"], "split-ratio", default: .float(0.5))
+    static let persistentWorkspaces = SettingsKey([], persistentWorkspacesKey, default: .strings([]))
+    static let notificationsOnReload = SettingsKey(["notifications"], "on-reload", default: .string(ReloadNoticeStyle.diff.rawValue))
+    static let settingsShowKeys = SettingsKey(["settings"], "show-keys", default: .bool(false))
 
     // Animations. The defaults are the ones of AnimationsConfig
     static let animationsEnabled = SettingsKey(["animations"], "enabled", default: .bool(true))
@@ -36,12 +41,15 @@ extension SettingsKey {
     // Theme
     static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.oneDark.rawValue))
     static let themeSeed = SettingsKey(["theme"], "seed", default: .string(MaterialPalette.baselineSeed.hex))
+    /// No default: without it, switching palettes leaves the wallpaper alone
+    static let themeWallpaper = SettingsKey(["theme"], "wallpaper", default: .string(""))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))
     static let menuBarTheme = SettingsKey(["menu-bar"], "theme", default: .string(MenuBarTheme.liquid.rawValue))
     static let menuBarDimEmpty = SettingsKey(["menu-bar"], "dim-empty-workspaces", default: .bool(true))
     static let menuBarShowMode = SettingsKey(["menu-bar"], "show-mode", default: .bool(true))
+    static let menuBarPerMonitor = SettingsKey(["menu-bar"], "per-monitor", default: .bool(false))
     static let menuBarAccent = SettingsKey(["menu-bar", "colors"], "accent", default: .string(ConfigColor.autoLiteral))
     static let menuBarFocused = SettingsKey(["menu-bar", "colors"], "focused", default: .string(ConfigColor.autoLiteral))
     static let menuBarOccupied = SettingsKey(["menu-bar", "colors"], "occupied", default: .string(ConfigColor.autoLiteral))
@@ -67,6 +75,31 @@ extension SettingsKey {
     static let gapsOuterLeft = SettingsKey(["gaps", "outer"], "left", default: .int(0))
     static let gapsOuterRight = SettingsKey(["gaps", "outer"], "right", default: .int(0))
     static let gapsSmart = SettingsKey(["gaps"], "smart", default: .bool(false))
+
+    /// [menu-bar.labels]: the name of the workspace in the 'labels' theme. No default: the name of the workspace
+    static func menuBarLabel(_ workspace: String) -> SettingsKey {
+        SettingsKey(["menu-bar", "labels"], workspace, default: .string(""))
+    }
+
+    /// [menu-bar.symbols]: the SF Symbol of the workspace in the 'labels' theme. No default: the name of the workspace
+    static func menuBarSymbol(_ workspace: String) -> SettingsKey {
+        SettingsKey(["menu-bar", "symbols"], workspace, default: .string(""))
+    }
+
+    /// Every key with a fixed name, for the export of a complete config. See: ConfigEditor.exportText
+    static let all: [SettingsKey] = [
+        startAtLogin, autoReloadConfig, persistentWorkspaces,
+        newWindowPlacement, splitRatio, startupLayout, splitTarget, minWindowSize,
+        menuBarEnabled, menuBarTheme, menuBarDimEmpty, menuBarShowMode, menuBarPerMonitor,
+        menuBarAccent, menuBarFocused, menuBarOccupied, menuBarEmpty,
+        themePalette, themeSeed,
+        animationsEnabled, animationsDuration, animationsWorkspaceSwitch,
+        notificationsOnReload,
+        bordersEnabled, bordersWidth, bordersCornerRadius, bordersSquareCorners, bordersActiveColor, bordersInactiveColor,
+        bordersFloatingColor, bordersGlow, bordersGlowRadius, bordersHideWhenSingle,
+        gapsInnerHorizontal, gapsInnerVertical, gapsOuterTop, gapsOuterBottom, gapsOuterLeft, gapsOuterRight, gapsSmart,
+        settingsShowKeys,
+    ]
 
     /// [borders.mode-colors]: the color of the border of the focused window while the binding mode is active.
     /// No default: a mode without a color keeps the normal colors

@@ -15,12 +15,14 @@ struct TomlKeyPath: Hashable, Sendable, CustomStringConvertible {
     var description: String { full.joined(separator: ".") }
 }
 
-/// A scalar that the patcher can write
+/// A scalar, or an array of strings, that the patcher can write
 enum TomlValue: Equatable, Sendable {
     case string(String)
     case bool(Bool)
     case int(Int)
     case float(Double)
+    /// An array of strings in one line: `persistent-workspaces`
+    case strings([String])
 
     /// The value as it is written in a TOML document
     var literal: String {
@@ -51,6 +53,14 @@ enum TomlValue: Equatable, Sendable {
                     }
                 }
                 return "\"\(escaped)\""
+            case .strings(let values):
+                // The style of the arrays of the config examples
+                let items = values.map { value in
+                    value.unicodeScalars.contains { $0 == "\"" || $0 == "\\" || $0.value < 0x20 || $0.value == 0x7F }
+                        ? TomlValue.string(value).literal
+                        : "\"\(value)\""
+                }
+                return "[" + items.joined(separator: ", ") + "]"
         }
     }
 
@@ -69,6 +79,11 @@ enum TomlValue: Equatable, Sendable {
             case .float:
                 guard !(any is Bool), let value = any as? Double else { return nil }
                 self = .float(value)
+            case .strings:
+                guard let array = any as? [Any] else { return nil }
+                let values = array.compactMap { $0 as? String }
+                guard values.count == array.count else { return nil }
+                self = .strings(values)
         }
     }
 
@@ -79,6 +94,7 @@ enum TomlValue: Equatable, Sendable {
             case .bool(let value): (any as? Bool) == value
             case .int(let value): !(any is Bool) && (any as? Int64).map { Int(exactly: $0) == value } == true
             case .float(let value): !(any is Bool) && (any as? Double) == value
+            case .strings(let values): (any as? [Any]).map { $0.compactMap { $0 as? String } == values && $0.count == values.count } == true
         }
     }
 }
@@ -340,6 +356,20 @@ extension TomlPatcher {
             guard let found else { return .absent }
             if found.isInlineTable { return .unsupported(.conflict) }
             return found.valueRange == nil ? .unsupported(.multilineValue) : .line(found.firstLine)
+        }
+
+        /// The value of the key as it is written. nil if the key isn't in the document, or if its value spans several lines
+        func valueText(of path: TomlKeyPath) -> String? {
+            guard case .line(let index) = locate(path), let range = entries.first(where: { $0.firstLine == index })?.valueRange else { return nil }
+            return String(lines[index].content[range])
+        }
+
+        /// The comment at the end of the line of an entry: `cmd-j = 'workspace 1' # terminals` -> "terminals"
+        func trailingComment(of entry: Entry) -> String? {
+            guard let range = entry.valueRange else { return nil }
+            let rest = lines[entry.firstLine].content[range.upperBound...].trimmingCharacters(in: .whitespaces)
+            guard rest.hasPrefix("#") else { return nil }
+            return String(rest.dropFirst()).trimmingCharacters(in: .whitespaces).takeIf { !$0.isEmpty }
         }
 
         // MARK: Edit

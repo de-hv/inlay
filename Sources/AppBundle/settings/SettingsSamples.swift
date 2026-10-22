@@ -21,7 +21,7 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now.addingTimeInterval(-120), url: url, errorCount: 0, warningCount: 0, isApplied: true)
     let model = SettingsModel { .success(.init(url: url, text: text, exists: true)) }
     model.refresh()
-    // The Themes tab once per part of it
+    // The content of every page, the Themes page once per part of it
     let tabs: [(String, AnyView, ThemesSection)] = [
         ("general", AnyView(GeneralSettingsView(model: model)), .palette),
         ("themes", AnyView(ThemesSettingsView(model: model)), .palette),
@@ -30,8 +30,9 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
         ("tiling", AnyView(TilingSettingsView(model: model)), .palette),
         ("gaps", AnyView(GapsSettingsView(model: model)), .palette),
         ("animations", AnyView(AnimationsSettingsView(model: model)), .palette),
-        ("menu-bar", AnyView(MenuBarSettingsView(model: model)), .palette),
         ("borders", AnyView(BordersSettingsView(model: model)), .palette),
+        ("workspaces", AnyView(WorkspacesSettingsView(model: model)), .palette),
+        ("shortcuts", AnyView(ShortcutsSettingsView(model: model)), .palette),
     ]
     for (name, view, section) in tabs {
         model.themesSection = section
@@ -41,8 +42,35 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
         window.setContentSize(hosting.fittingSize)
         hosting.layoutSubtreeIfNeeded()
         RunLoop.current.run(until: .now.addingTimeInterval(0.2))
-        guard let bitmap = hosting.bitmapImageRepForCachingDisplay(in: hosting.bounds) else { continue }
-        hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
-        try bitmap.representation(using: .png, properties: [:])?.write(to: directory.appending(path: "settings-\(name).png"))
+        try write(hosting, to: directory.appending(path: "settings-\(name).png"))
     }
+    // The keys over the rows, as while ⌥ is held: nothing in the rows moves
+    model.isOptionHeld = true
+    let keys = NSHostingView(rootView: BordersSettingsView(model: model))
+    let keysWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
+    keysWindow.contentView = keys
+    keysWindow.setContentSize(keys.fittingSize)
+    keys.layoutSubtreeIfNeeded()
+    RunLoop.current.run(until: .now.addingTimeInterval(0.2))
+    try write(keys, to: directory.appending(path: "settings-borders-keys.png"))
+    model.isOptionHeld = false
+
+    // The whole window, with its sidebar, on every page: as tall as the page, whatever the screen
+    model.themesSection = .palette
+    let controller = SettingsWindowController(model: model)
+    let window = controller.makeWindow(visibleFrame: { _ in CGRect(x: 0, y: 0, width: 4000, height: 4000) })
+    for page in SettingsPageID.allCases {
+        controller.select(page)
+        RunLoop.current.run(until: .now.addingTimeInterval(0.4))
+        guard let content = unsafe window.contentView else { continue }
+        content.layoutSubtreeIfNeeded()
+        try write(content, to: directory.appending(path: "settings-window-\(page.rawValue).png"))
+    }
+}
+
+@MainActor
+private func write(_ view: NSView, to url: URL) throws {
+    guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+    view.cacheDisplay(in: view.bounds, to: bitmap)
+    try bitmap.representation(using: .png, properties: [:])?.write(to: url)
 }

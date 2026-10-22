@@ -55,6 +55,10 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         switch action {
             case .toggleFloating:
                 runMenuBarCommand("layout floating tiling")
+            case .setLayout(let layout):
+                if let current = card?.windowLayout {
+                    runMenuBarCommands(Self.layoutCommands(from: current, to: layout))
+                }
             case .reloadConfig:
                 reloadConfigFromUi(warningsAsErrors: false)
             case .showConfigProblems:
@@ -76,6 +80,19 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                 }
         }
     }
+
+    /// From the layout of the focused window to another one, with the commands of the key bindings: 'fullscreen'
+    /// toggles it, like cmd-alt-ctrl-enter. Fullscreen is for a tiling window: a floating one is tiled first, so that
+    /// it is laid out like with the key binding (alone in its workspace, without gaps nor border with 'gaps.smart')
+    static func layoutCommands(from current: MenuBarCard.WindowLayout, to layout: MenuBarCard.WindowLayout) -> [String] {
+        let leaveFullscreen = current == .fullscreen ? ["fullscreen"] : []
+        return switch layout {
+            case _ where layout == current: []
+            case .tiling: leaveFullscreen + (current == .floating ? ["layout tiling"] : [])
+            case .floating: leaveFullscreen + ["layout floating"]
+            case .fullscreen: (current == .floating ? ["layout tiling"] : []) + ["fullscreen"]
+        }
+    }
 }
 
 // MARK: - The card
@@ -83,6 +100,8 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
 /// What the card of the menu does. The key bindings of the config aren't shown: the menu doesn't repeat them
 enum MenuBarCardAction: Hashable, Sendable {
     case toggleFloating
+    /// The focused window becomes tiling, floating or fullscreen
+    case setLayout(MenuBarCard.WindowLayout)
     case reloadConfig
     case showConfigProblems
     case openConfig
@@ -96,6 +115,7 @@ enum MenuBarCardAction: Hashable, Sendable {
     func title(_ card: MenuBarCard) -> String {
         switch self {
             case .toggleFloating: Strings.Menu.floating
+            case .setLayout(let layout): Strings.Menu.layout(layout)
             case .reloadConfig: Strings.Menu.reloadConfig
             case .showConfigProblems: card.configProblems ?? ""
             case .openConfig: Strings.Menu.openConfig
@@ -115,6 +135,10 @@ struct MenuBarCard: Equatable {
         var isFocused: Bool
     }
 
+    enum WindowLayout: Hashable, Sendable, CaseIterable {
+        case tiling, floating, fullscreen
+    }
+
     struct Shortcut: Equatable {
         var action: MenuBarCardAction
         var key: String
@@ -128,6 +152,15 @@ struct MenuBarCard: Equatable {
     var windows: [Window] = []
     /// nil without a focused window
     var isFloating: Bool? = nil
+    /// The focused window: the name of its app, and how it is laid out. nil without one
+    var focusedApp: String? = nil
+    var windowLayout: WindowLayout? = nil
+    /// The binding mode, if it isn't main, and the key that goes back to main
+    var mode: String? = nil
+    var modeExitKey: String? = nil
+    /// The first errors and warnings of the last load of the config, one line each
+    var problemLines: [String] = []
+
     /// The marker of the focused window, and the switch when it is on: the focused color of the palette
     var accent: Rgba
 
@@ -144,7 +177,7 @@ struct MenuBarCard: Equatable {
     func isEnabled(_ action: MenuBarCardAction) -> Bool {
         switch action {
             case .reloadConfig: status != .paused
-            case .toggleFloating: isFloating != nil
+            case .toggleFloating, .setLayout: isFloating != nil
             default: true
         }
     }
@@ -156,11 +189,47 @@ struct MenuBarCard: Equatable {
         let accent = (colors.focused == .auto ? colors.accent : colors.focused).resolve(auto: .systemAccent, systemAccent: .systemAccent)
         var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace, accent: accent)
         guard snapshot.status == .running else { return card }
-        card.configProblems = Strings.Menu.configProblems(ServerState.shared.lastConfigLoad)
+        let load = ServerState.shared.lastConfigLoad
+        card.configProblems = Strings.Menu.configProblems(load)
+        card.problemLines = (load?.problems ?? []).prefix(3).map { $0.split(separator: "\n").first.map(String.init) ?? $0 }
         let focusedId = focus.windowOrNil?.windowId
         card.windows = focus.workspace.allLeafWindowsRecursive.map { Window(app: $0.app.name ?? "?", isFocused: $0.windowId == focusedId) }
         card.isFloating = snapshot.focusedWindow?.isFloating
+        if let window = focus.windowOrNil, let focused = snapshot.focusedWindow {
+            card.focusedApp = window.app.name ?? "?"
+            card.windowLayout = focused.isFullscreen ? .fullscreen : focused.isFloating ? .floating : .tiling
+        }
+        card.mode = snapshot.nonMainMode
+        card.modeExitKey = card.mode.flatMap { exitKey(of: $0) }
         return card
+    }
+}
+
+/// The key of a binding mode that goes back to main: esc if it does, else the first one in the order of the keys
+@MainActor
+private func exitKey(of mode: String) -> String? {
+    let bindings = config.modes[mode]?.bindings.values.filter { $0.commands.shellOfCommandsDescription.contains("mode \(mainModeId)") } ?? []
+    let keys = bindings.map(\.descriptionWithKeyNotation).sorted()
+    return keys.contains("esc") ? "esc" : keys.first.map(prettyKeyNotation)
+}
+
+/// Runs commands one after the other, the way a key binding with several commands does
+@MainActor
+func runMenuBarCommands(_ raws: [String]) {
+    let commands = raws.compactMap { parseCommand($0, allowExecAndForget: false, allowEval: false).cmdOrNil }
+    guard commands.count == raws.count else {
+        NSSound.beep()
+        return
+    }
+    Task.startUnstructured { @MainActor in
+        // The menu is gone by then: the commands run as if a key binding ran them
+        try await Task.sleep(for: .milliseconds(120))
+        guard let token: RunSessionGuard = .isServerEnabled else { return }
+        try await runLightSession(.menuBarButton, token) {
+            for command in commands {
+                _ = await command.run(.defaultEnv, .emptyStdin)
+            }
+        }
     }
 }
 

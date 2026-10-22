@@ -31,7 +31,10 @@ extension MenuBarFont {
     static func size(of string: String, _ font: MenuBarFont) -> CGSize {
         let measured = Measured(string: string, font: font)
         if let size = sizes.withLock({ $0[measured] }) { return size }
-        let size = NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
+        let size = font == .symbol
+            ? NSImage(systemSymbolName: string, accessibilityDescription: nil)?
+                .withSymbolConfiguration(.init(pointSize: MenuBarMetrics.labelSymbolSize, weight: .regular))?.size ?? .zero
+            : NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
         sizes.withLock {
             if $0.count >= maxCachedSizes { $0.removeAll() }
             $0[measured] = size
@@ -97,7 +100,7 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where layout.style == .chips || layout.style == .dots {
+        for index in layout.cells.indices where layout.style == .chips || layout.style == .dots || layout.style == .labels {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
         if let marker = layout.marker {
@@ -118,6 +121,14 @@ enum MenuBarRenderer {
             case .underline: drawUnderline(layout, palette, in: cg)
             case .glyphs: drawGlyphs(layout, palette, in: cg)
             case .liquid: drawLiquid(layout, palette, in: cg)
+            case .labels: drawLabels(layout, palette, in: cg)
+        }
+        // 'per-monitor'
+        for separator in layout.separators {
+            cg.fill(CGPath(rect: separator, transform: nil), palette.base.opacity(MenuBarMetrics.emptyWorkspaceOpacity))
+        }
+        for marker in layout.visibleElsewhere {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: MenuBarMetrics.outlineWidth, palette.focused)
         }
     }
 
@@ -322,6 +333,52 @@ enum MenuBarRenderer {
         return [CGPath(ellipseIn: trail, transform: nil), path, CGPath(ellipseIn: drop, transform: nil)]
     }
 
+    // MARK: - Labels
+
+    private static func drawLabels(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        for cell in layout.cells {
+            let color = palette.nameColor(of: cell)
+            if let symbol = cell.symbol {
+                drawSymbol(symbol.string, pointSize: M.labelSymbolSize, centeredIn: symbol.frame, color)
+            } else {
+                draw(cell.name, color)
+            }
+        }
+        guard let marker = layout.marker else { return }
+        let path = roundedRect(marker.frame, marker.cornerRadius)
+        // Clears the symbol under the marker
+        cg.fill(path, .black, blendMode: .destinationOut)
+        if let initial = marker.initial {
+            draw(marker, initial, palette, in: cg)
+            return
+        }
+        if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
+        } else {
+            cg.fill(path, palette.focused)
+        }
+        // Whatever the marker covers, cut out of it or over it, like the names of the chips: the symbol and the label of
+        // the workspaces it leaves or reaches, and the symbol of the ones it passes over on its way
+        cg.saveGState()
+        cg.addPath(path)
+        cg.clip()
+        for cell in layout.cells {
+            let texts = cell.focus > 0 ? cell.expanded : [cell.symbol ?? cell.name]
+            for text in texts {
+                let color = marker.isOutlined ? palette.focused : palette.focusedName
+                if text.font == .symbol {
+                    drawSymbol(text.string, pointSize: M.labelSymbolSize, centeredIn: text.frame, color ?? .black, cutOut: color == nil)
+                } else if let color {
+                    draw(text, color)
+                } else {
+                    draw(text, .black, blendMode: .destinationOut)
+                }
+            }
+        }
+        cg.restoreGState()
+    }
+
     // MARK: - Binding mode
 
     /// The marker of a binding mode, the same in every theme: the initial of the mode cut out of a filled marker
@@ -380,7 +437,8 @@ enum MenuBarRenderer {
 
     /// SF Symbols are rasterized by SwiftUI, so they come out exactly like in Aeromenu.
     /// AppKit places the lines of the same symbol a fraction of a pixel off
-    private static func drawSymbol(_ name: String, pointSize: CGFloat, centeredIn frame: CGRect, _ color: Rgba) {
+    /// - Parameter cutOut: the symbol is cut out of what is under it instead of drawn
+    private static func drawSymbol(_ name: String, pointSize: CGFloat, centeredIn frame: CGRect, _ color: Rgba, cutOut: Bool = false) {
         let key = SymbolKey(name: name, pointSize: pointSize, color: color.hex, scale: 1 / pixel)
         if symbols[key] == nil {
             let renderer = ImageRenderer(content: Image(systemName: name).font(.system(size: pointSize)).foregroundStyle(Color(nsColor: color.nsColor)))
@@ -396,7 +454,7 @@ enum MenuBarRenderer {
             width: size.width,
             height: size.height,
         )
-        symbol.draw(in: target, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        symbol.draw(in: target, from: .zero, operation: cutOut ? .destinationOut : .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
     }
 
     private struct SymbolKey: Hashable {

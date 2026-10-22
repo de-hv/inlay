@@ -107,10 +107,12 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 # The menu bar item. See: inlay config --explain menu-bar
 [menu-bar]
     enabled = true
-    # pills|chips|square|minimal|dots|underline|glyphs|liquid
+    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels
     theme = 'liquid'
     dim-empty-workspaces = true
     show-mode = true
+    # The workspaces of each monitor together, and a hollow marker on the one another monitor shows
+    per-monitor = false
 
     # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto'
     [menu-bar.colors]
@@ -118,6 +120,26 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
         focused = 'auto'
         occupied = 'auto'
         empty = 'auto'
+
+    # The 'labels' theme only: the name of each workspace, shown in the focused one. The other themes ignore it
+    [menu-bar.labels]
+        # 1 = 'Terminals'
+        # 2 = 'Code'
+        # 3 = 'Browsers'
+        # 4 = 'Chats'
+        # 5 = 'AI'
+        # 6 = 'Other'
+        # 7 = 'Free'
+
+    # The 'labels' theme only: the SF Symbol of each workspace (the names of the SF Symbols app)
+    [menu-bar.symbols]
+        # 1 = 'terminal'
+        # 2 = 'chevron.left.forwardslash.chevron.right'
+        # 3 = 'globe'
+        # 4 = 'bubble.left.and.bubble.right'
+        # 5 = 'sparkles'
+        # 6 = 'square.grid.2x2'
+        # 7 = 'circle.dashed'
 
 # The colors of the menu bar item and of the borders: a palette with a light and a dark variant.
 # system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest|kanagawa|oxocarbon|ayu|one-dark|mono|
@@ -157,6 +179,11 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 # 'simple' or 'off'. See: inlay config --explain notifications
 [notifications]
     on-reload = 'diff'
+
+# The Settings window: every row shows the key of the config it writes. Without it, a key shows while the mouse
+# is over its row, or while the option key is held
+[settings]
+    show-keys = false
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    BORDERS

@@ -74,8 +74,8 @@ extension InlayTests {
 
         @Test func testEveryTabFitsOrScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
             let window = try window(visibleHeight: 600)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Themes", "Tiling", "Gaps", "Animations", "Menu Bar", "Borders"])
+            let tabs = try #require((window.contentViewController as? SettingsRootViewController)?.pages)
+            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Themes", "Tiling", "Gaps", "Borders", "Animations", "Workspaces", "Shortcuts"])
             var scrolling: [String] = []
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index
@@ -95,13 +95,13 @@ extension InlayTests {
                     assertEquals(window.frame.height, 600, additionalMsg: label)
                     scrolling.append(label)
                 } else {
-                    // A short tab: the window is as tall as the tab
-                    assertEquals(window.frame.height < 600, true, additionalMsg: label)
+                    // A short page: the window keeps its height, the one of every page, as far as the screen allows
+                    assertEquals(window.frame.height, 600, additionalMsg: label)
                 }
             }
-            // Some tabs are taller than such a screen. General is short now
+            // Some tabs are taller than such a screen. Tiling is short
             assertEquals(scrolling.isEmpty, false)
-            assertEquals(scrolling.contains("General"), false)
+            assertEquals(scrolling.contains("Tiling"), false)
         }
 
         /// Themes shows one part at a time. The part that comes is shown from its top, wherever the page was scrolled
@@ -112,7 +112,7 @@ extension InlayTests {
             let model = SettingsModel { .success(.init(url: URL(filePath: "/nonexistent/inlay.toml"), text: text, exists: true)) }
             model.refresh()
             let window = SettingsWindowController(model: model).makeWindow { _ in CGRect(x: 0, y: 0, width: 1512, height: 600) }
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            let tabs = try #require((window.contentViewController as? SettingsRootViewController)?.pages)
             tabs.selectedTabViewItemIndex = 1
             model.themesSection = .colors
             RunLoop.current.run(until: .now.addingTimeInterval(0.1))
@@ -145,7 +145,7 @@ extension InlayTests {
             let model = SettingsModel { .success(.init(url: URL(filePath: "/nonexistent/inlay.toml"), text: text, exists: true)) }
             model.refresh()
             let window = SettingsWindowController(model: model).makeWindow { _ in CGRect(x: 0, y: 0, width: 1512, height: 2000) }
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            let tabs = try #require((window.contentViewController as? SettingsRootViewController)?.pages)
             tabs.selectedTabViewItemIndex = 1
             // On the screen, and nothing but the run loop lays it out: like the real window
             window.orderFront(nil)
@@ -158,19 +158,27 @@ extension InlayTests {
                 RunLoop.current.run(until: .now.addingTimeInterval(0.3))
                 heights.insert(window.frame.height)
                 let scrollView = try #require(page.view as? NSScrollView)
-                assertEquals(scrollView.convert(scrollView.bounds, to: nil), window.contentLayoutRect, additionalMsg: "\(section)")
+                // The sidebar and its separator are on the leading side
+                let area = window.contentLayoutRect
+                let pagesArea = CGRect(x: area.minX + tabs.leadingWidth, y: area.minY, width: area.width - tabs.leadingWidth, height: area.height)
+                assertEquals(scrollView.convert(scrollView.bounds, to: nil), pagesArea, additionalMsg: "\(section)")
                 // Nothing to scroll: the form starts at the top of the scroll view
                 assertEquals(scrollView.contentView.bounds.origin.y, 0, additionalMsg: "\(section)")
             }
-            assertEquals(heights.count > 1, true) // The window did change its height
+            assertEquals(heights.count, 1) // The same height for every part: the window doesn't jump
         }
 
-        @Test func testOnABigScreenTheWindowIsAsTallAsTheTab() throws {
+        /// On a big screen the window has the same height on every page, however tall the page is
+        @Test func testOnABigScreenTheWindowHasAFixedHeight() throws {
             let window = try window(visibleHeight: 2000)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            let tabs = try #require((window.contentViewController as? SettingsRootViewController)?.pages)
+            for index in tabs.tabViewItems.indices {
+                tabs.selectedTabViewItemIndex = index
+                tabs.fitWindow(animate: false)
+                window.layoutIfNeeded()
+                assertEquals(window.contentLayoutRect.height, settingsContentHeight, additionalMsg: tabs.tabViewItems[index].label)
+            }
             let page = try #require(tabs.tabViewItems[0].viewController as? SettingsPageController)
-            window.layoutIfNeeded()
-            assertEquals(window.contentLayoutRect.height, page.contentSize.height)
             assertEquals(page.contentSize.width, 600)
         }
     }

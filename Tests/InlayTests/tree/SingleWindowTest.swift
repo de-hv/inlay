@@ -105,6 +105,24 @@ extension InlayTests {
             assertEquals(BordersSnapshot.fromModel().items.map(\.windowId), [2])
         }
 
+        /// Fullscreen from the menu runs the commands of the key binding: a floating window is tiled first, so that alone
+        /// in its workspace it has no gaps and no border, like with cmd-alt-ctrl-enter
+        @Test func testSmartGaps_fullscreenFromTheMenu() async throws {
+            config.gaps.smart = true
+            assertEquals(MenuBarMenu.layoutCommands(from: .floating, to: .fullscreen), ["layout tiling", "fullscreen"])
+            assertEquals(MenuBarMenu.layoutCommands(from: .tiling, to: .fullscreen), ["fullscreen"])
+            assertEquals(MenuBarMenu.layoutCommands(from: .fullscreen, to: .tiling), ["fullscreen"])
+            assertEquals(MenuBarMenu.layoutCommands(from: .fullscreen, to: .floating), ["fullscreen", "layout floating"])
+            assertEquals(MenuBarMenu.layoutCommands(from: .tiling, to: .tiling), [])
+
+            let window = TestWindow.new(id: 1, parent: workspace.floatingWindowsContainer, rect: Rect(topLeftX: 100, topLeftY: 200, width: 640, height: 480))
+            assertEquals(window.focusWindow(), true)
+            for command in MenuBarMenu.layoutCommands(from: .floating, to: .fullscreen) { try await run(command) }
+            assertEquals(window.isFullscreen, true)
+            assertFrame(1, workspace.workspaceMonitor.visibleRect)
+            assertEquals(BordersSnapshot.fromModel().items, [])
+        }
+
         @Test func testHideWhenSingle_alsoInFullscreen() async throws {
             config.borders.hideWhenSingle = true
             try await openWindow(1)

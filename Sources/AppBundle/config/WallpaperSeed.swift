@@ -69,7 +69,7 @@ final class WallpaperSeed {
         color = nil
     }
 
-    /// Reads the wallpaper again. The menu bar item, the borders and the hooks of the theme follow a new color
+    /// Reads the wallpaper again. The menu bar item and the borders follow a new color
     func refresh() {
         DebugStats.count("wallpaper-seed.refresh")
         watcher?.arm() // The store may have been replaced by a new file
@@ -88,7 +88,6 @@ final class WallpaperSeed {
         color = new
         DebugStats.count("wallpaper-seed.changed")
         publishUiState()
-        ThemeController.shared.colorsMayHaveChanged()
     }
 
     /// The pixels of a small version of the image, as (red, green, blue) from 0 to 1. nil if it isn't an image

@@ -34,8 +34,6 @@ enum SettingsSearch {
             entry(.general, S.showKeys, .settingsShowKeys),
             entry(.themes, S.palettes, .themePalette, .palette),
             entry(.themes, S.seed, .themeSeed, .palette),
-            entry(.themes, S.wallpaper, .themeWallpaper, .palette),
-            entry(.themes, S.hooks, nil, .palette),
             entry(.themes, S.workspaceIndicator, .menuBarTheme, .indicator),
             entry(.themes, S.labels, nil, .indicator),
             entry(.themes, S.dimEmpty, .menuBarDimEmpty, .indicator),

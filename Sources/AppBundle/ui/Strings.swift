@@ -80,13 +80,8 @@ enum Strings {
         }
     }
 
-    /// The theme as a whole: palette, wallpaper and hooks. See: ThemeController, ThemeCommand
+    /// See: ThemeCommand
     enum Theme {
-        static func missingWallpaper(_ palette: String) -> String { "The wallpaper of \(palette) doesn't exist" }
-        static func missingWallpaperDetail(_ path: String) -> String { "\(path) can't be found. Choose another one for the theme, or keep the wallpaper that is on the screen." }
-        static let chooseWallpaper = "Choose…"
-        static let keepWallpaper = "Keep Current"
-        static func chooseWallpaperMessage(_ palette: String) -> String { "The wallpaper of \(palette). It is written in \(configFileName)." }
         static func paletteSet(_ palette: String) -> String { "Palette: \(palette)" }
         static func manualColorsNote(_ keys: [String]) -> String {
             "Colors written by hand win over the palette: \(keys.joined(separator: ", ")). 'inlay theme set <palette> --reset-colors' removes them."
@@ -339,14 +334,7 @@ enum Strings {
         static let dark = "Dark"
         static let light = "Light"
         static let variantHelp = "The variant of the palettes that the previews show. The one in use follows the appearance of the system."
-        static let wallpaperAndHooks = "Wallpaper and Hooks"
-        static let wallpaperAndHooksFooter = "The wallpaper goes on every screen when the palette changes. The hooks of [theme] on-change run when the colors change, and are edited in the file, like the wallpapers of single palettes ([theme.wallpapers])."
-        static let wallpaper = "Wallpaper"
-        static let noWallpaper = "None: switching palettes leaves the wallpaper alone."
-        static let choose = "Choose…"
         static let remove = "Remove"
-        static let hooks = "Hooks"
-        static let noHooks = "None"
         static let labels = "Labels"
         static let labelsFooter = "Only the labels theme uses them: a symbol per workspace, and the name in the focused one. A workspace without a symbol shows its name. Symbols are SF Symbols names."
         static func labelPlaceholder(_ workspace: String) -> String { "Name (\(workspace))" }

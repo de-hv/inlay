@@ -45,8 +45,7 @@ border hidden around a single window (`gaps.smart`, `borders.hide-when-single`) 
 the config (`[notifications]`), and the four themes and seven palettes taken from Hyprland setups (`dots`,
 `underline`, `glyphs`, `liquid`; `kanagawa`, `oxocarbon`, `ayu`, `one-dark`, `mono`, `material` and its `seed`,
 `flexoki`): they are checked with tests and renders, including the frames of their animations.
-The same goes for the curves of the animations, `seed = 'wallpaper'`, `inlay theme set` with its wallpaper
-and its hooks, and the custom colors of Settings › Themes: tests and renders only. And for the latest revision:
+The same goes for the curves of the animations, `seed = 'wallpaper'`, `inlay theme set`, and the custom colors of Settings › Themes: tests and renders only. And for the latest revision:
 the `labels` theme with `[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, the Settings window with a
 sidebar, search, undo, the export of the config and the Workspaces and Shortcuts pages, and the menu with the
 layout of the focused window, the binding mode and the problems of the config.
@@ -637,29 +636,8 @@ the wallpaper changes: Inlay watches the store of the wallpapers of macOS, with 
 64×64 points (a few milliseconds). A wallpaper that isn't an image (the Aerial videos) gives the default seed.
 
 **Themes: `inlay theme set <palette>`** switches the palette from the terminal (`inlay theme list` lists them, and
-the one in use). A theme is the palette and, optionally, its wallpaper and the commands that theme your other apps:
-
-```toml
-[theme]
-    palette = 'one-dark'
-    wallpaper = '~/walls/default.jpg'       # the one of every palette (optional)
-    on-change = ['~/.config/ghostty/set-theme.sh']
-
-    [theme.wallpapers]                      # the ones of some palettes, which win
-        gruvbox = '~/walls/autumn.jpg'
-```
-
-- **The wallpaper** is put on every screen when the palette changes (`theme set`, Settings › Themes or the file),
-  never at startup: a wallpaper picked in System Settings stays until the next change of palette. Without one,
-  switching palettes leaves the wallpaper alone. If the file doesn't exist anymore, Inlay asks: *Choose…* picks
-  another image and writes it in the config (in `[theme.wallpapers]` if it was the one of the palette), *Keep
-  Current* leaves the wallpaper on the screen.
-- **The hooks** of `on-change` run when the colors change: another palette, the other variant (light or dark), a
-  new seed. They get the colors in effect as `INLAY_THEME_FOCUSED`, `INLAY_THEME_OCCUPIED`, `INLAY_THEME_EMPTY`,
-  `INLAY_THEME_ACCENT`, `INLAY_THEME_ACTIVE_BORDER`, `INLAY_THEME_INACTIVE_BORDER`, `INLAY_THEME_FLOATING_BORDER`
-  ('#RRGGBB'), and `INLAY_THEME`, `INLAY_THEME_VARIANT`, `INLAY_THEME_SEED` and `INLAY_THEME_WALLPAPER`.
-- **Colors set by hand win** over the palette. `inlay theme set <palette>` keeps them and says which ones;
-  `--reset-colors` removes them, so that the palette gives every color.
+the one in use). **Colors set by hand win** over the palette: `inlay theme set <palette>` keeps them and says which
+ones; `--reset-colors` removes them, so that the palette gives every color.
 
 **Settings › Themes** is where the look is decided, in one place. On top, always: the live preview, a small desktop
 with the menu bar item and three windows with their borders, and over it a chip that says where the colors come
@@ -672,8 +650,7 @@ three parts, one at a time:
   the other palettes, each one as a miniature with its menu bar item and two windows with their borders. The mouse
   over a palette shows it in the preview, without writing anything; a click uses it. While some colors are your
   own no palette is selected: the one that gives the rest is drawn dashed, as the *base*, and picking a palette
-  asks first, since it removes your colors. Below, the wallpaper of `[theme]` (*Choose…*, *Remove*) and the hooks
-  of `on-change`, which are edited in the file.
+  asks first, since it removes your colors.
 - **Indicator**: the nine shapes of the menu bar item, the names and symbols of the `labels` theme when it is the
   one in use, and the options (*Dim empty workspaces*, *Show the binding mode*, *Group by monitor*).
 - **Colors**: every color that a palette gives, the ones of the indicator (active, inactive and empty workspaces,

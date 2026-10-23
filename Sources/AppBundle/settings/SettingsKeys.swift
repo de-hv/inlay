@@ -41,8 +41,6 @@ extension SettingsKey {
     // Theme
     static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.oneDark.rawValue))
     static let themeSeed = SettingsKey(["theme"], "seed", default: .string(MaterialPalette.baselineSeed.hex))
-    /// No default: without it, switching palettes leaves the wallpaper alone
-    static let themeWallpaper = SettingsKey(["theme"], "wallpaper", default: .string(""))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))

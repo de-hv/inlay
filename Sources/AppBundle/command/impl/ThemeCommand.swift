@@ -1,8 +1,7 @@
 import AppKit
 import Common
 
-/// 'theme set <palette>' writes the palette in the config and reloads it: the wallpaper and the hooks of the theme follow.
-/// 'theme list' prints the palettes. See: ThemeController
+/// 'theme set <palette>' writes the palette in the config and reloads it. 'theme list' prints the palettes
 struct ThemeCommand: Command {
     let args: ThemeCmdArgs
     /*conforms*/ let shouldResetClosedWindowsCache = false
@@ -21,7 +20,6 @@ struct ThemeCommand: Command {
         var lines = ThemePalette.allCases.map { palette in
             var line = (palette == current ? "* " : "  ") + palette.rawValue
             if palette == .material { line += "  (seed: \(config.theme.seed))" }
-            if let wallpaper = config.theme.wallpapers[palette.rawValue] { line += "  wallpaper: \(wallpaper)" }
             return line
         }
         let manual = ManualColors.keys(in: config)
@@ -47,8 +45,6 @@ struct ThemeCommand: Command {
         if case .failure(let error) = ConfigEditor.apply(edits, to: target) {
             return .fail(io.err(error.message))
         }
-        // Also when it is the palette in use: the user asked for its wallpaper and its hooks
-        ThemeController.shared.forcesNextApply = true
         let result = await reloadConfig_nonCancellable(notice: .always)
         if !result.isOk { return .fail(io.err(result.stdout)) }
         if !args.resetColors && !manual.isEmpty {

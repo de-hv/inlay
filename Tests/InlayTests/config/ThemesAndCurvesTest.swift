@@ -3,7 +3,7 @@ import Common
 import Foundation
 import Testing
 
-/// [animations] curves, [theme] seed = 'wallpaper', wallpapers and on-change, and the colors set by hand
+/// [animations] curves, [theme] seed = 'wallpaper', and the colors set by hand
 extension InlayTests {
     @Suite @MainActor struct ThemesAndCurvesTest {
         init() {
@@ -74,42 +74,14 @@ extension InlayTests {
 
         // MARK: - Theme
 
-        @Test func testParseThemeWallpapersAndHooks() {
+        @Test func testParseThemeSeedWallpaper() {
             let result = parseConfig("""
                 [theme]
                 palette = 'gruvbox'
                 seed = 'wallpaper'
-                wallpaper = '~/walls/default.jpg'
-                on-change = ['echo $INLAY_THEME']
-                [theme.wallpapers]
-                gruvbox = '~/walls/autumn.jpg'
                 """)
             assertEquals(result.errors, [])
-            let theme = result.config.theme
-            assertEquals(theme.seed, .wallpaper)
-            assertEquals(theme.onChange, ["echo $INLAY_THEME"])
-            assertEquals(theme.wallpaper(of: .gruvbox), "~/walls/autumn.jpg")
-            assertEquals(theme.wallpaper(of: .nord), "~/walls/default.jpg")
-            assertNil(ThemeConfig().wallpaper(of: .nord))
-            assertEquals(
-                parseConfig("[theme.wallpapers]\nsolarized = 'a.jpg'\n").strErrors.first?.hasPrefix("[ERROR] theme.wallpapers.solarized: Unknown palette 'solarized'"),
-                true,
-            )
-        }
-
-        @Test func testThemeEnvironment() {
-            config.theme = ThemeConfig(palette: .gruvbox)
-            config.menuBar.colors = MenuBarColors()
-            config.borders = BordersConfig()
-            let environment = ThemeController.shared.themeEnvironment()
-            let gruvbox = ThemePalette.gruvbox.colors(isDark: isSystemAppearanceDark)!
-            assertEquals(environment["INLAY_THEME"], "gruvbox")
-            assertEquals(environment["INLAY_THEME_FOCUSED"], gruvbox.focused.hex)
-            assertEquals(environment["INLAY_THEME_ACTIVE_BORDER"], gruvbox.activeBorder.hex)
-            assertNil(environment["INLAY_THEME_WALLPAPER"])
-            // A color written by hand is the one the hooks get
-            config.borders.activeColor = .rgba(Rgba(hex: "#61AFEF").orDie())
-            assertEquals(ThemeController.shared.themeEnvironment()["INLAY_THEME_ACTIVE_BORDER"], "#61AFEF")
+            assertEquals(result.config.theme.seed, .wallpaper)
         }
 
         @Test func testManualColors() {

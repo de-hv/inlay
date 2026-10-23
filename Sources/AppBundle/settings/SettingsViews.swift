@@ -796,21 +796,6 @@ struct ThemesSettingsView: View {
         } footer: {
             footnote(Strings.Settings.paletteFooter)
         }
-        Section {
-            WallpaperRow(model: model)
-            LabeledContent {
-                Button(Strings.Settings.open) { openConfigInEditor() }
-            } label: {
-                Text(Strings.Settings.hooks)
-                Text(model.config.theme.onChange.isEmpty ? Strings.Settings.noHooks : model.config.theme.onChange.joined(separator: "\n"))
-                    .font(.system(size: 11, design: .monospaced))
-            }
-            .settingsHighlight(model, Strings.Settings.hooks)
-        } header: {
-            Text(Strings.Settings.wallpaperAndHooks)
-        } footer: {
-            footnote(Strings.Settings.wallpaperAndHooksFooter)
-        }
     }
 
     private var seedIsWallpaper: Bool { model.string(.themeSeed) == ThemeSeed.wallpaperLiteral }
@@ -1142,31 +1127,6 @@ private struct PaletteTile: View {
             .frame(height: 24)
             .padding(2)
             .background(Color(nsColor: border.nsColor), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-    }
-}
-
-/// [theme] wallpaper: the image that goes on every screen when the palette changes
-private struct WallpaperRow: View {
-    let model: SettingsModel
-
-    var body: some View {
-        let key = SettingsKey.themeWallpaper
-        let path = model.string(key)
-        SettingsRow(model: model, title: Strings.Settings.wallpaper, detail: path.isEmpty ? Strings.Settings.noWallpaper : path, key: key) {
-            Button(Strings.Settings.choose) { choose() }
-            if model.isSet(key) {
-                Button(Strings.Settings.remove) { model.reset(key) }
-            }
-        }
-    }
-
-    private func choose() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image]
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.set(.themeWallpaper, .string((url.path as NSString).abbreviatingWithTildeInPath))
     }
 }
 

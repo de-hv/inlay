@@ -20,7 +20,7 @@ public struct ThemeCmdArgs: CmdArgs, Equatable {
     public var resetColors: Bool = false
 
     public enum Action: String, Equatable, Sendable {
-        /// Make the palette the one of the config, and apply its wallpaper and its hooks
+        /// Make the palette the one of the config
         case set
         /// Print the palettes, the one in use marked
         case list

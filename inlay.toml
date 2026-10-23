@@ -149,15 +149,6 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     # The color that 'material' (Material You) is made from: '#RRGGBB', 'system-accent' or 'wallpaper' (the main color
     # of the wallpaper, like matugen)
     seed = '#6750A4'
-    # The wallpaper of every palette, put on the screens when the palette changes ('inlay theme set <palette>').
-    # Without it, switching palettes leaves the wallpaper alone. See: inlay config --explain theme.wallpaper
-    # wallpaper = '~/walls/default.jpg'
-    # Commands that run when the colors change, with them in INLAY_THEME_* variables (inlay config --explain theme.on-change)
-    on-change = []
-
-    # The wallpaper of a palette, which wins over the one of every palette
-    [theme.wallpapers]
-        # gruvbox = '~/walls/autumn.jpg'
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                  ANIMATIONS

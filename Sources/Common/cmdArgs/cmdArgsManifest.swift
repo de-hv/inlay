@@ -44,7 +44,6 @@ public enum CmdKind: String, CaseIterable, Equatable, Sendable {
     case swap
     case test
     case testNot = "test-not"
-    case theme
     case triggerBinding = "trigger-binding"
 
     case _true = "true"
@@ -144,8 +143,6 @@ func initSubcommands() -> [String: any SubCommandParserProtocol] {
                 result[kind.rawValue] = SubCommandParser(parseTestCmdArgs)
             case .testNot:
                 result[kind.rawValue] = SubCommandParser(parseTestNotCmdArgs)
-            case .theme:
-                result[kind.rawValue] = SubCommandParser(parseThemeCmdArgs)
             case .triggerBinding:
                 result[kind.rawValue] = SubCommandParser(parseTriggerBindingCmdArgs)
             case ._true:

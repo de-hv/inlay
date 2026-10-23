@@ -24,9 +24,9 @@ new windows (*dwindle*), without the *accordion* layout, with its own menu bar i
 | Build, install and uninstall without Xcode | Done | Clean build from scratch with the Command Line Tools; `install.sh` and `inlay uninstall` run end to end in an isolated environment (another `HOME`, another install folder) |
 | Window manager (tree, workspaces, commands, CLI) | The one of AeroSpace `74a1bf1`, under another name | Tests (simulated windows) |
 | *Dwindle*-style auto-tiling, no *accordion* layout | Done (see [Tiling](#tiling)) | Tests (simulated windows), including a pseudorandom session of 800 steps |
-| Menu bar item with *chips*, themes and Settings window | Done (see [Menu bar and settings](#menu-bar-and-settings)) | Tests and rendered images |
+| Menu bar item with *chips*, indicator styles and Settings window | Done (see [Menu bar and settings](#menu-bar-and-settings)) | Tests and rendered images |
 | Window borders | Done, with public API (see [Window borders](#window-borders)) | Tests, rendered images and `--debug-borders` on real windows |
-| Tests | 651 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
+| Tests | 761 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
 
 The "How it is verified" column says what has been verified automatically. In addition, Inlay has already been
 installed and used with the Accessibility permission in two rounds (2026-10-11). In the second one, with the
@@ -41,14 +41,13 @@ revision (installing without options, `inlay.toml` as the shipped config, the qu
 environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
 the focused workspace, the menu without icons, the Settings window that fits small screens, the config folder
 linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the smart gaps and the
-border hidden around a single window (`gaps.smart`, `borders.hide-when-single`) and the notice after a reload of
-the config (`[notifications]`), and the four themes and seven palettes taken from Hyprland setups (`dots`,
-`underline`, `glyphs`, `liquid`; `kanagawa`, `oxocarbon`, `ayu`, `one-dark`, `mono`, `material` and its `seed`,
-`flexoki`): they are checked with tests and renders, including the frames of their animations.
-The same goes for the curves of the animations, `seed = 'wallpaper'`, `inlay theme set`, and the custom colors of Settings › Themes: tests and renders only. And for the latest revision:
-the `labels` theme with `[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, the Settings window with a
-sidebar, search, undo, the export of the config and the Workspaces and Shortcuts pages, and the menu with the
-layout of the focused window, the binding mode and the problems of the config.
+border hidden around a single window (`gaps.smart`, `borders.hide-when-single`), and the four themes taken from
+Hyprland setups (`dots`, `underline`, `glyphs`, `liquid`): they are checked with tests and renders, including the
+frames of their animations. The same goes for the curves of the animations, the `labels` theme with
+`[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, undo, the export of the config, and the latest
+revision, which simplified the look: no palettes (every color is set on its own), no notice after a reload
+(Settings › Changes lists what each reload changed), a Settings window with five tabs in the toolbar, and a menu of
+native items.
 
 Known limitations of this version:
 
@@ -299,23 +298,18 @@ Without that key, reload by hand: `inlay reload-config` or *Reload Config* in th
 Settings the same way. Settings writing the file does not cause a second reload.
 
 ```toml
-auto-reload-config = true   # the default is false: reload with 'inlay reload-config' or from the menu
+auto-reload-config = true   # the default. With false: reload with 'inlay reload-config' or from the menu
 ```
 
-![Illustration, animated: on the left the config file, on the right the Borders tab of Settings (a real render). The line 'width = 4' of the file is changed to 'width = 8' and the Width slider of Settings moves to 8 pt; then the slider is moved to 2 pt and the line of the file becomes 'width = 2'](docs/images/settings-sync.gif)
+![Illustration, animated: on the left the config file, on the right the borders of the Appearance tab of Settings (a real render). The line 'width = 4' of the file is changed to 'width = 8' and the Width slider of Settings moves to 8 pt; then the slider is moved to 2 pt and the line of the file becomes 'width = 2'](docs/images/settings-sync.gif)
 
-**A reload says what it changed.** After *Reload Config* in the menu, a save picked up by `auto-reload-config`, or
-`inlay reload-config` and a key binding when the file changed since the last load, a notice shows up for a moment in the top right corner of the screen of the focus:
-`inlay.toml reloaded` and the keys that changed, with the old and the new value (`borders.width 4 → 8`). Comments
-and formatting don't count, and after four keys it says how many more. With warnings it stays longer and says how
-many; a config with errors shows its window instead. It never takes the focus: the mouse over it keeps it, and a
-click dismisses it. There is no notice at startup, nor for a change made in Settings, which shows it already.
-`--no-gui` skips it.
-
-```toml
-[notifications]
-    on-reload = 'diff'   # 'diff' | 'simple' (only the name of the file) | 'off'
-```
+**What a reload changed is in Settings › Changes**: every reload that changed the config since Inlay started,
+the last one first, with the keys that changed and their old and new values (`borders.width 4 → 8`), and who
+changed them: *Settings* (the window, which ⌘Z undoes) or *File* (saved by hand or by another program). Comments
+and formatting don't count. Nothing shows up on the screen: the menu says when the config was reloaded last.
+`auto-reload-config` and `[settings] show-keys` are only set in the file: the window doesn't show them, nor the
+switch of the menu bar item (`[menu-bar] enabled`). A `[theme]` or `[notifications]` table of a previous version
+is accepted with a warning and ignored.
 
 **Problems are never silent.** If the config has errors or warnings, `inlay reload-config` prints them, a
 window lists the errors, and the menu of the menu bar item shows "Config contains errors…" or "Config contains
@@ -356,7 +350,7 @@ The window borders are drawn in the gaps: see [Window borders](#window-borders) 
 window has no outer gaps and no border, and the window takes the whole visible part of the screen, under the menu
 bar and above the Dock. The gaps and the border come back as soon as a second tiling window joins it, sliding like
 any other change of the layout. `fullscreen` keeps it that way: the single window goes on filling the screen
-without gaps. Floating windows don't count, and keep their borders. It is also in **Settings › Gaps**.
+without gaps. Floating windows don't count, and keep their borders. It is also in **Settings › Windows**.
 
 ```toml
 [gaps]
@@ -420,7 +414,7 @@ and `resize` simply does not shrink them any further. `resize` always works in s
 
 ![Illustration, animated: two windows side by side. 'resize width -50' is run again and again on the left one, whose width goes down from 616 points in steps of 50 until it reaches a dashed line marked 'min-window-size = 100', where it stays at 100 points however many more times the command runs](docs/images/tiling-min-window-size.gif)
 
-Both keys are also in **Settings › Tiling** ("Window to split" and "Minimum window size").
+Both keys are also in **Settings › Windows** ("Window to split" and "Minimum window size").
 
 The windows that **are already open when Inlay starts** (or when it is resumed with `inlay enable on`) are not
 placed one by one. First the `on-window-detected` rules of the config run for each of them, exactly as for a
@@ -449,7 +443,7 @@ while Inlay was paused. To run them again for all the open windows, use
 It only affects that moment. The windows you open afterwards follow `new-window-placement`, and the grid is a
 normal tree: it can be moved, resized and rearranged with the usual commands. When resuming after a pause,
 only the workspaces in which some window appeared while Inlay was paused are rearranged; the others keep
-their arrangement. It is also in **Settings › Tiling**.
+their arrangement. It is also in **Settings › Windows**.
 
 A window that leaves the tiling because macOS **minimizes** it, puts it in **native fullscreen** or **hides
 its app** remembers its place (container, position, size and the neighbor that kept its space) and gets it
@@ -591,7 +585,7 @@ the drop of **`liquid`** flows to the new workspace with a trail behind it that 
 name: the purpose of each workspace at a glance. The names and the symbols are two tables of the config that
 **only this theme uses**: the other themes ignore them, so they can stay in the file while another theme is in use.
 A workspace without a symbol (or with a name that isn't an SF Symbol) shows its own name, and one without a label
-shows its name in the pill. Settings › Themes › Indicator edits them, with a preview of each symbol, when the theme
+shows its name in the pill. Settings › Appearance edits them, with a preview of each symbol, when the theme
 is `labels`.
 
 ```toml
@@ -615,62 +609,13 @@ The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` ke
 still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,
 the theme is treated as `'chips'` and the key is ignored. Picking a theme in Settings removes both.
 
-**`[theme] palette`**: the colors of the item **and** of the borders, from a palette of the Hyprland world:
-`'catppuccin'`, `'tokyo-night'`, `'gruvbox'`, `'nord'`, `'rose-pine'`, `'dracula'`, `'everforest'`, `'kanagawa'`,
-`'oxocarbon'`, `'ayu'`, `'one-dark'`, `'mono'` (black, white and grays), `'material'` or `'flexoki'`. Each one has
-a light and a dark variant, and the one of the appearance of the system applies (it changes with it). A palette
-only gives the colors you left at their default: the ones of `[menu-bar.colors]` that are `'auto'`, and the
-three colors of `[borders]`; a color you wrote there wins. `'one-dark'` is the default; `'system'` is no palette. The
-**Themes** tab of Settings picks it.
-
-```toml
-[theme]
-    palette = 'one-dark'     # system | catppuccin | tokyo-night | gruvbox | nord | rose-pine | dracula | everforest
-                             # | kanagawa | oxocarbon | ayu | one-dark | mono | material | flexoki
-    seed = '#6750A4'         # only for 'material': '#RRGGBB' or 'system-accent'
-```
-
-**`'material'`** is Material You: its colors are made from a single color, **`seed`**, the way matugen makes
-them from a wallpaper. They keep the hue of the seed, and each one has the lightness that Material gives to its
-role (the focused workspace and the active border, the accent and the floating border, the grays). The default
-seed gives the colors of the Material 3 baseline, and `seed = 'system-accent'` makes the palette from the accent
-color of macOS. It is an approximation of Material in CIELAB: the colors are close to the ones of matugen, not
-equal. The other palettes ignore `seed`.
-
-**`seed = 'wallpaper'`** makes it from the main color of the wallpaper of the main screen, like matugen: the hue
-that covers the most of the image, weighted by how colorful it is. It is read when the config loads and every time
-the wallpaper changes: Inlay watches the store of the wallpapers of macOS, with no timer, and reads a thumbnail of
-64×64 points (a few milliseconds). A wallpaper that isn't an image (the Aerial videos) gives the default seed.
-
-**Themes: `inlay theme set <palette>`** switches the palette from the terminal (`inlay theme list` lists them, and
-the one in use). **Colors set by hand win** over the palette: `inlay theme set <palette>` keeps them and says which
-ones; `--reset-colors` removes them, so that the palette gives every color.
-
-**Settings › Themes** is where the look is decided, in one place. On top, always: the live preview, a small desktop
-with the menu bar item and three windows with their borders, and over it a chip that says where the colors come
-from, green with the name of the palette (every color comes from it), orange *Custom* (some colors are your own,
-the rest come from the palette, and *Reset to Theme* gives them all back to it) or gray *No theme*. A *Dark* /
-*Light* switch shows the other variant of the palettes, without changing the appearance of the system. Below it,
-three parts, one at a time:
-
-- **Palette**: *Made for You* (System, Material · Wallpaper, Material · Color, with the seed when it is a color) and
-  the other palettes, each one as a miniature with its menu bar item and two windows with their borders. The mouse
-  over a palette shows it in the preview, without writing anything; a click uses it. While some colors are your
-  own no palette is selected: the one that gives the rest is drawn dashed, as the *base*, and picking a palette
-  asks first, since it removes your colors.
-- **Indicator**: the nine shapes of the menu bar item, the names and symbols of the `labels` theme when it is the
-  one in use, and the options (*Dim empty workspaces*, *Show the binding mode*, *Group by monitor*).
-- **Colors**: every color that a palette gives, the ones of the indicator (active, inactive and empty workspaces,
-  binding mode) and the ones of the borders (active, inactive, floating). Each one starts as the one of the theme
-  (a *Theme* badge); changing it makes it yours (*Custom*), and *Use Theme* gives it back.
-
-The Borders page keeps the rest of its options, and General the switch of the menu bar item; the colors are only
-in Themes.
-
-<p align="center"><img src="docs/images/menu-bar-palettes.png" alt="Real render of the pills theme in the fourteen palettes, the dark variant on a dark menu bar and the light one on a light menu bar: Catppuccin with a mauve focused pill, Tokyo Night blue, Gruvbox yellow, Nord frost blue, Rosé Pine rose, Dracula purple, Everforest green, Kanagawa blue, Oxocarbon magenta, Ayu yellow and orange, One Dark blue, Mono white and black, Material You lavender and purple, Flexoki orange; and Material You with seed '#B5651D', in peach and brown" width="880"></p>
+**Colors**: there are no palettes. Every color is set on its own: the ones of the item in `[menu-bar.colors]`
+(below) and the ones of the borders in `[borders]` (active, inactive and floating). **Settings › Appearance** has
+them all in one list, under the style of the indicator and its preview over a dark and a light menu bar.
 
 **`dim-empty-workspaces`, `show-mode`**: what the item shows besides the names. With
-`enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI.
+`enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI; open Inlay
+again from Applications to get to Settings. Only the file sets `enabled`.
 
 ```toml
 [menu-bar]
@@ -708,7 +653,7 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 **The item and its menu**
 
-<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a click on the item opens, from top to bottom: Workspace 2 with its windows (Editor checked, Terminal), by the name of their app; Float Focused Window; then Reload Config, Open inlay.toml, Pause Inlay and Settings, the version ('Inlay 0.1.0') and Quit Inlay" width="720"></p>
+<p align="center"><img src="docs/images/menu.png" alt="Illustration of the menu that a click on the item opens, from top to bottom: 'Workspace 2 · Zed' and 'Config reloaded 3 sec. ago', both dimmed; Window, with a submenu; Reload Config, Open inlay.toml and Settings; Pause Inlay and Quit Inlay" width="720"></p>
 
 
 - A **click** on the item (the left button) opens the menu: the windows of the focused workspace, the layout of
@@ -717,21 +662,19 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   The button never gets to see the mouse (a transparent view on top of it takes it), and the menu pops up
   below the item without highlighting it: no rounded background behind the item. A ⌘-drag still moves the
   item along the bar.
-- The menu is **one card**, short on purpose, in the material of the menus of macOS: it follows light and dark
-  mode by itself. At the top, *Inlay* and its state (*Tiling on*, *Paused* or *No permission*); in a binding
-  mode other than `main`, the mode and the key that leaves it (*resize · esc*) take
-  the place of the state. Then **the windows of the focused workspace**, by the name of their app and without
-  icons, with a dot in the focused color of the palette on the focused one. They are only shown: a click on them
-  does nothing. Then **the focused window**: a selector *Tiling · Floating · Fullscreen*. It runs the commands of
-  the key bindings (`fullscreen` toggles, like `cmd-alt-ctrl-enter`), once the menu is closed; *Fullscreen* tiles
-  a floating window first, so that a window alone in its workspace stays without gaps nor border with
-  `gaps.smart`, like with the key binding. Then a row of four buttons for what concerns Inlay itself (*Reload*,
-  *Config* that opens inlay.toml, *Pause/Resume* and *Settings*), the version (a click copies it, with the
-  commit) and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-comma`) and the binding
-  modes are done with the key bindings. The theme and
-  the palette are in the **Themes** page of Settings. **The menu does not show the key bindings of your
-  config**. Its own shortcuts (⌘R, ⌘E, ⌘, and ⌘Q) only exist while it is open. When the last load of the config
-  had errors or warnings, a block at the top says so, shows the first ones, and has *Config* and *Details*.
+- The menu has **native items**, like the menus of every macOS app. At the top, dimmed because they are only
+  information: the focused workspace and the app of the focused window (*Workspace 2 · Zed*), the binding mode
+  and the key that leaves it when it isn't `main`, and when the config was reloaded last. When the last load had
+  errors or warnings, an item says so (a click shows them all) and the first ones follow, indented. Then
+  **Window ▸**, a submenu with the app of the focused window and *Tiling*, *Floating* and *Fullscreen*, the one in
+  use checked (disabled without a focused window). It runs the commands of the key bindings (`fullscreen`
+  toggles, like `cmd-alt-ctrl-enter`), once the menu is closed; *Fullscreen* tiles a floating window first, so
+  that a window alone in its workspace stays without gaps nor border with `gaps.smart`, like with the key binding.
+  Then *Reload Config* (⌘R), *Open inlay.toml…* and *Settings…* (⌘,), and last *Pause Inlay* (⌘E) and *Quit
+  Inlay* (⌘Q). Paused, the first item says so; without the Accessibility permission the menu only has the item
+  that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-comma`) and
+  the binding modes are done with the key bindings. **The menu does not show the key bindings of your config**:
+  its own shortcuts only exist while it is open.
 - The shipped config defines **7 persistent workspaces** (1–7), which are the ones the item always shows.
   7 is the empty one: no rule sends an app to it, so there is (almost) always a free workspace, on the main
   display (`cmd-alt-ctrl-7`, and `cmd-alt-shift-7` to move a window there). Any
@@ -747,64 +690,55 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 ### The Settings window
 
-A sidebar, like the one of System Settings, with eight pages: **General** and **Themes**; *Windows*: **Tiling**,
-**Gaps**, **Borders** and **Animations**; *Workflow*: **Workspaces** and **Shortcuts**.
+Five tabs in the toolbar, like the settings of every macOS app:
 
-- **Search**: the field at the top of the sidebar finds a setting by its title, by its key (`corner-radius`) or by
-  its page. A click on a result opens its page and highlights the row for a moment.
-- **The keys of the config**: a row shows the key it writes while the mouse is over it, or while ⌥ is held,
-  over the row next to its control: nothing in the row moves. A click on the key copies its line (`width = 4`).
-  *Show the config keys* (General, `[settings] show-keys`) shows them in every row all the time.
-- **One height for every page**: the window doesn't change its size from page to page or between the parts of
-  Themes; a taller page scrolls. The palettes show two rows at a time, and scroll inside of their section.
-- **Undo**: the bottom of the sidebar shows the last change written (`[borders] width: 4 → 6`), with *Undo* and
-  *Redo*, also ⌘Z and ⇧⌘Z (not while a text field is being edited, which has its own). Undoing writes back the
-  text the file had, comments included; if the file changed since, by hand or by another program, nothing is
-  undone and the window says why.
-- **The sliders** have no tick marks: a small mark under the track tells the default, and the field next to them
-  takes an exact value, with arrows for a step up or down.
-- **Export complete config** (General › Configuration) saves a copy of your config, with your comments, plus every
-  key that it leaves out with the value that applies (from the window and from the shipped config): a config with
-  nothing implicit. Your file isn't touched. The key bindings and the window rules aren't added: they are yours.
-- **General** also has the notice after a reload (`[notifications] on-reload`) and the switch of the menu bar item
-  (`[menu-bar] enabled`), which had a tab of its own. **Tiling** has the split ratio (`[tiling] split-ratio`).
-- **Workspaces**: a row per workspace, in the order of their names (making one persistent doesn't move it), with
-  the apps that the `on-window-detected` rules send to it (read only: the rules are edited in the file), the key
-  bindings that go to it and that move a window to it, and a switch that adds it to `persistent-workspaces` or
-  removes it. Below, the apps that a rule makes floating.
-- **Shortcuts**: the key bindings of the config, mode by mode, in the order of the file, with the comment written
-  after each one and a filter. Read only.
-- **Mode colors** (Borders): a mode without a color shows the active color it uses, striped, and *Set Color…*; one
-  with a color has its picker and *Remove*.
+- **General**: open at login, the config file (its path, *Show in Finder*, *Open*, the status of the last load and
+  *Reload Now*, *Export complete config*) and the Accessibility permission.
+- **Appearance**: the style of the workspace indicator, with a preview over a dark and a light menu bar, its
+  options (*Dim empty workspaces*, *Show the binding mode*, *Group by monitor*) and, with `labels`, the names and
+  symbols; the colors of the indicator (active, inactive and empty workspaces, binding mode); and the borders:
+  width, corners, glow, a single window, their three colors and the colors of the binding modes.
+- **Windows**: tiling (placement, window to split, split ratio, the windows already open, minimum size), gaps and
+  animations.
+- **Keyboard**: the workspaces, in the order of their names, with the apps that the `on-window-detected` rules
+  send to each one (read only: the rules are edited in the file), the key bindings that go to it and that move a
+  window to it, and a switch that adds it to `persistent-workspaces` or removes it; the apps that a rule makes
+  floating; and the key bindings of the config, mode by mode, with the comment written after each one and a
+  filter (read only).
+- **Changes**: what each reload changed since Inlay started (see [Configuration](#configuration)), and *Undo* and
+  *Redo* of the last change of the window, also ⌘Z and ⇧⌘Z (not while a text field is being edited, which has its
+  own). Undoing writes back the text the file had, comments included; if the file changed since, by hand or by
+  another program, nothing is undone and the window says why.
+
+Every tab has the same height: the window doesn't change its size from tab to tab, and a taller tab scrolls. A row
+shows the key it writes while the mouse is over it, or while ⌥ is held, over the row next to its control: nothing
+in the row moves, and a click on the key copies its line (`width = 4`). The sliders have no tick marks: a small
+mark under the track tells the default, and the field next to them takes an exact value. *Export complete config*
+saves a copy of your config, with your comments, plus every key that it leaves out with the value that applies;
+your file isn't touched.
 
 These are the pages with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login (start-at-login); Configuration, with the path of the file, Show in Finder and Open, Reload on save (auto-reload-config) and the status of the last load; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-themes.png"><img src="docs/images/settings-themes.png" alt="Real render of the Themes tab of Settings: the live preview of the menu bar item and of three windows with their borders, next to a card that says which theme gives the colors; a segmented control with Palette, Indicator and Colors; and the Palette part: Made for You (System, Material · Wallpaper, Material · Color) and the other thirteen palettes in a compact grid of six columns" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-tiling.png"><img src="docs/images/settings-tiling.png" alt="Real render of the Tiling tab of Settings: New Windows, with Placement (Dwindle or After Focused) and Window to split (Focused or Cursor); and Arrangement, with Windows already open (Grid, Row or Dwindle) and a Minimum window size slider at 100 pt" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login; Configuration, with the path of the file, Show in Finder and Open, the status of the last load with Reload Now, and Export complete config; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-appearance.png"><img src="docs/images/settings-appearance.png" alt="Real render of the Appearance tab of Settings: the style of the indicator ('liquid · default') with its preview over a dark and a light menu bar and its three options; the colors of the indicator, all 'auto'; the borders, with their switches and sliders; their three colors; and the colors of the resize and service modes" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-windows.png"><img src="docs/images/settings-windows.png" alt="Real render of the Windows tab of Settings: New Windows (placement, window to split, split ratio), Arrangement (windows already open, minimum window size), the inner and outer gaps at 8 pt, smart gaps, and the animations" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Themes</sub></td><td align="center"><sub>Tiling</sub></td></tr>
+<tr><td align="center"><sub>General</sub></td><td align="center"><sub>Appearance</sub></td><td align="center"><sub>Windows</sub></td></tr>
 <tr>
-<td valign="top"><a href="docs/images/settings-gaps.png"><img src="docs/images/settings-gaps.png" alt="Real render of the Gaps tab of Settings: a preview of three tiled windows with the gaps at their actual size and the borders of the Borders tab, then the sliders of the inner gaps (horizontal and vertical) and of the outer gaps (top, bottom, left and right), all at 8 pt" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-animations.png"><img src="docs/images/settings-animations.png" alt="Real render of the Animations tab of Settings: Windows, with Animate the windows ([animations] enabled) and a Duration slider at 180 ms; and Workspaces, with Switching workspaces (Horizontal, Vertical, Auto or Off: [animations] workspace-switch)" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-borders.png"><img src="docs/images/settings-borders.png" alt="Real render of the Borders page of Settings: a preview of an active, an inactive and a floating window with their borders, the Show borders switch, the Width slider with its field, the Square corners switch, the Corner radius slider, the Glow switch and the Glow radius slider, Hide with a single window, a note that the colors are in Themes, and a row per binding mode (resize and service) that uses the active color, with Set Color…" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-keyboard.png"><img src="docs/images/settings-keyboard.png" alt="Real render of the Keyboard tab of Settings: a row per workspace from 1 to 7 with the apps that the rules send to it, its two key bindings and a switch for persistent-workspaces, the floating apps, and the key bindings of the main mode with their comments" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-changes.png"><img src="docs/images/settings-changes.png" alt="Real render of the Changes tab of Settings: the last change with Undo and Redo, and the list of the changes since Inlay started, empty" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-window-appearance.png"><img src="docs/images/settings-window-appearance.png" alt="Real render of the whole Settings window on the Appearance tab, as tall as every tab" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>Gaps</sub></td><td align="center"><sub>Animations</sub></td><td align="center"><sub>Borders</sub></td></tr>
-<tr>
-<td valign="top"><a href="docs/images/settings-workspaces.png"><img src="docs/images/settings-workspaces.png" alt="Real render of the Workspaces page of Settings: a row per workspace from 1 to 7 with the apps that the rules send to it, its two key bindings and a switch for persistent-workspaces, then the floating apps" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-shortcuts.png"><img src="docs/images/settings-shortcuts.png" alt="Real render of the Shortcuts page of Settings: a selector of the binding modes (main, service, resize), a filter, and the key bindings of main with their commands and comments" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-window-themes.png"><img src="docs/images/settings-window-themes.png" alt="Real render of the whole Settings window on the Themes page: the sidebar with the search field and the eight pages, and the palettes as miniatures" width="280"></a></td>
-</tr>
-<tr><td align="center"><sub>Workspaces</sub></td><td align="center"><sub>Shortcuts</sub></td><td align="center"><sub>The window</sub></td></tr>
+<tr><td align="center"><sub>Keyboard</sub></td><td align="center"><sub>Changes</sub></td><td align="center"><sub>The window</sub></td></tr>
 </table>
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): the content
-of each page, and the last one the whole window with its sidebar, without the title bar.</sub>
+of each tab, and the last one the whole window, without the title bar and the toolbar.</sub>
 
 The window is never taller than the usable part of the screen and never leaves it. A page that does not fit
-(on the screen of a small laptop, Borders is taller than what the menu bar and the Dock leave) scrolls, so
+(on the screen of a small laptop, Appearance is taller than what the menu bar and the Dock leave) scrolls, so
 every control can be reached. `Inlay --debug-settings <config> [--inspect] [--screen-height <points>]` opens
 the window alone, without the window manager, against a config file of your choice.
 
@@ -814,8 +748,7 @@ How the window and the file follow each other is in [Configuration](#configurati
 
 Inlay draws a colored border around each managed window (tiled or floating) of the visible workspaces. The
 color comes from the state the manager already knows, with no focus heuristics. It is configured in the
-`[borders]` table (`inlay config --explain borders` documents it), or in the **Borders** tab of Settings (its three
-colors, in **Themes › Colors**).
+`[borders]` table (`inlay config --explain borders` documents it), or in the **Appearance** tab of Settings.
 
 <p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (active-color) and the others with a gray one (inactive-color); a focused floating window with a purple border (floating-color); the focused window with a green border in the resize mode, from [borders.mode-colors]; only the focused window with a border, with inactive-color = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
 
@@ -894,7 +827,7 @@ the window, which macOS draws, stays round.
 **`hide-when-single`**: no border around the tiling window of a workspace that has only one, fullscreen or not:
 there is no other window to tell it from. The border comes back as soon as a second tiling window joins it.
 Floating windows keep theirs. It is for a single window that keeps the outer gaps: [smart gaps](#gaps) already
-remove the border along with the gaps. It is also in **Settings › Borders**.
+remove the border along with the gaps. It is also in **Settings › Appearance**.
 
 ```toml
 [borders]

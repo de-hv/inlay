@@ -141,12 +141,5 @@ extension InlayTests {
             // The file itself isn't touched
             assertEquals(text, "# My config\n[borders]\n    width = 6 # thin\n")
         }
-
-        @Test func testSearch() {
-            assertEquals(SettingsSearch.results("glow").map(\.title), [Strings.Settings.glow, Strings.Settings.glowRadius])
-            assertEquals(SettingsSearch.results("corner-radius").map(\.page), [.borders])
-            assertEquals(SettingsSearch.results("labels").first?.themesSection, .indicator)
-            assertEquals(SettingsSearch.results(""), [])
-        }
     }
 }

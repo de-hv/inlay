@@ -21,42 +21,16 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now.addingTimeInterval(-120), url: url, errorCount: 0, warningCount: 0, isApplied: true)
     let model = SettingsModel { .success(.init(url: url, text: text, exists: true)) }
     model.refresh()
-    // The content of every page, the Themes page once per part of it
-    let tabs: [(String, AnyView, ThemesSection)] = [
-        ("general", AnyView(GeneralSettingsView(model: model)), .palette),
-        ("themes", AnyView(ThemesSettingsView(model: model)), .palette),
-        ("themes-indicator", AnyView(ThemesSettingsView(model: model)), .indicator),
-        ("themes-colors", AnyView(ThemesSettingsView(model: model)), .colors),
-        ("tiling", AnyView(TilingSettingsView(model: model)), .palette),
-        ("gaps", AnyView(GapsSettingsView(model: model)), .palette),
-        ("animations", AnyView(AnimationsSettingsView(model: model)), .palette),
-        ("borders", AnyView(BordersSettingsView(model: model)), .palette),
-        ("workspaces", AnyView(WorkspacesSettingsView(model: model)), .palette),
-        ("shortcuts", AnyView(ShortcutsSettingsView(model: model)), .palette),
-    ]
-    for (name, view, section) in tabs {
-        model.themesSection = section
-        let hosting = NSHostingView(rootView: view)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentView = hosting
-        window.setContentSize(hosting.fittingSize)
-        hosting.layoutSubtreeIfNeeded()
-        RunLoop.current.run(until: .now.addingTimeInterval(0.2))
-        try write(hosting, to: directory.appending(path: "settings-\(name).png"))
+    // The content of every page
+    for page in SettingsPageID.allCases {
+        try render(SettingsWindowController.view(of: page, model), to: directory.appending(path: "settings-\(page.rawValue).png"))
     }
     // The keys over the rows, as while ⌥ is held: nothing in the rows moves
     model.isOptionHeld = true
-    let keys = NSHostingView(rootView: BordersSettingsView(model: model))
-    let keysWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
-    keysWindow.contentView = keys
-    keysWindow.setContentSize(keys.fittingSize)
-    keys.layoutSubtreeIfNeeded()
-    RunLoop.current.run(until: .now.addingTimeInterval(0.2))
-    try write(keys, to: directory.appending(path: "settings-borders-keys.png"))
+    try render(AppearanceSettingsView(model: model), to: directory.appending(path: "settings-appearance-keys.png"))
     model.isOptionHeld = false
 
-    // The whole window, with its sidebar, on every page: as tall as the page, whatever the screen
-    model.themesSection = .palette
+    // The whole window, with its toolbar, on every page
     let controller = SettingsWindowController(model: model)
     let window = controller.makeWindow(visibleFrame: { _ in CGRect(x: 0, y: 0, width: 4000, height: 4000) })
     for page in SettingsPageID.allCases {
@@ -66,6 +40,18 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
         content.layoutSubtreeIfNeeded()
         try write(content, to: directory.appending(path: "settings-window-\(page.rawValue).png"))
     }
+}
+
+/// A page as tall as its rows
+@MainActor
+private func render(_ view: some View, to url: URL) throws {
+    let hosting = NSHostingView(rootView: view)
+    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
+    window.contentView = hosting
+    window.setContentSize(hosting.fittingSize)
+    hosting.layoutSubtreeIfNeeded()
+    RunLoop.current.run(until: .now.addingTimeInterval(0.2))
+    try write(hosting, to: url)
 }
 
 @MainActor

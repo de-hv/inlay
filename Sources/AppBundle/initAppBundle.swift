@@ -17,7 +17,7 @@ import ServiceManagement
         }
 
         await bootstrapConfig_nonCancellable()
-        _ = await reloadConfig_nonCancellable(notice: .never)
+        _ = await reloadConfig_nonCancellable()
 
         startUnixSocketServer()
         GlobalObserver.initObserver()
@@ -40,7 +40,7 @@ import ServiceManagement
 /// The built-in config is loaded first, so that Inlay has key bindings and a config of its own to fall back to
 /// when the config of the user can't be loaded
 @MainActor private func bootstrapConfig_nonCancellable() async {
-    let result = await reloadConfig_nonCancellable(forceConfigUrl: defaultConfigUrl, notice: .never)
+    let result = await reloadConfig_nonCancellable(forceConfigUrl: defaultConfigUrl)
     let msg = """
         Can't load default config. Your installation is probably corrupted.
         Please don't modify \(defaultConfigUrl.description.singleQuoted)

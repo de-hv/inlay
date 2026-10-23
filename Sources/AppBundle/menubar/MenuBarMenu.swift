@@ -1,15 +1,14 @@
 import AppKit
 import Common
-import SwiftUI
 
-/// The menu of the menu bar item: one card, rebuilt from the model every time it opens. See: MenuBarCardView
+/// The menu of the menu bar item: native items, rebuilt from the model every time it opens. See: MenuBarCard
 ///
-/// It is still an NSMenu: macOS closes it, gives it the material of the menus, in the appearance of the system, and
-/// pops it up below the item. Its shortcuts are hidden items, so they only exist while the menu is open
+/// What Inlay is doing, the layout of the focused window in a submenu, the config, and Inlay itself. Switching
+/// workspaces, focusing or moving windows and the binding modes are for the key bindings
 @MainActor
 final class MenuBarMenu: NSObject, NSMenuDelegate {
     let menu = NSMenu()
-    /// What the card shows, as of the last time the menu opened
+    /// What the menu shows, as of the last time it opened
     private(set) var card: MenuBarCard?
 
     override init() {
@@ -25,36 +24,86 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
         let card = MenuBarCard.fromModel(state)
         self.card = card
         menu.removeAllItems()
-        let view = NSHostingView(rootView: MenuBarCardView(card: card) { [weak self, weak menu] action in
-            menu?.cancelTracking()
-            // After the menu is gone: Settings, for one, opens a window
-            Task.startUnstructured { @MainActor in self?.perform(action) }
-        })
-        view.frame.size = view.fittingSize
-        let item = NSMenuItem(title: inlayAppName, action: nil, keyEquivalent: "")
-        item.view = view
-        item.setAccessibilityLabel(inlayAppName)
-        menu.addItem(item)
-        for shortcut in card.shortcuts {
-            let item = NSMenuItem(title: shortcut.action.title(card), action: #selector(runShortcut(_:)), keyEquivalent: shortcut.key)
-            item.target = self
-            item.representedObject = shortcut.action
-            item.isEnabled = card.isEnabled(shortcut.action)
-            item.isHidden = true
-            item.allowsKeyEquivalentWhenHidden = true
-            menu.addItem(item)
-        }
+        for item in items(card) { menu.addItem(item) }
     }
 
-    @objc private func runShortcut(_ sender: NSMenuItem) {
+    private func items(_ card: MenuBarCard) -> [NSMenuItem] {
+        var items: [NSMenuItem] = []
+        // What Inlay is doing: information, not actions
+        switch card.status {
+            case .running:
+                items.append(info(Strings.Menu.workspaceAndApp(card.workspace, card.focusedApp)))
+                if let mode = card.mode { items.append(info(Strings.Menu.modeHelp(mode, card.modeExitKey))) }
+            case .paused:
+                items.append(info(Strings.Menu.paused))
+            case .needsAccessibility:
+                items.append(item(.promptForAccessibility, card))
+        }
+        if let lastReload = card.lastReload {
+            items.append(info(Strings.Menu.reloaded(RelativeDateTimeFormatter().localizedString(for: lastReload, relativeTo: .now))))
+        }
+        if card.configProblems != nil {
+            items.append(item(.showConfigProblems, card))
+            for line in card.problemLines {
+                let problem = info(line)
+                problem.indentationLevel = 1
+                items.append(problem)
+            }
+        }
+        if card.status == .needsAccessibility {
+            return items + [.separator(), item(.quit, card, key: "q")]
+        }
+        items.append(.separator())
+        items.append(windowItem(card))
+        items.append(.separator())
+        items.append(item(.reloadConfig, card, key: "r"))
+        items.append(item(.openConfig, card))
+        items.append(item(.openSettings, card, key: ","))
+        items.append(.separator())
+        items.append(item(.togglePause, card, key: "e"))
+        items.append(item(.quit, card, key: "q"))
+        return items
+    }
+
+    /// "Window ▸": the focused window, tiling, floating or fullscreen. Disabled without a focused window
+    private func windowItem(_ card: MenuBarCard) -> NSMenuItem {
+        let submenu = NSMenu(title: Strings.Menu.window)
+        submenu.autoenablesItems = false
+        submenu.addItem(info(card.focusedApp ?? Strings.Menu.noFocusedWindow))
+        submenu.addItem(.separator())
+        for layout in MenuBarCard.WindowLayout.allCases {
+            let item = item(.setLayout(layout), card, title: Strings.Menu.layoutShort(layout))
+            item.state = card.windowLayout == layout ? .on : .off
+            submenu.addItem(item)
+        }
+        let item = NSMenuItem(title: Strings.Menu.window, action: nil, keyEquivalent: "")
+        item.submenu = submenu
+        item.isEnabled = card.windowLayout != nil
+        return item
+    }
+
+    private func item(_ action: MenuBarCardAction, _ card: MenuBarCard, title: String? = nil, key: String = "") -> NSMenuItem {
+        let item = NSMenuItem(title: title ?? action.title(card), action: #selector(run(_:)), keyEquivalent: key)
+        item.target = self
+        item.representedObject = action
+        item.isEnabled = card.isEnabled(action)
+        return item
+    }
+
+    private func info(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        return item
+    }
+
+    @objc private func run(_ sender: NSMenuItem) {
         guard let action = sender.representedObject as? MenuBarCardAction else { return }
-        perform(action)
+        // After the menu is gone: Settings, for one, opens a window
+        Task.startUnstructured { @MainActor in self.perform(action) }
     }
 
     func perform(_ action: MenuBarCardAction) {
         switch action {
-            case .toggleFloating:
-                runMenuBarCommand("layout floating tiling")
             case .setLayout(let layout):
                 if let current = card?.windowLayout {
                     runMenuBarCommands(Self.layoutCommands(from: current, to: layout))
@@ -71,8 +120,6 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                 SettingsWindowController.shared.show()
             case .promptForAccessibility:
                 ServerState.shared.axPermissionStatus = .waitingWithPrompt
-            case .copyVersion:
-                Strings.Menu.versionToCopy.copyToClipboard()
             case .quit:
                 Task.startUnstructured { @MainActor in
                     terminationHandler?.beforeTermination()
@@ -95,11 +142,10 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
     }
 }
 
-// MARK: - The card
+// MARK: - What the menu shows
 
-/// What the card of the menu does. The key bindings of the config aren't shown: the menu doesn't repeat them
+/// What the items of the menu do. The key bindings of the config aren't shown: the menu doesn't repeat them
 enum MenuBarCardAction: Hashable, Sendable {
-    case toggleFloating
     /// The focused window becomes tiling, floating or fullscreen
     case setLayout(MenuBarCard.WindowLayout)
     case reloadConfig
@@ -108,13 +154,11 @@ enum MenuBarCardAction: Hashable, Sendable {
     case togglePause
     case openSettings
     case promptForAccessibility
-    case copyVersion
     case quit
 
-    /// The whole name: the tooltip, what VoiceOver reads, and the title of the hidden item of a shortcut
+    /// The title of the item, and what VoiceOver reads
     func title(_ card: MenuBarCard) -> String {
         switch self {
-            case .toggleFloating: Strings.Menu.floating
             case .setLayout(let layout): Strings.Menu.layout(layout)
             case .reloadConfig: Strings.Menu.reloadConfig
             case .showConfigProblems: card.configProblems ?? ""
@@ -122,36 +166,21 @@ enum MenuBarCardAction: Hashable, Sendable {
             case .togglePause: card.status == .paused ? Strings.Menu.resume : Strings.Menu.pause
             case .openSettings: Strings.Menu.settings
             case .promptForAccessibility: Strings.Menu.needsAccessibility
-            case .copyVersion: Strings.Menu.version
             case .quit: Strings.Menu.quit
         }
     }
 }
 
-/// What the card of the menu shows. Derived from the model when the menu opens
+/// What the menu shows. Derived from the model when the menu opens
 struct MenuBarCard: Equatable {
-    struct Window: Equatable {
-        var app: String
-        var isFocused: Bool
-    }
-
     enum WindowLayout: Hashable, Sendable, CaseIterable {
         case tiling, floating, fullscreen
-    }
-
-    struct Shortcut: Equatable {
-        var action: MenuBarCardAction
-        var key: String
     }
 
     var status: MenuBarSnapshot.Status
     /// The errors and the warnings of the last load of the config. nil if it had none
     var configProblems: String? = nil
     var workspace: String
-    /// The windows of the focused workspace, by the name of their app. Only shown: a window is focused with the keys
-    var windows: [Window] = []
-    /// nil without a focused window
-    var isFloating: Bool? = nil
     /// The focused window: the name of its app, and how it is laid out. nil without one
     var focusedApp: String? = nil
     var windowLayout: WindowLayout? = nil
@@ -160,24 +189,13 @@ struct MenuBarCard: Equatable {
     var modeExitKey: String? = nil
     /// The first errors and warnings of the last load of the config, one line each
     var problemLines: [String] = []
-
-    /// The marker of the focused window, and the switch when it is on: the focused color of the palette
-    var accent: Rgba
-
-    /// The row of buttons. Without the permission there is nothing to do but to grant it
-    var buttons: [MenuBarCardAction] {
-        status == .needsAccessibility ? [] : [.reloadConfig, .openConfig, .togglePause, .openSettings]
-    }
-
-    var shortcuts: [Shortcut] {
-        let buttons: [Shortcut] = self.buttons.isEmpty ? [] : [.init(action: .reloadConfig, key: "r"), .init(action: .togglePause, key: "e"), .init(action: .openSettings, key: ",")]
-        return buttons + [.init(action: .quit, key: "q")]
-    }
+    /// When the config was loaded last: a reload from the menu answers with it, now that there is no notice
+    var lastReload: Date? = nil
 
     func isEnabled(_ action: MenuBarCardAction) -> Bool {
         switch action {
             case .reloadConfig: status != .paused
-            case .toggleFloating, .setLayout: isFloating != nil
+            case .setLayout: windowLayout != nil
             default: true
         }
     }
@@ -185,16 +203,12 @@ struct MenuBarCard: Equatable {
     @MainActor
     static func fromModel(_ state: MenuBarState) -> MenuBarCard {
         let snapshot = state.snapshot
-        let colors = state.config.colors.applying(state.config.palette, seed: state.config.paletteSeed, isDark: isSystemAppearanceDark)
-        let accent = (colors.focused == .auto ? colors.accent : colors.focused).resolve(auto: .systemAccent, systemAccent: .systemAccent)
-        var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace, accent: accent)
-        guard snapshot.status == .running else { return card }
+        var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace)
         let load = ServerState.shared.lastConfigLoad
+        card.lastReload = load?.date
+        guard snapshot.status == .running else { return card }
         card.configProblems = Strings.Menu.configProblems(load)
         card.problemLines = (load?.problems ?? []).prefix(3).map { $0.split(separator: "\n").first.map(String.init) ?? $0 }
-        let focusedId = focus.windowOrNil?.windowId
-        card.windows = focus.workspace.allLeafWindowsRecursive.map { Window(app: $0.app.name ?? "?", isFocused: $0.windowId == focusedId) }
-        card.isFloating = snapshot.focusedWindow?.isFloating
         if let window = focus.windowOrNil, let focused = snapshot.focusedWindow {
             card.focusedApp = window.app.name ?? "?"
             card.windowLayout = focused.isFullscreen ? .fullscreen : focused.isFloating ? .floating : .tiling
@@ -241,7 +255,7 @@ func reloadConfigFromUi(warningsAsErrors: Bool) {
         guard let token: RunSessionGuard = .isServerEnabled else { return }
         try await runLightSession(.menuBarButton, token) {
             let args: ReloadConfigCmdArgs = ReloadConfigCmdArgs(rawArgs: []).copy(\.warningsAsErrors, warningsAsErrors)
-            _ = await reloadConfig_nonCancellable(args: args, notice: .always)
+            _ = await reloadConfig_nonCancellable(args: args)
         }
     }
 }

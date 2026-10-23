@@ -114,15 +114,37 @@ func prettyKeyNotation(_ binding: String) -> String {
     return modifiers + (keys[key] ?? key.uppercased())
 }
 
-/// The workspaces of the config: their apps, their key bindings, and the persistent ones. The apps are read only:
-/// the rules that send them are edited in the file
-struct WorkspacesSettingsView: View {
+// MARK: - Keyboard
+
+/// The workspaces and the key bindings of the config. Read only, but for the persistent workspaces: the rules and the
+/// bindings are edited in the file
+struct KeyboardSettingsView: View {
+    let model: SettingsModel
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
+            WorkspacesSections(model: model)
+            ShortcutsSections(model: model)
+            Section {
+                LabeledContent {
+                    Button(Strings.Settings.open) { openConfigInEditor() }
+                } label: {
+                    Text(Strings.Settings.editRules)
+                    Text(Strings.Settings.editRulesDetail)
+                }
+            }
+        }
+    }
+}
+
+/// The workspaces of the config: their apps, their key bindings, and the persistent ones
+private struct WorkspacesSections: View {
     let model: SettingsModel
 
     var body: some View {
         let summary = WorkspaceSummaries.make(root: model.rawRoot)
-        SettingsPage {
-            ErrorBanner(model: model)
+        Group {
             Section {
                 ForEach(summary.workspaces, id: \.name) { workspace in
                     row(workspace)
@@ -144,14 +166,6 @@ struct WorkspacesSettingsView: View {
                     Text(Strings.Settings.floatingApps)
                 } footer: {
                     footnote(Strings.Settings.floatingAppsFooter)
-                }
-            }
-            Section {
-                LabeledContent {
-                    Button(Strings.Settings.open) { openConfigInEditor() }
-                } label: {
-                    Text(Strings.Settings.editRules)
-                    Text(Strings.Settings.editRulesDetail)
                 }
             }
         }
@@ -191,7 +205,6 @@ struct WorkspacesSettingsView: View {
             }
         }
         .onHover { model.hover(key, $0) }
-        .settingsHighlight(model, workspace.name)
     }
 
     /// Adds the workspace to `persistent-workspaces`, in the order of the page, or removes it
@@ -263,8 +276,8 @@ enum ShortcutEntries {
     }
 }
 
-/// The key bindings of the config, mode by mode. Read only: they are edited in the file
-struct ShortcutsSettingsView: View {
+/// The key bindings of the config, mode by mode
+private struct ShortcutsSections: View {
     let model: SettingsModel
 
     var body: some View {
@@ -274,8 +287,7 @@ struct ShortcutsSettingsView: View {
         let entries = (mode?.entries ?? []).filter { entry in
             filter.isEmpty || ([entry.key, prettyKeyNotation(entry.key), entry.comment ?? ""] + entry.commands).contains { $0.lowercased().contains(filter) }
         }
-        SettingsPage {
-            ErrorBanner(model: model)
+        Group {
             Section {
                 HStack(spacing: 10) {
                     Picker("", selection: Binding(get: { mode?.mode ?? mainModeId }, set: { model.shortcutsMode = $0 })) {
@@ -315,13 +327,6 @@ struct ShortcutsSettingsView: View {
                     .font(.system(size: 11, design: .monospaced))
             } footer: {
                 footnote(Strings.Settings.shortcutsFooter)
-            }
-            Section {
-                LabeledContent {
-                    Button(Strings.Settings.open) { openConfigInEditor() }
-                } label: {
-                    Text(Strings.Settings.editShortcuts)
-                }
             }
         }
     }

@@ -22,7 +22,7 @@ struct SettingsKey: Hashable, Sendable {
 extension SettingsKey {
     // General
     static let startAtLogin = SettingsKey([], "start-at-login", default: .bool(false))
-    static let autoReloadConfig = SettingsKey([], "auto-reload-config", default: .bool(false))
+    static let autoReloadConfig = SettingsKey([], "auto-reload-config", default: .bool(true))
     static let newWindowPlacement = SettingsKey(["tiling"], "new-window-placement", default: .string(NewWindowPlacement.dwindle.rawValue))
     static let startupLayout = SettingsKey(["tiling"], "startup-layout", default: .string(StartupLayout.grid.rawValue))
     static let splitTarget = SettingsKey(["tiling"], "split-target", default: .string(SplitTarget.focused.rawValue))
@@ -30,17 +30,12 @@ extension SettingsKey {
     /// A float: the window shows it in percent
     static let splitRatio = SettingsKey(["tiling"], "split-ratio", default: .float(0.5))
     static let persistentWorkspaces = SettingsKey([], persistentWorkspacesKey, default: .strings([]))
-    static let notificationsOnReload = SettingsKey(["notifications"], "on-reload", default: .string(ReloadNoticeStyle.diff.rawValue))
     static let settingsShowKeys = SettingsKey(["settings"], "show-keys", default: .bool(false))
 
     // Animations. The defaults are the ones of AnimationsConfig
     static let animationsEnabled = SettingsKey(["animations"], "enabled", default: .bool(true))
     static let animationsDuration = SettingsKey(["animations"], "duration", default: .int(180))
     static let animationsWorkspaceSwitch = SettingsKey(["animations"], "workspace-switch", default: .string(WorkspaceSwitch.horizontal.rawValue))
-
-    // Theme
-    static let themePalette = SettingsKey(["theme"], "palette", default: .string(ThemePalette.oneDark.rawValue))
-    static let themeSeed = SettingsKey(["theme"], "seed", default: .string(MaterialPalette.baselineSeed.hex))
 
     // Menu bar
     static let menuBarEnabled = SettingsKey(["menu-bar"], "enabled", default: .bool(true))
@@ -90,9 +85,7 @@ extension SettingsKey {
         newWindowPlacement, splitRatio, startupLayout, splitTarget, minWindowSize,
         menuBarEnabled, menuBarTheme, menuBarDimEmpty, menuBarShowMode, menuBarPerMonitor,
         menuBarAccent, menuBarFocused, menuBarOccupied, menuBarEmpty,
-        themePalette, themeSeed,
         animationsEnabled, animationsDuration, animationsWorkspaceSwitch,
-        notificationsOnReload,
         bordersEnabled, bordersWidth, bordersCornerRadius, bordersSquareCorners, bordersActiveColor, bordersInactiveColor,
         bordersFloatingColor, bordersGlow, bordersGlowRadius, bordersHideWhenSingle,
         gapsInnerHorizontal, gapsInnerVertical, gapsOuterTop, gapsOuterBottom, gapsOuterLeft, gapsOuterRight, gapsSmart,

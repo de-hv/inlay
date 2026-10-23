@@ -3,25 +3,43 @@
 # This file is the config that Inlay ships with: './install.sh' copies it to ~/.config/inlay/inlay.toml when
 # you have no config yet, and Inlay falls back to the copy inside the app when it finds no config at all.
 # Edit your copy to your liking: Inlay reloads it when you save it (see 'auto-reload-config' below), and the
-# Settings window edits the same file.
+# Settings window edits the same file. Every key is here, with its default value when nothing else is said.
 #
 # Every key, with its possible values and its default:  inlay config --explain [<key>]
 # (the same text is in docs/config-reference.toml)
+#
+# The sections, in this order:
+#   GENERAL · CALLBACKS · WORKSPACES · GAPS · TILING · ANIMATIONS · MENU BAR · BORDERS · SETTINGS WINDOW ·
+#   PROGRAMS · KEY BINDINGS · WORKSPACES ASSIGNMENT · MONITORS
+# (TOML wants the keys that aren't in a [table] first: GENERAL, CALLBACKS and WORKSPACES come before the tables)
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    DEFAULTS
+#                                    GENERAL
 # └──────────────────────────────────────────────────────────────────────────────┘
 config-version = 2
-
-# Commands that run after Inlay starts
-after-startup-command = []
 
 # Start Inlay at login
 start-at-login = true
 
 # Reload the config when the config file is saved. It also keeps the Settings window, the menu bar item and
-# the borders in sync with what you write here by hand
+# the borders in sync with what you write here by hand. Only this file sets it
 auto-reload-config = true
+
+# Commands that run after Inlay starts
+after-startup-command = []
+
+# You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
+# Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
+automatically-unhide-macos-hidden-apps = false
+
+# The window under the mouse cursor gets the focus
+focus-follows-mouse.enabled = false
+
+# The keyboard layout that the names of the keys in the bindings refer to: qwerty|dvorak|colemak
+key-mapping.preset = 'qwerty'
+# Names of keys of your own, on top of the preset: the name to use in the bindings = the key it stands for.
+# For example: key-mapping.key-notation-to-key-code = { unicorn = 'q' }
+key-mapping.key-notation-to-key-code = {}
 
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
@@ -35,6 +53,9 @@ default-root-container-layout = 'tiles'
 #               tall monitor (anything higher than wide) gets vertical orientation
 default-root-container-orientation = 'horizontal'
 
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                    CALLBACKS
+# └──────────────────────────────────────────────────────────────────────────────┘
 # The mouse follows the focus when the focused monitor or the focused window changes
 # Drop them from your config, if you don't like this behavior
 # See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
@@ -42,9 +63,12 @@ default-root-container-orientation = 'horizontal'
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 on-focus-changed = ['move-mouse window-lazy-center']
 
-# You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
-# Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
-automatically-unhide-macos-hidden-apps = false
+# Commands that run every time the binding mode changes
+on-mode-changed = []
+
+# A program that Inlay runs every time the focused workspace changes: the program and its arguments.
+# For example: exec-on-workspace-change = ['/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces']
+exec-on-workspace-change = []
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    WORKSPACES
@@ -70,6 +94,9 @@ automatically-unhide-macos-hidden-apps = false
 # shortcut ever collides with them.
 persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                    GAPS
+# └──────────────────────────────────────────────────────────────────────────────┘
 # 8 points around the edges of the screen and 8 between two windows.
 # The window borders (see [borders] below) are drawn outside of the windows, in the gaps: keep the gaps at
 # least twice as big as borders.width, or the borders of two neighbor windows overlap. With the gaps of 8
@@ -102,10 +129,35 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     min-window-size = 100
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                    ANIMATIONS
+# └──────────────────────────────────────────────────────────────────────────────┘
+# The windows slide to their place when a window opens or closes, and when one is moved with swap or move.
+# See: inlay config --explain animations
+[animations]
+    enabled = true
+    # In milliseconds (0 ... 500). 0 = no animation
+    duration = 180
+    # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
+    workspace-switch = 'horizontal'
+    # The timing curve: ease-out | linear | ease | ease-in-out | snappy | overshot, or one of [animations.curves]
+    curve = 'ease-out'
+    # Each kind of animation can have its own curve and duration. Without them, the ones above
+    # open = { curve = 'overshot', duration = 220 }
+    # move = { curve = 'snappy' }
+    # fullscreen = { curve = 'ease-in-out', duration = 240 }
+    # workspace = { curve = 'snappy', duration = 160 }
+
+    # Curves of your own: the name = [x1, y1, x2, y2]
+    [animations.curves]
+        # bounce = [0.34, 1.56, 0.64, 1]
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    MENU BAR
 # └──────────────────────────────────────────────────────────────────────────────┘
 # The menu bar item. See: inlay config --explain menu-bar
 [menu-bar]
+    # Show the menu bar item. Only this file sets it: with 'false', open Inlay again from Applications to get
+    # to the Settings window
     enabled = true
     # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels
     theme = 'liquid'
@@ -114,12 +166,16 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     # The workspaces of each monitor together, and a hollow marker on the one another monitor shows
     per-monitor = false
 
-    # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto'
+    # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text, light or dark)
     [menu-bar.colors]
-        accent = 'auto'
+        # The focused workspace
         focused = 'auto'
+        # The workspaces with windows
         occupied = 'auto'
+        # The workspaces without windows
         empty = 'auto'
+        # The marker of the focused workspace while a binding mode is active. 'auto': the same as 'focused'
+        accent = 'auto'
 
     # The 'labels' theme only: the name of each workspace, shown in the focused one. The other themes ignore it
     [menu-bar.labels]
@@ -140,41 +196,6 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
         # 5 = 'sparkles'
         # 6 = 'square.grid.2x2'
         # 7 = 'circle.dashed'
-
-# The colors of the menu bar item and of the borders: a palette with a light and a dark variant.
-# system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest|kanagawa|oxocarbon|ayu|one-dark|mono|
-# material|flexoki. See: inlay config --explain theme
-[theme]
-    palette = 'one-dark'
-    # The color that 'material' (Material You) is made from: '#RRGGBB', 'system-accent' or 'wallpaper' (the main color
-    # of the wallpaper, like matugen)
-    seed = '#6750A4'
-
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                  ANIMATIONS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The windows slide to their place when a window opens or closes, and when one is moved with swap or move.
-# See: inlay config --explain animations
-[animations]
-    enabled = true
-    # In milliseconds (0 ... 500). 0 = no animation
-    duration = 180
-    # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
-    workspace-switch = 'horizontal'
-    # The timing curve: ease-out | linear | ease | ease-in-out | snappy | overshot, or one of [animations.curves].
-    # Each kind of animation can have its own: open, move, fullscreen and workspace (inlay config --explain animations)
-    curve = 'ease-out'
-    # open = { curve = 'overshot', duration = 220 }
-
-# A notice in the corner of the screen when the config is reloaded: 'diff' (with the keys that changed),
-# 'simple' or 'off'. See: inlay config --explain notifications
-[notifications]
-    on-reload = 'diff'
-
-# The Settings window: every row shows the key of the config it writes. Without it, a key shows while the mouse
-# is over its row, or while the option key is held
-[settings]
-    show-keys = false
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    BORDERS
@@ -203,6 +224,27 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     [borders.mode-colors]
         # resize = '#30D158'
         # service = '#FF453A'
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                    SETTINGS WINDOW
+# └──────────────────────────────────────────────────────────────────────────────┘
+# The Settings window. Only this file sets it
+[settings]
+    # Every row shows the key of the config it writes. Without it, a key shows while the mouse is over its row,
+    # or while the option key is held
+    show-keys = false
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+#                                    PROGRAMS
+# └──────────────────────────────────────────────────────────────────────────────┘
+# The environment of the programs that Inlay runs: exec-and-forget, exec-on-workspace-change
+[exec]
+    # The programs inherit the environment of Inlay
+    inherit-env-vars = true
+
+    # Variables that are set or replaced. ${NAME} is replaced by the value of the variable
+    [exec.env-vars]
+        PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    KEY BINDINGS

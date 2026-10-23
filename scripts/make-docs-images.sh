@@ -44,12 +44,12 @@ mkdir -p "$WORK"
 "$APP" --render-menu-bar "$WORK/menu-bar-6x" 6 >/dev/null
 "$APP" --render-borders "$WORK/borders" >/dev/null
 "$APP" --render-settings "$WORK/settings" >/dev/null
-# The Borders tab with other values of 'width', for the animation of the file and the window in sync
+# The Appearance tab with other values of 'width', for the animation of the file and the window in sync
 for width in 2 8; do
   sed "s/^    width = 4\$/    width = $width/" inlay.toml >"$WORK/width-$width.toml"
   "$APP" --render-settings "$WORK/settings-width-$width" "$WORK/width-$width.toml" >/dev/null
 done
-for tab in general themes tiling gaps animations borders workspaces shortcuts window-themes; do
+for tab in general appearance windows keyboard changes window-appearance; do
   if wanted "settings-$tab"; then cp "$WORK/settings/settings-$tab.png" "$OUT/settings-$tab.png"; echo "settings-$tab.png"; fi
 done
 
@@ -65,7 +65,6 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 PAGES=(
   hero:1280:800
   menu-bar-themes:880:700
-  menu-bar-palettes:880:1170
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500

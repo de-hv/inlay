@@ -88,8 +88,6 @@ extension CmdArgs {
                 command = TestCommand(args: self as! TestCmdArgs)
             case .testNot:
                 command = TestNotCommand(args: self as! TestNotCmdArgs)
-            case .theme:
-                command = ThemeCommand(args: self as! ThemeCmdArgs)
             case .triggerBinding:
                 command = TriggerBindingCommand(args: self as! TriggerBindingCmdArgs)
             case .volume:

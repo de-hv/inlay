@@ -37,10 +37,11 @@ start-at-login = false
 # Reload the config when the config file is saved. With it, the Settings window, the menu bar item and the
 # borders follow what you write in the file by hand. It works when the config is a symbolic link, and with
 # the editors that save by replacing the file. Without it, use 'inlay reload-config' or the menu.
-# The Settings window always reloads the config after it writes the file, with or without this key
+# The Settings window always reloads the config after it writes the file, with or without this key.
+# Only the file sets it: the Settings window doesn't show it
 # Possible values: true|false
-# Fallback value (if you omit the key): auto-reload-config = false
-auto-reload-config = false
+# Fallback value (if you omit the key): auto-reload-config = true
+auto-reload-config = true
 
 # Normalization: containers with a single child are flattened
 # See: https://nikitabobko.github.io/AeroSpace/guide#normalization
@@ -138,6 +139,15 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
 # Deprecated key of AeroSpace: it is always an error. Drop it from your config
 # indent-for-nested-containers-with-the-same-orientation = 30
+
+# Not a table of Inlay anymore: the palettes are gone, and every color is set on its own in [menu-bar.colors] and
+# [borders]. The table is accepted with a warning and ignored, so that a config of a previous version still loads.
+# Drop it from your config
+# theme = {}
+
+# Not a table of Inlay anymore: the notice after a reload is gone, and Settings > Changes lists what each reload
+# changed. The table is accepted with a warning and ignored. Drop it from your config
+# notifications = {}
 
 # Gaps between windows (inner.*) and between the windows and the edges of the monitor (outer.*), in points.
 # Possible values:
@@ -249,7 +259,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
 # The menu bar item
 [menu-bar]
-    # Show the menu bar item. With 'false' Inlay keeps working: use the key bindings and the CLI
+    # Show the menu bar item. With 'false' Inlay keeps working: use the key bindings and the CLI, and open Inlay
+    # again from Applications to get to the Settings window. Only the file sets it: the Settings window doesn't show it
     # Possible values: true|false
     # Fallback value (if you omit the key): enabled = true
     enabled = true
@@ -311,7 +322,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - 'auto'.          The color of the menu bar text: white on a dark menu bar, black on a light one.
     #                    For 'accent': the same as 'focused'
     # With a fixed color in 'focused', the name of the workspace is drawn in black or white,
-    # whichever has more contrast. A fixed color doesn't adapt to the menu bar
+    # whichever has more contrast. A fixed color doesn't adapt to the menu bar: it is the same in the light and
+    # in the dark appearance. Settings > Appearance edits them
     [menu-bar.colors]
         # The marker of the focused workspace while it shows the binding mode (see 'show-mode').
         # With a fixed color, the initial is drawn in white, or in black over a light color
@@ -341,38 +353,6 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     [menu-bar.symbols]
         # 1 = 'terminal'
         # 2 = 'chevron.left.forwardslash.chevron.right'
-
-# The colors of the menu bar item and of the borders, from a palette of the Hyprland world. See: Settings > Themes
-[theme]
-    # A palette has a light and a dark variant, and the one of the appearance of the system applies. It gives the
-    # colors that the config leaves at their default: the ones of [menu-bar.colors] that are 'auto', and
-    # active-color, inactive-color and floating-color of [borders] while they have their fallback values.
-    # A color written there wins over the palette.
-    # - system. No palette: the colors of [menu-bar.colors] and [borders], as they are.
-    # - catppuccin (Mocha and Latte), tokyo-night (Night and Day), gruvbox, nord, rose-pine (Main and Dawn),
-    #   dracula (Dracula and Alucard), everforest, kanagawa (Wave and Lotus), oxocarbon, ayu (Mirage and Light),
-    #   one-dark (One Dark and One Light), flexoki
-    # - mono. Black, white and grays: the binding mode stands out by its initial, not by a color.
-    # - material. Material You, made from the color of 'seed' the way matugen makes it from a wallpaper.
-    # Possible values: system|catppuccin|tokyo-night|gruvbox|nord|rose-pine|dracula|everforest|kanagawa|oxocarbon|
-    #                  ayu|one-dark|mono|material|flexoki
-    # Fallback value (if you omit the key): palette = 'one-dark'
-    palette = 'one-dark'
-
-    # The color that the 'material' palette is made from. The other palettes ignore it. Material You keeps its
-    # hue and picks the colors by their lightness: the focused workspace and the active border, the accent and
-    # the floating border, and the grays. With the fallback value it gives the colors of the Material 3 baseline.
-    # 'system-accent' makes it from the accent color of macOS, and follows it when it changes.
-    # 'wallpaper' makes it from the main color of the wallpaper of the main screen, like matugen: it is read when the
-    # config loads and every time the wallpaper changes (no timer: Inlay watches the store of the wallpapers of macOS).
-    # A wallpaper that isn't an image (the Aerial videos) gives the fallback seed
-    # Possible values:
-    # - '#RRGGBB'. The alpha of '#RRGGBBAA' is ignored
-    # - 'system-accent'. System Settings -> Appearance -> Accent color
-    # - 'wallpaper'
-    # Fallback value (if you omit the key): seed = '#6750A4'
-    seed = '#6750A4'
-
 
 # The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
 # - a window opens (it grows from the center of its tile, from 80% of its size, while its neighbor makes room) or closes,
@@ -441,26 +421,10 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     [animations.curves]
         # bounce = [0.34, 1.56, 0.64, 1]
 
-# The notices that Inlay shows for a moment, in the top right corner of the screen
-[notifications]
-    # The notice after the config is reloaded: from the menu, or on save with auto-reload-config. A 'reload-config'
-    # of a key binding or of the CLI shows it only if the file changed since the last load (the 'esc' that leaves a
-    # binding mode reloads the config). Not at startup, nor after a change made in the Settings window, which shows it.
-    # A config with errors shows its errors in a window instead.
-    # - 'diff': the name of the file and the keys that changed, with the old and the new value
-    #   ('borders.width 4 -> 8'). Comments and formatting don't count. Up to 4 keys, then '+N more'
-    # - 'simple': only the name of the file
-    # - 'off': no notice
-    # With warnings it stays longer and says how many. The mouse over it keeps it; a click dismisses it.
-    # Settings > General edits it
-    # Possible values: 'diff' | 'simple' | 'off'
-    # Fallback value (if you omit the key): on-reload = 'diff'
-    on-reload = 'diff'
-
 # The Settings window. It changes nothing else
 [settings]
     # Every row of the window shows the key of the config that it writes. With 'false' a key shows while the
-    # mouse is over its row, or while the option key is held
+    # mouse is over its row, or while the option key is held. Only the file sets it: the window doesn't show it
     # Possible values: true|false
     # Fallback value (if you omit the key): show-keys = false
     show-keys = false

@@ -42,7 +42,7 @@ struct Config: ConvenienceMutable {
     var defaultRootContainerLayout: Layout = .tiles
     var defaultRootContainerOrientation: DefaultContainerOrientation = .auto
     var startAtLogin: Bool = false
-    var autoReloadConfig: Bool = false
+    var autoReloadConfig: Bool = true
     var automaticallyUnhideMacosHiddenApps: Bool = false
     var _accordionPadding: Void = ()
     var enableNormalizationOppositeOrientationForNestedContainers: Bool = true
@@ -55,8 +55,9 @@ struct Config: ConvenienceMutable {
     var menuBar: MenuBarConfig = MenuBarConfig()
     var borders: BordersConfig = BordersConfig()
     var animations: AnimationsConfig = AnimationsConfig()
-    var theme: ThemeConfig = ThemeConfig()
-    var notifications: NotificationsConfig = NotificationsConfig()
+    /// [theme] and [notifications] are tables of the past: they are accepted and ignored. See: parseObsoleteTable
+    var _theme: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
+    var _notifications: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     var settingsWindow: SettingsWindowConfig = SettingsWindowConfig()
 
     var onFocusChanged: Shell<any Command> = .empty

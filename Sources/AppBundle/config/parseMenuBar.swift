@@ -13,10 +13,6 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var labels: [String: String] = [:]
     /// [menu-bar.symbols]. Workspace -> the SF Symbol that the 'labels' theme draws for it. Only that theme uses it
     var symbols: [String: String] = [:]
-    /// [theme] palette: it gives the colors that are 'auto'. Not a key of [menu-bar]: copied from the config. See: MenuBarStore
-    var palette: ThemePalette = .system
-    /// [theme] seed, as a color: the one that the 'material' palette is made from. Copied from the config too
-    var paletteSeed: Rgba = MaterialPalette.baselineSeed
 
     /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
     var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value

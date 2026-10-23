@@ -4,9 +4,11 @@ import Common
 /// The interface is in English for now, like the CLI
 enum Strings {
     enum Menu {
-        static func workspace(_ name: String) -> String { "Workspace \(name)" }
-        static let noWindows = "No windows"
-        static let floating = "Float Focused Window"
+        static func workspaceAndApp(_ workspace: String, _ app: String?) -> String {
+            "Workspace \(workspace)" + (app.map { " · \($0)" } ?? "")
+        }
+        static func reloaded(_ ago: String) -> String { "Config reloaded \(ago)" }
+        static let window = "Window"
         static let reloadConfig = "Reload Config"
         static let openConfig = "Open \(configFileName)…"
         static let pause = "Pause \(inlayAppName)"
@@ -24,8 +26,6 @@ enum Strings {
         }
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
         static let paused = "\(inlayAppName) is paused"
-        static let copyVersionToolTip = "Click to copy the version"
-        static func focusedWindow(_ app: String) -> String { "Focused window · \(app)" }
         static let noFocusedWindow = "No focused window"
         static func layout(_ layout: MenuBarCard.WindowLayout) -> String {
             switch layout {
@@ -44,28 +44,7 @@ enum Strings {
         static func modeHelp(_ mode: String, _ exitKey: String?) -> String {
             "Binding mode: \(mode)" + (exitKey.map { ". \($0) goes back to main" } ?? "")
         }
-        static let details = "Details"
-        static let on = "On"
-        static let off = "Off"
-
-        /// The label at the top of the card
-        enum Status {
-            static let running = "Tiling on"
-            static let paused = "Paused"
-            static let needsAccessibility = "No permission"
-        }
-
-        /// The short labels of the row of buttons of the card. Their tooltips are the whole names
-        enum Tile {
-            static let reload = "Reload"
-            static let config = "Config"
-            static let pause = "Pause"
-            static let resume = "Resume"
-            static let settings = "Settings"
-            static let quit = "Quit"
-        }
         static var version: String { "\(inlayAppName) \(inlayAppVersion)" }
-        static var versionToCopy: String { "\(inlayAppName) v\(inlayAppVersion) \(gitHash)" }
     }
 
     enum Item {
@@ -80,86 +59,21 @@ enum Strings {
         }
     }
 
-    /// See: ThemeCommand
-    enum Theme {
-        static func paletteSet(_ palette: String) -> String { "Palette: \(palette)" }
-        static func manualColorsNote(_ keys: [String]) -> String {
-            "Colors written by hand win over the palette: \(keys.joined(separator: ", ")). 'inlay theme set <palette> --reset-colors' removes them."
-        }
-    }
-
-    /// The notice that tells that the config was reloaded. See: ReloadNoticePanel
-    enum Notice {
-        static func reloaded(_ fileName: String) -> String { "\(fileName) reloaded" }
-        static let noChanges = "No setting changed"
-        static let added = "added"
-        static let removed = "removed"
-        static func more(_ count: Int) -> String { "+\(count) more" }
-        static func warnings(_ count: Int) -> String { count == 1 ? "1 warning: see the menu" : "\(count) warnings: see the menu" }
-    }
-
     enum Settings {
         static let windowTitle = "\(inlayAppName) Settings"
         static let general = "General"
-        static let menuBar = "Menu Bar"
-        static let borders = "Borders"
-        static let themes = "Themes"
+        static let appearance = "Appearance"
+        static let windowsPage = "Windows"
+        static let keyboard = "Keyboard"
+        static let changes = "Changes"
         static let workspaceIndicator = "Workspace Indicator"
-        static let palette = "Palette"
-        static let paletteFooter = "A palette colors the menu bar item and the borders, with a light and a dark variant that follow the appearance of the system. It gives every color you haven't set yourself in Colors."
-        static let paletteSection = "Palette"
-        static let indicatorSection = "Indicator"
-        static let colorsSection = "Colors"
-        static let madeForYou = "Made for You"
-        static let palettes = "Palettes"
-        static let systemPalette = "System"
-        static let materialFromWallpaper = "Material · Wallpaper"
-        static let materialFromColor = "Material · Color"
+        static let style = "Style"
         static let borderColors = "Border Colors"
-        static let indicatorInThemes = "The shape of the indicator, its options and its colors are in Themes."
-        static let indicatorShapeFooter = "The shape of the item in the menu bar. Its colors are in Colors."
-        static let colorsInThemes = "The colors of the indicator and of the borders are in Themes › Colors, next to the palette that gives them."
-        static let noThemeTitle = "No theme"
-        static func themeTitle(_ palette: String) -> String { "Theme: \(palette)" }
-        static let themeInUseDetail = "Every color comes from the palette."
-        static func seedFromWallpaperDetail(_ hex: String?) -> String {
-            "The main color of the wallpaper of the main screen, like matugen" + (hex.map { ": \($0)." } ?? ". It is read when the config loads.")
-        }
         static let indicatorColors = "Indicator Colors"
-        static let indicatorColorsFooter = "Each color starts as the one of the theme. Changing one makes it yours: the theme no longer applies to it, until “Use Theme”."
+        static let indicatorColorsFooter = "'auto' draws the item in the color of the menu bar text, so it follows the light and the dark menu bar. A fixed color stays the same over both."
         static let activeWorkspaceColor = "Active workspace"
         static let inactiveWorkspaceColor = "Inactive workspaces (with windows)"
         static let emptyWorkspaceColor = "Empty workspaces"
-        static let themeBadge = "Theme"
-        static let customBadge = "Custom"
-        static let custom = "Custom"
-        static let useTheme = "Use Theme"
-        static let keepCustom = "Keep Custom Colors"
-        static let noThemeInUse = "The colors of the system, and the ones you set."
-        static func customInUse(_ colors: [String], base: String) -> String {
-            "Custom colors: \(colors.joined(separator: ", ")). No theme applies to them; the rest come from \(base)."
-        }
-        static func useOnlyTheme(_ palette: String) -> String { "Use \(palette) for Every Color" }
-        static func baseOf(_ palette: String) -> String { "\(palette) · base" }
-        static func replaceCustomTitle(_ palette: String) -> String { "Use the \(palette) theme?" }
-        static func replaceCustomDetail(_ colors: [String]) -> String {
-            "Your custom colors (\(colors.joined(separator: ", "))) are removed from \(configFileName), so that the theme gives every color."
-        }
-        /// The name of a color that a palette gives, as the user knows it
-        static func colorName(_ key: SettingsKey) -> String {
-            switch key {
-                case .menuBarFocused: "active workspace"
-                case .menuBarOccupied: "inactive workspaces"
-                case .menuBarEmpty: "empty workspaces"
-                case .menuBarAccent: "binding mode"
-                case .bordersActiveColor: "active border"
-                case .bordersInactiveColor: "inactive borders"
-                case .bordersFloatingColor: "floating border"
-                default: key.label
-            }
-        }
-        static let seed = "Seed"
-        static let seedDetail = "Material You is made from this color, the way matugen makes it from a wallpaper. 'system-accent' follows the accent color of macOS."
         static let defaultValue = "default"
         static let gaps = "Gaps"
         static let reset = "Reset"
@@ -172,7 +86,6 @@ enum Strings {
         static let placement = "Placement"
         static let newWindows = "New Windows"
         static let arrangement = "Arrangement"
-        static let windows = "Windows"
         static let workspaces = "Workspaces"
         static let placementDwindleDetail = "Dwindle: the new window splits the focused one along its longer side."
         static let placementAfterFocusedDetail = "After focused: the new window is added next to the focused one, and the windows of the container share the space."
@@ -209,8 +122,6 @@ enum Strings {
         static let file = "File"
         static let showInFinder = "Show in Finder"
         static let open = "Open"
-        static let autoReload = "Reload on save"
-        static let autoReloadDetail = "Apply the changes as soon as the file changes on disk."
         static let status = "Status"
         static let reloadNow = "Reload Now"
         static let notLoadedYet = "Not loaded yet"
@@ -232,12 +143,8 @@ enum Strings {
             "Failed to load \(ago) · \(errors) error(s). The previous config stays in effect"
         }
 
-        // Menu Bar
+        // Appearance
         static let livePreview = "Live preview"
-        static let theme = "Theme"
-        static let options = "Options"
-        static let showItem = "Show the menu bar item"
-        static let showItemDetail = "Without it, use the key bindings and the CLI. Open \(inlayAppName) again from Applications to get back here."
         static let dimEmpty = "Dim empty workspaces"
         static let dimEmptyDetail = "Workspaces without windows are drawn fainter."
         static let showMode = "Show the binding mode"
@@ -265,11 +172,6 @@ enum Strings {
         static let modeColors = "Mode Colors"
         static let modeColorsFooter = "The border of the focused window while a binding mode is active. It wins over the active and the floating colors. “Remove” takes the color away from the mode. The main mode has no color of its own: it is the active color."
         static let noModes = "The config defines no binding mode besides main."
-        static let notSet = "not set"
-        static let active = "Active"
-        static let inactive = "Inactive"
-        static let floatingPreview = "Floating"
-        static func points(_ value: Int) -> String { "\(value) pt" }
 
         // Gaps
         static let innerGaps = "Inner Gaps"
@@ -285,35 +187,30 @@ enum Strings {
         static let right = "Right"
         static let innerGapsFooter = "The borders are drawn in the gaps, outside of the windows: with inner gaps less than twice the width of the border, the borders of two windows touch."
         static let outerGapsFooter = "Between the windows and the edges of the screen. With outer gaps less than the width of the border, the edge of the screen cuts the border."
-        static let actualSize = "Actual size"
         static let singleWindow = "Single Window"
         static let smartGaps = "Smart gaps"
         static let smartGapsDetail = "The only tiling window of a workspace takes the whole screen, without outer gaps nor border."
 
-        // The sidebar and the search
-        static let windowsGroup = "Windows"
-        static let workflowGroup = "Workflow"
-        static let search = "Search"
-        static let clearSearch = "Clear the search"
-        static let noResults = "No setting matches the search."
+        // Changes
         static let lastChange = "Last change"
-        static let undone = "Undone"
+        static let nothingToUndo = "Nothing to undo"
+        static let changesSinceStart = "Since \(inlayAppName) Started"
+        static let changesFooter = "Every reload that changed the config, the last one first: the changes of this window, which ⌘Z undoes, and the ones saved in the file. Only comments or formatting don't count. The list starts again when \(inlayAppName) does."
+        static let noChanges = "The config hasn't changed since \(inlayAppName) started."
+        static let changedInSettings = "Settings"
+        static let changedInFile = "File"
+        static let absent = "–"
+        static func keyCount(_ count: Int) -> String { count == 1 ? "1 key" : "\(count) keys" }
+        static func more(_ count: Int) -> String { "+\(count) more" }
         static let undo = "Undo"
         static let redo = "Redo"
         static let defaultValueShort = "default"
         static let cantUndoChangedFile = "\(configFileName) changed since the last change of this window: undoing would write those changes away."
         static let copyKey = "Click to copy the line of the config"
-        static let thisWindow = "This Window"
-        static let showKeys = "Show the config keys"
-        static let showKeysDetail = "Every row shows the key it writes. Without it, a key shows while the mouse is over its row, or while ⌥ is held."
         static let pointsUnit = "pt"
         static let millisecondsUnit = "ms"
 
         // General
-        static let reloadNotice = "Notice after a reload"
-        static let reloadNoticeDetail = "What the notice says when the config is reloaded: the keys that changed, only the name of the file, or nothing."
-        static let reloadNoticeDiff = "Changes"
-        static let reloadNoticeSimple = "Simple"
         static let export = "Export complete config"
         static let exportDetail = "A copy of your config with your comments, plus every key you left out with the value that applies. Your file isn't touched."
         static let exportButton = "Export…"
@@ -328,12 +225,7 @@ enum Strings {
         static let splitRatio = "Split ratio"
         static let splitRatioDetail = "How much of its space the split window keeps. 50%: half and half."
 
-        // Themes
-        static let previewOnly = "Preview only: click to use it."
-        static let resetToTheme = "Reset to Theme"
-        static let dark = "Dark"
-        static let light = "Light"
-        static let variantHelp = "The variant of the palettes that the previews show. The one in use follows the appearance of the system."
+        // Labels
         static let remove = "Remove"
         static let labels = "Labels"
         static let labelsFooter = "Only the labels theme uses them: a symbol per workspace, and the name in the focused one. A workspace without a symbol shows its name. Symbols are SF Symbols names."
@@ -359,8 +251,8 @@ enum Strings {
         static let persistentHelp = "Persistent: [persistent-workspaces]"
         static let floatingApps = "Floating Apps"
         static let floatingAppsFooter = "Their windows float: an on-window-detected rule makes them floating."
-        static let editRules = "Window rules"
-        static let editRulesDetail = "The rules that send the apps to their workspace are edited in the file."
+        static let editRules = "Rules and key bindings"
+        static let editRulesDetail = "The rules that send the apps to their workspace, and the key bindings, are edited in the file."
 
         // Shortcuts
         static let shortcuts = "Shortcuts"
@@ -368,7 +260,6 @@ enum Strings {
         static let noShortcuts = "The config has no key bindings."
         static let noMatchingShortcuts = "No key binding matches the filter."
         static let shortcutsFooter = "The key bindings of the config, with the comment written after each one. They are edited in the file."
-        static let editShortcuts = "Edit the key bindings"
 
         // Why a control is disabled
         static let definedByHand = "Defined by hand in the config file"

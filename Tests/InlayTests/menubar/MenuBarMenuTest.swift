@@ -2,7 +2,6 @@
 import AppKit
 import Common
 import HotKey
-import SwiftUI
 import Testing
 
 extension InlayTests {
@@ -13,75 +12,111 @@ extension InlayTests {
             ServerState.shared.axPermissionStatus = .granted
         }
 
-        /// The menu as it opens: its card, and all its items
+        /// The menu as it opens: what it shows, and its items
         private func openMenu() throws -> (card: MenuBarCard, items: [NSMenuItem]) {
             let menu = MenuBarMenu()
             menu.menuNeedsUpdate(menu.menu)
             return (try #require(menu.card), menu.menu.items)
         }
 
-        // MARK: - The card
+        private func titles(_ items: [NSMenuItem]) -> [String] {
+            items.map { $0.isSeparatorItem ? "---" : $0.title }
+        }
 
-        /// The menu is one card: the windows of the focused workspace, the one thing it changes of the focused window,
-        /// the config and Inlay itself. Switching workspaces, focusing or moving windows, the layout, the binding
-        /// modes and the themes are for the key bindings and the settings window
-        @Test func testCard() throws {
+        // MARK: - The items
+
+        /// Native items: what Inlay is doing, the focused window in a submenu, the config, and Inlay itself.
+        /// Switching workspaces, focusing or moving windows and the binding modes are for the key bindings
+        @Test func testItems() throws {
             let workspace = focus.workspace
             assertEquals(TestWindow.new(id: 1, parent: workspace.rootTilingContainer).focusWindow(), true)
-            _ = Workspace.get(byName: "2")
-            config.modes["service"] = Mode(bindings: [:])
+            ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now, url: newUserConfigUrl, errorCount: 0, warningCount: 0, isApplied: true)
+            defer { ServerState.shared.lastConfigLoad = nil }
 
             let (card, items) = try openMenu()
             assertEquals(card.status, .running)
             assertEquals(card.configProblems, nil)
             assertEquals(card.workspace, workspace.name)
-            assertEquals(card.windows, [MenuBarCard.Window(app: TestApp.shared.name ?? "?", isFocused: true)])
-            assertEquals(card.isFloating, false)
-            assertEquals(card.isEnabled(.toggleFloating), true)
-            assertEquals(card.buttons, [.reloadConfig, .openConfig, .togglePause, .openSettings])
-            assertEquals(card.buttons.map { $0.title(card) }, ["Reload Config", "Open inlay.toml…", "Pause Inlay-Debug", "Settings…"])
-
-            // One item that is the card, and the hidden items of the shortcuts. No submenu
-            let visible = items.filter { !$0.isHidden }
-            assertEquals(visible.count, 1)
-            assertTrue(visible.first?.view is NSHostingView<MenuBarCardView>)
-            assertEquals(items.filter(\.hasSubmenu).count, 0)
-            // The windows are only shown: nothing in the menu focuses one
-            assertEquals(items.compactMap { $0.representedObject as? String }, [])
+            assertEquals(card.windowLayout, .tiling)
+            let app = TestApp.shared.name ?? "?"
+            assertEquals(titles(items), [
+                "Workspace \(workspace.name) · \(app)",
+                titles(items)[1], // "Config reloaded <when>"
+                "---",
+                "Window",
+                "---",
+                "Reload Config", "Open inlay.toml…", "Settings…",
+                "---",
+                "Pause Inlay-Debug", "Quit Inlay-Debug",
+            ])
+            assertTrue(items[1].title.hasPrefix("Config reloaded "))
+            // The information isn't an action
+            assertEquals(items[0].isEnabled, false)
+            assertEquals(items[1].isEnabled, false)
+            // The shortcuts of the menu itself
+            assertEquals(items.filter { !$0.keyEquivalent.isEmpty }.map { "\($0.title) \($0.keyEquivalent)" }, [
+                "Reload Config r", "Settings… ,", "Pause Inlay-Debug e", "Quit Inlay-Debug q",
+            ])
         }
 
-        /// A workspace without windows says so, and there is no window to float
+        /// Window ▸: the app of the focused window, and its layout checked
+        @Test func testWindowSubmenu() throws {
+            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
+            let (_, items) = try openMenu()
+            let window = try #require(items.first { $0.title == "Window" })
+            assertEquals(window.isEnabled, true)
+            let submenu = try #require(window.submenu)
+            assertEquals(titles(submenu.items), [TestApp.shared.name ?? "?", "---", "Tiling", "Floating", "Fullscreen"])
+            assertEquals(submenu.items.map(\.state), [.off, .off, .on, .off, .off])
+            assertEquals(submenu.items[0].isEnabled, false)
+            assertEquals(submenu.items[2 ... 4].allSatisfy(\.isEnabled), true)
+        }
+
+        /// A workspace without windows: the submenu is disabled
         @Test func testAnEmptyWorkspace() throws {
-            let (card, _) = try openMenu()
-            assertEquals(card.windows, [])
-            assertEquals(card.isFloating, nil)
-            assertEquals(card.isEnabled(.toggleFloating), false)
+            let (card, items) = try openMenu()
+            assertEquals(card.windowLayout, nil)
+            assertEquals(card.isEnabled(.setLayout(.floating)), false)
+            assertEquals(items.first { $0.title == "Window" }?.isEnabled, false)
+            assertEquals(items.first?.title, "Workspace \(focus.workspace.name)")
         }
 
-        /// The key bindings of the config aren't shown, even when one runs the command of a button
+        /// The binding mode, and the problems of the config as items: the first one shows them all
+        @Test func testModeAndProblems() throws {
+            config.modes["resize"] = Mode(bindings: [:])
+            ServerState.shared.lastConfigLoad = ConfigLoadStatus(
+                date: .now, url: newUserConfigUrl, errorCount: 0, warningCount: 1, isApplied: true,
+                problems: ["[WARNING] animations.curve: Unknown curve 'bounce2'\nmore"],
+            )
+            defer { ServerState.shared.lastConfigLoad = nil }
+            activeMode = "resize"
+            defer { activeMode = mainModeId }
+            let (card, items) = try openMenu()
+            assertEquals(card.mode, "resize")
+            assertEquals(items.contains { $0.title.hasPrefix("Binding mode: resize") }, true)
+            let problems = try #require(items.first { $0.title == "Config contains warnings…" })
+            assertEquals(problems.isEnabled, true)
+            let line = try #require(items.first { $0.title == "[WARNING] animations.curve: Unknown curve 'bounce2'" })
+            assertEquals(line.indentationLevel, 1)
+        }
+
+        /// The key bindings of the config aren't shown, even when one runs the command of an item
         @Test func testNoKeyBindingsOfTheConfig() throws {
             assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
-            _ = Workspace.get(byName: "2")
             for (modifiers, key, command) in [(NSEvent.ModifierFlags.option, Key.two, "workspace 2"), ([.option, .shift], .f, "layout floating tiling")] {
                 let binding = HotkeyBinding(modifiers, key, parseCommand(command).cmdOrDie)
                 config.modes[mainModeId]?.bindings[binding.descriptionWithKeyCode] = binding
             }
-
             let (_, items) = try openMenu()
-            assertEquals(items.filter { $0.badge != nil }.map(\.title), [])
-            // The shortcuts of the menu itself are real: hidden items, that only exist while the menu is open
-            let shortcuts = items.filter { !$0.keyEquivalent.isEmpty }
-            assertEquals(shortcuts.map { "\($0.title) \($0.keyEquivalent)" }, ["Reload Config r", "Pause Inlay-Debug e", "Settings… ,", "Quit Inlay-Debug q"])
-            assertEquals(shortcuts.allSatisfy { $0.isHidden && $0.allowsKeyEquivalentWhenHidden }, true)
+            let all = items + items.compactMap(\.submenu).flatMap(\.items)
+            assertEquals(all.filter { $0.badge != nil }.map(\.title), [])
+            assertEquals(all.filter { !$0.keyEquivalent.isEmpty }.map(\.keyEquivalent), ["r", ",", "e", "q"])
         }
 
-        /// Only the name and the version. The commit and the attribution are in the README and in NOTICE.md
         @Test func testVersion() {
             assertEquals(Strings.Menu.version, "\(inlayAppName) \(inlayAppVersion)")
             assertEquals(Strings.Menu.version.contains(gitHash.prefix(7)), false)
             assertEquals(Strings.Menu.version.lowercased().contains("aerospace"), false)
-            // What a click on it copies still tells the commit, for a bug report
-            assertEquals(Strings.Menu.versionToCopy, "\(inlayAppName) v\(inlayAppVersion) \(gitHash)")
         }
 
         @Test func testPausedAndWithoutThePermission() throws {
@@ -89,38 +124,21 @@ extension InlayTests {
             ServerState.shared.isEnabled = false
             var (card, items) = try openMenu()
             assertEquals(card.status, .paused)
-            assertEquals(card.windows, [])
-            assertEquals(card.isEnabled(.toggleFloating), false)
-            assertEquals(card.buttons.map { $0.title(card) }, ["Reload Config", "Open inlay.toml…", "Resume Inlay-Debug", "Settings…"])
+            assertEquals(card.windowLayout, nil)
+            assertEquals(items.first?.title, "Inlay-Debug is paused")
+            assertEquals(items.first { $0.title == "Window" }?.isEnabled, false)
             assertEquals(card.isEnabled(.reloadConfig), false)
-            assertEquals(items.filter { !$0.keyEquivalent.isEmpty && $0.isEnabled }.map(\.keyEquivalent), ["e", ",", "q"])
+            assertEquals(items.filter { !$0.keyEquivalent.isEmpty && $0.isEnabled }.map(\.keyEquivalent), [",", "e", "q"])
+            assertEquals(items.contains { $0.title == "Resume Inlay-Debug" }, true)
 
             ServerState.shared.isEnabled = true
             ServerState.shared.axPermissionStatus = .waiting
             defer { ServerState.shared.axPermissionStatus = .granted }
             (card, items) = try openMenu()
             assertEquals(card.status, .needsAccessibility)
-            assertEquals(card.windows, [])
-            assertEquals(card.buttons, [])
-            assertEquals(MenuBarCardAction.promptForAccessibility.title(card), "Inlay-Debug requires accessibility permission to move windows")
-            assertEquals(items.filter { !$0.keyEquivalent.isEmpty }.map(\.keyEquivalent), ["q"])
-        }
-
-        /// The card has the same width in every state: only its height changes
-        @Test func testCardSize() throws {
-            _ = NSApplication.shared
-            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
-            var heights: [CGFloat] = []
-            for isEnabled in [true, false] {
-                ServerState.shared.isEnabled = isEnabled
-                defer { ServerState.shared.isEnabled = true }
-                let (_, items) = try openMenu()
-                let view = try #require(items.first?.view)
-                assertEquals(view.frame.width, MenuBarCardView.width)
-                heights.append(view.frame.height)
-            }
-            // Paused, the card has no windows and no switch
-            assertTrue(heights[0] > heights[1])
+            // Nothing to do but to grant it, or to quit
+            assertEquals(titles(items), ["Inlay-Debug requires accessibility permission to move windows", "---", "Quit Inlay-Debug"])
+            assertEquals(items[0].isEnabled, true)
         }
 
         /// The button highlights itself while the mouse is down on it. The shield takes the mouse away from the button

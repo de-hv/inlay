@@ -54,7 +54,7 @@ extension InlayTests {
             assertEquals(model.isSet(.menuBarTheme), false)
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // The same as an empty [menu-bar] table
-            assertEquals(model.menuBarConfig, MenuBarConfig(palette: .oneDark))
+            assertEquals(model.menuBarConfig, MenuBarConfig())
         }
 
         @Test func testReadsTheFile() throws {
@@ -73,7 +73,7 @@ extension InlayTests {
             assertEquals(model.bool(.startAtLogin), true)
             assertEquals(model.isSet(.menuBarTheme), true)
             assertEquals(model.isSet(.menuBarDimEmpty), false)
-            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())), palette: .oneDark)
+            let expected = MenuBarConfig(theme: .square, showMode: true, colors: MenuBarColors(focused: .rgba(Rgba(hex: "#D19A66").orDie())))
             assertEquals(model.menuBarConfig, expected)
         }
 
@@ -83,7 +83,7 @@ extension InlayTests {
             let model = try model("config-version = 2\n[menu-bar]\ntheme = 'chips-icons'\nshow-app-icons = true\n[mode.main.binding]\n")
             assertEquals(model.unavailableReason, nil)
             assertEquals(model.menuBarTheme, .chips)
-            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips, palette: .oneDark))
+            assertEquals(model.menuBarConfig, MenuBarConfig(theme: .chips))
             assertEquals(model.disabledReason(.menuBarTheme), nil)
             // Another control: the file is edited as it is
             model.set(.menuBarShowMode, .bool(true))
@@ -347,7 +347,7 @@ extension InlayTests {
 
             let broken = try self.model("[menu-bar\n")
             assertEquals(broken.unavailableReason, "inlay.toml has errors. Fix them to change the settings from here.")
-            assertEquals(broken.menuBarConfig, MenuBarConfig(palette: .oneDark))
+            assertEquals(broken.menuBarConfig, MenuBarConfig())
         }
 
         @Test func testNeedsAccessibility() throws {
@@ -396,10 +396,10 @@ extension InlayTests {
             model.refresh()
             let tabs: [(String, AnyView)] = [
                 ("general", AnyView(GeneralSettingsView(model: model))),
-                ("themes", AnyView(ThemesSettingsView(model: model))),
-                ("borders", AnyView(BordersSettingsView(model: model))),
-                ("workspaces", AnyView(WorkspacesSettingsView(model: model))),
-                ("shortcuts", AnyView(ShortcutsSettingsView(model: model))),
+                ("appearance", AnyView(AppearanceSettingsView(model: model))),
+                ("windows", AnyView(WindowsSettingsView(model: model))),
+                ("keyboard", AnyView(KeyboardSettingsView(model: model))),
+                ("changes", AnyView(ChangesSettingsView(model: model))),
             ]
             for (name, view) in tabs {
                 let hosting = NSHostingView(rootView: view)

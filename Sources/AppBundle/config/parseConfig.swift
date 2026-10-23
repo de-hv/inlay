@@ -162,8 +162,8 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "menu-bar": Parser(\.menuBar, parseMenuBar),
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
-    "theme": Parser(\.theme, parseTheme),
-    "notifications": Parser(\.notifications, parseNotifications),
+    "theme": Parser(\._theme, parseObsoleteTable("The palettes are gone: every color is set on its own in [menu-bar.colors] and [borders]")),
+    "notifications": Parser(\._notifications, parseObsoleteTable("The notice of the reload is gone: the changes are listed in Settings › Changes")),
     "settings": Parser(\.settingsWindow, parseSettingsWindow),
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
@@ -180,6 +180,13 @@ extension ParsedCmd {
             case .help(let a): .failure(a)
             case .failure(let a): .failure(a.msg)
         }
+    }
+}
+
+/// A table that Inlay had once and doesn't have anymore: a warning instead of an error, so an old config still loads
+func parseObsoleteTable(_ reason: String) -> @Sendable (OrderedJson, ConfigBacktrace, inout ConfigParserContext) -> Void {
+    { _, backtrace, c in
+        c.warnings.append(.init(backtrace, "\(reason). It is ignored: please drop it from the config"))
     }
 }
 

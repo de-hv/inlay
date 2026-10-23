@@ -47,7 +47,7 @@ final class BordersController {
         observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { BordersController.shared.screensDidChange() }
         })
-        // Light or dark: a palette has a variant for each (see ThemePalette)
+        // Light or dark: 'system-accent' may change with it
         appearanceObservation = NSApp.observe(\.effectiveAppearance) { _, _ in
             MainActor.assumeIsolated { BordersController.shared.refresh() }
         }

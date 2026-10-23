@@ -108,8 +108,8 @@ final class MenuBarController: NSObject {
         // whatever AppKit does to the appearance, it can't ask for a new image. `mayShowMode` is true at least
         // whenever the layout draws the initial of the mode (MenuBarLayout.needsColor)
         let mayShowMode = state.config.showMode && state.snapshot.nonMainMode != nil
-        // A palette has fixed colors: the item follows the menu bar by hand
-        let followsBar = !MenuBarPalette.isTemplate(state.config.colors.applying(state.config.palette, seed: state.config.paletteSeed, isDark: true), needsColor: mayShowMode)
+        // Fixed colors: the item follows the menu bar by hand
+        let followsBar = !MenuBarPalette.isTemplate(state.config.colors, needsColor: mayShowMode)
         return MenuBarDrawKey(
             state: state,
             transition: transition,

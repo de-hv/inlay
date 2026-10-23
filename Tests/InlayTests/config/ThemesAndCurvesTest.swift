@@ -3,7 +3,7 @@ import Common
 import Foundation
 import Testing
 
-/// [animations] curves, [theme] seed = 'wallpaper', and the colors set by hand
+/// [animations] curves, and the tables of the past: [theme] and [notifications]
 extension InlayTests {
     @Suite @MainActor struct ThemesAndCurvesTest {
         init() {
@@ -72,49 +72,23 @@ extension InlayTests {
             )
         }
 
-        // MARK: - Theme
+        // MARK: - Tables of the past
 
-        @Test func testParseThemeSeedWallpaper() {
+        /// [theme] and [notifications] are gone: an old config still loads, with a warning for each
+        @Test func testObsoleteTables() {
             let result = parseConfig("""
+                config-version = 2
                 [theme]
                 palette = 'gruvbox'
                 seed = 'wallpaper'
+                [notifications]
+                on-reload = 'diff'
                 """)
             assertEquals(result.errors, [])
-            assertEquals(result.config.theme.seed, .wallpaper)
-        }
-
-        @Test func testManualColors() {
-            assertEquals(ManualColors.keys(in: parseConfig("").config), [])
-            let config = parseConfig("""
-                [menu-bar.colors]
-                focused = '#E06C75'
-                [borders]
-                active-color = '#61AFEF'
-                """).config
-            assertEquals(ManualColors.keys(in: config), [.menuBarFocused, .bordersActiveColor])
-        }
-
-        @Test func testThemeCmdArgs() {
-            assertEquals(parseCommand("theme list").errorOrNil, nil)
-            assertEquals(parseCommand("theme set gruvbox --reset-colors").errorOrNil, nil)
-            assertEquals(parseCommand("theme set").errorOrNil, "'theme set' requires the name of a palette (see: inlay theme list)")
-            assertEquals(parseCommand("theme list --reset-colors").errorOrNil, "--reset-colors requires 'set'")
-        }
-
-        // MARK: - The color of the wallpaper
-
-        @Test func testDominantColor() {
-            let teal = (0.2, 0.6, 0.55)
-            let gray = (0.5, 0.5, 0.5)
-            let orange = (0.95, 0.55, 0.2)
-            // Mostly gray, more teal than orange: the grays don't count
-            let pixels = Array(repeating: gray, count: 600) + Array(repeating: teal, count: 300) + Array(repeating: orange, count: 100)
-            let color = WallpaperSeed.dominantColor(pixels)!
-            assertTrue(abs(color.red - 0.2) < 0.01 && abs(color.green - 0.6) < 0.01 && abs(color.blue - 0.55) < 0.01)
-            // Only grays: their average
-            assertEquals(WallpaperSeed.dominantColor([gray, (0.3, 0.3, 0.3)])?.hex, Rgba(red: 0.4, green: 0.4, blue: 0.4).hex)
-            assertNil(WallpaperSeed.dominantColor([]))
+            assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
+            assertTrue(result.strWarnings.contains { $0.contains("theme: The palettes are gone") })
+            assertTrue(result.strWarnings.contains { $0.contains("notifications: The notice of the reload is gone") })
+            assertEquals(parseCommand("theme list").errorOrNil != nil, true)
         }
     }
 }

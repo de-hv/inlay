@@ -27,17 +27,10 @@ final class SettingsModel {
     /// the floating colors for good, which is what those two keys are for. (It can still be written by hand)
     private(set) var colorableModes: [String] = []
 
-    /// The part of the Themes tab on the screen. Only the window remembers it, not the config
-    var themesSection: ThemesSection = .palette
-
     // MARK: The window. None of it is kept in the config
 
-    /// The page in the sidebar
+    /// The tab in the toolbar
     var page: SettingsPageID = .general
-    /// The text of the search field of the sidebar
-    var searchText: String = ""
-    /// The row that a search result leads to: it is highlighted for a moment
-    var highlightedTitle: String? = nil
     /// The row under the mouse: it shows its key. See: showsKey
     var hoveredKey: SettingsKey? = nil
     /// ⌥ is held down: every row shows its key
@@ -45,10 +38,6 @@ final class SettingsModel {
     /// The binding mode that the Shortcuts page shows, and the text that filters its bindings
     var shortcutsMode: String = mainModeId
     var shortcutsFilter: String = ""
-    /// The variant of the palette that the previews of Themes show. nil: the one of the appearance of the system
-    var previewVariantIsDark: Bool? = nil
-    /// The palette under the mouse in Themes › Palette: the preview shows it, without writing it
-    var hoveredPalette: ThemePalette? = nil
     /// The changes written by the window that can be undone, the last one at the end
     private(set) var undoStack: [SettingsChange] = []
     private(set) var redoStack: [SettingsChange] = []
@@ -183,8 +172,6 @@ final class SettingsModel {
             perMonitor: bool(.menuBarPerMonitor),
             labels: config.menuBar.labels.merging(pendingStrings(SettingsKey.menuBarLabel)) { $1 }.filter { !$0.value.isEmpty },
             symbols: config.menuBar.symbols.merging(pendingStrings(SettingsKey.menuBarSymbol)) { $1 }.filter { !$0.value.isEmpty },
-            palette: palette,
-            paletteSeed: paletteSeed,
         )
     }
 
@@ -203,60 +190,6 @@ final class SettingsModel {
         (config.persistentWorkspaces.elements + config.menuBar.labels.keys.sorted() + config.menuBar.symbols.keys.sorted())
             .toOrderedSet()
             .elements
-    }
-
-    /// The variant of the palettes in the previews of Themes
-    var previewIsDark: Bool { previewVariantIsDark ?? isSystemAppearanceDark }
-
-    var palette: ThemePalette { ThemePalette(rawValue: string(.themePalette)) ?? ThemeConfig().palette }
-
-    /// [theme] seed, the color that 'material' is made from
-    var paletteSeed: Rgba {
-        let seed: ThemeSeed = string(.themeSeed) == ThemeSeed.wallpaperLiteral ? .wallpaper : .color(color(.themeSeed))
-        return ThemeConfig(seed: seed).seedColor(systemAccent: .systemAccent, wallpaper: WallpaperSeed.shared.color)
-    }
-
-    /// The colors that the config sets by hand: the palette doesn't give them. See: ManualColors
-    var manualColorKeys: [SettingsKey] {
-        ManualColors.keys.filter { isSet($0) && value($0) != $0.defaultValue }
-    }
-
-    /// A palette is in use, and some colors are the user's own instead of its ones: no theme applies to them
-    var hasCustomColors: Bool { palette != .system && !manualColorKeys.isEmpty }
-
-    /// The color that the palette gives to the key, in the appearance of the system. nil for 'system', and for a key
-    /// that a palette doesn't color
-    func paletteColor(_ key: SettingsKey) -> Rgba? {
-        guard let colors = palette.colors(isDark: isSystemAppearanceDark, seed: paletteSeed) else { return nil }
-        return switch key {
-            case .menuBarFocused: colors.focused
-            case .menuBarOccupied: colors.occupied
-            case .menuBarEmpty: colors.empty
-            case .menuBarAccent: colors.accent
-            case .bordersActiveColor: colors.activeBorder
-            case .bordersInactiveColor: colors.inactiveBorder
-            case .bordersFloatingColor: colors.floatingBorder
-            default: nil
-        }
-    }
-
-    /// Picks a palette in one write. With `resettingColors`, the colors set by hand are removed: the palette gives every color.
-    /// - Parameter seed: the [theme] seed to write with it (Material You). nil: the seed stays as it is
-    func setPalette(_ palette: ThemePalette, seed: String? = nil, resettingColors: Bool) {
-        let manual = resettingColors ? manualColorKeys : []
-        var edits = [ConfigEdit(path: SettingsKey.themePalette.path, value: .string(palette.rawValue))]
-        var keys: [SettingsKey] = [.themePalette]
-        if let seed {
-            edits.append(ConfigEdit(path: SettingsKey.themeSeed.path, value: .string(seed)))
-            keys.append(.themeSeed)
-        }
-        write(edits + manual.map { ConfigEdit(path: $0.path, value: nil) }, keys: keys + manual)
-    }
-
-    /// Removes every color set by hand, in one write: the palette gives them all again
-    func resetManualColors() {
-        let manual = manualColorKeys
-        write(manual.map { ConfigEdit(path: $0.path, value: nil) }, keys: manual)
     }
 
     /// 'chips-icons', the theme of a previous version, is 'chips', like for the parser
@@ -342,6 +275,7 @@ final class SettingsModel {
                 refresh()
                 return
         }
+        ConfigHistory.shared.lastTextWrittenBySettings = patched
         switch ConfigEditor.write(patched, to: current) {
             case .success:
                 errorMessage = nil
@@ -384,6 +318,7 @@ final class SettingsModel {
             redoStack = []
             return
         }
+        ConfigHistory.shared.lastTextWrittenBySettings = text
         switch ConfigEditor.write(text, to: current) {
             case .success:
                 errorMessage = nil
@@ -409,72 +344,33 @@ final class SettingsModel {
         if !reloadsConfig { return }
         Task.startUnstructured { @MainActor in
             try await runLightSession(.menuBarButton, .forceRun) {
-                _ = await reloadConfig_nonCancellable(notice: .never)
+                _ = await reloadConfig_nonCancellable()
             }
         }
     }
 }
 
-/// The parts of the Themes tab of the settings window, one at a time
-enum ThemesSection: Hashable, Sendable {
-    /// The palettes: where the colors come from
-    case palette
-    /// The shape of the workspace indicator, and its options
-    case indicator
-    /// Every color that a palette gives: the indicator and the borders, theme or the user's own
-    case colors
-}
-
-/// The pages of the settings window, in the order of the sidebar
+/// The tabs of the settings window, in the order of the toolbar
 enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
-    case general, themes, tiling, gaps, borders, animations, workspaces, shortcuts
+    case general, appearance, windows, keyboard, changes
 
     var title: String {
         switch self {
             case .general: Strings.Settings.general
-            case .themes: Strings.Settings.themes
-            case .tiling: Strings.Settings.tiling
-            case .gaps: Strings.Settings.gaps
-            case .borders: Strings.Settings.borders
-            case .animations: Strings.Settings.animations
-            case .workspaces: Strings.Settings.workspacesPage
-            case .shortcuts: Strings.Settings.shortcuts
+            case .appearance: Strings.Settings.appearance
+            case .windows: Strings.Settings.windowsPage
+            case .keyboard: Strings.Settings.keyboard
+            case .changes: Strings.Settings.changes
         }
     }
 
     var symbol: String {
         switch self {
             case .general: "gearshape"
-            case .themes: "paintpalette"
-            case .tiling: "rectangle.split.2x1"
-            case .gaps: "rectangle.split.3x1"
-            case .borders: "rectangle.dashed"
-            case .animations: "wand.and.stars"
-            case .workspaces: "square.grid.2x2"
-            case .shortcuts: "keyboard"
-        }
-    }
-
-    /// The color of the square behind the symbol, like in System Settings
-    var tint: Rgba {
-        switch self {
-            case .general: Rgba(hex: "#8E8E93").orDie()
-            case .themes: Rgba(hex: "#BF5AF2").orDie()
-            case .tiling: Rgba(hex: "#0A84FF").orDie()
-            case .gaps: Rgba(hex: "#30B0C7").orDie()
-            case .borders: Rgba(hex: "#5E5CE6").orDie()
-            case .animations: Rgba(hex: "#FF9F0A").orDie()
-            case .workspaces: Rgba(hex: "#30D158").orDie()
-            case .shortcuts: Rgba(hex: "#636366").orDie()
-        }
-    }
-
-    /// The group of the sidebar the page is in. nil: the top one, without a title
-    var group: String? {
-        switch self {
-            case .general, .themes: nil
-            case .tiling, .gaps, .borders, .animations: Strings.Settings.windowsGroup
-            case .workspaces, .shortcuts: Strings.Settings.workflowGroup
+            case .appearance: "paintbrush"
+            case .windows: "rectangle.split.2x1"
+            case .keyboard: "keyboard"
+            case .changes: "clock.arrow.circlepath"
         }
     }
 }

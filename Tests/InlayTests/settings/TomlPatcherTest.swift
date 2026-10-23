@@ -604,7 +604,7 @@ extension InlayTests {
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
                 .bordersGlow, .bordersGlowRadius, .bordersHideWhenSingle, .gapsSmart,
-                .splitRatio, .persistentWorkspaces, .menuBarPerMonitor, .notificationsOnReload,
+                .splitRatio, .persistentWorkspaces, .menuBarPerMonitor,
             ] {
                 let value: TomlValue = switch key.defaultValue {
                     // The opposite of what the file has, which isn't always the default

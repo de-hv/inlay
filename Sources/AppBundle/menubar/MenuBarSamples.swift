@@ -104,12 +104,6 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     }
     append("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot)
     append("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot)
-    // The palettes of [theme], in the default theme
-    for palette in ThemePalette.allCases where palette != .system {
-        append("pills-palette-\(palette.rawValue)", MenuBarConfig(palette: palette), MenuBarSamples.snapshot)
-    }
-    // Material You from another seed
-    append("pills-palette-material-seed", MenuBarConfig(palette: .material, paletteSeed: Rgba(hex: "#B5651D").orDie()), MenuBarSamples.snapshot)
     // 'per-monitor': the workspaces of each monitor together, and 5 shown by the other monitor
     for theme in MenuBarTheme.allCases {
         append("\(theme.rawValue)-per-monitor", MenuBarConfig(theme: theme, perMonitor: true), MenuBarSamples.twoMonitors)
@@ -123,7 +117,6 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     append("paused", MenuBarConfig(), paused)
     append("needs-accessibility", MenuBarConfig(), needsAccessibility)
 
-    try renderMenuCards(to: directory, scale: scale)
 
     let padding: CGFloat = 8
     var rendered: [(name: String, bitmap: NSBitmapImageRep)] = []
@@ -181,34 +174,4 @@ private func contactSheet(_ rendered: [(name: String, bitmap: NSBitmapImageRep)]
     }
     NSGraphicsContext.restoreGraphicsState()
     return sheet.representation(using: .png, properties: [:])
-}
-
-/// The card of the menu in a few states, in the dark and in the light appearance: `menu-<state>-<appearance>.png`
-@MainActor
-private func renderMenuCards(to directory: URL, scale: CGFloat) throws {
-    let accent = Rgba(hex: "#61AFEF").orDie()
-    var running = MenuBarCard(status: .running, workspace: "2", accent: accent)
-    running.windows = [.init(app: "Zed", isFocused: true), .init(app: "Code", isFocused: false)]
-    running.isFloating = false
-    running.focusedApp = "Zed"
-    running.windowLayout = .tiling
-    var mode = running
-    mode.mode = "resize"
-    mode.modeExitKey = "esc"
-    mode.configProblems = Strings.Menu.configProblems(ConfigLoadStatus(date: .now, url: newUserConfigUrl, errorCount: 0, warningCount: 1, isApplied: true))
-    mode.problemLines = ["[WARNING] animations.curve: Unknown curve 'bounce2'"]
-    let paused = MenuBarCard(status: .paused, workspace: "2", accent: accent)
-    for (name, card) in [("running", running), ("mode", mode), ("paused", paused)] {
-        for isDark in [true, false] {
-            let view = NSHostingView(rootView: MenuBarCardView(card: card) { _ in }
-                .background(isDark ? Color(white: 0.17) : Color(white: 0.94))
-                .environment(\.colorScheme, isDark ? .dark : .light))
-            view.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
-            view.frame.size = view.fittingSize
-            view.layoutSubtreeIfNeeded()
-            guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { continue }
-            view.cacheDisplay(in: view.bounds, to: bitmap)
-            try bitmap.representation(using: .png, properties: [:])?.write(to: directory.appending(path: "menu-\(name)-\(isDark ? "dark" : "light").png"))
-        }
-    }
 }

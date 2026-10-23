@@ -5,7 +5,7 @@ import SwiftUI
 /// The height of the pages of the settings window, whatever the page
 let settingsContentHeight: CGFloat = 640
 
-/// Shows the settings window: a sidebar with the pages and a search field, like System Settings, and the page next to it.
+/// Shows the settings window: a tab per group of settings, in the toolbar, like the settings of every macOS app.
 ///
 /// Inlay has no Dock icon and is never the active app on its own, so the window is brought forward by hand
 @MainActor
@@ -37,9 +37,9 @@ final class SettingsWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private var tabs: SettingsTabViewController? { (window?.contentViewController as? SettingsRootViewController)?.pages }
+    private var tabs: SettingsTabViewController? { window?.contentViewController as? SettingsTabViewController }
 
-    /// Shows a page, from the sidebar or from the outside
+    /// Shows a page, from the outside
     func select(_ page: SettingsPageID) {
         model.page = page
         tabs?.selectedTabViewItemIndex = SettingsPageID.allCases.firstIndex(of: page) ?? 0
@@ -67,16 +67,16 @@ final class SettingsWindowController: NSObject {
     func makeWindow(visibleFrame: ((NSWindow) -> CGRect?)? = nil) -> NSWindow {
         let tabs = SettingsTabViewController()
         if let visibleFrame { tabs.visibleFrame = visibleFrame }
-        // The sidebar picks the page: the tab view shows no tabs of its own
-        tabs.tabStyle = .unspecified
+        tabs.tabStyle = .toolbar
         tabs.transitionOptions = []
-        tabs.leadingWidth = settingsSidebarWidth + 1
         for page in SettingsPageID.allCases {
             tabs.addTab(page.title, symbol: page.symbol, Self.view(of: page, model))
         }
-        let sidebar = NSHostingView(rootView: SettingsSidebar(model: model) { [weak self] page in self?.select(page) })
-        let root = SettingsRootViewController(sidebar: sidebar, pages: tabs)
-        let window = NSWindow(contentViewController: root)
+        // A click on a tab of the toolbar: the window opens on it the next time
+        tabs.onSelect = { [weak self] index in
+            if let page = SettingsPageID.allCases.getOrNil(atIndex: index) { self?.model.page = page }
+        }
+        let window = NSWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.title = model.page.title
         // Kept after closing, so it reopens where it was
@@ -99,18 +99,15 @@ final class SettingsWindowController: NSObject {
     static func view(of page: SettingsPageID, _ model: SettingsModel) -> some View {
         switch page {
             case .general: GeneralSettingsView(model: model)
-            case .themes: ThemesSettingsView(model: model)
-            case .tiling: TilingSettingsView(model: model)
-            case .gaps: GapsSettingsView(model: model)
-            case .borders: BordersSettingsView(model: model)
-            case .animations: AnimationsSettingsView(model: model)
-            case .workspaces: WorkspacesSettingsView(model: model)
-            case .shortcuts: ShortcutsSettingsView(model: model)
+            case .appearance: AppearanceSettingsView(model: model)
+            case .windows: WindowsSettingsView(model: model)
+            case .keyboard: KeyboardSettingsView(model: model)
+            case .changes: ChangesSettingsView(model: model)
         }
     }
 
     /// ⌥ shows the keys of every row; ⌘Z and ⇧⌘Z undo and redo the changes of the window, unless a text field is being
-    /// edited (it has its own undo); ⌘F goes to the search field
+    /// edited (it has its own undo)
     private func installKeyMonitor(_ window: NSWindow) {
         if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
         let windowNumber = window.windowNumber
@@ -152,20 +149,11 @@ final class SettingsWindowController: NSObject {
 final class SettingsTabViewController: NSTabViewController {
     /// The part of the screen that the window may use
     var visibleFrame: (NSWindow) -> CGRect? = { ($0.screen ?? NSScreen.main)?.visibleFrame }
-    /// The sidebar, on the leading side of the pages
-    var leadingWidth: CGFloat = 0
+    /// A tab was selected
+    var onSelect: (@MainActor (Int) -> Void)? = nil
     /// The window has the same height on every page, so that it doesn't jump from one to another: a page that is
     /// taller scrolls. Less on a screen that hasn't room for it
     var contentHeight: CGFloat = settingsContentHeight
-
-    private var scrollToTopObserver: (any NSObjectProtocol)?
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        scrollToTopObserver = NotificationCenter.default.addObserver(forName: .settingsPageScrollToTop, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.selectedPage?.scrollToTop() }
-        }
-    }
 
     func addTab(_ title: String, symbol: String, _ view: some View) {
         let page = SettingsPageController(NSHostingController(rootView: AnyView(view)))
@@ -188,6 +176,7 @@ final class SettingsTabViewController: NSTabViewController {
 
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
+        onSelect?(selectedTabViewItemIndex)
         guard let window = unsafe view.window else { return }
         window.title = tabViewItem?.label ?? Strings.Settings.windowTitle
         fitWindow(animate: window.isVisible)
@@ -222,7 +211,7 @@ final class SettingsTabViewController: NSTabViewController {
         let frame = SettingsWindowSizing.frame(
             current: window.frame,
             chromeHeight: chrome,
-            content: CGSize(width: content.width + leadingWidth, height: contentHeight),
+            content: CGSize(width: content.width, height: contentHeight),
             visible: visibleFrame(window),
         )
         if frame != window.frame {
@@ -354,9 +343,4 @@ enum SettingsWindowSizing {
         }
         return frame
     }
-}
-
-extension Notification.Name {
-    /// A part of a tab took the place of another one (Themes › Palette, Indicator, Colors): its top is shown
-    static let settingsPageScrollToTop = Notification.Name("inlay.settings.scrollToTop")
 }

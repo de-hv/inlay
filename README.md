@@ -479,7 +479,14 @@ a warning (not with an error) and are treated as `tiles`:
 
 The warnings show up in `inlay reload-config` and in the menu of the menu bar item ("Config contains warnings...").
 
-### Moving windows: `swap` and `move`
+### Moving the focus and the windows: `focus`, `swap` and `move`
+
+**`focus left|down|up|right` (`cmd-alt` + arrow) goes to the window next to the focused one on the screen.**
+AeroSpace follows the tree instead: it goes up to the closest container with something in that direction and then
+down to the window of it that was focused last, which may be nowhere near. With *dwindle*, two columns whose
+bottom halves are split in two, `focus left` from the top right window could land on the bottom left ones.
+In Inlay it goes to the window that faces it on that side; toward a side with two windows (the two halves below),
+to the one that was focused more recently, so that going back and forth returns to the same window.
 
 The shipped config has two ways of moving the focused window with the arrows:
 

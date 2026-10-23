@@ -24,10 +24,8 @@ struct FocusCommand: Command {
 
         switch args.target {
             case .direction(let direction):
-                let window = target.windowOrNil
-                if let (parent, ownIndex) = window?.closestParent(hasChildrenInDirection: direction, withLayout: nil) {
-                    guard let windowToFocus = parent.children[ownIndex + direction.focusOffset]
-                        .findLeafWindowRecursive(snappedTo: direction.opposite) else { return .fail(io.err(bugPrompt())) }
+                // The window next to the focused one on the screen, not the one that the tree finds. See: tilingNeighbor
+                if let windowToFocus = target.windowOrNil?.tilingNeighbor(in: direction) {
                     return .from(bool: windowToFocus.focusWindow())
                 } else {
                     return hitWorkspaceBoundaries(target, io, args, direction)

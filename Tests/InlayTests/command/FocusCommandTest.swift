@@ -206,6 +206,81 @@ extension InlayTests {
             assertEquals(focus.windowOrNil?.windowId, 2)
         }
 
+        /// The layout of dwindle with six windows: two columns, the bottom of each one split in two
+        ///
+        ///     A (1) | B (2)
+        ///     C D   | E F
+        ///    (3)(4) |(5)(6)
+        @MainActor private func dwindleGrid() -> [UInt32: Window] {
+            var windows: [UInt32: Window] = [:]
+            Workspace.get(byName: name).rootTilingContainer.apply {
+                for (top, bottom) in [(1, [3, 4]), (2, [5, 6])] as [(UInt32, [UInt32])] {
+                    TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {
+                        windows[top] = TestWindow.new(id: top, parent: $0)
+                        TilingContainer.newHTiles(parent: $0, adaptiveWeight: 1).apply {
+                            for id in bottom { windows[id] = TestWindow.new(id: id, parent: $0) }
+                        }
+                    }
+                }
+            }
+            return windows
+        }
+
+        @MainActor private func focusAndCheck(_ direction: CardinalDirection, from start: Window, _ expected: UInt32) async {
+            _ = start.focusWindow()
+            await parseCommand("focus \(direction.rawValue)").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(focus.windowOrNil?.windowId, expected)
+        }
+
+        @Test func testFocusGoesToTheWindowNextToItOnTheScreen() async {
+            let windows = dwindleGrid()
+            // D was the last one focused of the left column: the tree went from B to D
+            windows[4]!.markAsMostRecentChild()
+            await focusAndCheck(.left, from: windows[2]!, 1)
+            // The tree went from D to the most recent window of the right column, B
+            windows[2]!.markAsMostRecentChild()
+            await focusAndCheck(.right, from: windows[4]!, 5)
+            await focusAndCheck(.up, from: windows[4]!, 1)
+            await focusAndCheck(.up, from: windows[6]!, 2)
+            await focusAndCheck(.left, from: windows[5]!, 4)
+        }
+
+        @Test func testFocusPicksTheMostRecentOfTheWindowsThatTouchIt() async {
+            let windows = dwindleGrid()
+            windows[4]!.markAsMostRecentChild()
+            await focusAndCheck(.down, from: windows[1]!, 4)
+            windows[3]!.markAsMostRecentChild()
+            await focusAndCheck(.down, from: windows[1]!, 3)
+        }
+
+        @Test func testFocusStopsAtTheEdgeOfTheWorkspace() async {
+            let windows = dwindleGrid()
+            await focusAndCheck(.up, from: windows[2]!, 2)
+            await focusAndCheck(.right, from: windows[6]!, 6)
+            await focusAndCheck(.left, from: windows[3]!, 3)
+        }
+
+        @Test func testFocusFollowsTheWeights() async {
+            // The left column is a quarter of the screen: its bottom window faces the top half of the right one too
+            var windows: [UInt32: Window] = [:]
+            Workspace.get(byName: name).rootTilingContainer.apply {
+                TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {
+                    windows[1] = TestWindow.new(id: 1, parent: $0, adaptiveWeight: 1)
+                    windows[2] = TestWindow.new(id: 2, parent: $0, adaptiveWeight: 3)
+                }
+                TilingContainer.newVTiles(parent: $0, adaptiveWeight: 3).apply {
+                    windows[3] = TestWindow.new(id: 3, parent: $0)
+                    windows[4] = TestWindow.new(id: 4, parent: $0)
+                }
+            }
+            windows[4]!.markAsMostRecentChild()
+            await focusAndCheck(.right, from: windows[1]!, 3) // Only 3 faces 1
+            windows[4]!.markAsMostRecentChild()
+            await focusAndCheck(.right, from: windows[2]!, 4)
+            windows[3]!.markAsMostRecentChild()
+            await focusAndCheck(.right, from: windows[2]!, 3)
+        }
+
         @Test func testFocusOutsideOfTheContainer() async {
             Workspace.get(byName: name).rootTilingContainer.apply {
                 TestWindow.new(id: 1, parent: $0)

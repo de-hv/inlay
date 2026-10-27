@@ -309,7 +309,8 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-ctrl-enter = ['fullscreen']
 
     # The focused window, between floating and tiling: the Window menu of the menu bar item does the same.
-    # A floating window takes a place in the layout like a new window; a window in fullscreen leaves it first
+    # A floating window takes a place in the layout like a new window; a tiling one floats in the middle of the
+    # screen; a window in fullscreen leaves it first
     cmd-alt-ctrl-shift-f = ['fullscreen off', 'layout floating tiling']
 
     # Modes: [m]anage (service) and resize with [n] beside it.

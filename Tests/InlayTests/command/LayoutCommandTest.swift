@@ -1,4 +1,5 @@
 @testable import AppBundle
+import AppKit
 import Common
 import Testing
 
@@ -147,6 +148,70 @@ extension InlayTests {
 
             assertEquals(workspace.floatingWindows.singleOrNil()?.windowId, 2)
             assertEquals(root.layoutDescription, .h_tiles([.window(1)]))
+        }
+
+        // MARK: - Tiling to floating: the test monitor is 1920x1080
+
+        @Test func testTilingToFloating_theWindowIsCentered_withItsFloatingSize() async {
+            let window = tilingWindow(rect: Rect(topLeftX: 0, topLeftY: 0, width: 960, height: 1080))
+            window.lastFloatingSize = CGSize(width: 800, height: 600)
+
+            await parseCommand("layout floating").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertTrue(window.isFloating)
+            assertEquals(frame(window), [560, 240, 800, 600])
+        }
+
+        @Test func testTilingToFloating_neverBiggerThanTheScreen() async {
+            let window = tilingWindow(rect: Rect(topLeftX: 0, topLeftY: 0, width: 960, height: 1080))
+            window.lastFloatingSize = CGSize(width: 2500, height: 600)
+
+            await parseCommand("layout floating tiling").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(frame(window), [0, 240, 1920, 600])
+        }
+
+        @Test func testTilingToFloating_fullscreenWindow_leavesFullscreen() async {
+            let window = tilingWindow(rect: Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1080))
+            window.lastFloatingSize = CGSize(width: 800, height: 600)
+            window.isFullscreen = true
+
+            await parseCommand("layout floating").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(window.isFullscreen, false)
+            assertEquals(frame(window), [560, 240, 800, 600])
+        }
+
+        /// The rule of the apps without a workspace makes their windows floating: they stay where they opened
+        @Test func testTilingToFloating_byARule_theWindowStaysWhereItIs() async {
+            let window = tilingWindow(rect: Rect(topLeftX: 100, topLeftY: 50, width: 800, height: 600))
+            window.lastFloatingSize = CGSize(width: 800, height: 600)
+            var env = CmdEnv.defaultEnv.withWindowId(window.windowId)
+            env.isWindowDetectedCallback = true
+
+            await parseCommand("layout floating").cmdOrDie.run(env, .emptyStdin)
+            assertTrue(window.isFloating)
+            assertEquals(frame(window), [100, 50, 800, 600])
+        }
+
+        @Test func testFloatingToFloating_theWindowDoesntMove() async {
+            let window = TestWindow.new(
+                id: 1,
+                parent: Workspace.get(byName: name).floatingWindowsContainer,
+                rect: Rect(topLeftX: 100, topLeftY: 50, width: 800, height: 600),
+            )
+            assertTrue(window.focusWindow())
+
+            await parseCommand("layout floating").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            assertEquals(frame(window), [100, 50, 800, 600])
+        }
+
+        /// x, y, width, height
+        private func frame(_ window: TestWindow) -> [CGFloat]? {
+            window.rect.map { [$0.topLeftX, $0.topLeftY, $0.width, $0.height] }
+        }
+
+        private func tilingWindow(rect: Rect) -> TestWindow {
+            let window = TestWindow.new(id: 1, parent: Workspace.get(byName: name).rootTilingContainer, rect: rect)
+            assertTrue(window.focusWindow())
+            return window
         }
 
         @Test func testChangeOrientation() async {

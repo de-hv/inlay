@@ -85,8 +85,16 @@ struct LayoutCommand: Command {
             case .floating:
                 guard let window = target.windowOrNil else { return .fail(io.err(noWindowIsFocused)) }
                 let workspace = target.workspace
+                let wasTiling = window.parent is TilingContainer
                 window.bindAsFloatingWindow(to: workspace)
-                if let size = window.lastFloatingSize { window.setAxFrame(nil, size) }
+                // A tiling window made floating by hand goes to the middle of the screen. One that a rule makes
+                // floating stays where its app opened it
+                if wasTiling && !env.isWindowDetectedCallback {
+                    window.isFullscreen = false
+                    window.center(in: workspace)
+                } else if let size = window.lastFloatingSize {
+                    window.setAxFrame(nil, size)
+                }
                 return .succ
         }
     }
@@ -137,5 +145,22 @@ extension ConventionalWindowParentCases {
             case .tiling:      tilingContainerOrNil != nil
             case .floating:    floatingWindowsContainerOrNil != nil
         }
+    }
+}
+
+extension Window {
+    /// The window, with the size it had before it was tiled (its current one otherwise), in the middle of the visible
+    /// part of the monitor of the workspace. It is never bigger than that part
+    @MainActor
+    fileprivate func center(in workspace: Workspace) {
+        let area = workspace.workspaceMonitor.visibleRect
+        let size = lastFloatingSize ?? lastAppliedLayoutPhysicalRect.map { CGSize(width: $0.width, height: $0.height) }
+        guard let size else { return }
+        let width = min(size.width, area.width)
+        let height = min(size.height, area.height)
+        // The tile that it is leaving may still be on its way
+        WindowAnimator.shared.cancel(windowId)
+        let topLeft = CGPoint(x: area.topLeftX + (area.width - width) / 2, y: area.topLeftY + (area.height - height) / 2)
+        setAxFrame(topLeft, CGSize(width: width, height: height))
     }
 }

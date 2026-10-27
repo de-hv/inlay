@@ -269,8 +269,8 @@ It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a s
 window) is already floating when the rules run, so it does not match and stays where it opens; popups never
 get to the rules. The window of an app without a rule floats in the workspace on the screen, where the app
 opens it, and the tiled windows don't move. **`cmd-alt-ctrl-shift-f` puts it in the layout** (`fullscreen off`
-and `layout floating tiling`: the same key floats a tiling window again, like the *Window* menu of the menu bar
-item). **`cmd-alt-shift` + a workspace key (`j k l i o p 7`) moves a window to that workspace with its layout**:
+and `layout floating tiling`: the same key floats a tiling window again, in the middle of the screen, like the
+*Window* menu of the menu bar item). **`cmd-alt-shift` + a workspace key (`j k l i o p 7`) moves a window to that workspace with its layout**:
 a floating window floats there, a tiling one splits a window there like a new window, and a window in
 fullscreen leaves it and takes a place in the layout of that workspace. To give an app
 a place of its own, give it a rule above (a workspace of its own); to have every other window tiled in the

@@ -117,11 +117,15 @@ extension TreeNode {
     ///
     /// Nothing to do for a node with a single sibling: the sibling takes all the space, and the container gets flattened.
     /// An only child takes its container with it (an empty container is removed), so it's the container that releases its space
+    ///
+    /// - Parameter temporarily: the node comes back to its place later (minimized, macOS native fullscreen, hidden app).
+    ///   Otherwise, two windows left alone in the workspace are put side by side again. See: Workspace.orientTwoWindowsLikeDwindle
     @MainActor
-    func releaseTilingSpaceToNeighbor() {
+    func releaseTilingSpaceToNeighbor(temporarily: Bool = false) {
         guard config.tiling.newWindowPlacement == .dwindle else { return }
         guard let parent = parent as? TilingContainer else { return }
-        if parent.children.count == 1 && !parent.isRootContainer { return parent.releaseTilingSpaceToNeighbor() }
+        if !temporarily { nodeWorkspace?.lostTilingNode = true }
+        if parent.children.count == 1 && !parent.isRootContainer { return parent.releaseTilingSpaceToNeighbor(temporarily: temporarily) }
         guard parent.children.count >= 3, let neighbor = siblingThatTakesTheSpace else { return }
         // Normalizes the weights. From this point, the weights are in screen points
         guard predictLayoutRect() != nil else { return }

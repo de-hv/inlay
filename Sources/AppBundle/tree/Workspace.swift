@@ -35,6 +35,8 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     nonisolated private let nameLogicalSegments: StringLogicalSegments
     /// `assignedMonitorPoint` must be interpreted only when the workspace is invisible
     fileprivate var assignedMonitorPoint: CGPoint? = nil
+    /// A node left the tiling tree for good since the last normalization. See: orientTwoWindowsLikeDwindle
+    var lostTilingNode = false
 
     @MainActor
     private init(_ name: String) {

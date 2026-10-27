@@ -44,7 +44,7 @@ private func _normalizeLayoutReason(workspace: Workspace?, windows: [Window]) as
                 }
                 window.layoutReason = .macos(prevParentKind: parent.kind)
                 window.rememberPlace()
-                window.releaseTilingSpaceToNeighbor()
+                window.releaseTilingSpaceToNeighbor(temporarily: true)
                 window.bind(to: container, adaptiveWeight: WEIGHT_DOESNT_MATTER, index: INDEX_BIND_LAST)
             case .macos(let prevParentKind):
                 if !isMacosFullscreen && !isMacosMinimized && !isMacosWindowOfHiddenApp {

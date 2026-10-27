@@ -352,6 +352,57 @@ extension InlayTests {
             assertRects([1: (0, 0, 960, 1079), 2: (960, 0, 960, 1079)])
         }
 
+        /// 1 | (2 / 3): 1 goes away, and 2 / 3 would be left one above the other on a wide screen
+        @Test func testClose_twoWindowsLeft_sideBySide() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            try await run("resize height +100") // 3 is focused: 439.5 for 2, 639.5 for 3
+
+            try await close(1)
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(2), .window(3)]))
+            // Each one keeps its share
+            let width2 = 1920 * 439.5 / 1079
+            assertRects([2: (0, 0, width2, 1079), 3: (width2, 0, 1920 - width2, 1079)])
+        }
+
+        @Test func testMoveToAnotherWorkspace_twoWindowsLeft_sideBySide() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            assertEquals(window(1).focusWindow(), true)
+
+            try await run("move-node-to-workspace other")
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(2), .window(3)]))
+            assertRects([2: (0, 0, 960, 1079), 3: (960, 0, 960, 1079)])
+        }
+
+        @Test func testTilingToFloating_twoWindowsLeft_sideBySide() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+            assertEquals(window(1).focusWindow(), true)
+
+            try await run("layout floating")
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(2), .window(3)]))
+        }
+
+        /// The window comes back to its place: 2 / 3 stays as it is, so that 1 finds it
+        @Test func testMacosMinimize_twoWindowsLeft_stayAsTheyAre() async throws {
+            for id in 1 ... 3 as ClosedRange<UInt32> { try await openWindow(id) }
+
+            window(1).isMacosMinimizedForTest = true
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.window(2), .window(3)]))
+
+            window(1).isMacosMinimizedForTest = false
+            try await refresh()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .h_tiles([.window(1), .v_tiles([.window(2), .window(3)])]))
+        }
+
+        /// Two windows that no window left keep the layout they were given
+        @Test func testTwoWindowsStackedOnPurpose_stayAsTheyAre() async throws {
+            try await openWindow(1)
+            try await openWindow(2)
+            try await run("layout v_tiles")
+            workspace.normalizeContainers()
+            assertEquals(workspace.rootTilingContainer.layoutDescription, .v_tiles([.window(1), .window(2)]))
+        }
+
         @Test func testClose_unwindsTheSequence() async throws {
             for id in 1 ... 5 as ClosedRange<UInt32> {
                 try await openWindow(id)

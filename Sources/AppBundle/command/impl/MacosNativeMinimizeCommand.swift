@@ -17,7 +17,7 @@ struct MacosNativeMinimizeCommand: Command {
         window.asMacWindow().setNativeMinimized(newState)
         if newState { // minimize
             window.rememberPlace()
-            window.releaseTilingSpaceToNeighbor()
+            window.releaseTilingSpaceToNeighbor(temporarily: true)
             window.bind(to: macosMinimizedWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
             return .succ
         } else { // unminimize

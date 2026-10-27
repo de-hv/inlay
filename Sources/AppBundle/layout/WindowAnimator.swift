@@ -176,7 +176,7 @@ final class WindowAnimator {
     }
 
     /// How big a new window is when it starts to grow, as a fraction of its tile: like the 'popin' of Hyprland
-    static let entryScale: CGFloat = 0.8
+    static let entryScale: CGFloat = 0.87
 
     /// Where a new window starts: smaller than its tile, in its center
     static func entryFrame(_ tile: CGRect) -> CGRect {

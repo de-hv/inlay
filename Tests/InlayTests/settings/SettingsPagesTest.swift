@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 extension InlayTests {
-    /// The Workspaces and Shortcuts pages, the undo of the window, and the export of the config
+    /// The Keyboard page, the undo of the window, and the export of the config
     @Suite @MainActor final class SettingsPagesTest {
         private let directory: URL
         private let file: URL
@@ -59,22 +59,9 @@ extension InlayTests {
 
             """
 
-        @Test func testWorkspaces() throws {
+        /// Persistent: the array of the file, in one line
+        @Test func testPersistentWorkspaces() throws {
             let model = try model(config)
-            let summary = WorkspaceSummaries.make(root: model.rawRoot)
-            assertEquals(summary.workspaces, [
-                WorkspaceSummary(name: "1", isPersistent: true, apps: ["com.example.term"], goKey: "cmd-alt-ctrl-j", moveKey: "cmd-alt-shift-j"),
-                WorkspaceSummary(name: "2", isPersistent: true),
-                WorkspaceSummary(name: "3", isPersistent: false, goKey: "cmd-alt-ctrl-u"),
-            ])
-            assertEquals(summary.floatingApps, ["com.example.calc"])
-            // The comment after the id names an app that isn't installed
-            assertEquals(appDisplayName("com.example.term", in: model.fileDocument), "Term")
-            assertEquals(appDisplayName("com.example.calc", in: model.fileDocument), "calc")
-            assertEquals(WorkspaceSummaries.target(of: "move-node-to-workspace --focus-follows-window 4", command: "move-node-to-workspace"), "4")
-            assertEquals(WorkspaceSummaries.target(of: "workspace next", command: "workspace"), nil)
-
-            // Persistent: the array of the file, in one line
             assertEquals(model.unavailableReason, nil)
             assertEquals(parseConfig(config).errors.map { $0.description(.error) }, [])
             model.set(.persistentWorkspaces, .strings(["1", "2", "3"]))

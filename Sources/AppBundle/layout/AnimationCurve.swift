@@ -20,6 +20,12 @@ struct AnimationCurve: Equatable, Sendable {
         "ease-in-out": AnimationCurve(x1: 0.42, y1: 0, x2: 0.58, y2: 1),
         "snappy": AnimationCurve(x1: 0.2, y1: 0.9, x2: 0.1, y2: 1),
         "overshot": AnimationCurve(x1: 0.05, y1: 0.9, x2: 0.1, y2: 1.1),
+        // easeOutQuint, the curve of the windows in Hyprland and Omarchy
+        "quint": AnimationCurve(x1: 0.23, y1: 1, x2: 0.32, y2: 1),
+        // easeOutExpo: fast to leave and very gentle to arrive, like the animations of macOS
+        "expo": AnimationCurve(x1: 0.16, y1: 1, x2: 0.3, y2: 1),
+        // The 'quick' curve of Hyprland
+        "quick": AnimationCurve(x1: 0.15, y1: 0, x2: 0.1, y2: 1),
     ]
 
     /// The progress of the movement when `progress` of the time has passed. 0 at 0 and 1 at 1

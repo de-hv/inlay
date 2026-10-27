@@ -65,7 +65,6 @@ enum Strings {
         static let appearance = "Appearance"
         static let windowsPage = "Windows"
         static let keyboard = "Keyboard"
-        static let changes = "Changes"
         static let workspaceIndicator = "Workspace Indicator"
         static let style = "Style"
         static let borderColors = "Border Colors"
@@ -192,19 +191,6 @@ enum Strings {
         static let outerGapsFooter = "Between the windows and the edges of the screen. With outer gaps less than the width of the border, the edge of the screen cuts the border."
         static let singleWindow = "Single Window and Fullscreen"
 
-        // Changes
-        static let lastChange = "Last change"
-        static let nothingToUndo = "Nothing to undo"
-        static let changesSinceStart = "Since \(inlayAppName) Started"
-        static let changesFooter = "Every reload that changed the config, the last one first: the changes of this window, which ⌘Z undoes, and the ones saved in the file. Only comments or formatting don't count. The list starts again when \(inlayAppName) does."
-        static let noChanges = "The config hasn't changed since \(inlayAppName) started."
-        static let changedInSettings = "Settings"
-        static let changedInFile = "File"
-        static let absent = "–"
-        static func keyCount(_ count: Int) -> String { count == 1 ? "1 key" : "\(count) keys" }
-        static func more(_ count: Int) -> String { "+\(count) more" }
-        static let undo = "Undo"
-        static let redo = "Redo"
         static let defaultValueShort = "default"
         static let cantUndoChangedFile = "\(configFileName) changed since the last change of this window: undoing would write those changes away."
         static let copyKey = "Click to copy the line of the config"
@@ -275,16 +261,7 @@ enum Strings {
         static let usesActiveColor = "Uses the active color"
         static let setColor = "Set Color…"
 
-        // Workspaces
-        static let workspacesPage = "Workspaces"
-        static let workspacesFooter = "The apps come from the on-window-detected rules of the config, the keys from the bindings of the main mode. The switch makes a workspace persistent: it always exists, and the item always shows it."
-        static let noWorkspaces = "The config defines no workspaces."
-        static let noAppsHere = "No app is sent here"
-        static func goToWorkspaceKey(_ key: String) -> String { "Go to the workspace: \(key)" }
-        static func moveToWorkspaceKey(_ key: String) -> String { "Move the focused window here: \(key)" }
-        static let persistentHelp = "Persistent: [persistent-workspaces]"
-        static let floatingApps = "Floating Apps"
-        static let floatingAppsFooter = "Their windows float: an on-window-detected rule makes them floating."
+        // Keyboard
         static let editRules = "Rules and key bindings"
         static let editRulesDetail = "The rules that send the apps to their workspace, and the key bindings, are edited in the file."
 

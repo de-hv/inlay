@@ -118,7 +118,7 @@ extension InlayTests {
         }
 
         /// Fullscreen from the menu runs the commands of the key binding: a floating window is tiled first, so that it
-        /// looks like with cmd-alt-ctrl-enter
+        /// looks like with cmd-alt-shift-enter
         @Test func testFullscreenFromTheMenu() async throws {
             assertEquals(MenuBarMenu.layoutCommands(from: .floating, to: .fullscreen), ["layout tiling", "fullscreen"])
             assertEquals(MenuBarMenu.layoutCommands(from: .tiling, to: .fullscreen), ["fullscreen"])

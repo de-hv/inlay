@@ -399,7 +399,6 @@ extension InlayTests {
                 ("appearance", AnyView(AppearanceSettingsView(model: model))),
                 ("windows", AnyView(WindowsSettingsView(model: model))),
                 ("keyboard", AnyView(KeyboardSettingsView(model: model))),
-                ("changes", AnyView(ChangesSettingsView(model: model))),
             ]
             for (name, view) in tabs {
                 let hosting = NSHostingView(rootView: view)

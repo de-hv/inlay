@@ -34,7 +34,7 @@ extension SettingsKey {
 
     // Animations. The defaults are the ones of AnimationsConfig
     static let animationsEnabled = SettingsKey(["animations"], "enabled", default: .bool(true))
-    static let animationsDuration = SettingsKey(["animations"], "duration", default: .int(180))
+    static let animationsDuration = SettingsKey(["animations"], "duration", default: .int(160))
     static let animationsWorkspaceSwitch = SettingsKey(["animations"], "workspace-switch", default: .string(WorkspaceSwitch.horizontal.rawValue))
 
     // Menu bar

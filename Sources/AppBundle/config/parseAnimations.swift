@@ -8,18 +8,19 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
     /// Nothing else is animated: resizing, the mouse
     var enabled: Bool = true
     /// How long a window takes to get to its new frame, in milliseconds. 0: no animation
-    var duration: Int = 180
+    var duration: Int = 160
     /// How switching workspaces slides the windows. See: WorkspaceSlide
     var workspaceSwitch: WorkspaceSwitch = .horizontal
     /// The name of the timing curve of every animation: one of AnimationCurve.presets or of `curves`
-    var curve: String = "ease-out"
+    var curve: String = "quint"
     /// [animations.curves]: name -> curve. The curves of the user, by name, on top of the presets
     var curves: [String: AnimationCurve] = [:]
-    /// The curve and the duration of each kind of animation, when they aren't the ones of `curve` and `duration`
-    var open: AnimationStep = AnimationStep()
-    var move: AnimationStep = AnimationStep()
-    var fullscreen: AnimationStep = AnimationStep()
-    var workspace: AnimationStep = AnimationStep()
+    /// The curve and the duration of each kind of animation, when they aren't the ones of `curve` and `duration`.
+    /// The defaults only hold while the config sets neither `curve` nor `duration`: see parseAnimations
+    var open: AnimationStep = AnimationStep(curve: "quint", duration: 200)
+    var move: AnimationStep = AnimationStep(curve: "quint", duration: 160)
+    var fullscreen: AnimationStep = AnimationStep(curve: "expo", duration: 220)
+    var workspace: AnimationStep = AnimationStep(curve: "expo", duration: 140)
 
     static let durationRange = 0 ... 500
 
@@ -32,6 +33,15 @@ struct AnimationsConfig: ConvenienceMutable, Equatable, Sendable {
             case .move: move
             case .fullscreen: fullscreen
             case .workspace: workspace
+        }
+    }
+
+    mutating func setStep(_ kind: AnimationKind, _ step: AnimationStep) {
+        switch kind {
+            case .open: open = step
+            case .move: move = step
+            case .fullscreen: fullscreen = step
+            case .workspace: workspace = step
         }
     }
 
@@ -132,7 +142,17 @@ private func parseWorkspaceSwitch(_ raw: OrderedJson, _ backtrace: ConfigBacktra
 }
 
 func parseAnimations(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> AnimationsConfig {
-    let result = parseTable(raw, AnimationsConfig(), animationsParserTable, backtrace, &c)
+    var result = parseTable(raw, AnimationsConfig(), animationsParserTable, backtrace, &c)
+    // A config that sets `curve` or `duration` gets them for every kind of animation it doesn't set on its own:
+    // `duration = 0` turns them all off, whatever the defaults of each kind
+    if case .dict(let table) = raw {
+        for kind in AnimationKind.allCases where table[kind.rawValue] == nil {
+            var step = result.step(kind)
+            if table["curve"] != nil { step.curve = nil }
+            if table["duration"] != nil { step.duration = nil }
+            result.setStep(kind, step)
+        }
+    }
     // The names are checked once the whole table is read: [animations.curves] can come after the keys that use it
     let names = Set(AnimationCurve.presets.keys).union(result.curves.keys)
     let possible = names.sorted().joined(separator: ", ")

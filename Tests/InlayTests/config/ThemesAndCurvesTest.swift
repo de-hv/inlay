@@ -47,16 +47,16 @@ extension InlayTests {
             assertEquals(animations.effectiveCurve(.open), AnimationCurve.presets["overshot"])
             assertEquals(animations.effectiveDuration(.open), .milliseconds(220))
             assertEquals(animations.effectiveDuration(.workspace), .milliseconds(120))
-            assertEquals(animations.effectiveDuration(.fullscreen), .milliseconds(180))
+            assertEquals(animations.effectiveDuration(.fullscreen), .milliseconds(220))
             assertEquals(animations.copy(\.enabled, false).effectiveDuration(.open), .zero)
-            // The default: the curve of before
-            assertEquals(parseConfig("").config.animations.effectiveCurve(.move), .easeOut)
+            // The default: easeOutQuint
+            assertEquals(parseConfig("").config.animations.effectiveCurve(.move), AnimationCurve.presets["quint"])
         }
 
         @Test func testCurveErrors() {
             assertEquals(
                 parseConfig("[animations]\ncurve = 'wobble'\n").strErrors,
-                ["[ERROR] animations.curve: Unknown curve 'wobble'. Possible values: ease, ease-in-out, ease-out, linear, overshot, snappy, or a curve of [animations.curves]"],
+                ["[ERROR] animations.curve: Unknown curve 'wobble'. Possible values: ease, ease-in-out, ease-out, expo, linear, overshot, quick, quint, snappy, or a curve of [animations.curves]"],
             )
             assertEquals(
                 parseConfig("[animations]\nopen = { curve = 'wobble' }\n").strErrors.count,

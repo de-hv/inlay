@@ -74,24 +74,25 @@ exec-on-workspace-change = []
 #                                    WORKSPACES
 # └──────────────────────────────────────────────────────────────────────────────┘
 # Named by number, as the menu bar item shows them. The keys are on the right
-# hand: the first three workspaces on the home row, where the fingers rest
-# (index, middle, ring), and the other four on the row above:
+# hand, in the order of vim: the first four workspaces on the home row, the
+# other three on the row above, over j k l:
 #
-#   u i o p   ->   7 4 5 6
-#   j k l     ->   1 2 3
+#     u i o     ->     5 6 7
+#   h j k l     ->   1 2 3 4
 #
-#   "1" = Terminal    cmd-alt-ctrl-j  (move a window: cmd-alt-shift-j)
-#   "2" = Code        cmd-alt-ctrl-k  (cmd-alt-shift-k)
-#   "3" = Browser     cmd-alt-ctrl-l  (cmd-alt-shift-l)
-#   "4" = Chat        cmd-alt-ctrl-i  (cmd-alt-shift-i)
-#   "5" = AI          cmd-alt-ctrl-o  (cmd-alt-shift-o)
-#   "6" = Other       cmd-alt-ctrl-p  (cmd-alt-shift-p)   every app without a workspace,
+#   "1" = Terminal    cmd-alt-ctrl-h  (move a window: cmd-alt-shift-h)
+#   "2" = Code        cmd-alt-ctrl-j  (cmd-alt-shift-j)
+#   "3" = Browser     cmd-alt-ctrl-k  (cmd-alt-shift-k)
+#   "4" = Chat        cmd-alt-ctrl-l  (cmd-alt-shift-l)
+#   "5" = AI          cmd-alt-ctrl-u  (cmd-alt-shift-u)
+#   "6" = Other       cmd-alt-ctrl-i  (cmd-alt-shift-i)   every app without a workspace,
 #                                                         on the secondary display if there is one
-#   "7" = Empty       cmd-alt-ctrl-7  (cmd-alt-shift-7)   no app goes there on its own: a workspace
+#   "7" = Empty       cmd-alt-ctrl-o  (cmd-alt-shift-o)   no app goes there on its own: a workspace
 #                                                         that is (almost) always free, on the main display
 #
-# cmd-alt-ctrl / cmd-alt-shift rather than anything shorter, so no other app's
-# shortcut ever collides with them.
+# cmd-alt-ctrl goes to a workspace, and cmd-alt-shift with the same key takes the focused window there. The
+# other actions are cmd-alt-shift with a key of the left hand (see KEY BINDINGS). Nothing shorter, so no other
+# app's shortcut ever collides with them.
 persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -135,16 +136,22 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 [animations]
     enabled = true
     # In milliseconds (0 ... 500). 0 = no animation
-    duration = 180
+    duration = 160
     # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
     workspace-switch = 'horizontal'
-    # The timing curve: ease-out | linear | ease | ease-in-out | snappy | overshot, or one of [animations.curves]
-    curve = 'ease-out'
+    # The timing curve: quint | expo | quick | ease-out | linear | ease | ease-in-out | snappy | overshot, or one of
+    # [animations.curves]. quint is easeOutQuint, the curve of the windows in Hyprland and Omarchy; expo is
+    # easeOutExpo, fast to leave and very gentle to arrive, like the animations of macOS.
+    # The windows of other apps are moved through the Accessibility API, and the apps draw them late: short
+    # animations with a strong ease-out, where most of the movement happens at the start, hide the frames that
+    # an app skips. A curve that overshoots resizes the windows past their tiles, and the apps lay out again
+    curve = 'quint'
     # Each kind of animation can have its own curve and duration. Without them, the ones above
-    # open = { curve = 'overshot', duration = 220 }
-    # move = { curve = 'snappy' }
-    # fullscreen = { curve = 'ease-in-out', duration = 240 }
-    # workspace = { curve = 'snappy', duration = 160 }
+    open = { curve = 'quint', duration = 200 }
+    move = { curve = 'quint', duration = 160 }
+    fullscreen = { curve = 'expo', duration = 220 }
+    # It moves every window of the two workspaces at once: workspace-switch = 'off' if it stutters
+    workspace = { curve = 'expo', duration = 140 }
 
     # Curves of your own: the name = [x1, y1, x2, y2]
     [animations.curves]
@@ -256,36 +263,46 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 #                                    KEY BINDINGS
 # └──────────────────────────────────────────────────────────────────────────────┘
 [mode.main.binding]
-    # All the windows of the workspace get the same share of their containers again, after resizing them
-    cmd-alt-comma = 'balance-sizes'
+    # cmd-alt-ctrl + a key of the right hand goes to a workspace, cmd-alt-shift + the same key takes the focused
+    # window there. cmd-alt-shift + a key of the left hand is an action. The arrows: cmd-alt focuses, cmd-alt-ctrl
+    # swaps, cmd-alt-shift moves
 
-    # The windows of the workspace are placed again one after another, like new windows: two side by side,
-    # then dwindle. For a workspace left as a row, or with two windows one above the other.
-    # 'arrange-workspace grid' and 'arrange-workspace row' arrange it as a grid or as a row
-    cmd-alt-ctrl-d = 'arrange-workspace dwindle'
-
-    # Go to workspace. 1 2 3 on the home row, 7 4 5 6 on the row above (see
-    # the WORKSPACES note):
-    #   u i o p  ->  7 4 5 6
-    #   j k l    ->  1 2 3
-    cmd-alt-ctrl-j = ['workspace 1', 'mode main'] # terminals
-    cmd-alt-ctrl-k = ['workspace 2', 'mode main'] # code / editors
-    cmd-alt-ctrl-l = ['workspace 3', 'mode main'] # browsers
-    cmd-alt-ctrl-i = ['workspace 4', 'mode main'] # chats (slack, teams, whatsapp, telegram)
-    cmd-alt-ctrl-o = ['workspace 5', 'mode main'] # AI
-    cmd-alt-ctrl-p = ['workspace 6', 'mode main'] # everything else / secondary display
-    cmd-alt-ctrl-7 = ['workspace 7', 'mode main'] # empty: no app goes there on its own
+    # Go to workspace (see the WORKSPACES note):
+    #     u i o  ->    5 6 7
+    #   h j k l  ->  1 2 3 4
+    cmd-alt-ctrl-h = ['workspace 1', 'mode main'] # terminals
+    cmd-alt-ctrl-j = ['workspace 2', 'mode main'] # code / editors
+    cmd-alt-ctrl-k = ['workspace 3', 'mode main'] # browsers
+    cmd-alt-ctrl-l = ['workspace 4', 'mode main'] # chats (slack, teams, whatsapp, telegram)
+    cmd-alt-ctrl-u = ['workspace 5', 'mode main'] # AI
+    cmd-alt-ctrl-i = ['workspace 6', 'mode main'] # everything else / secondary display
+    cmd-alt-ctrl-o = ['workspace 7', 'mode main'] # empty: no app goes there on its own
 
     # Move window to workspace (same keys as above). It keeps its layout: a floating window floats in the
     # other workspace, and a tiling one splits a window there like a new window. A window in fullscreen
     # leaves it, and takes a place in the layout of the other workspace
-    cmd-alt-shift-j = 'move-node-to-workspace 1' # terminals
-    cmd-alt-shift-k = 'move-node-to-workspace 2' # code / editors
-    cmd-alt-shift-l = 'move-node-to-workspace 3' # browsers
-    cmd-alt-shift-i = 'move-node-to-workspace 4' # chats
-    cmd-alt-shift-o = 'move-node-to-workspace 5' # AI
-    cmd-alt-shift-p = 'move-node-to-workspace 6' # everything else / secondary
-    cmd-alt-shift-7 = 'move-node-to-workspace 7' # empty
+    cmd-alt-shift-h = 'move-node-to-workspace 1' # terminals
+    cmd-alt-shift-j = 'move-node-to-workspace 2' # code / editors
+    cmd-alt-shift-k = 'move-node-to-workspace 3' # browsers
+    cmd-alt-shift-l = 'move-node-to-workspace 4' # chats
+    cmd-alt-shift-u = 'move-node-to-workspace 5' # AI
+    cmd-alt-shift-i = 'move-node-to-workspace 6' # everything else / secondary
+    cmd-alt-shift-o = 'move-node-to-workspace 7' # empty
+
+    # [b]alance: all the windows of the workspace get the same share of their containers again, after resizing them
+    cmd-alt-shift-b = 'balance-sizes'
+
+    # [d]windle: the windows of the workspace are placed again one after another, like new windows: two side by
+    # side, then dwindle. For a workspace left as a row, or with two windows one above the other.
+    # 'arrange-workspace grid' and 'arrange-workspace row' arrange it as a grid or as a row
+    cmd-alt-shift-d = 'arrange-workspace dwindle'
+
+    # [f]loating: the focused window, between floating and tiling: the Window menu of the menu bar item does the
+    # same. A floating window takes a place in the layout like a new window; a tiling one floats in the middle of
+    # the screen; a window in fullscreen leaves it first
+    cmd-alt-shift-f = ['fullscreen off', 'layout floating tiling']
+
+    cmd-alt-shift-enter = ['fullscreen']
 
     # focus
     cmd-alt-left  = 'focus left'
@@ -306,22 +323,14 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-shift-up    = 'move up'
     cmd-alt-shift-right = 'move right'
 
-    cmd-alt-ctrl-enter = ['fullscreen']
-
-    # The focused window, between floating and tiling: the Window menu of the menu bar item does the same.
-    # A floating window takes a place in the layout like a new window; a tiling one floats in the middle of the
-    # screen; a window in fullscreen leaves it first
-    cmd-alt-ctrl-shift-f = ['fullscreen off', 'layout floating tiling']
-
-    # Modes: [m]anage (service) and resize with [n] beside it.
-    cmd-alt-ctrl-m = 'mode service'
-
-    cmd-alt-ctrl-n = 'mode resize'
+    # Modes: [s]ervice and [r]esize
+    cmd-alt-ctrl-s = 'mode service'
+    cmd-alt-ctrl-r = 'mode resize'
 
 
 [mode.service.binding]
     esc = ['reload-config', 'mode main']
-    cmd-alt-ctrl-m = 'mode main' # the key that entered the mode leaves it (toggle)
+    cmd-alt-ctrl-s = 'mode main' # the key that entered the mode leaves it (toggle)
     r   = ['flatten-workspace-tree', 'mode main'] # reset layout
     # Every window back to the workspace of its app: the 'on-window-detected' rules below run again for all
     # the open windows. They place a window only when it opens, and after waking up plugged to an external
@@ -340,7 +349,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
 [mode.resize.binding]
     esc = ['reload-config', 'mode main']
-    cmd-alt-ctrl-n = 'mode main' # the key that entered the mode leaves it (toggle)
+    cmd-alt-ctrl-r = 'mode main' # the key that entered the mode leaves it (toggle)
     r   = ['flatten-workspace-tree', 'mode main'] # reset layout
 
     cmd-alt-ctrl-up = 'resize smart +50'
@@ -357,7 +366,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 #   1. File dialogs float where they open
 #   2. The apps with a workspace go to it: 1 to 5
 #   3. The quick apps, and the settings windows of any app, float where they open
-#   4. Every other window floats where it opens, until cmd-alt-ctrl-shift-f tiles it
+#   4. Every other window floats where it opens, until cmd-alt-shift-f tiles it
 #
 # Every rule starts with 'layout tiling'. Some apps (Zen, Teams) expose incomplete
 # accessibility attributes while restoring windows on wake/unlock, so Inlay
@@ -516,8 +525,8 @@ run = ['layout floating']
 #   Everything else
 # └────────────────────┘
 # The windows of the apps that have no rule above float where they open, in the workspace that is on the
-# screen, instead of taking a place in its layout. cmd-alt-ctrl-shift-f puts the window in the layout of its
-# workspace: it stops floating. cmd-alt-shift + a workspace key (j k l i o p 7) moves it there, still floating.
+# screen, instead of taking a place in its layout. cmd-alt-shift-f puts the window in the layout of its
+# workspace: it stops floating. cmd-alt-shift + a workspace key (h j k l u i o) moves it there, still floating.
 #
 # Only the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About" window)
 # floats, so 'window-layout' is 'floating' for it, the rule doesn't match, and it stays where it opens.

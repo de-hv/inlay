@@ -351,7 +351,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
         # 2 = 'chevron.left.forwardslash.chevron.right'
 
 # The animations of the tiling windows. A window slides to its new frame, and its border goes with it, when:
-# - a window opens (it grows from the center of its tile, from 80% of its size, while its neighbor makes room) or closes,
+# - a window opens (it grows from the center of its tile, from 87% of its size, while its neighbor makes room) or closes,
 # - a window is moved with 'swap' or 'move' (the key bindings, the CLI),
 # - the 'fullscreen' command makes a window grow from its tile to the screen, or shrink back to its tile,
 # - the screen switches workspaces (see workspace-switch).
@@ -366,8 +366,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # How long a window takes to get to its new frame, in milliseconds. 0 = no animation
     # Possible values: 0 ... 500
-    # Fallback value (if you omit the key): duration = 180
-    duration = 180
+    # Fallback value (if you omit the key): duration = 160
+    duration = 160
 
     # How switching workspaces slides the windows, in the same duration: the windows of the workspace that is left
     # go out of the screen, and the ones of the workspace that is shown come in. Only the tiling windows slide: the
@@ -387,30 +387,34 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # How the movement is spread over the duration: a cubic Bézier curve, like the 'bezier' of Hyprland and the
     # cubic-bezier() of CSS. The presets:
+    # - 'quint'. easeOutQuint, the curve of the windows in Hyprland and Omarchy: most of the movement at the start
+    # - 'expo'. easeOutExpo: fast to leave and very gentle to arrive, like the animations of macOS
+    # - 'quick'. The 'quick' curve of Hyprland
     # - 'ease-out'. Quick to leave, gentle to arrive: the curve of Inlay before there were curves
     # - 'linear', 'ease', 'ease-in-out'. The ones of CSS
     # - 'snappy'. Fast, and a soft landing
     # - 'overshot'. It goes a bit past its frame and comes back: the popin of a Hyprland setup
     # or the name of a curve of [animations.curves]. A curve that overshoots also resizes the window past its tile
     # for a moment: some apps (browsers, Electron) are slow to redraw that
-    # Fallback value (if you omit the key): curve = 'ease-out'
-    curve = 'ease-out'
+    # Fallback value (if you omit the key): curve = 'quint'
+    curve = 'quint'
 
     # The curve and the duration of a new window, that grows from the center of its tile: { curve = '...', duration = ... },
-    # both optional. Fallback value (if you omit the key): the curve and the duration of [animations]
-    # open = { curve = 'overshot', duration = 220 }
+    # both optional: the one left out is the one of [animations]
+    # Fallback value (if you omit the key): open = { curve = 'quint', duration = 200 }
+    open = { curve = 'quint', duration = 200 }
 
     # The same for the windows that make room for a new one, take the space of one that closed, or move with 'swap'
-    # or 'move'. Fallback value (if you omit the key): the curve and the duration of [animations]
-    # move = { curve = 'snappy' }
+    # or 'move'. Fallback value (if you omit the key): move = { curve = 'quint', duration = 160 }
+    move = { curve = 'quint', duration = 160 }
 
-    # The same for the 'fullscreen' command, in and out. Fallback value (if you omit the key): the curve and the
-    # duration of [animations]
-    # fullscreen = { curve = 'ease-in-out', duration = 240 }
+    # The same for the 'fullscreen' command, in and out.
+    # Fallback value (if you omit the key): fullscreen = { curve = 'expo', duration = 220 }
+    fullscreen = { curve = 'expo', duration = 220 }
 
-    # The same for switching workspaces: the windows that slide out and in. Fallback value (if you omit the key):
-    # the curve and the duration of [animations]
-    # workspace = { curve = 'snappy', duration = 160 }
+    # The same for switching workspaces: the windows that slide out and in. They all move at once: 'off' in
+    # workspace-switch if it stutters. Fallback value (if you omit the key): workspace = { curve = 'expo', duration = 140 }
+    workspace = { curve = 'expo', duration = 140 }
 
     # Curves of your own: the name = [x1, y1, x2, y2], the control points of the curve. x1 and x2 must be in
     # 0 ... 1; y1 and y2 can be below 0 or above 1 (an overshoot). A name of a preset is replaced by yours

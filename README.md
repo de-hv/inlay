@@ -46,7 +46,7 @@ Hyprland setups (`dots`, `underline`, `glyphs`, `liquid`): they are checked with
 frames of their animations. The same goes for the curves of the animations, the `labels` theme with
 `[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, undo, the export of the config, and the latest
 revision, which simplified the look: no palettes (every color is set on its own), no notice after a reload
-(Settings › Changes lists what each reload changed), a Settings window with five tabs in the toolbar, and a menu of
+(the menu says when the config was reloaded last), a Settings window with four tabs in the toolbar, and a menu of
 native items.
 
 Known limitations of this version:
@@ -268,9 +268,9 @@ run = 'layout floating'
 It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About"
 window) is already floating when the rules run, so it does not match and stays where it opens; popups never
 get to the rules. The window of an app without a rule floats in the workspace on the screen, where the app
-opens it, and the tiled windows don't move. **`cmd-alt-ctrl-shift-f` puts it in the layout** (`fullscreen off`
+opens it, and the tiled windows don't move. **`cmd-alt-shift-f` puts it in the layout** (`fullscreen off`
 and `layout floating tiling`: the same key floats a tiling window again, in the middle of the screen, like the
-*Window* menu of the menu bar item). **`cmd-alt-shift` + a workspace key (`j k l i o p 7`) moves a window to that workspace with its layout**:
+*Window* menu of the menu bar item). **`cmd-alt-shift` + a workspace key (`h j k l u i o`) moves a window to that workspace with its layout**:
 a floating window floats there, a tiling one splits a window there like a new window, and a window in
 fullscreen leaves it and takes a place in the layout of that workspace. To give an app
 a place of its own, give it a rule above (a workspace of its own); to have every other window tiled in the
@@ -309,10 +309,8 @@ auto-reload-config = true   # the default. With false: reload with 'inlay reload
 
 ![Illustration, animated: on the left the config file, on the right the borders of the Appearance tab of Settings (a real render). The line 'width = 4' of the file is changed to 'width = 8' and the Width slider of Settings moves to 8 pt; then the slider is moved to 2 pt and the line of the file becomes 'width = 2'](docs/images/settings-sync.gif)
 
-**What a reload changed is in Settings › Changes**: every reload that changed the config since Inlay started,
-the last one first, with the keys that changed and their old and new values (`borders.width 4 → 8`), and who
-changed them: *Settings* (the window, which ⌘Z undoes) or *File* (saved by hand or by another program). Comments
-and formatting don't count. Nothing shows up on the screen: the menu says when the config was reloaded last.
+Nothing shows up on the screen after a reload: the menu says when the config was reloaded last. ⌘Z in the
+Settings window undoes its last change.
 `auto-reload-config` and `[settings] show-keys` are only set in the file: the window doesn't show them, nor the
 switch of the menu bar item (`[menu-bar] enabled`). A `[theme]` or `[notifications]` table of a previous version
 is accepted with a warning and ignored.
@@ -452,12 +450,12 @@ tree out of its tiling windows, in the order they have in the tree (`--workspace
 the focused one). With `dwindle` they come back one after another and each one splits the previous one, like
 new windows: two side by side on a wide screen, then the spiral, with `split-ratio`. `grid` and `row` are the
 ones of `startup-layout`. The floating windows stay where they are. The shipped config runs
-`arrange-workspace dwindle` with `cmd-alt-ctrl-d`: useful for a workspace that was left as a row, or with two
+`arrange-workspace dwindle` with `cmd-alt-shift-d`: useful for a workspace that was left as a row, or with two
 windows one above the other.
 
 ```toml
 [mode.main.binding]
-    cmd-alt-ctrl-d = 'arrange-workspace dwindle'
+    cmd-alt-shift-d = 'arrange-workspace dwindle'
 ```
 
 A window that leaves the tiling because macOS **minimizes** it, puts it in **native fullscreen** or **hides
@@ -508,9 +506,10 @@ The shipped config has two ways of moving the focused window with the arrows:
 
 ### Animations
 
-The tiling windows **slide to their place**, in 180 ms, when a window opens (it grows from the center of its
-tile while its neighbor makes room for it, like the *popin* of Hyprland) or closes, when a window is moved with `swap` or `move`,
-and when the `fullscreen` command (`cmd-alt-ctrl-enter`) makes a window grow from its tile to the whole screen, or
+The tiling windows **slide to their place**, in 160 ms (200 ms to open, 220 ms for fullscreen and 140 ms to switch workspaces in
+the shipped config, with the `quint` and `expo` curves), when a window opens (it grows from the center of its
+tile, from 87% of its size, while its neighbor makes room for it, like the *popin* of Hyprland) or closes, when a window is moved with `swap` or `move`,
+and when the `fullscreen` command (`cmd-alt-shift-enter`) makes a window grow from its tile to the whole screen, or
 shrink back to its tile. The native fullscreen of macOS has an animation of its own.
 The borders go with them. Switching workspaces has its own slide (below). Nothing else is animated: resizing, `balance-sizes`, the
 startup and the mouse stay instant. With *Reduce motion* (System Settings → Accessibility → Display) nothing is
@@ -546,7 +545,8 @@ windows, nothing more. A window that is slow to resize (some browsers, Electron 
 always ends in its exact place.
 
 **Curves**: how the movement is spread over the duration, a cubic Bézier curve like the `bezier` of Hyprland. The
-presets are `ease-out` (the default, and the curve of before), `linear`, `ease`, `ease-in-out`, `snappy` and
+presets are `quint` (the default: easeOutQuint, the curve of the windows in Hyprland and Omarchy), `expo`
+(easeOutExpo), `quick` (the one of Hyprland), `ease-out` (the curve of before), `linear`, `ease`, `ease-in-out`, `snappy` and
 `overshot` (the window goes a bit past its frame and comes back); `[animations.curves]` adds your own. Each kind
 of animation can have its own curve and duration: `open` (a new window), `move` (the others make room or take the
 space, `swap`, `move`), `fullscreen` and `workspace`.
@@ -683,16 +683,16 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   errors or warnings, an item says so (a click shows them all) and the first ones follow, indented. Then
   **Window ▸**, a submenu with the app of the focused window and *Tiling*, *Floating* and *Fullscreen*, the one in
   use checked (disabled without a focused window). It runs the commands of the key bindings (`fullscreen`
-  toggles, like `cmd-alt-ctrl-enter`), once the menu is closed; *Fullscreen* tiles a floating window first, so
+  toggles, like `cmd-alt-shift-enter`), once the menu is closed; *Fullscreen* tiles a floating window first, so
   that it looks like with the key binding: like a window alone in its workspace (`[borders.single-window]`).
   Then *Reload Config* (⌘R), *Open inlay.toml…* and *Settings…* (⌘,), and last *Pause Inlay* (⌘E) and *Quit
   Inlay* (⌘Q). Paused, the first item says so; without the Accessibility permission the menu only has the item
-  that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-comma`) and
+  that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-shift-b`) and
   the binding modes are done with the key bindings. **The menu does not show the key bindings of your config**:
   its own shortcuts only exist while it is open.
 - The shipped config defines **7 persistent workspaces** (1–7), which are the ones the item always shows.
   7 is the empty one: no rule sends an app to it, so there is (almost) always a free workspace, on the main
-  display (`cmd-alt-ctrl-7`, and `cmd-alt-shift-7` to move a window there). Any
+  display (`cmd-alt-ctrl-o`, and `cmd-alt-shift-o` to move a window there). Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **Settings…** (⌘, in the menu, or opening Inlay again from Applications) edits those keys **in your config
   file**, line by line and without touching comments or the rest of the file, and reloads the config. If the
@@ -705,7 +705,7 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 
 ### The Settings window
 
-Five tabs in the toolbar, like the settings of every macOS app:
+Four tabs in the toolbar, like the settings of every macOS app:
 
 - **General**: open at login, the config file (its path, *Show in Finder*, *Open*, the status of the last load and
   *Reload Now*, *Export complete config*), the config folder and the Accessibility permission. **Link to a
@@ -721,15 +721,12 @@ Five tabs in the toolbar, like the settings of every macOS app:
   width, corners, glow, a single window, their three colors and the colors of the binding modes.
 - **Windows**: tiling (placement, window to split, split ratio, the windows already open, minimum size), gaps and
   animations.
-- **Keyboard**: the workspaces, in the order of their names, with the apps that the `on-window-detected` rules
-  send to each one (read only: the rules are edited in the file), the key bindings that go to it and that move a
-  window to it, and a switch that adds it to `persistent-workspaces` or removes it; the apps that a rule makes
-  floating; and the key bindings of the config, mode by mode, with the comment written after each one and a
-  filter (read only).
-- **Changes**: what each reload changed since Inlay started (see [Configuration](#configuration)), and *Undo* and
-  *Redo* of the last change of the window, also ⌘Z and ⇧⌘Z (not while a text field is being edited, which has its
-  own). Undoing writes back the text the file had, comments included; if the file changed since, by hand or by
-  another program, nothing is undone and the window says why.
+- **Keyboard**: the key bindings of the config, mode by mode, with the comment written after each one and a
+  filter (read only: they are edited in the file).
+
+⌘Z and ⇧⌘Z undo and redo the last change of the window (not while a text field is being edited, which has its
+own). Undoing writes back the text the file had, comments included; if the file changed since, by hand or by
+another program, nothing is undone and the window says why.
 
 Every tab has the same height: the window doesn't change its size from tab to tab, and a taller tab scrolls. A row
 shows the key it writes while the mouse is over it, or while ⌥ is held, over the row next to its control: nothing
@@ -748,11 +745,10 @@ These are the pages with the shipped config (click one to see it at full size):
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Appearance</sub></td><td align="center"><sub>Windows</sub></td></tr>
 <tr>
-<td valign="top"><a href="docs/images/settings-keyboard.png"><img src="docs/images/settings-keyboard.png" alt="Real render of the Keyboard tab of Settings: a row per workspace from 1 to 7 with the apps that the rules send to it, its two key bindings and a switch for persistent-workspaces, the floating apps, and the key bindings of the main mode with their comments" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-changes.png"><img src="docs/images/settings-changes.png" alt="Real render of the Changes tab of Settings: the last change with Undo and Redo, and the list of the changes since Inlay started, empty" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-keyboard.png"><img src="docs/images/settings-keyboard.png" alt="Real render of the Keyboard tab of Settings: the key bindings of the main mode with their comments" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-window-appearance.png"><img src="docs/images/settings-window-appearance.png" alt="Real render of the whole Settings window on the Appearance tab, as tall as every tab" width="280"></a></td>
 </tr>
-<tr><td align="center"><sub>Keyboard</sub></td><td align="center"><sub>Changes</sub></td><td align="center"><sub>The window</sub></td></tr>
+<tr><td align="center"><sub>Keyboard</sub></td><td align="center"><sub>The window</sub></td></tr>
 </table>
 
 <sub>Real renders, drawn off screen by `Inlay --render-settings` (see [Development](#development)): the content

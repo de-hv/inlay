@@ -75,7 +75,7 @@ extension InlayTests {
         @Test func testEveryTabFitsOrScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
             let window = try window(visibleHeight: 600)
             let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Appearance", "Windows", "Keyboard", "Changes"])
+            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Appearance", "Windows", "Keyboard"])
             var scrolling: [String] = []
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index
@@ -99,9 +99,8 @@ extension InlayTests {
                     assertEquals(window.frame.height, 600, additionalMsg: label)
                 }
             }
-            // Some tabs are taller than such a screen. Changes is short while nothing has changed
+            // Some tabs are taller than such a screen
             assertEquals(scrolling.isEmpty, false)
-            assertEquals(scrolling.contains("Changes"), false)
         }
 
         /// The top of a page shows again when asked, wherever the page was scrolled, and a window that gets taller than
@@ -139,7 +138,7 @@ extension InlayTests {
             defer { window.orderOut(nil) }
             RunLoop.current.run(until: .now.addingTimeInterval(0.2))
             var heights: Set<CGFloat> = []
-            for index in [1, 2, 0, 4, 3, 1] {
+            for index in [1, 2, 0, 3, 1] {
                 tabs.selectedTabViewItemIndex = index
                 RunLoop.current.run(until: .now.addingTimeInterval(0.3))
                 heights.insert(window.frame.height)

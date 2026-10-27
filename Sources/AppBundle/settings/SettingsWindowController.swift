@@ -147,7 +147,6 @@ final class SettingsWindowController: NSObject {
             case .appearance: AppearanceSettingsView(model: model)
             case .windows: WindowsSettingsView(model: model)
             case .keyboard: KeyboardSettingsView(model: model)
-            case .changes: ChangesSettingsView(model: model)
         }
     }
 

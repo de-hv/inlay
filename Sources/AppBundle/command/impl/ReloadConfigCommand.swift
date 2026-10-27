@@ -23,11 +23,6 @@ struct ReloadConfigResult {
     let stderr: String
 }
 
-/// The text of the config that was applied last. What the next reload compares with. See: ConfigHistory
-@MainActor private var appliedConfigText: String? = nil
-/// The file that text was read from. The built-in config that is loaded first isn't the user's, so going from one to
-/// the other isn't a change. See: bootstrapConfig_nonCancellable
-@MainActor private var appliedConfigUrl: URL? = nil
 
 @MainActor func reloadConfig_nonCancellable(
     args: ReloadConfigCmdArgs = ReloadConfigCmdArgs(rawArgs: []),
@@ -39,10 +34,7 @@ struct ReloadConfigResult {
     let isApplied = parseResult.allowReloadConfig && !args.dryRun
 
     var hotkeyWarnings: [ConfigParseDiagnostic] = []
-    let previousText = appliedConfigUrl == result.configUrl ? appliedConfigText : nil
     if isApplied {
-        appliedConfigText = result.text
-        appliedConfigUrl = result.configUrl
         resetHotKeys()
         config = parseResult.config
         configUrl = result.configUrl
@@ -53,8 +45,6 @@ struct ReloadConfigResult {
         // must not add Inlay to the login items: the config of the user decides
         if forceConfigUrl == nil { syncStartAtLogin() }
         syncFocusFollowsMouse(config)
-        // Settings › Changes lists what the reload changed
-        ConfigHistory.shared.record(from: previousText, to: result.text)
     }
 
     var errors = parseResult.errors.map { $0.description(.error) }

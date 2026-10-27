@@ -65,7 +65,7 @@ extension InlayTests {
                 let bound = config.modes[mode]?.bindings.values.first { $0.descriptionWithKeyNotation == binding }
                 return bound?.commands.strictEquals(parseCommand(command).cmdOrDie) == true
             }
-            for (key, workspace) in zip(["j", "k", "l", "i", "o", "p", "7"], 1 ... 7) {
+            for (key, workspace) in zip(["h", "j", "k", "l", "u", "i", "o"], 1 ... 7) {
                 assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
                 // The window keeps its layout: a floating window floats in the other workspace
                 assertEquals(runs("cmd-alt-shift-\(key)", "move-node-to-workspace \(workspace)"), true, additionalMsg: key)
@@ -77,9 +77,14 @@ extension InlayTests {
                 assertEquals(runs("cmd-alt-shift-\(direction)", "move \(direction)"), true, additionalMsg: direction)
                 assertEquals(runs("cmd-alt-ctrl-\(direction)", "join-with \(direction); mode main", mode: "service"), true, additionalMsg: direction)
             }
-            assertTrue(runs("cmd-alt-comma", "balance-sizes"))
-            assertTrue(runs("cmd-alt-ctrl-d", "arrange-workspace dwindle"))
-            assertTrue(runs("cmd-alt-ctrl-shift-f", "fullscreen off; layout floating tiling"))
+            assertTrue(runs("cmd-alt-shift-b", "balance-sizes"))
+            assertTrue(runs("cmd-alt-shift-d", "arrange-workspace dwindle"))
+            assertTrue(runs("cmd-alt-shift-f", "fullscreen off; layout floating tiling"))
+            assertTrue(runs("cmd-alt-shift-enter", "fullscreen"))
+            assertTrue(runs("cmd-alt-ctrl-s", "mode service"))
+            assertTrue(runs("cmd-alt-ctrl-r", "mode resize"))
+            assertTrue(runs("cmd-alt-ctrl-s", "mode main", mode: "service"))
+            assertTrue(runs("cmd-alt-ctrl-r", "mode main", mode: "resize"))
             assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
         }
 

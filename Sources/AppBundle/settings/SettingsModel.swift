@@ -275,7 +275,6 @@ final class SettingsModel {
                 refresh()
                 return
         }
-        ConfigHistory.shared.lastTextWrittenBySettings = patched
         switch ConfigEditor.write(patched, to: current) {
             case .success:
                 errorMessage = nil
@@ -328,7 +327,6 @@ final class SettingsModel {
             redoStack = []
             return
         }
-        ConfigHistory.shared.lastTextWrittenBySettings = text
         switch ConfigEditor.write(text, to: current) {
             case .success:
                 errorMessage = nil
@@ -362,7 +360,7 @@ final class SettingsModel {
 
 /// The tabs of the settings window, in the order of the toolbar
 enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
-    case general, appearance, windows, keyboard, changes
+    case general, appearance, windows, keyboard
 
     var title: String {
         switch self {
@@ -370,7 +368,6 @@ enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
             case .appearance: Strings.Settings.appearance
             case .windows: Strings.Settings.windowsPage
             case .keyboard: Strings.Settings.keyboard
-            case .changes: Strings.Settings.changes
         }
     }
 
@@ -380,7 +377,6 @@ enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
             case .appearance: "paintbrush"
             case .windows: "rectangle.split.2x1"
             case .keyboard: "keyboard"
-            case .changes: "clock.arrow.circlepath"
         }
     }
 }

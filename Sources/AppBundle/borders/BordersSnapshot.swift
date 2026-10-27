@@ -22,6 +22,8 @@ struct BorderCandidate: Equatable, Sendable {
     var frame: CGRect
     var isFocused: Bool = false
     var isFloating: Bool = false
+    /// The width of its border. nil: the one of [borders]. See: SingleWindowBorder
+    var width: CGFloat? = nil
 }
 
 /// All the borders to show. A value derived from the model on the main thread. See: publishUiState
@@ -56,7 +58,7 @@ struct BordersSnapshot: Equatable, Sendable {
                 windowId: candidate.windowId,
                 frame: candidate.frame,
                 color: rgba,
-                width: config.width,
+                width: candidate.width ?? config.width,
                 cornerRadius: config.cornerRadius,
                 squareCorners: config.squareCorners,
                 glowRadius: candidate.isFocused && config.glow ? config.glowRadius : 0,
@@ -71,9 +73,9 @@ extension BordersSnapshot {
     /// the tiling ones, and the normal windows that float. No heuristics of its own: everything comes from the tree,
     /// and from what the window was taken for when it was detected.
     ///
-    /// The fullscreen window keeps its border, pulled inside of the screen where the outer gaps leave no room for it.
-    /// The single tiling window of a workspace has no border with 'borders.hide-when-single', and with 'gaps.smart'
-    /// (it fills the screen, with no gaps around it for a border).
+    /// The tiling window alone in its workspace and the fullscreen window have the border of [borders.single-window], in
+    /// the gap that the layout leaves around them. Without it (and in fullscreen with --no-outer-gaps) they fill the
+    /// screen without a border.
     ///
     /// Left out: the tiling windows that a fullscreen window covers, the windows in the macOS native fullscreen,
     /// the minimized ones, the ones of hidden apps, popups, the dialogs and sheets that float on their own,
@@ -82,37 +84,38 @@ extension BordersSnapshot {
     static func candidatesFromModel() -> [BorderCandidate] {
         let focused = focus.windowOrNil
         var result: [BorderCandidate] = []
-        func add(_ window: Window, _ rect: Rect, isFloating: Bool) {
+        func add(_ window: Window, _ rect: Rect, isFloating: Bool, width: CGFloat? = nil) {
             if window.windowId == windowIdWithBorderHiddenByMouse || window.windowId == currentlyManipulatedWithMouseWindowId { return }
             result.append(BorderCandidate(
                 windowId: window.windowId,
                 frame: CGRect(x: rect.topLeftX, y: rect.topLeftY, width: rect.width, height: rect.height),
                 isFocused: window == focused,
                 isFloating: isFloating,
+                width: width,
             ))
+        }
+        let single = config.borders.singleWindow
+        /// While the window slides to its frame, the border goes with it. See: WindowAnimator
+        func currentRect(_ window: Window) -> Rect? {
+            WindowAnimator.shared.currentFrame(window.windowId)
+                .map { Rect(topLeftX: $0.minX, topLeftY: $0.minY, width: $0.width, height: $0.height) }
         }
         for monitor in monitorInfos {
             let workspace = monitor.activeWorkspace
-            let area = monitor.visibleRectPaddedByOuterGaps
-            // The border is drawn outside of the frame: around a window that fills the screen it needs to be pulled in
-            let room = monitor.visibleRect.insetBy(config.borders.width)
-            let hidesTiling = workspace.hasSingleTilingWindow && (config.borders.hideWhenSingle || config.gaps.smart)
-            // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the whole monitor.
-            // The other tiling windows are behind it, and their borders would stick out in the outer gaps
-            if hidesTiling {
-                // Nothing to tell the window from: no border, fullscreen or not
-            } else if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
-                // While it grows, the border goes with it. See: WindowAnimator
-                let rect = WindowAnimator.shared.currentFrame(fullscreen.windowId)
-                    .map { Rect(topLeftX: $0.minX, topLeftY: $0.minY, width: $0.width, height: $0.height) }
-                    ?? (fullscreen.noOuterGapsInFullscreen ? monitor.visibleRect : area)
-                add(fullscreen, rect.intersection(room), isFloating: false)
+            let tiling = workspace.rootTilingContainer.allLeafWindowsRecursive
+            // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the area of
+            // [borders.single-window]. The other tiling windows are behind it, and their borders would stick out
+            if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
+                if single.enabled && !fullscreen.noOuterGapsInFullscreen {
+                    add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.singleWindowRect, isFloating: false, width: single.width)
+                }
+            } else if tiling.count == 1, let window = tiling.first {
+                if single.enabled, let rect = currentRect(window) ?? window.lastAppliedLayoutPhysicalRect {
+                    add(window, rect, isFloating: false, width: single.width)
+                }
             } else {
-                for window in workspace.rootTilingContainer.allLeafWindowsRecursive {
-                    // While the window slides to its frame, the border goes with it. See: WindowAnimator
-                    if let frame = WindowAnimator.shared.currentFrame(window.windowId) {
-                        add(window, Rect(topLeftX: frame.minX, topLeftY: frame.minY, width: frame.width, height: frame.height), isFloating: false)
-                    } else if let rect = window.lastAppliedLayoutPhysicalRect {
+                for window in tiling {
+                    if let rect = currentRect(window) ?? window.lastAppliedLayoutPhysicalRect {
                         add(window, rect, isFloating: false)
                     }
                 }
@@ -121,9 +124,16 @@ extension BordersSnapshot {
                 // A dialog comes and goes with the window it belongs to. Only the windows that the user sees as windows
                 // are decorated. A dialog that the user made a tiling window is in the tiling tree, and it has a border there
                 guard window.detectedType != .dialog, let rect = window.lastKnownFloatingRect else { continue }
-                // A floating window that was made fullscreen
-                let coversMonitor = rect.minX <= area.minX && rect.minY <= area.minY && rect.maxX >= area.maxX && rect.maxY >= area.maxY
-                add(window, coversMonitor ? rect.intersection(room) : rect, isFloating: true)
+                // A floating window that was made fullscreen looks like a fullscreen tiling window: [borders.single-window]
+                // (the layout gives it the area of a window alone in its workspace, one point shorter: see layoutFullscreen)
+                let full = monitor.singleWindowRect
+                let coversMonitor = rect.minX <= full.minX && rect.minY <= full.minY && rect.maxX >= full.maxX && rect.maxY >= full.maxY - 1
+                if !coversMonitor {
+                    add(window, rect, isFloating: true)
+                } else if single.enabled {
+                    // The border is drawn outside of the frame: around a window that fills the screen it is pulled in
+                    add(window, rect.intersection(monitor.visibleRect.insetBy(single.width)), isFloating: true, width: single.width)
+                }
             }
         }
         return result

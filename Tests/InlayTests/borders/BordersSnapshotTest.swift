@@ -16,6 +16,8 @@ extension InlayTests {
             activeMode = mainModeId
             windowIdWithBorderHiddenByMouse = nil
             currentlyManipulatedWithMouseWindowId = nil
+            // A window alone in its workspace has a border, like in the app. See: SingleWindowTest
+            config.borders.singleWindow = SingleWindowBorder()
         }
 
         private func summary() -> [String] {
@@ -162,27 +164,25 @@ extension InlayTests {
             try await workspace.layoutWorkspace()
             assertEquals(summary().count, 3)
 
-            // The fullscreen window keeps its border; the tiling windows behind it have none.
+            // The fullscreen window has the border of [borders.single-window]; the tiling windows behind it have none.
             // The floating window is above it and keeps its border too
             window1.isFullscreen = true
             try await workspace.layoutWorkspace()
             assertEquals(summary(), ["1 \(accent)", "3 \(inactive)"])
-            // No outer gaps in the tests: the border is pulled inside of the screen, by its own width
-            let width = config.borders.width
+            // In the gap of a window alone in its workspace, whatever the outer gaps are
             let screen = workspace.workspaceMonitor.visibleRect
-            assertEquals(BordersSnapshot.fromModel().items.first?.frame, CGRect(
-                x: screen.topLeftX + width, y: screen.topLeftY + width, width: screen.width - 2 * width, height: screen.height - 2 * width,
-            ))
-            // With outer gaps as wide as the border, it fits around the window as it is
+            let single = config.borders.singleWindow
+            // One point shorter, like the tiling windows (see: layoutFrame)
+            let expected = CGRect(x: screen.topLeftX + single.gap, y: screen.topLeftY + single.gap, width: screen.width - 2 * single.gap, height: screen.height - 2 * single.gap - 1)
+            assertEquals(BordersSnapshot.fromModel().items.first?.frame, expected)
+            assertEquals(BordersSnapshot.fromModel().items.first?.width, single.width)
             config.gaps.outer = .init(left: 8, bottom: 8, top: 8, right: 8)
-            assertEquals(BordersSnapshot.fromModel().items.first?.frame, CGRect(
-                x: screen.topLeftX + 8, y: screen.topLeftY + 8, width: screen.width - 16, height: screen.height - 16,
-            ))
-            // 'fullscreen --no-outer-gaps' fills the screen, whatever the gaps are
-            window1.noOuterGapsInFullscreen = true
-            assertEquals(BordersSnapshot.fromModel().items.first?.frame.minX, screen.topLeftX + width)
-            window1.noOuterGapsInFullscreen = false
+            assertEquals(BordersSnapshot.fromModel().items.first?.frame, expected)
             config.gaps = .zero
+            // 'fullscreen --no-outer-gaps' fills the screen, without a border
+            window1.noOuterGapsInFullscreen = true
+            assertEquals(summary(), ["3 \(inactive)"])
+            window1.noOuterGapsInFullscreen = false
 
             window1.isFullscreen = false
             try await workspace.layoutWorkspace()
@@ -197,11 +197,19 @@ extension InlayTests {
             try await workspace.layoutWorkspace()
             assertEquals(summary(), [])
             // The layout forgets that a floating window is fullscreen, but the window still covers the monitor:
-            // it has its border, inside of the screen
+            // it has the border of a fullscreen window, in its gap
             try await workspace.layoutWorkspace()
             assertEquals(summary(), ["1 #BF5AF2"])
-            let width = config.borders.width
-            assertEquals(BordersSnapshot.fromModel().items.first?.frame.minX, workspace.workspaceMonitor.visibleRect.topLeftX + width)
+            let item = try #require(BordersSnapshot.fromModel().items.first)
+            assertEquals(item.frame.minX, workspace.workspaceMonitor.visibleRect.topLeftX + config.borders.singleWindow.gap)
+            assertEquals(item.width, config.borders.singleWindow.width)
+            // Without [borders.single-window], it fills the screen without a border
+            config.borders.singleWindow.enabled = false
+            try await workspace.layoutWorkspace()
+            floating.isFullscreen = true
+            try await workspace.layoutWorkspace()
+            try await workspace.layoutWorkspace()
+            assertEquals(summary(), [])
         }
 
         @Test func testUnconventionalWindows() async throws {

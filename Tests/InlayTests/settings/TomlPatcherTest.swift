@@ -603,7 +603,7 @@ extension InlayTests {
                 .menuBarEnabled, .menuBarTheme,
                 .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
                 .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
-                .bordersGlow, .bordersGlowRadius, .bordersHideWhenSingle, .gapsSmart,
+                .bordersGlow, .bordersGlowRadius, .bordersSingleEnabled, .bordersSingleWidth, .bordersSingleGap,
                 .splitRatio, .persistentWorkspaces, .menuBarPerMonitor,
             ] {
                 let value: TomlValue = switch key.defaultValue {

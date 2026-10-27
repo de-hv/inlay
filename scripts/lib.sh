@@ -2,6 +2,14 @@
 # Helpers shared by the scripts in this directory. Meant to be sourced, not run.
 # Compatible with the bash 3.2 that ships with macOS.
 
+# The lengths and the cuts of the lines count characters, not bytes: '·' and '…' are one character each. Without
+# a UTF-8 locale (LANG unset, or C) bash counts bytes, and could cut one in half. Not exported: only bash needs it,
+# and swift build builds everything again when the locale of its environment changes
+case "${LC_ALL:-${LC_CTYPE:-${LANG:-}}}" in
+  *[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) ;;
+  *) LC_ALL=en_US.UTF-8 ;;
+esac
+
 APP_NAME="Inlay"
 CLI_NAME="inlay"
 BUNDLE_ID="com.davidhiguita.inlay"
@@ -39,21 +47,32 @@ info() {
     printf '%s==>%s %s%s%s\n' "$C_BOLD$C_BLUE" "$C_RESET" "$C_BOLD" "$1" "$C_RESET"
   fi
 }
+# While the checklist of install.sh is on the screen, what these say goes below it at the end: see checklist_note
 # Something done: '  ✓ Installed …'
 ok() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_note info "$*"; return 0; fi
   if [ -n "$C_RESET" ]; then printf '  %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$*"; else printf '==> %s\n' "$*"; fi
 }
-note() { printf '    %s\n' "$*"; }
+note() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_note info "$*"; return 0; fi
+  printf '    %s\n' "$*"
+}
 # An explanation that can be skimmed
-hint() { printf '    %s%s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+hint() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_note info "$*"; return 0; fi
+  printf '    %s%s%s\n' "$C_DIM" "$*" "$C_RESET"
+}
 warn() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_note warn "$*"; return 0; fi
   if [ -n "$E_RESET" ]; then printf '  %s!%s %s\n' "$E_YELLOW" "$E_RESET" "$*" >&2; else printf 'warning: %s\n' "$*" >&2; fi
 }
 # Something the user can fix right away, like a path typed wrong. The script goes on
 problem() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_note warn "$*"; return 0; fi
   if [ -n "$E_RESET" ]; then printf '  %s✗%s %s\n' "$E_RED" "$E_RESET" "$*" >&2; else printf 'warning: %s\n' "$*" >&2; fi
 }
 fail() {
+  if [ "$CL_ACTIVE" = true ]; then checklist_abort; fi
   if [ -n "$E_RESET" ]; then printf '  %s✗ error:%s %s\n' "$E_BOLD$E_RED" "$E_RESET" "$*" >&2; else printf 'error: %s\n' "$*" >&2; fi
   exit 1
 }
@@ -275,8 +294,11 @@ fancy_ui() { [ -n "$C_RESET" ] && [ -t 0 ] && [ -t 1 ]; }
 
 term_width() {
   local width
-  width="$(tput cols 2>/dev/null || true)"
-  case "$width" in ''|*[!0-9]*) width="${COLUMNS:-80}" ;; esac
+  # The terminal itself: inside $(...) the output of tput is a pipe, and tput may answer 80 whatever the terminal is
+  width="$(stty size </dev/tty 2>/dev/null || true)"
+  width="${width##* }"
+  case "$width" in ''|*[!0-9]*|0) width="$(tput cols 2>/dev/null || true)" ;; esac
+  case "$width" in ''|*[!0-9]*|0) width="${COLUMNS:-80}" ;; esac
   printf '%s\n' "$width"
 }
 
@@ -344,7 +366,7 @@ kill_tree() {
 # with VERBOSE=true, the output is shown as it comes, and it also goes to the log. Returns the status of the
 # command, and sets SPIN_SECONDS to how long it took
 spin_command() {
-  local log="$1" pid status=0 start="$SECONDS" frame=0 line text count total filled bar i width elapsed
+  local log="$1" pid status=0 start="$SECONDS" frame=0 line text count total filled bar i width elapsed room
   local frames="⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏" spinner
   shift
   if [ "${VERBOSE:-false}" = true ] || [ -z "$C_RESET" ]; then
@@ -354,12 +376,20 @@ spin_command() {
   fi
   "$@" >>"$log" 2>&1 &
   pid=$!
-  width="$(term_width)"
-  printf '\033[?25l'
-  trap 'kill_tree "$pid"; printf "\r\033[2K\033[?25h"; exit 130' INT
+  if [ "$CL_ACTIVE" = true ]; then
+    checklist_spin_until "$pid" "$log" "$start" || status=$?
+    SPIN_SECONDS=$((SECONDS - start))
+    return "$status"
+  fi
+  # No cursor, and no wrapping: a line longer than the terminal is cut, instead of going on in a new line that the
+  # next redraw would leave behind
+  printf '\033[?25l\033[?7l'
+  trap 'kill_tree "$pid"; printf "\r\033[2K\033[?25h\033[?7h"; exit 130' INT
   # shellcheck disable=SC2086
   set -- $frames
   while kill -0 "$pid" 2>/dev/null; do
+    # Every time: the terminal may be resized while it builds
+    width="$(term_width)"
     line="$(grep -E '^(\[[0-9]+/[0-9]+\] |==> )' "$log" 2>/dev/null | tail -n 1 || true)"
     elapsed="$(format_duration $((SECONDS - start)))"
     eval "spinner=\${$((frame + 1))}"
@@ -377,8 +407,16 @@ spin_command() {
           bar="${bar}━"
           i=$((i + 1))
         done
-        printf '\r\033[2K  %s%s%s %-28.28s %s%s %s%s%s%s/%s  %s%s' "$C_CYAN" "$spinner" "$C_RESET" "$text" "$bar" \
-          "$C_RESET" "$C_BOLD" "$count" "$C_RESET" "$C_DIM" "$total" "$elapsed" "$C_RESET"
+        if [ "$width" -ge 76 ]; then
+          printf '\r\033[2K  %s%s%s %-28.28s %s%s %s%s%s%s/%s  %s%s' "$C_CYAN" "$spinner" "$C_RESET" "$text" "$bar" \
+            "$C_RESET" "$C_BOLD" "$count" "$C_RESET" "$C_DIM" "$total" "$elapsed" "$C_RESET"
+        else
+          # A small terminal: no bar, and as much of the name as fits
+          room=$((width - 24))
+          [ "$room" -gt 0 ] || room=0
+          printf '\r\033[2K  %s%s%s %s %s%s%s%s/%s  %s%s' "$C_CYAN" "$spinner" "$C_RESET" "${text:0:$room}" \
+            "$C_BOLD" "$count" "$C_RESET" "$C_DIM" "$total" "$elapsed" "$C_RESET"
+        fi
         ;;
       *)
         text="${line#==> }"
@@ -386,7 +424,9 @@ spin_command() {
           "Signing with"*) text="Signing · if macOS asks for your keychain password, choose \"Always Allow\"" ;;
           "") text="Starting" ;;
         esac
-        printf '\r\033[2K  %s%s%s %s  %s%s%s' "$C_CYAN" "$spinner" "$C_RESET" "${text:0:$((width - 16))}" "$C_DIM" \
+        room=$((width - 18))
+        [ "$room" -gt 0 ] || room=0
+        printf '\r\033[2K  %s%s%s %s  %s%s%s' "$C_CYAN" "$spinner" "$C_RESET" "${text:0:$room}" "$C_DIM" \
           "$elapsed" "$C_RESET"
         ;;
     esac
@@ -394,7 +434,7 @@ spin_command() {
     sleep 0.15
   done
   wait "$pid" || status=$?
-  printf '\r\033[2K\033[?25h'
+  printf '\r\033[2K\033[?25h\033[?7h'
   trap - INT
   SPIN_SECONDS=$((SECONDS - start))
   return "$status"
@@ -563,4 +603,326 @@ choose_many() {
     if [ "${states:$i:1}" = 1 ]; then CHOSEN="$CHOSEN$((i + 1)) "; fi
     i=$((i + 1))
   done
+}
+
+# ~~~ The checklist of install.sh ~~~
+#
+# Every step of the script on a line of its own, from the start: '·' while it waits, a spinner while it runs, then
+# '✓', '!' or '✗', with a short detail next to it. On a terminal that shows colors the list is drawn once and then
+# redrawn in place. A question goes right below the list, and the next redraw removes it. What doesn't fit in the
+# line of a step (the warnings, the backups, the hints) is said after the list, when it is done: see checklist_note.
+# Nothing wraps while the list is on the screen (the autowrap of the terminal is off), so every line is one row, and
+# the list knows how far up it starts. Elsewhere, and with --verbose, every step that ends prints a line.
+
+CL_ACTIVE=false
+CL_STTY=""
+CL_NAMES=()
+CL_STATES=()
+CL_DETAILS=()
+CL_NOTES=()
+# The rows below the list that the next redraw removes: questions, and what was typed
+CL_EXTRA=0
+CL_DRAWN=false
+# The rows that the last redraw printed: the steps, and the options of a menu
+CL_ROWS=0
+CL_FRAME=""
+CL_NAME_WIDTH=14
+CL_WIDTH=80
+# The options of the menu that is open, drawn right below the line of the step it belongs to. See: checklist_menu
+CL_MENU_AT=-1
+CL_MENU_STEP=0
+CL_MENU_LINES=()
+
+# checklist_start <name>... Draws the list, every step waiting
+checklist_start() {
+  local i=0
+  CL_NAMES=("$@")
+  CL_STATES=()
+  CL_DETAILS=()
+  CL_NOTES=()
+  while [ "$i" -lt "$#" ]; do
+    CL_STATES[i]=pending
+    CL_DETAILS[i]=""
+    i=$((i + 1))
+  done
+  CL_EXTRA=0
+  CL_DRAWN=false
+  if fancy_ui && [ "${VERBOSE:-false}" != true ]; then
+    CL_ACTIVE=true
+    # What is typed while the list works isn't shown: it would push the list down. The questions show it again
+    CL_STTY="$(stty -g </dev/tty 2>/dev/null || true)"
+    stty -echo </dev/tty 2>/dev/null || true
+    printf '\033[?7l\033[?25l'
+    trap 'checklist_restore_terminal' EXIT
+    trap 'printf "\r\033[J"; checklist_restore_terminal; printf "\n"; exit 130' INT
+    checklist_draw
+  fi
+}
+
+# checklist_set <index> <pending|run|ok|warn|bad|ask> [<detail>]. The index starts at 0
+checklist_set() {
+  CL_STATES[$1]="$2"
+  if [ $# -ge 3 ]; then CL_DETAILS[$1]="$3"; fi
+  if [ "$CL_ACTIVE" = true ]; then
+    checklist_draw
+    return 0
+  fi
+  # Without the redraw: a line when the step ends
+  case "$2" in
+    ok) printf '==> %s%s\n' "${CL_NAMES[$1]}" "${CL_DETAILS[$1]:+: ${CL_DETAILS[$1]}}" ;;
+    warn) printf 'warning: %s%s\n' "${CL_NAMES[$1]}" "${CL_DETAILS[$1]:+: ${CL_DETAILS[$1]}}" ;;
+    bad) printf 'error: %s%s\n' "${CL_NAMES[$1]}" "${CL_DETAILS[$1]:+: ${CL_DETAILS[$1]}}" ;;
+  esac
+}
+
+# The line of a step
+checklist_line() {
+  local mark detail="${CL_DETAILS[$1]}" style="$C_DIM" room
+  case "${CL_STATES[$1]}" in
+    pending) mark="${C_DIM}·$C_RESET" ;;
+    run) mark="$C_CYAN$CL_FRAME$C_RESET" ;;
+    ok) mark="${C_GREEN}✓$C_RESET" ;;
+    warn) mark="$C_YELLOW!$C_RESET" style="$C_YELLOW" ;;
+    bad) mark="${C_RED}✗$C_RESET" style="$C_RED" ;;
+    ask) mark="$C_CYAN?$C_RESET" style="" ;;
+  esac
+  # The detail gets what is left of the width of the terminal, and an ellipsis if it is cut
+  room=$((CL_WIDTH - 5 - CL_NAME_WIDTH))
+  if [ "${#detail}" -gt "$room" ]; then
+    if [ "$room" -gt 1 ]; then detail="${detail:0:$((room - 1))}…"; else detail=""; fi
+  fi
+  printf '\033[2K  %s %s%-*s%s %s%s%s\n' "$mark" "$C_BOLD" "$CL_NAME_WIDTH" "${CL_NAMES[$1]}" "$C_RESET" "$style" "$detail" "$C_RESET"
+}
+
+# Draws the list again where it is, and removes what is below it. If it can't be reached anymore (a small terminal
+# with a long question), a new one is drawn below
+checklist_draw() {
+  local i=0 count="${#CL_NAMES[@]}" rows printed=0 line
+  [ "$CL_ACTIVE" = true ] || return 0
+  CL_WIDTH="$(term_width)"
+  if [ "$CL_DRAWN" = true ]; then
+    rows="$(stty size </dev/tty 2>/dev/null || echo "24 80")"
+    rows="${rows%% *}"
+    if [ "$((CL_ROWS + CL_EXTRA))" -lt "${rows:-24}" ]; then
+      printf '\033[%dA\r\033[J' "$((CL_ROWS + CL_EXTRA))"
+    else
+      printf '\n'
+    fi
+  fi
+  while [ "$i" -lt "$count" ]; do
+    checklist_line "$i"
+    printed=$((printed + 1))
+    if [ "$i" -eq "$CL_MENU_AT" ] && [ "${#CL_MENU_LINES[@]}" -gt 0 ]; then
+      for line in "${CL_MENU_LINES[@]}"; do
+        printf '\033[2K%s\n' "$line"
+        printed=$((printed + 1))
+      done
+    fi
+    i=$((i + 1))
+  done
+  CL_ROWS="$printed"
+  CL_EXTRA=0
+  CL_DRAWN=true
+}
+
+# checklist_print <text>. A line below the list, for a moment: the next redraw removes it
+checklist_print() {
+  printf '\033[2K%s\n' "$*"
+  if [ "$CL_ACTIVE" = true ]; then CL_EXTRA=$((CL_EXTRA + 1)); fi
+}
+
+# checklist_note <info|warn> <text>. Said after the list, when it is done
+checklist_note() {
+  CL_NOTES[${#CL_NOTES[@]}]="$1$TAB$2"
+}
+
+# The terminal as it was: the echo of what is typed, the autowrap, the cursor
+checklist_restore_terminal() {
+  if [ -n "${CL_STTY:-}" ]; then stty "$CL_STTY" </dev/tty 2>/dev/null || true; fi
+  printf '\033[?7h\033[?25h'
+}
+
+# The list is done: the last redraw, the terminal as it was, and the notes
+checklist_end() {
+  local entry kind text
+  if [ "$CL_ACTIVE" = true ]; then
+    checklist_draw
+    checklist_restore_terminal
+    trap - EXIT INT
+    CL_ACTIVE=false
+  fi
+  [ "${#CL_NOTES[@]}" -gt 0 ] || return 0
+  echo
+  for entry in "${CL_NOTES[@]}"; do
+    kind="${entry%%"$TAB"*}"
+    text="${entry#*"$TAB"}"
+    if [ -z "$C_RESET" ]; then
+      if [ "$kind" = warn ]; then printf 'warning: %s\n' "$text"; else printf '    %s\n' "$text"; fi
+    elif [ "$kind" = warn ]; then
+      printf '  %s!%s %s\n' "$C_YELLOW" "$C_RESET" "$text"
+    else
+      printf '    %s%s%s\n' "$C_DIM" "$text" "$C_RESET"
+    fi
+  done
+  CL_NOTES=()
+}
+
+# Something failed: the step that was running is marked, and the list ends
+checklist_abort() {
+  local i=0
+  while [ "$i" -lt "${#CL_NAMES[@]}" ]; do
+    if [ "${CL_STATES[$i]}" = run ] || [ "${CL_STATES[$i]}" = ask ]; then CL_STATES[i]=bad; fi
+    i=$((i + 1))
+  done
+  checklist_end
+}
+
+# checklist_spin_until <pid> <log> <start>. The spinner of the step that runs, with how far the build got: the
+# '[n/m]' of swift build, or the last '==>' line. Returns the status of the process
+checklist_spin_until() {
+  local pid="$1" log="$2" start="$3" frame=0 line text count total index status=0
+  local frames="⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏"
+  index="$CL_SPIN"
+  # A background job doesn't get the Ctrl-C of the terminal
+  trap 'kill_tree "$pid"; printf "\r\033[J"; checklist_restore_terminal; printf "\n"; exit 130' INT
+  # shellcheck disable=SC2086
+  set -- $frames
+  while kill -0 "$pid" 2>/dev/null; do
+    line="$(grep -E '^(\[[0-9]+/[0-9]+\] |==> )' "$log" 2>/dev/null | tail -n 1 || true)"
+    eval "CL_FRAME=\${$((frame + 1))}"
+    case "$line" in
+      "["*)
+        count="${line#[}" && count="${count%%/*}"
+        total="${line#*/}" && total="${total%%]*}"
+        text="$count/$total"
+        ;;
+      "==> Signing with"*) text="signing · if macOS asks for your keychain password, choose \"Always Allow\"" ;;
+      "==> "*) text="${line#==> }" ;;
+      *) text="starting" ;;
+    esac
+    CL_DETAILS[index]="$text · $(format_duration $((SECONDS - start)))"
+    checklist_draw
+    frame=$(((frame + 1) % 10))
+    sleep 0.15
+  done
+  wait "$pid" || status=$?
+  trap 'printf "\r\033[J"; checklist_restore_terminal; printf "\n"; exit 130' INT
+  return "$status"
+}
+
+# Throws away what was typed while the list worked: a key pressed during the build must not answer the next question
+checklist_flush_input() {
+  local saved
+  saved="$(stty -g </dev/tty 2>/dev/null)" || return 0
+  stty -icanon min 0 time 0 </dev/tty 2>/dev/null && dd bs=1024 count=64 </dev/tty >/dev/null 2>&1 || true
+  stty "$saved" </dev/tty 2>/dev/null || true
+}
+
+# checklist_ask_yes_no <question> [<default: n|y>]. ask_yes_no, below the list
+checklist_ask_yes_no() {
+  local answer="" default="${2:-n}" choices="[y/N]"
+  if [ "$CL_ACTIVE" != true ]; then
+    ask_yes_no "$@"
+    return
+  fi
+  if [ "$default" = y ]; then choices="[Y/n]"; fi
+  checklist_flush_input
+  printf '\033[2K      %s?%s %s %s%s%s \033[?25h' "$C_CYAN" "$C_RESET" "$1" "$C_DIM" "$choices" "$C_RESET"
+  stty echo </dev/tty 2>/dev/null || true
+  IFS= read -r answer || answer=""
+  stty -echo </dev/tty 2>/dev/null || true
+  printf '\033[?25l'
+  CL_EXTRA=$((CL_EXTRA + 1))
+  case "$answer" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    "") [ "$default" = y ] ;;
+    *) return 1 ;;
+  esac
+}
+
+# checklist_ask_path <label>. ask_path, below the list. Sets ANSWER
+checklist_ask_path() {
+  local prompt width rows start=$'\001' end=$'\002'
+  if [ "$CL_ACTIVE" != true ]; then
+    ask_path "$1" "Tab completes · empty goes back"
+    return
+  fi
+  prompt="      $start$C_CYAN$end?$start$C_RESET$end $1 $start$C_DIM$end(Tab completes · empty goes back)$start$C_RESET$end "
+  checklist_flush_input
+  # Readline needs the autowrap for a long path. Then the rows that it took are counted
+  printf '\033[2K\033[?7h\033[?25h'
+  stty echo </dev/tty 2>/dev/null || true
+  ANSWER=""
+  IFS= read -r -e -p "$prompt" ANSWER || ANSWER=""
+  stty -echo </dev/tty 2>/dev/null || true
+  printf '\033[?7l\033[?25l'
+  width="$(term_width)"
+  rows=$(((6 + 2 + ${#1} + 34 + ${#ANSWER}) / width + 1))
+  CL_EXTRA=$((CL_EXTRA + rows))
+  ANSWER="$(printf '%s' "$ANSWER" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+}
+
+# checklist_menu <hint> <extra key, or empty> <option>... The options of a question, right below the line of the step
+# CL_MENU_STEP. An option is
+# "<label><TAB><detail>". Sets CHOICE to the number of the option, from 1, or to 0 when the extra key was pressed.
+# Without the redraw: the options by their number
+checklist_menu() {
+  local hint="$1" extra="$2" count selected=1 width option i answer
+  shift 2
+  count=$#
+  width="$(label_width "$@")"
+  if [ "$CL_ACTIVE" != true ]; then
+    i=0
+    for option in "$@"; do
+      i=$((i + 1))
+      split_option "$option"
+      printf '     %2d) %-*s  %s\n' "$i" "$width" "$OPT_LABEL" "$OPT_DETAIL"
+    done
+    while true; do
+      printf '    Choice [1]: '
+      IFS= read -r answer || answer=""
+      case "$answer" in
+        "") CHOICE=1; return 0 ;;
+        "$extra") if [ -n "$extra" ]; then CHOICE=0; return 0; fi ;;
+        *[!0-9]*) ;;
+        *) if [ "$answer" -ge 1 ] && [ "$answer" -le "$count" ]; then CHOICE="$answer"; return 0; fi ;;
+      esac
+    done
+  fi
+  CL_MENU_AT="$CL_MENU_STEP"
+  checklist_flush_input
+  while true; do
+    CL_MENU_LINES=()
+    i=0
+    for option in "$@"; do
+      i=$((i + 1))
+      split_option "$option"
+      if [ "$i" -eq "$selected" ]; then
+        CL_MENU_LINES[${#CL_MENU_LINES[@]}]="      ${C_CYAN}› $C_BOLD$(printf '%-*s' "$width" "$OPT_LABEL")$C_RESET  $C_DIM$OPT_DETAIL$C_RESET"
+      else
+        CL_MENU_LINES[${#CL_MENU_LINES[@]}]="        $(printf '%-*s' "$width" "$OPT_LABEL")  $C_DIM$OPT_DETAIL$C_RESET"
+      fi
+    done
+    CL_MENU_LINES[${#CL_MENU_LINES[@]}]="      $C_DIM$hint$C_RESET"
+    checklist_draw
+    read_key
+    case "$KEY" in
+      up|k) if [ "$selected" -gt 1 ]; then selected=$((selected - 1)); else selected="$count"; fi ;;
+      down|j) if [ "$selected" -lt "$count" ]; then selected=$((selected + 1)); else selected=1; fi ;;
+      [1-9]) if [ "$KEY" -le "$count" ]; then selected="$KEY"; fi ;;
+      enter) CHOICE="$selected"; break ;;
+      *) if [ -n "$extra" ] && [ "$KEY" = "$extra" ]; then CHOICE=0; break; fi ;;
+    esac
+  done
+  # The menu gives way to the list as it was. The step says what was picked
+  CL_MENU_AT=-1
+  CL_MENU_LINES=()
+}
+
+# show_in_pager <command>... The output of the command in less, on the other screen of the terminal: the list
+# stays where it is
+show_in_pager() {
+  if [ "$CL_ACTIVE" = true ]; then printf '\033[?1049h\033[?7h\033[?25h'; fi
+  if command -v less >/dev/null 2>&1; then "$@" | less -R; else "$@"; fi
+  if [ "$CL_ACTIVE" = true ]; then printf '\033[?1049l\033[?7l\033[?25l'; fi
 }

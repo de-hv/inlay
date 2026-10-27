@@ -7,7 +7,9 @@ let settingsContentHeight: CGFloat = 640
 
 /// Shows the settings window: a tab per group of settings, in the toolbar, like the settings of every macOS app.
 ///
-/// Inlay has no Dock icon and is never the active app on its own, so the window is brought forward by hand
+/// Inlay has no Dock icon, and macOS may refuse to activate such an app: the window would open behind the app in front.
+/// While the window is open, Inlay is a regular app, with its icon in the Dock and in ⌘Tab, and it goes back to being an
+/// accessory app when the window closes
 @MainActor
 final class SettingsWindowController: NSObject {
     static let shared = SettingsWindowController()
@@ -17,6 +19,11 @@ final class SettingsWindowController: NSObject {
     /// What the model was last refreshed for. See: modelDidChange
     private var lastSeenState: [AnyHashable] = []
     private var screenObservers: [any NSObjectProtocol] = []
+    private var closeObserver: (any NSObjectProtocol)?
+    private var keyObserver: (any NSObjectProtocol)?
+    private var otherAppObserver: (any NSObjectProtocol)?
+    /// When the window was put above the other windows. See: show
+    private var floatingSince: ContinuousClock.Instant? = nil
     private var keyMonitor: Any?
 
     init(model: SettingsModel = SettingsModel()) {
@@ -33,8 +40,32 @@ final class SettingsWindowController: NSObject {
         // The screen may not be the one of the last time
         tabs?.fitWindow(animate: false)
         select(model.page)
-        NSApp.activate()
+        NSApp.setActivationPolicy(.regular)
+        // macOS may refuse to activate an app that was an accessory one a moment ago, and let the app in front keep
+        // the focus. The window is put in front of every window anyway, and stays above them until it gets the focus
+        // or another app is picked. See: dropFloating
+        window.level = .floating
+        floatingSince = .now
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        NSApp.activate()
+        // The new activation policy applies on the next turn of the run loop: once more then
+        Task.startUnstructured { @MainActor in
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    /// The window is a normal window again: it got the focus, or the user went to another app
+    private func dropFloating() {
+        window?.level = .normal
+        floatingSince = nil
+    }
+
+    /// The window closed: no Dock icon again. The app in front before gets the focus back
+    private func windowWillClose() {
+        dropFloating()
+        NSApp.setActivationPolicy(.accessory)
     }
 
     private var tabs: SettingsTabViewController? { window?.contentViewController as? SettingsTabViewController }
@@ -91,6 +122,20 @@ final class SettingsWindowController: NSObject {
             })
         }
         installKeyMonitor(window)
+        closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.windowWillClose() }
+        }
+        keyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.dropFloating() }
+        }
+        otherAppObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] notification in
+            let isOtherApp = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier != myPid
+            MainActor.assumeIsolated {
+                // Not the app that was in front when the menu closed, getting the focus back for a moment
+                guard isOtherApp, let self, let since = self.floatingSince, .now - since > .seconds(1) else { return }
+                self.dropFloating()
+            }
+        }
         self.window = window
         return window
     }
@@ -219,6 +264,8 @@ final class SettingsTabViewController: NSTabViewController {
             defer { isFitting = false }
             window.setFrame(frame, display: true, animate: animate)
         }
+        // The scroll view lays itself out again after the window: the form must stay where it belongs
+        selectedPage?.settleScroll()
     }
 }
 
@@ -263,7 +310,7 @@ final class SettingsPageController: NSViewController {
 
     /// The scroll position stays where the form is: never past its end, never above its top. A form that got
     /// shorter, or a window that got taller, would otherwise leave its top out of sight with nothing to scroll back
-    private func settleScroll() {
+    func settleScroll() {
         guard let scrollView = view as? NSScrollView, let form = scrollView.documentView else { return }
         let keepsTop = keepsTopUntil.map { .now < $0 } ?? false
         func settle(_ scrollView: NSScrollView) {
@@ -309,6 +356,9 @@ final class SettingsPageController: NSViewController {
                 self?.settleScroll()
             }
         }
+        // The form takes its size in several steps after it is made: it starts at its top, not where the first steps
+        // leave the scroll position
+        keepsTopUntil = .now + .milliseconds(500)
         // The window got taller or shorter
         scrollView.contentView.postsFrameChangedNotifications = true
         clipObserver = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: scrollView.contentView, queue: .main) { [weak self] _ in

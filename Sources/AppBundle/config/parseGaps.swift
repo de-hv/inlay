@@ -3,9 +3,8 @@ import Common
 struct Gaps: ConvenienceMutable, Equatable, Sendable {
     var inner: Inner
     var outer: Outer
-    /// A workspace with a single tiling window has no outer gaps and no border: the window takes the whole visible area
-    /// of the monitor
-    var smart: Bool = false
+    /// 'smart' is a key of the past: [borders.single-window] decides the gap around a window alone in its workspace
+    var _smart: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 
     static let zero = Gaps(inner: .zero, outer: .zero)
     /// What the sliders of the settings window offer. The config takes any value
@@ -90,7 +89,7 @@ struct ResolvedGaps {
 let gapsParser: [String: any ParserProtocol<Gaps>] = [
     "inner": Parser(\.inner, parseInner),
     "outer": Parser(\.outer, parseOuter),
-    "smart": Parser(\.smart, parseBool),
+    "smart": Parser(\._smart, parseObsolete("Smart gaps are gone: [borders.single-window] decides the border and the gap of a window alone in its workspace")),
 ]
 
 let gapsInnerParser: [String: any ParserProtocol<Gaps.Inner>] = [

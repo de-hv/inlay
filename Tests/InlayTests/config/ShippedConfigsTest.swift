@@ -25,8 +25,6 @@ extension InlayTests {
             assertEquals(result.config.tiling, TilingConfig())
             assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders, BordersConfig())
-            // A single window takes the whole screen, without a border
-            assertEquals(result.config.gaps.smart, true)
             // Saving the file by hand reloads it, which is what keeps the settings window in sync with it
             assertEquals(result.config.autoReloadConfig, true)
             // It is the config that the app falls back to

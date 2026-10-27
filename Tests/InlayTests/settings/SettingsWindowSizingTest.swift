@@ -89,7 +89,7 @@ extension InlayTests {
                 // The whole form is there, and it starts at its top
                 assertEquals(abs(form.frame.height - page.contentSize.height) < 1, true, additionalMsg: label)
                 assertEquals(scrollView.contentView.isFlipped, true)
-                assertEquals(scrollView.contentView.bounds.origin.y, 0)
+                assertEquals(scrollView.contentView.bounds.origin.y, 0, additionalMsg: label)
                 if page.contentSize.height > scrollView.contentView.bounds.height {
                     // Taller than the screen: the window is as tall as the screen, and the tab scrolls
                     assertEquals(window.frame.height, 600, additionalMsg: label)

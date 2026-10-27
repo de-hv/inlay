@@ -164,8 +164,11 @@ enum Strings {
         static let glow = "Glow"
         static let glowDetail = "A halo of the color of the border around the focused window."
         static let glowRadius = "Glow radius"
-        static let hideWhenSingle = "Hide with a single window"
-        static let hideWhenSingleDetail = "No border around the only tiling window of a workspace, also with gaps around it. Smart gaps remove it anyway."
+        static let singleWindowBorder = "Border"
+        static let singleWindowBorderDetail = "Off: the window fills the screen, without a border."
+        static let singleWindowGap = "Gap"
+        static let singleWindowGapDetail = "Between the window and the edges of the screen. Never less than the width of the border."
+        static let singleWindowFooter = "A tiling window alone in its workspace, and a window in fullscreen, look the same: this border, in its colors, and this gap around the window."
         static let activeWindow = "Active window"
         static let inactiveWindows = "Inactive windows"
         static let floatingWindow = "Focused floating window"
@@ -187,9 +190,7 @@ enum Strings {
         static let right = "Right"
         static let innerGapsFooter = "The borders are drawn in the gaps, outside of the windows: with inner gaps less than twice the width of the border, the borders of two windows touch."
         static let outerGapsFooter = "Between the windows and the edges of the screen. With outer gaps less than the width of the border, the edge of the screen cuts the border."
-        static let singleWindow = "Single Window"
-        static let smartGaps = "Smart gaps"
-        static let smartGapsDetail = "The only tiling window of a workspace takes the whole screen, without outer gaps nor border."
+        static let singleWindow = "Single Window and Fullscreen"
 
         // Changes
         static let lastChange = "Last change"
@@ -209,6 +210,39 @@ enum Strings {
         static let copyKey = "Click to copy the line of the config"
         static let pointsUnit = "pt"
         static let millisecondsUnit = "ms"
+
+        // The config folder. See: ConfigFolderLink
+        static let configFolder = "Config folder"
+        static let configFolderDetail = "It can be a link to a folder of yours, a dotfiles repo for example: Inlay reads and writes the inlay.toml in it."
+        static func configFolderDotfile(_ dotfile: String) -> String { "Your config is ~/\(dotfile): a config folder would be a second config. To use one, move that file into a folder as inlay.toml and link it." }
+        static let linkFolder = "Link to a Folder…"
+        static let linkPrompt = "Link"
+        static let linkPanelMessage = "Pick the folder of your config, or the inlay.toml in it"
+        static let unlink = "Unlink"
+        static let cancel = "Cancel"
+        static func linkTitle(_ dir: String, _ folder: String) -> String { "Link \(dir) to \(folder)?" }
+        static func linkDetail(_ folder: String, hasRealFolder: Bool) -> String {
+            "Inlay will read and write \(folder)/inlay.toml. Nothing else of that folder is touched."
+                + (hasRealFolder ? " Your current config folder isn't deleted: it is renamed, as a backup." : "")
+        }
+        static func noConfigInFolderTitle(_ folder: String) -> String { "\(folder) has no inlay.toml" }
+        static func noConfigInFolderDetail(hasRealFolder: Bool) -> String {
+            "It gets one before it is linked: a copy of the config you use now, or the default config of \(inlayAppName)."
+                + (hasRealFolder ? " Your current config folder isn't deleted: it is renamed, as a backup." : "")
+        }
+        static let copyMyConfig = "Copy My Config"
+        static let useDefaultConfig = "Use the Default Config"
+        static func linkedTitle(_ dir: String, _ folder: String) -> String { "\(dir) is now a link to \(folder)" }
+        static func backupKept(_ backup: String) -> String { "Your previous config folder wasn't deleted: it is now \(backup)" }
+        static func unlinkTitle(_ dir: String) -> String { "Make \(dir) a folder of its own?" }
+        static func unlinkDetail(_ folder: String) -> String {
+            "It gets a copy of \(folder)/inlay.toml, and Inlay reads and writes that copy. \(folder) isn't touched."
+        }
+        static let cantLink = "The config folder can't be linked there"
+        static func notAConfig(_ file: String) -> String { "\(file) isn't an inlay.toml. Pick the folder of your config, or the inlay.toml in it." }
+        static func notAFolder(_ path: String) -> String { "\(path) isn't an existing folder." }
+        static let isTheConfigFolder = "That is the config folder itself: it can't be a link to itself."
+        static func alreadyLinked(_ folder: String) -> String { "The config folder is already a link to \(folder). Nothing was changed." }
 
         // General
         static let export = "Export complete config"

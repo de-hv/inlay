@@ -3,7 +3,7 @@ import AppKit
 import Common
 import Testing
 
-/// A workspace with a single tiling window: 'gaps.smart' and 'borders.hide-when-single'.
+/// A workspace with a single tiling window, and a fullscreen window: [borders.single-window].
 /// The test monitor is 1920x1080. The layout takes 1920x1079 (see Workspace.layoutWorkspace)
 extension InlayTests {
     @Suite @MainActor struct SingleWindowTest {
@@ -21,94 +21,105 @@ extension InlayTests {
             ServerState.shared.axPermissionStatus = .granted
             ServerState.shared.isEnabled = true
             activeMode = mainModeId
+            config.borders.singleWindow = SingleWindowBorder()
             windowIdWithBorderHiddenByMouse = nil
             currentlyManipulatedWithMouseWindowId = nil
             workspace = focus.workspace
         }
 
-        // MARK: - Smart gaps
+        // MARK: - A window alone in its workspace
 
-        @Test func testSmartGaps_aSingleWindowTakesTheWholeScreen_theGapsComeBackWithASecondOne() async throws {
-            config.gaps.smart = true
+        @Test func testASingleWindowHasTheGapAndTheBorder_theOuterGapsComeBackWithASecondOne() async throws {
             try await openWindow(1)
-            assertRects([1: (0, 0, 1920, 1079)])
+            assertRects([1: (2, 2, 1916, 1075)])
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
 
             try await openWindow(2)
             assertRects([1: (8, 8, 948, 1063), 2: (964, 8, 948, 1063)])
+            assertBorders([1: (CGRect(x: 8, y: 8, width: 948, height: 1063), 4), 2: (CGRect(x: 964, y: 8, width: 948, height: 1063), 4)])
 
             try await run("close --window-id 2")
+            assertRects([1: (2, 2, 1916, 1075)])
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
+        }
+
+        @Test func testWithoutIt_aSingleWindowFillsTheScreenWithoutABorder() async throws {
+            config.borders.singleWindow.enabled = false
+            try await openWindow(1)
             assertRects([1: (0, 0, 1920, 1079)])
+            assertBorders([:])
         }
 
-        @Test func testWithoutSmartGaps_aSingleWindowKeepsTheOuterGaps() async throws {
+        /// The edge of the screen would cut a border wider than the gap
+        @Test func testTheGapIsNeverNarrowerThanTheBorder() async throws {
+            config.borders.singleWindow = SingleWindowBorder(enabled: true, width: 6, gap: 2)
             try await openWindow(1)
-            assertRects([1: (8, 8, 1904, 1063)])
+            assertRects([1: (6, 6, 1908, 1067)])
+            assertBorders([1: (CGRect(x: 6, y: 6, width: 1908, height: 1067), 6)])
         }
 
-        @Test func testSmartGaps_floatingWindowsDontCount() async throws {
-            config.gaps.smart = true
+        @Test func testFloatingWindowsDontCount() async throws {
             try await openWindow(1)
-            TestWindow.new(id: 2, parent: workspace.floatingWindowsContainer, rect: Rect(topLeftX: 100, topLeftY: 200, width: 640, height: 480))
-            try await workspace.layoutWorkspace()
-            assertRects([1: (0, 0, 1920, 1079)])
-        }
-
-        @Test func testSmartGaps_fullscreenKeepsASingleWindowWithoutGaps() async throws {
-            config.gaps.smart = true
-            try await openWindow(1)
-            try await run("fullscreen")
-            assertFrame(1, workspace.workspaceMonitor.visibleRect)
-
-            // With a second window the gaps are back, and fullscreen keeps the outer ones
-            try await run("fullscreen off")
-            try await openWindow(2)
-            try await run("fullscreen")
-            assertFrame(2, workspace.workspaceMonitor.visibleRectPaddedByOuterGaps)
-        }
-
-        @Test func testSmartGaps_aSingleWindowHasNoBorder() async throws {
-            config.gaps.smart = true
-            try await openWindow(1)
-            // It fills the screen: there are no gaps around it for a border
-            assertEquals(BordersSnapshot.fromModel().items, [])
-
-            // With the gaps back, the borders come back
-            try await openWindow(2)
-            assertEquals(BordersSnapshot.fromModel().items.map(\.frame), [
-                CGRect(x: 8, y: 8, width: 948, height: 1063),
-                CGRect(x: 964, y: 8, width: 948, height: 1063),
-            ])
-
-            try await run("close --window-id 2")
-            assertEquals(BordersSnapshot.fromModel().items, [])
-        }
-
-        // MARK: - Hide the border of a single window
-
-        @Test func testHideWhenSingle() async throws {
-            config.borders.hideWhenSingle = true
-            try await openWindow(1)
-            assertEquals(BordersSnapshot.fromModel().items, [])
-
-            // A floating window keeps its border, and doesn't make the tiling one less single
             let floating = TestWindow.new(id: 2, parent: workspace.floatingWindowsContainer, rect: Rect(topLeftX: 100, topLeftY: 200, width: 640, height: 480))
             assertEquals(floating.focusWindow(), true)
             try await workspace.layoutWorkspace()
-            assertEquals(BordersSnapshot.fromModel().items.map(\.windowId), [2])
-            assertEquals(Window.get(byId: 1)?.focusWindow(), true)
-
-            // A second tiling window: both have a border
-            try await openWindow(3)
-            assertEquals(BordersSnapshot.fromModel().items.map(\.windowId).sorted(), [1, 2, 3])
-
-            try await run("close --window-id 3")
-            assertEquals(BordersSnapshot.fromModel().items.map(\.windowId), [2])
+            assertRects([1: (2, 2, 1916, 1075)])
+            // The floating window keeps the border of [borders]
+            assertBorders([
+                1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1),
+                2: (CGRect(x: 100, y: 200, width: 640, height: 480), 4),
+            ])
         }
 
-        /// Fullscreen from the menu runs the commands of the key binding: a floating window is tiled first, so that alone
-        /// in its workspace it has no gaps and no border, like with cmd-alt-ctrl-enter
-        @Test func testSmartGaps_fullscreenFromTheMenu() async throws {
-            config.gaps.smart = true
+        /// The border of a single window takes the colors of the others: not focused, the inactive color
+        @Test func testTheColorsOfTheOtherBorders() async throws {
+            try await openWindow(1)
+            let active = config.borders.activeColor.resolve(auto: .systemAccent, systemAccent: .systemAccent)
+            assertEquals(BordersSnapshot.fromModel().items.first?.color, active)
+            let floating = TestWindow.new(id: 2, parent: workspace.floatingWindowsContainer, rect: Rect(topLeftX: 100, topLeftY: 200, width: 640, height: 480))
+            assertEquals(floating.focusWindow(), true)
+            let inactive = config.borders.inactiveColor.resolve(auto: .systemAccent, systemAccent: .systemAccent)
+            assertEquals(BordersSnapshot.fromModel().items.first { $0.windowId == 1 }?.color, inactive)
+        }
+
+        // MARK: - Fullscreen
+
+        /// A fullscreen window looks like a window alone in its workspace, whatever the other windows are
+        @Test func testFullscreenLooksLikeASingleWindow() async throws {
+            try await openWindow(1)
+            try await run("fullscreen")
+            assertRects([1: (2, 2, 1916, 1075)])
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
+
+            try await run("fullscreen off")
+            try await openWindow(2)
+            try await run("fullscreen")
+            assertFrame(2, Rect(topLeftX: 2, topLeftY: 2, width: 1916, height: 1075))
+            // The windows behind it have no border
+            assertBorders([2: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
+        }
+
+        @Test func testFullscreenWithoutIt_fillsTheScreenWithoutABorder() async throws {
+            config.borders.singleWindow.enabled = false
+            try await openWindow(1)
+            try await openWindow(2)
+            try await run("fullscreen")
+            // Like a window alone in its workspace: one point shorter than the screen (see: layoutFrame)
+            assertFrame(2, Rect(topLeftX: 0, topLeftY: 0, width: 1920, height: 1079))
+            assertBorders([:])
+        }
+
+        @Test func testFullscreenWithNoOuterGaps_fillsTheScreenWithoutABorder() async throws {
+            try await openWindow(1)
+            try await openWindow(2)
+            try await run("fullscreen --no-outer-gaps")
+            assertFrame(2, workspace.workspaceMonitor.visibleRect)
+            assertBorders([:])
+        }
+
+        /// Fullscreen from the menu runs the commands of the key binding: a floating window is tiled first, so that it
+        /// looks like with cmd-alt-ctrl-enter
+        @Test func testFullscreenFromTheMenu() async throws {
             assertEquals(MenuBarMenu.layoutCommands(from: .floating, to: .fullscreen), ["layout tiling", "fullscreen"])
             assertEquals(MenuBarMenu.layoutCommands(from: .tiling, to: .fullscreen), ["fullscreen"])
             assertEquals(MenuBarMenu.layoutCommands(from: .fullscreen, to: .tiling), ["fullscreen"])
@@ -119,20 +130,17 @@ extension InlayTests {
             assertEquals(window.focusWindow(), true)
             for command in MenuBarMenu.layoutCommands(from: .floating, to: .fullscreen) { try await run(command) }
             assertEquals(window.isFullscreen, true)
-            assertFrame(1, workspace.workspaceMonitor.visibleRect)
-            assertEquals(BordersSnapshot.fromModel().items, [])
+            assertRects([1: (2, 2, 1916, 1075)])
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
         }
 
-        @Test func testHideWhenSingle_alsoInFullscreen() async throws {
-            config.borders.hideWhenSingle = true
-            try await openWindow(1)
-            try await run("fullscreen")
-            assertEquals(BordersSnapshot.fromModel().items, [])
-        }
+        // MARK: - The old keys
 
-        @Test func testWithoutHideWhenSingle_aSingleWindowHasABorder() async throws {
-            try await openWindow(1)
-            assertEquals(BordersSnapshot.fromModel().items.map(\.frame), [CGRect(x: 8, y: 8, width: 1904, height: 1063)])
+        @Test func testTheKeysOfThePast() {
+            let result = parseConfig("config-version = 2\n[gaps]\nsmart = true\n[borders]\nhide-when-single = true\n")
+            assertEquals(result.errors, [])
+            assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
+            assertEquals(result.config.borders.singleWindow, SingleWindowBorder())
         }
 
         // MARK: - Utils
@@ -161,6 +169,17 @@ extension InlayTests {
                 [expected.topLeftX, expected.topLeftY, expected.width, expected.height],
                 sourceLocation: sourceLocation,
             )
+        }
+
+        /// The borders: id -> (frame, width)
+        private func assertBorders(_ expected: [UInt32: (CGRect, CGFloat)], sourceLocation: SourceLocation = #_sourceLocation) {
+            let items = BordersSnapshot.fromModel().items
+            assertEquals(items.map(\.windowId).sorted(), expected.keys.sorted(), sourceLocation: sourceLocation)
+            for item in items {
+                guard let (frame, width) = expected[item.windowId] else { continue }
+                assertEquals(item.frame, frame, additionalMsg: "window \(item.windowId)", sourceLocation: sourceLocation)
+                assertEquals(item.width, width, additionalMsg: "window \(item.windowId)", sourceLocation: sourceLocation)
+            }
         }
 
         /// The frames of all the tiling windows of the workspace: id -> (x, y, width, height)

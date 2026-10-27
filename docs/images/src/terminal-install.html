@@ -9,68 +9,24 @@
 <body class="png">
 <div class="sheet"><span class="tag real">Real output</span>
   <h1>./install.sh</h1>
-  <div class="sub">It checks every requirement, says what it is going to do and asks once. Then five steps and a summary. On every run it asks where your config should live: Enter keeps it, or pick a folder of a dotfiles repo with the arrows.</div>
+  <div class="sub">Every step is a line of a list from the start, marked in place as it goes. Before anything is done it says what each step will do and asks once; the question about where your config lives opens right below its line. What doesn't fit in a line goes below the list at the end.</div>
   <div style="margin-top:16px"><div class="term"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay — zsh</span></div>
 <pre class="mono"><span class="p">❯</span> <span class="cmd">./install.sh</span>
-  <span style="color:#79e0ee;font-weight:600">▟▙</span>  <span style="color:#fff;font-weight:600">Inlay 0.1.0</span>  <span style="color:#70748a">installer</span>
-  <span style="color:#79e0ee;font-weight:600">▜▛</span>  <span style="color:#70748a">a tiling window manager for macOS · b618324</span>
 
-<span style="color:#8cc4ff;font-weight:600">==&gt;</span> <span style="color:#fff;font-weight:600">Requirements</span>
-  <span style="color:#7ee2a8">✓</span> macOS 27.0.1             <span style="color:#70748a">needs 14 or later</span>
-  <span style="color:#7ee2a8">✓</span> Command Line Tools       <span style="color:#70748a">/Library/Developer/CommandLineTools</span>
-  <span style="color:#7ee2a8">✓</span> Swift 6.4                <span style="color:#70748a">needs 6.2 or later</span>
-  <span style="color:#7ee2a8">✓</span> codesign
+  <span style="color:#fff;font-weight:600">Inlay 0.1.0</span> <span style="color:#70748a">installer · b618324</span>
 
-  <span style="color:#fff;font-weight:600">This is what will happen:</span>
-   <span style="color:#70748a">1</span>  Build Inlay.app  <span style="color:#70748a">Swift 6.4 · release              </span>
-                       <span style="color:#70748a">signed with &quot;Inlay Local Code Signing&quot;</span> <span style="color:#7ee2a8">exists</span>
-   <span style="color:#70748a">2</span>  Install          <span style="color:#70748a">/Applications/Inlay.app           </span> <span style="color:#70748a">new</span>
-   <span style="color:#70748a">3</span>  Link the CLI     <span style="color:#70748a">~/.local/bin/inlay                </span>
-   <span style="color:#70748a">4</span>  Your config      <span style="color:#70748a">~/.config/inlay/inlay.toml        </span> new: a copy of the repo&#x27;s inlay.toml
-   <span style="color:#70748a">5</span>  Open Inlay
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">Requirements  </span> <span style="color:#70748a">macOS 27.0.1 · Swift 6.4 · codesign</span>
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">Build         </span> <span style="color:#70748a">signed · 2m 14s</span>
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">Install       </span> <span style="color:#70748a">/Applications/Inlay.app</span>
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">CLI           </span> <span style="color:#70748a">~/.local/bin/inlay</span>
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">Config        </span> <span style="color:#70748a">~/.config/inlay → ~/.dotfiles/inlay · up to date</span>
+  <span style="color:#7ee2a8">✓</span> <span style="color:#fff;font-weight:600">Open Inlay    </span> <span style="color:#70748a">running in the menu bar</span>
 
-    <span style="color:#70748a">All the options: ./install.sh --help</span>
+    <span style="color:#70748a">Your previous ~/.config/inlay wasn't deleted: it is now ~/.config/inlay.backup-20261026-185825</span>
 
-  <span style="color:#79e0ee">?</span> <span style="color:#fff;font-weight:600">Continue?</span> <span style="color:#70748a">[Y/n]</span>
-
-<span style="color:#8cc4ff;font-weight:600">[1/5]</span> <span style="color:#fff;font-weight:600">Build Inlay.app</span>
-  <span style="color:#7ee2a8">✓</span> Built Inlay.app <span style="color:#70748a">· signed with &quot;Inlay Local Code Signing&quot; · 2s</span>
-
-<span style="color:#8cc4ff;font-weight:600">[2/5]</span> <span style="color:#fff;font-weight:600">Install</span>
-  <span style="color:#7ee2a8">✓</span> Installed /Applications/Inlay.app
-
-<span style="color:#8cc4ff;font-weight:600">[3/5]</span> <span style="color:#fff;font-weight:600">Link the CLI</span>
-  <span style="color:#7ee2a8">✓</span> Linked ~/.local/bin/inlay <span style="color:#c9a5ff">-&gt;</span> /Applications/Inlay.app/Contents/Resources/bin/inlay
-
-<span style="color:#8cc4ff;font-weight:600">[4/5]</span> <span style="color:#fff;font-weight:600">Your config</span>
-  <span style="color:#7ee2a8">✓</span> Created ~/.config/inlay/inlay.toml <span style="color:#70748a">· a copy of the inlay.toml of the repo</span>
-
-    <span style="color:#70748a">~/.config/inlay can also be a link to a folder of yours (a dotfiles repo, for example).</span>
-  <span style="color:#79e0ee">?</span> <span style="color:#fff;font-weight:600">Where should your config live?</span> <span style="color:#79e0ee">Link ~/.dotfiles/inlay</span>
-  <span style="color:#7ee2a8">✓</span> Linked ~/.config/inlay <span style="color:#c9a5ff">-&gt;</span> ~/.dotfiles/inlay
-    <span style="color:#70748a">Inlay reads and writes ~/.dotfiles/inlay/inlay.toml</span>
-  <span style="color:#7ee2a8">✓</span> No errors or warnings in ~/.config/inlay/inlay.toml
-
-<span style="color:#8cc4ff;font-weight:600">[5/5]</span> <span style="color:#fff;font-weight:600">Open Inlay</span>
-  <span style="color:#7ee2a8">✓</span> Opened Inlay <span style="color:#70748a">· it lives in the menu bar: no Dock icon, no window</span>
-
-<span style="color:#7ee2a8">╭─</span> <span style="color:#7ee2a8;font-weight:600">Inlay 0.1.0 is installed</span>
-<span style="color:#7ee2a8">│</span>
-<span style="color:#7ee2a8">│</span>  <span style="color:#70748a">App     </span> /Applications/Inlay.app                <span style="color:#7ee2a8">✓</span> <span style="color:#70748a">stable signature</span>
-<span style="color:#7ee2a8">│</span>  <span style="color:#70748a">CLI     </span> ~/.local/bin/inlay                     <span style="color:#7ee2a8">✓</span> <span style="color:#70748a">in your PATH</span>
-<span style="color:#7ee2a8">│</span>  <span style="color:#70748a">Config  </span> ~/.config/inlay -&gt; ~/.dotfiles/inlay   <span style="color:#7ee2a8">✓</span> <span style="color:#70748a">no errors or warnings</span>
-<span style="color:#7ee2a8">│</span>  <span style="color:#70748a">Inlay   </span> running, in the menu bar               <span style="color:#7ee2a8">✓</span>
-<span style="color:#7ee2a8">│</span>
-<span style="color:#7ee2a8">╰────────────────────────────────────────────────────────</span>
-
-  <span style="color:#fff;font-weight:600">Next</span>
-    <span style="color:#79e0ee">cmd-alt-ctrl-j ... cmd-alt-ctrl-7   </span> go to workspaces 1 to 7
-    <span style="color:#79e0ee">inlay config --explain              </span> every setting, documented
-    <span style="color:#79e0ee">right-click its menu bar item       </span> the menu and the Settings
-    <span style="color:#79e0ee">the first time it runs              </span> turn it on in System Settings &gt; Privacy &amp; Security &gt; Accessibility
-
-    <span style="color:#70748a">Took 6s · build log ~/Library/Logs/Inlay/install-20261021-233016.log · to uninstall: inlay uninstall</span></pre></div></div>
-  <div class="note">The output of <code>install.sh</code> in an isolated test run (another <code>HOME</code> and install folder), with the paths of that sandbox written as the default ones. In that run a quick stand-in took the place of the build, which takes a few minutes: while it runs, one line under <span class="mono">[1/5]</span> says how far it is.</div>
+  <span style="color:#7ee2a8;font-weight:600">Inlay 0.1.0 is installed</span> <span style="color:#70748a">· 2m 31s · inlay uninstall removes it</span>
+    <span style="color:#70748a">The first time: allow Inlay in System Settings &gt; Privacy &amp; Security &gt; Accessibility.</span></pre></div></div>
+  <div class="note">The output of <code>install.sh</code> in an isolated test run (another <code>HOME</code> and install folder), with the paths of that sandbox written as the default ones. In that run a quick stand-in took the place of the build, which takes a few minutes: while it runs, the line of Build has a spinner and says how far it is.</div>
 </div>
 <script>fillToml();</script>
 </body></html>

@@ -378,6 +378,7 @@ struct GeneralSettingsView: View {
                     Text(Strings.Settings.file)
                     Text(filePath).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
                 }
+                ConfigFolderRow(model: model)
                 LabeledContent {
                     Button(Strings.Settings.reloadNow) { reloadConfigFromUi(warningsAsErrors: false) }
                         .disabled(!model.isAccessibilityGranted || model.isPaused)
@@ -456,6 +457,122 @@ struct GeneralSettingsView: View {
             case load.warningCount > 0: .yellow
             default: .green
         }
+    }
+}
+
+/// The config folder, and a link from it to a folder of the user: the question of install.sh. See: ConfigFolderLink
+private struct ConfigFolderRow: View {
+    let model: SettingsModel
+
+    var body: some View {
+        let dir = ConfigFolderLink.configFolder
+        let state = ConfigFolderLink.state(of: dir)
+        let usesDotfile = isDotfileConfig
+        LabeledContent {
+            if case .linked = state {
+                Button(Strings.Settings.unlink) { unlink() }
+            }
+            Button(Strings.Settings.linkFolder) { link() }
+        } label: {
+            Text(Strings.Settings.configFolder)
+            switch state {
+                case .linked(let folder):
+                    Text("\(pretty(dir)) → \(pretty(folder))").font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                case .folder, .none:
+                    Text(pretty(dir)).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+            }
+            Text(usesDotfile ? Strings.Settings.configFolderDotfile(configDotfileName) : Strings.Settings.configFolderDetail)
+        }
+        .disabled(usesDotfile || model.unavailableReason != nil || model.target == nil)
+    }
+
+    /// The config in use is ~/.inlay.toml: a config folder would be a second config. install.sh skips the question too
+    private var isDotfileConfig: Bool {
+        model.target.map { $0.exists && $0.url.lastPathComponent == configDotfileName } ?? false
+    }
+
+    private func pretty(_ url: URL) -> String { (url.path as NSString).abbreviatingWithTildeInPath }
+
+    private func link() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.prompt = Strings.Settings.linkPrompt
+        panel.message = Strings.Settings.linkPanelMessage
+        panel.directoryURL = ConfigFolderLink.candidates.first ?? FileManager.default.homeDirectoryForCurrentUser
+        guard panel.runModal() == .OK, let picked = panel.url else { return }
+        let folder: URL
+        switch ConfigFolderLink.folder(of: picked) {
+            case .success(let url): folder = url
+            case .failure(let error):
+                show(error)
+                return
+        }
+        // Which config the folder gets if it has none: the one in use, or the built-in one. Else, a confirmation
+        var config: String? = nil
+        let alert = NSAlert()
+        if ConfigFolderLink.hasConfig(folder) {
+            alert.messageText = Strings.Settings.linkTitle(pretty(ConfigFolderLink.configFolder), pretty(folder))
+            alert.informativeText = Strings.Settings.linkDetail(pretty(folder), hasRealFolder: ConfigFolderLink.state() == .folder)
+            alert.addButton(withTitle: Strings.Settings.linkPrompt)
+            alert.addButton(withTitle: Strings.Settings.cancel)
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        } else {
+            alert.messageText = Strings.Settings.noConfigInFolderTitle(pretty(folder))
+            alert.informativeText = Strings.Settings.noConfigInFolderDetail(hasRealFolder: ConfigFolderLink.state() == .folder)
+            alert.addButton(withTitle: Strings.Settings.copyMyConfig)
+            alert.addButton(withTitle: Strings.Settings.useDefaultConfig)
+            alert.addButton(withTitle: Strings.Settings.cancel)
+            switch alert.runModal() {
+                case .alertFirstButtonReturn: config = model.target?.text
+                case .alertSecondButtonReturn: config = try? String(contentsOf: defaultConfigUrl, encoding: .utf8)
+                default: return
+            }
+        }
+        do {
+            let backup = try ConfigFolderLink.link(to: folder, writing: config)
+            model.configFileDidMove()
+            if let backup {
+                let done = NSAlert()
+                done.messageText = Strings.Settings.linkedTitle(pretty(ConfigFolderLink.configFolder), pretty(folder))
+                done.informativeText = Strings.Settings.backupKept(pretty(backup))
+                done.runModal()
+            }
+        } catch {
+            show(error)
+        }
+    }
+
+    private func unlink() {
+        guard case .linked(let folder) = ConfigFolderLink.state() else { return }
+        let alert = NSAlert()
+        alert.messageText = Strings.Settings.unlinkTitle(pretty(ConfigFolderLink.configFolder))
+        alert.informativeText = Strings.Settings.unlinkDetail(pretty(folder))
+        alert.addButton(withTitle: Strings.Settings.unlink)
+        alert.addButton(withTitle: Strings.Settings.cancel)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try ConfigFolderLink.unlink()
+            model.configFileDidMove()
+        } catch {
+            show(error)
+        }
+    }
+
+    private func show(_ error: ConfigFolderLink.LinkError) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = Strings.Settings.cantLink
+        alert.informativeText = switch error {
+            case .notAConfig(let url): Strings.Settings.notAConfig(pretty(url))
+            case .notAFolder(let url): Strings.Settings.notAFolder(pretty(url))
+            case .isTheConfigFolder: Strings.Settings.isTheConfigFolder
+            case .alreadyLinked(let url): Strings.Settings.alreadyLinked(pretty(url))
+            case .failed(let reason): reason
+        }
+        alert.runModal()
     }
 }
 
@@ -771,9 +888,19 @@ private struct BordersSections: View {
                 ToggleRow(model: model, title: Strings.Settings.glow, detail: Strings.Settings.glowDetail, key: .bordersGlow)
                 SliderRow(model: model, title: Strings.Settings.glowRadius, key: .bordersGlowRadius, range: BordersConfig.glowRadiusRange)
                     .disabled(!model.bool(.bordersGlow))
-                ToggleRow(model: model, title: Strings.Settings.hideWhenSingle, detail: Strings.Settings.hideWhenSingleDetail, key: .bordersHideWhenSingle)
             } header: {
                 Text(Strings.Settings.windowBorders)
+            }
+            Section {
+                ToggleRow(model: model, title: Strings.Settings.singleWindowBorder, detail: Strings.Settings.singleWindowBorderDetail, key: .bordersSingleEnabled)
+                SliderRow(model: model, title: Strings.Settings.width, key: .bordersSingleWidth, range: BordersConfig.widthRange, showsTable: false)
+                    .disabled(!model.bool(.bordersSingleEnabled))
+                SliderRow(model: model, title: Strings.Settings.singleWindowGap, detail: Strings.Settings.singleWindowGapDetail, key: .bordersSingleGap, range: SingleWindowBorder.gapRange, showsTable: false)
+                    .disabled(!model.bool(.bordersSingleEnabled))
+            } header: {
+                tableHeader(Strings.Settings.singleWindow, SettingsKey.bordersSingleEnabled)
+            } footer: {
+                footnote(Strings.Settings.singleWindowFooter)
             }
             Section {
                 ColorRow(model: model, title: Strings.Settings.activeWindow, key: .bordersActiveColor, allowsAuto: false)
@@ -822,9 +949,6 @@ private struct GapsSections: View {
                 tableHeader(Strings.Settings.outerGaps, SettingsKey.gapsOuterTop)
             } footer: {
                 footnote(Strings.Settings.outerGapsFooter)
-            }
-            Section(Strings.Settings.singleWindow) {
-                ToggleRow(model: model, title: Strings.Settings.smartGaps, detail: Strings.Settings.smartGapsDetail, key: .gapsSmart)
             }
         }
     }

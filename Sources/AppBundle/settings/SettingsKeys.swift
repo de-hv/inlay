@@ -58,7 +58,9 @@ extension SettingsKey {
     static let bordersFloatingColor = SettingsKey(["borders"], "floating-color", default: .string("#BF5AF2"))
     static let bordersGlow = SettingsKey(["borders"], "glow", default: .bool(false))
     static let bordersGlowRadius = SettingsKey(["borders"], "glow-radius", default: .int(12))
-    static let bordersHideWhenSingle = SettingsKey(["borders"], "hide-when-single", default: .bool(false))
+    static let bordersSingleEnabled = SettingsKey(["borders", "single-window"], "enabled", default: .bool(true))
+    static let bordersSingleWidth = SettingsKey(["borders", "single-window"], "width", default: .int(1))
+    static let bordersSingleGap = SettingsKey(["borders", "single-window"], "gap", default: .int(2))
 
     // Gaps. The fallback of an omitted gap is 0. A gap per monitor (`[{ monitor.main = 16 }, 8]`) is defined by hand
     static let gapsInnerHorizontal = SettingsKey(["gaps", "inner"], "horizontal", default: .int(0))
@@ -67,7 +69,6 @@ extension SettingsKey {
     static let gapsOuterBottom = SettingsKey(["gaps", "outer"], "bottom", default: .int(0))
     static let gapsOuterLeft = SettingsKey(["gaps", "outer"], "left", default: .int(0))
     static let gapsOuterRight = SettingsKey(["gaps", "outer"], "right", default: .int(0))
-    static let gapsSmart = SettingsKey(["gaps"], "smart", default: .bool(false))
 
     /// [menu-bar.labels]: the name of the workspace in the 'labels' theme. No default: the name of the workspace
     static func menuBarLabel(_ workspace: String) -> SettingsKey {
@@ -87,8 +88,9 @@ extension SettingsKey {
         menuBarAccent, menuBarFocused, menuBarOccupied, menuBarEmpty,
         animationsEnabled, animationsDuration, animationsWorkspaceSwitch,
         bordersEnabled, bordersWidth, bordersCornerRadius, bordersSquareCorners, bordersActiveColor, bordersInactiveColor,
-        bordersFloatingColor, bordersGlow, bordersGlowRadius, bordersHideWhenSingle,
-        gapsInnerHorizontal, gapsInnerVertical, gapsOuterTop, gapsOuterBottom, gapsOuterLeft, gapsOuterRight, gapsSmart,
+        bordersFloatingColor, bordersGlow, bordersGlowRadius,
+        bordersSingleEnabled, bordersSingleWidth, bordersSingleGap,
+        gapsInnerHorizontal, gapsInnerVertical, gapsOuterTop, gapsOuterBottom, gapsOuterLeft, gapsOuterRight,
         settingsShowKeys,
     ]
 

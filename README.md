@@ -40,8 +40,8 @@ revision (installing without options, `inlay.toml` as the shipped config, the qu
 `inlay uninstall`, `inlay config --explain` and the reload of a config saved by hand): tried in an isolated
 environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
 the focused workspace, the menu without icons, the Settings window that fits small screens, the config folder
-linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the smart gaps and the
-border hidden around a single window (`gaps.smart`, `borders.hide-when-single`), and the four themes taken from
+linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the border and the gap
+of a window alone in its workspace or in fullscreen (`[borders.single-window]`), and the four themes taken from
 Hyprland setups (`dots`, `underline`, `glyphs`, `liquid`): they are checked with tests and renders, including the
 frames of their animations. The same goes for the curves of the animations, the `labels` theme with
 `[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, undo, the export of the config, and the latest
@@ -76,13 +76,16 @@ git clone <this repo> inlay && cd inlay
 
 No option is needed. First `install.sh` **checks every requirement** (macOS, the Command Line Tools, Swift,
 `codesign`) and, if something is missing, lists it all at once with the command that fixes it
-(`xcode-select --install`, which it offers to run). Then it **says what it is going to do**: where it builds,
-installs and links, which signature the app gets and what happens to your config. `Continue? [Y/n]`: Enter
-goes on (`--yes` skips the question). Then, in five numbered steps (`[1/5]`…`[5/5]`), it:
+(`xcode-select --install`, which it offers to run). In a terminal **every step is a line of a list from the
+start, marked in place as it goes**: `·` while it waits, a spinner while it runs, then `✓` (or `!`, `✗`) with a
+short detail. Before anything is done, the list says what every step will do (where it installs and links,
+what happens to your config) and asks `Install? [Y/n]`: Enter goes on (`--yes` skips the question). What
+doesn't fit in the line of a step (a backup that was made, a warning) is said below the list when it is done.
+Nothing in the list wraps, also in a narrow terminal, and what you type while it works isn't shown. Then it:
 
 1. builds `Inlay.app` and signs it with a local identity, so that macOS keeps the Accessibility permission
-   across rebuilds (see [Signing](#signing)). In a terminal **one line, redrawn in place, says how far the
-   build is** (`132/214`, a progress bar and the time); the whole output goes to
+   across rebuilds (see [Signing](#signing)). **Its line says how far the build is** (`132/214` and the
+   time); the whole output goes to
    `~/Library/Logs/Inlay/install-<date>.log` (the last 10 are kept). If the build fails, it prints the end of
    that output, without the progress lines. `--verbose` shows everything as it comes, as does a pipe or a log;
 2. installs it in `/Applications` (or in `~/Applications` if there are no permissions);
@@ -93,16 +96,14 @@ goes on (`--yes` skips the question). Then, in five numbered steps (`[1/5]`…`[
    config should live**: where it is (the first option, what Enter picks) or in a folder of your own through a
    symbolic link (one you keep in a dotfiles repo, for example). See
    [Your own config folder](#your-own-config-folder). Without a terminal to ask on (stdin is not a TTY) it
-   asks nothing. It checks the config with the parser of the app it has just installed and prints its errors
-   and warnings (they never stop the installation);
+   asks nothing. It checks the config with the parser of the app it has just installed: its errors and
+   warnings go below the list (they never stop the installation);
 5. **opens Inlay**.
 
-It ends with a **summary**: the app and its signature, the CLI link (and whether it is in your `PATH`), the
-config and what the parser said of it, whether Inlay is running, and what to do next: the keys of your config
-that go to the workspaces, `inlay config --explain`, the menu bar item, and the Accessibility permission the
-first time (see [Before opening Inlay](#before-opening-inlay)).
+It ends with one line, `Inlay 0.1.0 is installed · 2m 31s · inlay uninstall removes it`, and what to do the
+first time: allow Inlay in the Accessibility permission (see [Before opening Inlay](#before-opening-inlay)).
 
-<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: it checks the requirements, says what it is going to do and asks to continue, builds, installs Inlay.app and links the CLI in numbered steps, creates ~/.config/inlay/inlay.toml as a copy of the inlay.toml of the repo, asks where the config should live and gets ~/.dotfiles/inlay, links ~/.config/inlay to that folder, checks the config, opens Inlay and ends with a summary and what to do next" width="880"></p>
+<p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: the header, and the list of the six steps, each one marked done with its detail: the requirements, the build (signed, 2m 14s), the app in /Applications, the CLI in ~/.local/bin, the config linked from ~/.config/inlay to ~/.dotfiles/inlay, and Inlay running in the menu bar; then the line that says it is installed and the Accessibility permission to allow the first time" width="880"></p>
 
 It can be run as many times as needed: it updates what is installed, quitting the running copy first.
 
@@ -127,17 +128,20 @@ two neighboring windows touch.
 
 ### Your own config folder
 
-On every run, also when you already have a config, `install.sh` asks:
+On every run, also when you already have a config, `install.sh` asks, in a menu right below the line of the
+config:
 
 ```
-? Where should your config live?  ↑↓ · Enter
-  ❯ Keep ~/.config/inlay           where it is now · 481 lines
-    Link ~/.dotfiles/inlay         has inlay.toml
-    Link ~/dotfiles/.config/inlay  no inlay.toml: gets a copy of the repo's
-    Another folder...              type its path
+  ? Config         ~/.config/inlay/inlay.toml · yours, 3 settings missing
+      › Keep it                    yours, 3 settings missing
+        Use the repo's inlay.toml  yours is kept as a backup
+        Use ~/.dotfiles/inlay      has inlay.toml
+        Another folder...          type its path
+      ↑↓ · Enter · d shows what's missing
 ```
 
 Move with the arrows (or `j`/`k`, or the number of an option) and press Enter; Enter alone keeps what you have.
+The menu gives way to the answer: the line of the config says what was picked.
 The list has the folders of a dotfiles repo that it finds; "Another folder..." asks for a path (`~` is
 expanded, and Tab completes it). The folder you pick becomes the target of **a symbolic link,
 `~/.config/inlay`**. Inlay reads and writes the `inlay.toml` in it; nothing else in the folder is touched. A
@@ -173,12 +177,12 @@ one next to the new one as `inlay.toml.backup-<date>` (`inlay.toml.backup-202610
 - **You pass `--reset-config`**, or answer `Use the repo's inlay.toml` to the question about what your config
   lacks. Whatever the config is, it is replaced by the `inlay.toml` of the repo.
 
-Any other config is **kept as it is**, and the script **lists the settings of the `inlay.toml` of the repo that
-yours doesn't have** (up to 8, and how many more), with their table: `+ [gaps]  smart = true`. A key binding
-counts as present when your config has its command under another key. It also tells if the config has no
-`on-window-detected` rule. When something is missing and there is a terminal, it asks `What now?`: keep yours
-(Enter), show the whole diff (in `less`), or use the `inlay.toml` of the repo, keeping yours as
-`inlay.toml.backup-<date>`. A config in a linked folder can only be kept: edit it in your folder. Without a
+Any other config is **kept as it is**, and its line says **how many settings of the `inlay.toml` of the repo
+it doesn't have**. A key binding counts as present when your config has its command under another key. It also
+tells if the config has no `on-window-detected` rule. When something is missing and there is a terminal, the
+menu of the question has `Use the repo's inlay.toml` (yours is kept as `inlay.toml.backup-<date>`), and `d`
+shows the missing settings with their table (`+ [borders]  glow = false`) and the whole diff, in `less`. A
+config in a linked folder can only be kept: edit it in your folder. Without a
 terminal it prints the two commands that matter: `./install.sh --reset-config` and a `diff`. A config changed
 from the Settings window counts as edited: it is kept.
 
@@ -346,16 +350,12 @@ the monitor (`outer.*`). A key that is omitted is 0. A value can also depend on 
 
 The window borders are drawn in the gaps: see [Window borders](#window-borders) for how the two fit together.
 
-**Smart gaps** (`smart`, `false` by default; `true` in the shipped config): a workspace with a single tiling
-window has no outer gaps and no border, and the window takes the whole visible part of the screen, under the menu
-bar and above the Dock. The gaps and the border come back as soon as a second tiling window joins it, sliding like
-any other change of the layout. `fullscreen` keeps it that way: the single window goes on filling the screen
-without gaps. Floating windows don't count, and keep their borders. It is also in **Settings › Windows**.
-
-```toml
-[gaps]
-    smart = true   # a single tiling window: no outer gaps
-```
+**A window alone in its workspace** doesn't take the outer gaps: it has a gap and a border of its own,
+`[borders.single-window]` (see [Window borders](#window-borders)). By default a thin border of 1 point and a gap of
+2 points, from the edges of the visible part of the screen; with `enabled = false`, the window fills the screen
+without a border. The outer gaps and the border of `[borders]` come back as soon as a second tiling window joins
+it, sliding like any other change of the layout. `fullscreen` looks the same. Floating windows don't count.
+(`gaps.smart`, of a previous version, is accepted with a warning and ignored.)
 
 ### Tiling
 
@@ -669,7 +669,7 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
   **Window ▸**, a submenu with the app of the focused window and *Tiling*, *Floating* and *Fullscreen*, the one in
   use checked (disabled without a focused window). It runs the commands of the key bindings (`fullscreen`
   toggles, like `cmd-alt-ctrl-enter`), once the menu is closed; *Fullscreen* tiles a floating window first, so
-  that a window alone in its workspace stays without gaps nor border with `gaps.smart`, like with the key binding.
+  that it looks like with the key binding: like a window alone in its workspace (`[borders.single-window]`).
   Then *Reload Config* (⌘R), *Open inlay.toml…* and *Settings…* (⌘,), and last *Pause Inlay* (⌘E) and *Quit
   Inlay* (⌘Q). Paused, the first item says so; without the Accessibility permission the menu only has the item
   that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-comma`) and
@@ -693,7 +693,13 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
 Five tabs in the toolbar, like the settings of every macOS app:
 
 - **General**: open at login, the config file (its path, *Show in Finder*, *Open*, the status of the last load and
-  *Reload Now*, *Export complete config*) and the Accessibility permission.
+  *Reload Now*, *Export complete config*), the config folder and the Accessibility permission. **Link to a
+  Folder…** makes `~/.config/inlay` a symbolic link to a folder of yours (a dotfiles repo), like the question of
+  `install.sh` and with its rules: pick the folder, or the `inlay.toml` in it. A folder without `inlay.toml` gets
+  one first: a copy of the config you use now, or the default one (a dialog asks). A real `~/.config/inlay` is not
+  deleted: it is renamed to `~/.config/inlay.backup-<date>`; a previous link is only replaced, and the folder it
+  pointed to isn't touched. **Unlink** makes `~/.config/inlay` a folder of its own again, with a copy of the
+  linked `inlay.toml`. Not with a `~/.inlay.toml`: a config folder would be a second config.
 - **Appearance**: the style of the workspace indicator, with a preview over a dark and a light menu bar, its
   options (*Dim empty workspaces*, *Show the binding mode*, *Group by monitor*) and, with `labels`, the names and
   symbols; the colors of the indicator (active, inactive and empty workspaces, binding mode); and the borders:
@@ -721,9 +727,9 @@ These are the pages with the shipped config (click one to see it at full size):
 
 <table>
 <tr>
-<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login; Configuration, with the path of the file, Show in Finder and Open, the status of the last load with Reload Now, and Export complete config; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login; Configuration, with the path of the file, Show in Finder and Open, the config folder with Link to a Folder, the status of the last load with Reload Now, and Export complete config; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-appearance.png"><img src="docs/images/settings-appearance.png" alt="Real render of the Appearance tab of Settings: the style of the indicator ('liquid · default') with its preview over a dark and a light menu bar and its three options; the colors of the indicator, all 'auto'; the borders, with their switches and sliders; their three colors; and the colors of the resize and service modes" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-windows.png"><img src="docs/images/settings-windows.png" alt="Real render of the Windows tab of Settings: New Windows (placement, window to split, split ratio), Arrangement (windows already open, minimum window size), the inner and outer gaps at 8 pt, smart gaps, and the animations" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-windows.png"><img src="docs/images/settings-windows.png" alt="Real render of the Windows tab of Settings: New Windows (placement, window to split, split ratio), Arrangement (windows already open, minimum window size), the inner and outer gaps at 8 pt, and the animations" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Appearance</sub></td><td align="center"><sub>Windows</sub></td></tr>
 <tr>
@@ -763,7 +769,9 @@ color comes from the state the manager already knows, with no focus heuristics. 
 | `floating-color` | color | `'#BF5AF2'` |
 | `glow` | `true`, `false` | `false` |
 | `glow-radius` | 1 … 40 (points) | `12` |
-| `hide-when-single` | `true`, `false` | `false` |
+| `[borders.single-window]` `enabled` | `true`, `false` | `true` |
+| `[borders.single-window]` `width` | 1 … 20 (points) | `1` |
+| `[borders.single-window]` `gap` | 0 … 40 (points), never less than its `width` | `4` |
 | `[borders.mode-colors]` `<mode>` | color | empty table |
 
 **The colors.** The image above shows them all.
@@ -824,14 +832,20 @@ the window, which macOS draws, stays round.
 
 <p align="center"><img src="docs/images/borders-glow.png" alt="Real render, detail of the border of the focused window with glow = false, and with glow = true and glow-radius = 6, 12 (the default) and 24: an orange halo outside of the border that reaches farther as the radius grows, over the gap and the edge of the neighboring window" width="880"></p>
 
-**`hide-when-single`**: no border around the tiling window of a workspace that has only one, fullscreen or not:
-there is no other window to tell it from. The border comes back as soon as a second tiling window joins it.
-Floating windows keep theirs. It is for a single window that keeps the outer gaps: [smart gaps](#gaps) already
-remove the border along with the gaps. It is also in **Settings › Appearance**.
+**`[borders.single-window]`**: the tiling window alone in its workspace, and the window in fullscreen (the
+`fullscreen` command, also with other windows behind it), look the same: a border of their own, in the colors of
+the other borders (active, inactive, floating, the binding mode), and a gap around the window, from the edges of
+the visible part of the screen. The gap is never narrower than the border, so that the edge of the screen doesn't
+cut it. With `enabled = false` they fill the screen, without a border. Floating windows don't count and keep their
+border; a floating window made fullscreen looks like the others. `fullscreen --no-outer-gaps` fills the screen
+without a border. It is also in **Settings › Appearance**. (`hide-when-single`, of a previous version, is accepted
+with a warning and ignored.)
 
 ```toml
-[borders]
-    hide-when-single = true
+[borders.single-window]
+    enabled = true
+    width = 1   # 1 ... 20 points
+    gap = 2     # 0 ... 40 points, never less than 'width'
 ```
 
 **Borders and gaps**: the border takes a part of the [gap](#gaps).

@@ -294,6 +294,16 @@ final class SettingsModel {
 
     private static let maxUndo = 50
 
+    /// The config file is another one now: the config folder was linked to a folder of the user, or unlinked. The
+    /// changes of the window can't be undone in it. See: ConfigFolderLink
+    func configFileDidMove() {
+        undoStack = []
+        redoStack = []
+        errorMessage = nil
+        refresh()
+        reloadConfigAfterEdit()
+    }
+
     // MARK: - Undo
 
     /// Puts the file back as it was before the last change of the window. Nothing happens if the file was changed

@@ -185,13 +185,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): outer.right = 0
     outer.right = 0
 
-    # Smart gaps: a workspace with a single tiling window has no outer gaps and no border, and the window takes
-    # the whole visible part of the monitor (under the menu bar, above the Dock). The gaps and the border come back
-    # as soon as a second tiling window joins it. 'fullscreen' keeps it so: the single window still has no gaps.
-    # Floating windows don't count, and keep their borders
-    # Possible values: true|false
-    # Fallback value (if you omit the key): smart = false
-    smart = false
+    # Not a key of Inlay anymore: [borders.single-window] decides the gap and the border of a window alone in its
+    # workspace. The key is accepted with a warning and ignored. Drop it from your config
+    # smart = true
 
 # The environment of the programs that Inlay starts (exec-and-forget, exec-on-workspace-change).
 # They also get INLAY_WINDOW_ID, INLAY_WORKSPACE, INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE
@@ -496,12 +492,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): glow-radius = 12
     glow-radius = 12
 
-    # No border around the tiling window of a workspace that has only one, fullscreen or not: there is no other
-    # window to tell it from. It comes back as soon as a second tiling window joins it. Floating windows keep theirs.
-    # For a single window with the outer gaps around it: gaps.smart already removes the border along with the gaps
-    # Possible values: true|false
-    # Fallback value (if you omit the key): hide-when-single = false
-    hide-when-single = false
+    # Not a key of Inlay anymore: [borders.single-window] enabled = false leaves a window alone in its workspace
+    # without a border. The key is accepted with a warning and ignored. Drop it from your config
+    # hide-when-single = false
 
     # The color of the border of the focused window while a binding mode is active: the name of the mode =
     # the color. It wins over active-color and floating-color. A mode without an entry keeps the normal color
@@ -509,6 +502,30 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the table): empty
     [borders.mode-colors]
         service = '#FF453A'
+
+    # The tiling window alone in its workspace, and the window in fullscreen (the 'fullscreen' command, also when
+    # other windows are behind it), look the same: a border of their own, in the colors of the other borders, and a
+    # gap around the window, between it and the edges of the visible part of the screen (under the menu bar, above
+    # the Dock). The outer gaps of [gaps] don't apply to them. As soon as a second tiling window joins it, the window
+    # gets the outer gaps and the border of [borders] again. Floating windows don't count, and keep their borders;
+    # a floating window made fullscreen looks like the others. 'fullscreen --no-outer-gaps' fills the screen, without
+    # a border, and so does the macOS native fullscreen. Settings > Appearance edits it
+    [borders.single-window]
+        # The border and the gap. With 'false' the window fills the screen, without a border
+        # Possible values: true|false
+        # Fallback value (if you omit the key): enabled = true
+        enabled = true
+
+        # The width of the border, in points
+        # Possible values: 1 ... 20
+        # Fallback value (if you omit the key): width = 1
+        width = 1
+
+        # The room between the window and the edges of the screen, in points. Never less than 'width': with a gap
+        # narrower than the border, the gap is as wide as the border, so that the edge of the screen doesn't cut it
+        # Possible values: 0 ... 40
+        # Fallback value (if you omit the key): gap = 2
+        gap = 2
 
 # The key bindings of a binding mode: [mode.<name>.binding]. Every entry is: the key = a command, or a
 # list of commands. Only the bindings of the active mode work; the 'mode' command switches the mode.

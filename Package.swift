@@ -9,19 +9,13 @@ let swiftSettings: [SwiftSetting] = [
     .strictMemorySafety(),
 ]
 
-// scripts/build-app.sh sets both variables. A plain 'swift build' gets the defaults of Sources/BuildInfo/BuildInfo.c
-// The values reach the C code unquoted, so they must be plain tokens: digits, letters, dots and dashes
-let buildInfoDefines: [CSetting] = [
-    ("INLAY_VERSION", "INLAY_BUILD_VERSION"),
-    ("INLAY_GIT_HASH", "INLAY_BUILD_GIT_HASH"),
-].compactMap { (envVar, define) -> CSetting? in
-    guard let value = Context.environment[envVar], !value.isEmpty else { return nil }
-    precondition(
-        value.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "-") },
-        "\(envVar) may only contain ASCII letters, digits, dots and dashes: '\(value)'",
-    )
-    return .define(define, to: value)
-}
+// scripts/build-app.sh writes the version and the git hash of the build to .build/build-info/inlay_build_info_values.h,
+// outside of the sources: a plain 'swift build' gets the defaults of Sources/BuildInfo/BuildInfo.c. They aren't
+// settings of the manifest: a setting that changes (the git hash changes with every commit) makes SwiftPM build
+// everything again, while a header that changes only builds BuildInfo.c again, and links
+let buildInfoSettings: [CSetting] = [
+    .unsafeFlags(["-I", Context.packageDirectory + "/.build/build-info"]),
+]
 
 // With the Command Line Tools, an incremental build of the test target that follows a change in the app sources
 // (or a plain 'swift build') fails with "plugin for module 'TestingMacros' not found": the compiler isn't told
@@ -70,7 +64,7 @@ let package = Package(
         // Version and git hash of the build
         .target(
             name: "BuildInfo",
-            cSettings: buildInfoDefines,
+            cSettings: buildInfoSettings,
         ),
         .target(
             name: "Common",

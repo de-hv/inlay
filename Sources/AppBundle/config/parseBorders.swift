@@ -22,8 +22,10 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var glow: Bool = false
     /// The blur radius of the glow, in points: about how far from the border the glow reaches
     var glowRadius: CGFloat = 12
-    /// No border around the tiling window of a workspace that has only one: there is no other window to tell it from
-    var hideWhenSingle: Bool = false
+    /// [borders.single-window]. The tiling window alone in its workspace, and the fullscreen window
+    var singleWindow: SingleWindowBorder = SingleWindowBorder()
+    /// 'hide-when-single' is a key of the past: see [borders.single-window]
+    var _hideWhenSingle: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 
     static let widthRange = 1 ... 20
     static let cornerRadiusRange = 0 ... 40
@@ -41,8 +43,35 @@ let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "mode-colors": Parser(\.modeColors, parseModeColors),
     "glow": Parser(\.glow, parseBool),
     "glow-radius": Parser(\.glowRadius, parsePoints("glow-radius", BordersConfig.glowRadiusRange)),
-    "hide-when-single": Parser(\.hideWhenSingle, parseBool),
+    "single-window": Parser(\.singleWindow, parseSingleWindowBorder),
+    "hide-when-single": Parser(\._hideWhenSingle, parseObsolete("'hide-when-single' is gone: [borders.single-window] enabled = false leaves a window alone in its workspace without a border")),
 ]
+
+/// [borders.single-window] table of the config: the tiling window alone in its workspace, and the window in fullscreen
+/// (the 'fullscreen' command), look the same. With a border, they keep a gap around them, from the edges of the screen;
+/// without it, they fill the screen
+struct SingleWindowBorder: ConvenienceMutable, Equatable, Sendable {
+    var enabled: Bool = true
+    /// The width of the border, in points
+    var width: CGFloat = 1
+    /// The room around the window, in points: between the window and the edges of the visible part of the screen
+    var gap: CGFloat = 2
+
+    /// The gap is never narrower than the border: the edge of the screen would cut it
+    var effectiveGap: CGFloat { max(gap, width) }
+
+    static let gapRange = 0 ... 40
+}
+
+let singleWindowBorderParserTable: [String: any ParserProtocol<SingleWindowBorder>] = [
+    "enabled": Parser(\.enabled, parseBool),
+    "width": Parser(\.width, parsePoints("width", BordersConfig.widthRange)),
+    "gap": Parser(\.gap, parsePoints("gap", SingleWindowBorder.gapRange)),
+]
+
+private func parseSingleWindowBorder(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> SingleWindowBorder {
+    parseTable(raw, SingleWindowBorder(), singleWindowBorderParserTable, backtrace, &c)
+}
 
 func parseBorders(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> BordersConfig {
     parseTable(raw, BordersConfig(), bordersParserTable, backtrace, &c)

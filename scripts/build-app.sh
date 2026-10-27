@@ -66,9 +66,14 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git rev-parse --verify
   fi
 fi
 
-# Package.swift reads these two and hands them to the BuildInfo target
-export INLAY_VERSION="$VERSION"
-export INLAY_GIT_HASH="$GIT_HASH"
+# For the BuildInfo target. Only written when it changes: a header that is written again builds BuildInfo.c again
+BUILD_INFO_DIR=".build/build-info"
+BUILD_INFO_VALUES="#define INLAY_BUILD_VERSION $VERSION
+#define INLAY_BUILD_GIT_HASH $GIT_HASH"
+mkdir -p "$BUILD_INFO_DIR"
+if [ "$(cat "$BUILD_INFO_DIR/inlay_build_info_values.h" 2>/dev/null || true)" != "$BUILD_INFO_VALUES" ]; then
+  printf '%s\n' "$BUILD_INFO_VALUES" > "$BUILD_INFO_DIR/inlay_build_info_values.h"
+fi
 
 info "Building $APP_NAME $VERSION ($GIT_HASH, $CONFIGURATION) with $(swift --version 2>&1 | head -n 1)"
 # One invocation for both products (InlayApp and inlay): building them one by one compiles the shared code twice

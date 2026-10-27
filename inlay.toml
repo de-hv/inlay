@@ -108,8 +108,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     outer.right =      8
     outer.top =        8
     outer.bottom =     8
-    # A single tiling window takes the whole screen, without the outer gaps and without a border
-    smart = true
+    # A window alone in its workspace, or in fullscreen, has a gap of its own: see [borders.single-window]
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    TILING
@@ -216,14 +215,21 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     glow = false
     # In points (1 ... 40)
     glow-radius = 12
-    # No border around the only tiling window of a workspace, also with the gaps around it. With
-    # [gaps] smart = true a single window has no border anyway
-    hide-when-single = false
 
     # The color of the border of the focused window while a binding mode is active
     [borders.mode-colors]
         # resize = '#30D158'
         # service = '#FF453A'
+
+    # A tiling window alone in its workspace, and a window in fullscreen, look the same: a thin border, in the
+    # colors above, and a small gap from the edges of the screen. With enabled = false they fill the screen,
+    # without a border
+    [borders.single-window]
+        enabled = true
+        # In points (1 ... 20)
+        width = 1
+        # In points (0 ... 40). Never less than 'width'
+        gap = 2
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 #                                    SETTINGS WINDOW

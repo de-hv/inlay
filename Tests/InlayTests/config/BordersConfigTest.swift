@@ -20,7 +20,7 @@ extension InlayTests {
             assertEquals(borders.modeColors, [:])
             assertEquals(borders.glow, false)
             assertEquals(borders.glowRadius, 12)
-            assertEquals(borders.hideWhenSingle, false)
+            assertEquals(borders.singleWindow, SingleWindowBorder(enabled: true, width: 1, gap: 2))
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.borders, BordersConfig())
         }

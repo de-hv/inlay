@@ -445,6 +445,19 @@ normal tree: it can be moved, resized and rearranged with the usual commands. Wh
 only the workspaces in which some window appeared while Inlay was paused are rearranged; the others keep
 their arrangement. It is also in **Settings › Windows**.
 
+**To arrange a workspace again** at any moment, `inlay arrange-workspace dwindle|grid|row` rebuilds its tiling
+tree out of its tiling windows, in the order they have in the tree (`--workspace <name>` for another one than
+the focused one). With `dwindle` they come back one after another and each one splits the previous one, like
+new windows: two side by side on a wide screen, then the spiral, with `split-ratio`. `grid` and `row` are the
+ones of `startup-layout`. The floating windows stay where they are. The shipped config runs
+`arrange-workspace dwindle` with `cmd-alt-ctrl-d`: useful for a workspace that was left as a row, or with two
+windows one above the other.
+
+```toml
+[mode.main.binding]
+    cmd-alt-ctrl-d = 'arrange-workspace dwindle'
+```
+
 A window that leaves the tiling because macOS **minimizes** it, puts it in **native fullscreen** or **hides
 its app** remembers its place (container, position, size and the neighbor that kept its space) and gets it
 back when it returns:

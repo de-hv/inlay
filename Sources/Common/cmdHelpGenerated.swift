@@ -1,6 +1,9 @@
 // FILE WAS GENERATED UPSTREAM FROM docs/aerospace-*.adoc files (see docs/upstream-aerospace)
 // Inlay keeps it as a static file. Edit it by hand when a command changes
 
+let arrange_workspace_help_generated = """
+    USAGE: arrange-workspace [-h|--help] [--workspace <workspace>] (dwindle|grid|row)
+    """
 let balance_sizes_help_generated = """
     USAGE: balance-sizes [-h|--help] [--workspace <workspace>]
     """

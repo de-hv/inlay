@@ -49,6 +49,8 @@ enum StartupArrangement {
         let detected = detectedWindowIds
         detectedWindowIds = []
         let layout = config.tiling.startupLayout
+        // The windows stay where they were placed, one after another, like new windows
+        if layout == .dwindle { return }
         // While Inlay is paused the tree is kept. A workspace that got no window in the meantime keeps its layout
         for workspace in Workspace.all
             where workspace.rootTilingContainer.allLeafWindowsRecursive.contains(where: { detected.contains($0.windowId) })
@@ -60,19 +62,16 @@ enum StartupArrangement {
 
 extension Workspace {
     /// Rebuilds the tiling tree of the workspace out of its tiling windows, in the order they have in the tree.
-    /// All the windows of a row get the same width, and all the rows get the same height.
+    /// See: `arrange-workspace` command
     ///
-    /// The tree is a normalized one: the root container is horizontal for a single row, and vertical with a horizontal
-    /// container per row otherwise. A row of one window is the window itself
+    /// - grid, row: all the windows of a row get the same width, and all the rows get the same height. The tree is a
+    ///   normalized one: the root container is horizontal for a single row, and vertical with a horizontal container
+    ///   per row otherwise. A row of one window is the window itself
+    /// - dwindle: the windows come back one after another, and each one splits the previous one like a new window:
+    ///   two side by side on a wide screen, then a spiral. With the 'tiling.split-ratio' of the config
     @MainActor
     func arrangeTilingWindows(_ layout: StartupLayout) {
         let windows = rootTilingContainer.allLeafWindowsRecursive
-        let rows: [[Window]]
-        switch layout {
-            case .dwindle: return
-            case .row: rows = [windows]
-            case .grid: rows = gridRows(windows)
-        }
         if windows.isEmpty { return }
         // Binding marks every window as the most recent one
         let mostRecentTiling = rootTilingContainer.mostRecentWindowRecursive
@@ -81,6 +80,17 @@ extension Workspace {
             window.unbindFromParent()
         }
         rootTilingContainer.unbindFromParent() // With the containers that are left empty
+        switch layout {
+            case .dwindle: bindAsDwindle(windows)
+            case .row: bindInRows([windows])
+            case .grid: bindInRows(gridRows(windows))
+        }
+        mostRecentTiling?.markAsMostRecentChild()
+        mostRecent?.markAsMostRecentChild()
+    }
+
+    @MainActor
+    private func bindInRows(_ rows: [[Window]]) {
         let root = TilingContainer(parent: self, adaptiveWeight: 1, rows.count == 1 ? .h : .v, .tiles, index: INDEX_BIND_LAST)
         for row in rows {
             let parent = rows.count == 1 || row.count == 1 ? root : TilingContainer.newHTiles(parent: root, adaptiveWeight: 1, index: INDEX_BIND_LAST)
@@ -88,8 +98,17 @@ extension Workspace {
                 window.bind(to: parent, adaptiveWeight: 1, index: INDEX_BIND_LAST)
             }
         }
-        mostRecentTiling?.markAsMostRecentChild()
-        mostRecent?.markAsMostRecentChild()
+    }
+
+    @MainActor
+    private func bindAsDwindle(_ windows: [Window]) {
+        let root = TilingContainer(parent: self, adaptiveWeight: 1, .h, .tiles, index: INDEX_BIND_LAST)
+        var previous: Window? = nil
+        for window in windows {
+            let data = previous?.dwindleSplit() ?? BindingData(parent: root, adaptiveWeight: 1, index: INDEX_BIND_LAST)
+            window.bind(to: data.parent, adaptiveWeight: data.adaptiveWeight, index: data.index)
+            previous = window
+        }
     }
 }
 

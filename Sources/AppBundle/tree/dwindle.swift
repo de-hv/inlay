@@ -37,12 +37,22 @@ func prepareDwindleBindingDataForNewTilingWindow(_ workspace: Workspace, focused
     // The most recent window isn't necessarily the focused one. Example: flatten-workspace-tree rebinds all the windows
     let focused = focused?.takeIf { $0.parent is TilingContainer && $0.nodeWorkspace == workspace }
     let underCursor = config.tiling.splitTarget == .cursor ? workspace.tilingWindow(at: cursorLocation()) : nil
-    guard let target = underCursor ?? focused ?? workspace.rootTilingContainer.mostRecentWindowRecursive,
-          target.parent is TilingContainer,
-          // Also normalizes the weights. From this point, the weights are in screen points
-          let targetRect = target.predictLayoutRect() else { return nil }
-    let axis: Orientation = targetRect.width > targetRect.height ? .h : .v
-    return target.splitTilingPlace(axis, newShare: 1 - config.tiling.splitRatio, newIsAfter: true, rect: targetRect)
+    guard let target = underCursor ?? focused ?? workspace.rootTilingContainer.mostRecentWindowRecursive else { return nil }
+    return target.dwindleSplit()
+}
+
+extension Window {
+    /// Splits the window like dwindle does for a new window (steps 2 and 3 of
+    /// ``prepareDwindleBindingDataForNewTilingWindow(_:focused:)``), and tells where to bind the new window.
+    /// nil if the window isn't a part of the tiling tree of a workspace
+    @MainActor
+    func dwindleSplit() -> BindingData? {
+        guard parent is TilingContainer,
+              // Also normalizes the weights. From this point, the weights are in screen points
+              let rect = predictLayoutRect() else { return nil }
+        let axis: Orientation = rect.width > rect.height ? .h : .v
+        return splitTilingPlace(axis, newShare: 1 - config.tiling.splitRatio, newIsAfter: true, rect: rect)
+    }
 }
 
 extension Workspace {

@@ -259,6 +259,11 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     # All the windows of the workspace get the same share of their containers again, after resizing them
     cmd-alt-comma = 'balance-sizes'
 
+    # The windows of the workspace are placed again one after another, like new windows: two side by side,
+    # then dwindle. For a workspace left as a row, or with two windows one above the other.
+    # 'arrange-workspace grid' and 'arrange-workspace row' arrange it as a grid or as a row
+    cmd-alt-ctrl-d = 'arrange-workspace dwindle'
+
     # Go to workspace. 1 2 3 on the home row, 7 4 5 6 on the row above (see
     # the WORKSPACES note):
     #   u i o p  ->  7 4 5 6

@@ -2,6 +2,7 @@
 // Inlay keeps it as a static file. Edit it by hand when a command changes
 
 let subcommandDescriptions = [
+    ["  arrange-workspace", "Rebuild the tiling tree of the workspace: as if its windows opened one after another (dwindle), as a grid or as a row"],
     ["  balance-sizes", "Balance sizes of all windows in the current workspace"],
     ["  close-all-windows-but-current", "On the focused workspace, close all windows but current"],
     ["  close", "Close the focused window"],

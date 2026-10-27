@@ -78,6 +78,7 @@ extension InlayTests {
                 assertEquals(runs("cmd-alt-ctrl-\(direction)", "join-with \(direction); mode main", mode: "service"), true, additionalMsg: direction)
             }
             assertTrue(runs("cmd-alt-comma", "balance-sizes"))
+            assertTrue(runs("cmd-alt-ctrl-d", "arrange-workspace dwindle"))
             assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
         }
 

@@ -651,7 +651,7 @@ checklist_start() {
     CL_ACTIVE=true
     # What is typed while the list works isn't shown: it would push the list down. The questions show it again
     CL_STTY="$(stty -g </dev/tty 2>/dev/null || true)"
-    stty -echo </dev/tty 2>/dev/null || true
+    tty_quiet
     printf '\033[?7l\033[?25l'
     trap 'checklist_restore_terminal' EXIT
     trap 'printf "\r\033[J"; checklist_restore_terminal; printf "\n"; exit 130' INT
@@ -735,6 +735,13 @@ checklist_print() {
 checklist_note() {
   CL_NOTES[${#CL_NOTES[@]}]="$1$TAB$2"
 }
+
+# What is typed isn't shown while the list works. Not only without echo, but also without the canonical mode (line by
+# line): a terminal in canonical mode without echo is waiting for a password, and some terminals show a lock while it
+# lasts (Ghostty, iTerm2). It came and went with every question. Ctrl-C still works: the signals are kept
+tty_quiet() { stty -echo -icanon min 1 time 0 </dev/tty 2>/dev/null || true; }
+# What is typed is shown, and read line by line: for the answer to a question
+tty_typing() { stty echo icanon </dev/tty 2>/dev/null || true; }
 
 # The terminal as it was: the echo of what is typed, the autowrap, the cursor
 checklist_restore_terminal() {
@@ -828,9 +835,9 @@ checklist_ask_yes_no() {
   if [ "$default" = y ]; then choices="[Y/n]"; fi
   checklist_flush_input
   printf '\033[2K      %s?%s %s %s%s%s \033[?25h' "$C_CYAN" "$C_RESET" "$1" "$C_DIM" "$choices" "$C_RESET"
-  stty echo </dev/tty 2>/dev/null || true
+  tty_typing
   IFS= read -r answer || answer=""
-  stty -echo </dev/tty 2>/dev/null || true
+  tty_quiet
   printf '\033[?25l'
   CL_EXTRA=$((CL_EXTRA + 1))
   case "$answer" in
@@ -851,10 +858,10 @@ checklist_ask_path() {
   checklist_flush_input
   # Readline needs the autowrap for a long path. Then the rows that it took are counted
   printf '\033[2K\033[?7h\033[?25h'
-  stty echo </dev/tty 2>/dev/null || true
+  tty_typing
   ANSWER=""
   IFS= read -r -e -p "$prompt" ANSWER || ANSWER=""
-  stty -echo </dev/tty 2>/dev/null || true
+  tty_quiet
   printf '\033[?7l\033[?25l'
   width="$(term_width)"
   rows=$(((6 + 2 + ${#1} + 34 + ${#ANSWER}) / width + 1))

@@ -39,6 +39,11 @@ func moveWindowToWorkspace(_ window: Window, _ targetWorkspace: Workspace, _ io:
                 .succ(io.err("Window '\(window.windowId)' already belongs to workspace '\(targetWorkspace.name)'. Tip: use --fail-if-noop to exit with non-zero code"))
         }
     }
+    // A fullscreen window takes a place in the layout of the other workspace, like a new window
+    if window.isFullscreen {
+        WindowAnimator.shared.requestAnimatedLayout()
+        window.isFullscreen = false
+    }
     let binding: BindingData
     if window.isFloating {
         binding = BindingData(parent: targetWorkspace.floatingWindowsContainer, adaptiveWeight: WEIGHT_AUTO, index: index ?? INDEX_BIND_LAST)

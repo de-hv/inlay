@@ -276,16 +276,16 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-ctrl-p = ['workspace 6', 'mode main'] # everything else / secondary display
     cmd-alt-ctrl-7 = ['workspace 7', 'mode main'] # empty: no app goes there on its own
 
-    # Move window to workspace (same keys as above). It also becomes a tiling window: the windows of the
-    # apps without a workspace open floating (see WORKSPACES ASSIGNMENT), and these keys put them in the
-    # layout, also in the workspace that is on the screen
-    cmd-alt-shift-j = ['layout tiling', 'move-node-to-workspace 1'] # terminals
-    cmd-alt-shift-k = ['layout tiling', 'move-node-to-workspace 2'] # code / editors
-    cmd-alt-shift-l = ['layout tiling', 'move-node-to-workspace 3'] # browsers
-    cmd-alt-shift-i = ['layout tiling', 'move-node-to-workspace 4'] # chats
-    cmd-alt-shift-o = ['layout tiling', 'move-node-to-workspace 5'] # AI
-    cmd-alt-shift-p = ['layout tiling', 'move-node-to-workspace 6'] # everything else / secondary
-    cmd-alt-shift-7 = ['layout tiling', 'move-node-to-workspace 7'] # empty
+    # Move window to workspace (same keys as above). It keeps its layout: a floating window floats in the
+    # other workspace, and a tiling one splits a window there like a new window. A window in fullscreen
+    # leaves it, and takes a place in the layout of the other workspace
+    cmd-alt-shift-j = 'move-node-to-workspace 1' # terminals
+    cmd-alt-shift-k = 'move-node-to-workspace 2' # code / editors
+    cmd-alt-shift-l = 'move-node-to-workspace 3' # browsers
+    cmd-alt-shift-i = 'move-node-to-workspace 4' # chats
+    cmd-alt-shift-o = 'move-node-to-workspace 5' # AI
+    cmd-alt-shift-p = 'move-node-to-workspace 6' # everything else / secondary
+    cmd-alt-shift-7 = 'move-node-to-workspace 7' # empty
 
     # focus
     cmd-alt-left  = 'focus left'
@@ -307,6 +307,10 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-shift-right = 'move right'
 
     cmd-alt-ctrl-enter = ['fullscreen']
+
+    # The focused window, between floating and tiling: the Window menu of the menu bar item does the same.
+    # A floating window takes a place in the layout like a new window; a window in fullscreen leaves it first
+    cmd-alt-ctrl-shift-f = ['fullscreen off', 'layout floating tiling']
 
     # Modes: [m]anage (service) and resize with [n] beside it.
     cmd-alt-ctrl-m = 'mode service'
@@ -352,7 +356,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 #   1. File dialogs float where they open
 #   2. The apps with a workspace go to it: 1 to 5
 #   3. The quick apps, and the settings windows of any app, float where they open
-#   4. Every other window floats where it opens, until cmd-alt-shift + a workspace key tiles it there
+#   4. Every other window floats where it opens, until cmd-alt-ctrl-shift-f tiles it
 #
 # Every rule starts with 'layout tiling'. Some apps (Zen, Teams) expose incomplete
 # accessibility attributes while restoring windows on wake/unlock, so Inlay
@@ -511,8 +515,8 @@ run = ['layout floating']
 #   Everything else
 # └────────────────────┘
 # The windows of the apps that have no rule above float where they open, in the workspace that is on the
-# screen, instead of taking a place in its layout. cmd-alt-shift + a workspace key (j k l i o p u) puts the
-# window in the layout of that workspace, also of the one that is on the screen: it stops floating.
+# screen, instead of taking a place in its layout. cmd-alt-ctrl-shift-f puts the window in the layout of its
+# workspace: it stops floating. cmd-alt-shift + a workspace key (j k l i o p 7) moves it there, still floating.
 #
 # Only the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About" window)
 # floats, so 'window-layout' is 'floating' for it, the rule doesn't match, and it stays where it opens.

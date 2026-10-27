@@ -65,6 +65,26 @@ extension InlayTests {
             assertEquals((Workspace.get(byName: "b").floatingWindowsContainer.children.singleOrNil() as? Window)?.windowId, 1)
         }
 
+        /// The window leaves fullscreen, and splits a window of the other workspace like a new window
+        @Test func testFullscreenWindowTakesAPlaceInTheLayout() async {
+            config.enableNormalizationFlattenContainers = true
+            config.enableNormalizationOppositeOrientationForNestedContainers = true
+            config.tiling = TilingConfig(newWindowPlacement: .dwindle, splitRatio: 0.5)
+            let window = TestWindow.new(id: 1, parent: Workspace.get(byName: "a").rootTilingContainer)
+            assertTrue(window.focusWindow())
+            window.isFullscreen = true
+            let workspaceB = Workspace.get(byName: "b")
+            workspaceB.rootTilingContainer.apply {
+                TestWindow.new(id: 2, parent: $0)
+                TestWindow.new(id: 3, parent: $0)
+            }
+
+            await parseCommand("move-node-to-workspace b").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            workspaceB.normalizeContainers()
+            assertEquals(window.isFullscreen, false)
+            assertEquals(workspaceB.rootTilingContainer.layoutDescription, .h_tiles([.window(2), .v_tiles([.window(3), .window(1)])]))
+        }
+
         @Test func testSummonWindow() async {
             let workspaceA = Workspace.get(byName: "a").apply {
                 $0.rootTilingContainer.apply {

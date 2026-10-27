@@ -268,9 +268,11 @@ run = 'layout floating'
 It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About"
 window) is already floating when the rules run, so it does not match and stays where it opens; popups never
 get to the rules. The window of an app without a rule floats in the workspace on the screen, where the app
-opens it, and the tiled windows don't move. **`cmd-alt-shift` + a workspace key (`j k l i o p`) puts it in
-the layout**: the keys run `layout tiling` and then `move-node-to-workspace`, so the window stops floating and
-goes to that workspace, or takes its place in the workspace on the screen if it is that one. To give an app
+opens it, and the tiled windows don't move. **`cmd-alt-ctrl-shift-f` puts it in the layout** (`fullscreen off`
+and `layout floating tiling`: the same key floats a tiling window again, like the *Window* menu of the menu bar
+item). **`cmd-alt-shift` + a workspace key (`j k l i o p 7`) moves a window to that workspace with its layout**:
+a floating window floats there, a tiling one splits a window there like a new window, and a window in
+fullscreen leaves it and takes a place in the layout of that workspace. To give an app
 a place of its own, give it a rule above (a workspace of its own); to have every other window tiled in the
 workspace where it opens, as AeroSpace does, delete the rule. Like every rule it runs once per window: a
 window that you tile stays tiled, until you run the rules again by hand (`w` in the `service` mode).

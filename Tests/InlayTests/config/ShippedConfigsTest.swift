@@ -67,8 +67,8 @@ extension InlayTests {
             }
             for (key, workspace) in zip(["j", "k", "l", "i", "o", "p", "7"], 1 ... 7) {
                 assertEquals(runs("cmd-alt-ctrl-\(key)", "workspace \(workspace); mode main"), true, additionalMsg: key)
-                // The window also stops floating: the windows of the apps without a workspace open floating
-                assertEquals(runs("cmd-alt-shift-\(key)", "layout tiling; move-node-to-workspace \(workspace)"), true, additionalMsg: key)
+                // The window keeps its layout: a floating window floats in the other workspace
+                assertEquals(runs("cmd-alt-shift-\(key)", "move-node-to-workspace \(workspace)"), true, additionalMsg: key)
             }
             for direction in ["left", "down", "up", "right"] {
                 assertEquals(runs("cmd-alt-\(direction)", "focus \(direction)"), true, additionalMsg: direction)
@@ -79,6 +79,7 @@ extension InlayTests {
             }
             assertTrue(runs("cmd-alt-comma", "balance-sizes"))
             assertTrue(runs("cmd-alt-ctrl-d", "arrange-workspace dwindle"))
+            assertTrue(runs("cmd-alt-ctrl-shift-f", "fullscreen off; layout floating tiling"))
             assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
         }
 

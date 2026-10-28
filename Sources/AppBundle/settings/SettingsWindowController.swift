@@ -107,7 +107,7 @@ final class SettingsWindowController: NSObject {
         tabs.onSelect = { [weak self] index in
             if let page = SettingsPageID.allCases.getOrNil(atIndex: index) { self?.model.page = page }
         }
-        let window = NSWindow(contentViewController: tabs)
+        let window = SettingsWindow(contentViewController: tabs)
         window.styleMask = [.titled, .closable]
         window.title = model.page.title
         // Kept after closing, so it reopens where it was
@@ -186,6 +186,17 @@ final class SettingsWindowController: NSObject {
         NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.model.isOptionHeld = false }
         }
+    }
+}
+
+/// The text field being edited doesn't tell the font panel its font and color. The color panel would pass that color on
+/// to the color well of a ColorPicker, in the middle of a layout pass of the window: AppKit then throws, and the app
+/// crashes. It would also give the setting of that color the color of the text
+private final class SettingsWindow: NSWindow {
+    override func fieldEditor(_ createFlag: Bool, for object: Any?) -> NSText? {
+        let editor = super.fieldEditor(createFlag, for: object)
+        (editor as? NSTextView)?.usesFontPanel = false
+        return editor
     }
 }
 

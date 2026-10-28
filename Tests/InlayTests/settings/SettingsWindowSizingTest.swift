@@ -74,8 +74,8 @@ extension InlayTests {
 
         @Test func testEveryTabFitsOrScrollsInAWindowThatIsAsTallAsASmallScreen() throws {
             let window = try window(visibleHeight: 600)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Appearance", "Windows", "Keyboard"])
+            let tabs = try #require(SettingsWindowController.pages(of: window))
+            assertEquals(tabs.tabViewItems.map(\.label), ["General", "Menu Bar", "Borders", "Windows", "Keyboard"])
             var scrolling: [String] = []
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index
@@ -107,13 +107,13 @@ extension InlayTests {
         /// the page never leaves its top out of sight
         @Test func testScrollToTop() throws {
             let window = try window(visibleHeight: 600)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
-            tabs.selectedTabViewItemIndex = 1
+            let tabs = try #require(SettingsWindowController.pages(of: window))
+            tabs.selectedTabViewItemIndex = 2
             RunLoop.current.run(until: .now.addingTimeInterval(0.1))
             window.layoutIfNeeded()
-            let page = try #require(tabs.tabViewItems[1].viewController as? SettingsPageController)
+            let page = try #require(tabs.tabViewItems[2].viewController as? SettingsPageController)
             let scrollView = try #require(page.view as? NSScrollView)
-            // Appearance is taller than such a screen: the page scrolls. Scrolled down, as the user would
+            // Borders is taller than such a screen: the page scrolls. Scrolled down, as the user would
             scrollView.contentView.scroll(to: NSPoint(x: 0, y: 120))
             assertEquals(scrollView.contentView.bounds.origin.y, 120)
             page.scrollToTop()
@@ -128,24 +128,31 @@ extension InlayTests {
             assertEquals(scrollView.contentView.bounds.origin.y, 0)
         }
 
-        /// Going from a tab to another one, the scroll view of the tab fills the window below the toolbar every time
-        /// (a gap under the toolbar, or the top of the form under it, otherwise), and the window keeps its height
+        /// Going from a page to another one, the scroll view of the page fills the window below the title bar and next to
+        /// the sidebar every time (a gap under the title bar, or the top of the form under it, otherwise), and the window
+        /// keeps its height
         @Test func testTheScrollViewFillsTheWindowOnEveryTab() throws {
             let window = try window(visibleHeight: 2000)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            let tabs = try #require(SettingsWindowController.pages(of: window))
             // On the screen, and nothing but the run loop lays it out: like the real window
             window.orderFront(nil)
             defer { window.orderOut(nil) }
             RunLoop.current.run(until: .now.addingTimeInterval(0.2))
             var heights: Set<CGFloat> = []
-            for index in [1, 2, 0, 3, 1] {
+            for index in [1, 2, 0, 4, 3, 1] {
                 tabs.selectedTabViewItemIndex = index
                 RunLoop.current.run(until: .now.addingTimeInterval(0.3))
                 heights.insert(window.frame.height)
                 let label = tabs.tabViewItems[index].label
                 let page = try #require(tabs.tabViewItems[index].viewController as? SettingsPageController)
                 let scrollView = try #require(page.view as? NSScrollView)
-                assertEquals(scrollView.convert(scrollView.bounds, to: nil), window.contentLayoutRect, additionalMsg: label)
+                var area = window.contentLayoutRect
+                area.origin.x += SettingsSplitViewController.sidebarWidth
+                area.size.width -= SettingsSplitViewController.sidebarWidth
+                let frame = scrollView.convert(scrollView.bounds, to: nil)
+                assertEquals(abs(frame.minX - area.minX) <= 1 && frame.maxX == area.maxX, true, additionalMsg: "\(label): \(frame) \(area)")
+                assertEquals(frame.minY, area.minY, additionalMsg: label)
+                assertEquals(frame.height, area.height, additionalMsg: label)
                 assertEquals(scrollView.contentView.bounds.origin.y, 0, additionalMsg: label)
             }
             assertEquals(heights.count, 1) // The same height for every tab: the window doesn't jump
@@ -154,7 +161,7 @@ extension InlayTests {
         /// On a big screen the window has the same height on every page, however tall the page is
         @Test func testOnABigScreenTheWindowHasAFixedHeight() throws {
             let window = try window(visibleHeight: 2000)
-            let tabs = try #require(window.contentViewController as? SettingsTabViewController)
+            let tabs = try #require(SettingsWindowController.pages(of: window))
             for index in tabs.tabViewItems.indices {
                 tabs.selectedTabViewItemIndex = index
                 tabs.fitWindow(animate: false)

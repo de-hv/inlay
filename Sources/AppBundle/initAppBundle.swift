@@ -71,11 +71,11 @@ private let serverHelp = """
       --check-config <path>   Print the errors and the warnings of a config file and exit. Inlay doesn't start
       --render-menu-bar <dir> [<scale>]
                               Draw the menu bar item to PNG files (every theme, dark and light menu bar,
-                              default and custom colors) and exit. Inlay doesn't start.
+                              default and custom colors), and its menu, and exit. Inlay doesn't start.
                               <scale> is the number of pixels per point (2 by default, 1 ... 8)
       --render-borders <dir>  Draw the window borders in every state to PNG files and exit. Inlay doesn't start
       --render-settings <dir> [<config>]
-                              Draw the tabs of the Settings window to PNG files and exit, as they are with
+                              Draw the pages of the Settings window to PNG files and exit, as they are with
                               the shipped config or with the <config> file. Inlay doesn't start, and the
                               config of the user is neither read nor written
       --debug-settings <config> [--inspect] [--screen-height <points>]

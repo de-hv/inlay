@@ -358,14 +358,15 @@ final class SettingsModel {
     }
 }
 
-/// The tabs of the settings window, in the order of the toolbar
+/// The pages of the settings window, in the order of the sidebar
 enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
-    case general, appearance, windows, keyboard
+    case general, menuBar, borders, windows, keyboard
 
     var title: String {
         switch self {
             case .general: Strings.Settings.general
-            case .appearance: Strings.Settings.appearance
+            case .menuBar: Strings.Settings.menuBarPage
+            case .borders: Strings.Settings.bordersPage
             case .windows: Strings.Settings.windowsPage
             case .keyboard: Strings.Settings.keyboard
         }
@@ -374,7 +375,8 @@ enum SettingsPageID: String, CaseIterable, Hashable, Sendable {
     var symbol: String {
         switch self {
             case .general: "gearshape"
-            case .appearance: "paintbrush"
+            case .menuBar: "menubar.rectangle"
+            case .borders: "square.dashed.inset.filled"
             case .windows: "rectangle.split.2x1"
             case .keyboard: "keyboard"
         }

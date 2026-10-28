@@ -44,13 +44,15 @@ mkdir -p "$WORK"
 "$APP" --render-menu-bar "$WORK/menu-bar-6x" 6 >/dev/null
 "$APP" --render-borders "$WORK/borders" >/dev/null
 "$APP" --render-settings "$WORK/settings" >/dev/null
-# The Appearance tab with other values of 'width', for the animation of the file and the window in sync
+# The Borders page with other values of 'width', for the animation of the file and the window in sync
 for width in 2 8; do
   sed "s/^    width = 4\$/    width = $width/" inlay.toml >"$WORK/width-$width.toml"
   "$APP" --render-settings "$WORK/settings-width-$width" "$WORK/width-$width.toml" >/dev/null
 done
-for tab in general appearance windows keyboard window-appearance; do
-  if wanted "settings-$tab"; then cp "$WORK/settings/settings-$tab.png" "$OUT/settings-$tab.png"; echo "settings-$tab.png"; fi
+# The render of a page, and the name of its image: settings-<page>.png
+for page in general:general menuBar:menu-bar borders:borders windows:windows keyboard:keyboard window-menuBar:window-menu-bar; do
+  render=${page%%:*} name=${page##*:}
+  if wanted "settings-$name"; then cp "$WORK/settings/settings-$render.png" "$OUT/settings-$name.png"; echo "settings-$name.png"; fi
 done
 
 chrome() { # chrome <width> <height> <scale> <more options...>
@@ -64,11 +66,11 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 # --- PNG: name:width:height (in points; rendered at 2x) ---
 PAGES=(
   hero:1280:800
-  menu-bar-themes:880:700
+  menu-bar-themes:880:870
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500
-  menu:880:400
+  menu:880:470
   borders-states:880:586
   borders-width:880:290
   borders-corner-radius:880:310

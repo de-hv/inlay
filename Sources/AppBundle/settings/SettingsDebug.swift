@@ -59,7 +59,7 @@ private func inspectSettingsWindow(_ window: NSWindow, config: URL) -> Int {
         }
         return false
     }
-    guard let tabs = window.contentViewController as? SettingsTabViewController, let root = unsafe window.contentView?.superview else { return 1 }
+    guard let tabs = SettingsWindowController.pages(of: window), let root = unsafe window.contentView?.superview else { return 1 }
     var problems = 0
     for index in tabs.tabViewItems.indices {
         tabs.selectedTabViewItemIndex = index
@@ -72,7 +72,7 @@ private func inspectSettingsWindow(_ window: NSWindow, config: URL) -> Int {
         print("--- tab '\(item.label)'")
         print("  screen, the usable part: \(text(visible))")
         print("  window: \(text(window.frame)), entirely on the screen: \(isOnScreen)")
-        print("  content area, below the toolbar: \(text(area)). The tab asks for \(Int(asked.width))x\(Int(asked.height))")
+        print("  content area, below the title bar: \(text(area)). The tab asks for \(Int(asked.width))x\(Int(asked.height))")
         if !isOnScreen { problems += 1 }
         let page = content as? NSScrollView
         if asked.height > area.height + 0.5 {

@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><title>The themes of the menu bar item</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 700px; }
+  body { width: 880px; height: 870px; }
   .row { margin-top: 16px; } .row .cap { margin: 0 0 7px; }
   .pair { display: grid; grid-template-columns: 404px 404px; gap: 16px; }
   .pair > div { border-radius: 8px; overflow: hidden; height: 36px; } .pair > div:first-child { background: #383d5c; } .pair > div:last-child { background: #e6e6e6; }
@@ -28,6 +28,10 @@
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/glyphs-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/glyphs-default-light.png" style="height:36px"></div></div></div>
   <div class="row"><div class="cap"><code>theme = 'liquid'</code> &nbsp;the default: a dot per workspace, and a drop with the name of the focused one</div>
     <div class="pair"><div><img class="item" src="render/menu-bar-6x/liquid-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/liquid-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'segments'</code> &nbsp;a segment per workspace, hollow if it is empty, and the focused one wider, with its name before the track</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/segments-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/segments-default-light.png" style="height:36px"></div></div></div>
+  <div class="row"><div class="cap"><code>theme = 'capsule'</code> &nbsp;a dot per workspace, a ring if it is empty, and a capsule with the name of the focused one</div>
+    <div class="pair"><div><img class="item" src="render/menu-bar-6x/capsule-default-dark.png" style="height:36px"></div><div><img class="item" src="render/menu-bar-6x/capsule-default-light.png" style="height:36px"></div></div></div>
 </div>
 <script>fillToml();</script>
 </body></html>

@@ -12,76 +12,67 @@ extension InlayTests {
             ServerState.shared.axPermissionStatus = .granted
         }
 
-        /// The menu as it opens: what it shows, and its items
-        private func openMenu() throws -> (card: MenuBarCard, items: [NSMenuItem]) {
-            let menu = MenuBarMenu()
-            menu.menuNeedsUpdate(menu.menu)
-            return (try #require(menu.card), menu.menu.items)
+        /// The menu as it opens: what it shows, and how the panel lays it out
+        private func openMenu() throws -> (card: MenuBarCard, content: MenuBarPanelContent) {
+            let card = try #require(MenuBarMenu().update())
+            return (card, MenuBarPanelContent(card))
         }
 
-        private func titles(_ items: [NSMenuItem]) -> [String] {
-            items.map { $0.isSeparatorItem ? "---" : $0.title }
+        private func footer(_ content: MenuBarPanelContent) -> [String] {
+            content.footer.map(\.title)
         }
 
-        // MARK: - The items
+        // MARK: - What it shows
 
-        /// Native items: what Inlay is doing, the focused window in a submenu, the config, and Inlay itself.
+        /// What Inlay is doing, the focused window and its workspace, the config, and Inlay itself.
         /// Switching workspaces, focusing or moving windows and the binding modes are for the key bindings
-        @Test func testItems() throws {
+        @Test func testContent() throws {
             let workspace = focus.workspace
             assertEquals(TestWindow.new(id: 1, parent: workspace.rootTilingContainer).focusWindow(), true)
             ServerState.shared.lastConfigLoad = ConfigLoadStatus(date: .now, url: newUserConfigUrl, errorCount: 0, warningCount: 0, isApplied: true)
             defer { ServerState.shared.lastConfigLoad = nil }
 
-            let (card, items) = try openMenu()
+            let (card, content) = try openMenu()
             assertEquals(card.status, .running)
             assertEquals(card.configProblems, nil)
             assertEquals(card.workspace, workspace.name)
             assertEquals(card.windowLayout, .tiling)
             let app = TestApp.shared.name ?? "?"
-            assertEquals(titles(items), [
-                "Workspace \(workspace.name) · \(app)",
-                titles(items)[1], // "Config reloaded <when>"
-                "---",
-                "Window",
-                "---",
-                "Reload Config", "Open inlay.toml…", "Settings…",
-                "---",
-                "Pause Inlay-Debug", "Quit Inlay-Debug",
-            ])
-            assertTrue(items[1].title.hasPrefix("Config reloaded "))
-            // The information isn't an action
-            assertEquals(items[0].isEnabled, false)
-            assertEquals(items[1].isEnabled, false)
-            // The shortcuts of the menu itself
-            assertEquals(items.filter { !$0.keyEquivalent.isEmpty }.map { "\($0.title) \($0.keyEquivalent)" }, [
-                "Reload Config r", "Settings… ,", "Pause Inlay-Debug e", "Quit Inlay-Debug q",
-            ])
+            assertEquals(content.title, "Workspace \(workspace.name) · \(app)")
+            assertEquals(content.details.count, 1)
+            assertTrue(content.details[0].hasPrefix("Config reloaded "))
+            assertNil(content.problems)
+            assertNil(content.prompt)
+            // The layout in use is selected, and the arrangements apply to the focused workspace
+            assertEquals(content.showsLayouts, true)
+            assertEquals(content.windowLayout, .tiling)
+            assertEquals(content.canSetLayout, true)
+            assertEquals(content.canArrange, true)
+            assertEquals(footer(content), ["Reload Config", "Open inlay.toml…", "Settings…", "Pause Inlay-Debug", "Quit Inlay-Debug"])
+            assertEquals(content.footer.allSatisfy(\.isEnabled), true)
+            // The shortcuts of the menu itself, while it is open
+            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", ",", "e", "q"])
+            assertEquals(MenuBarCardAction.forShortcut("R"), .reloadConfig)
+            assertNil(MenuBarCardAction.forShortcut("o"))
         }
 
-        /// Window ▸: the app of the focused window, and its layout checked
-        @Test func testWindowSubmenu() throws {
-            assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
-            let (_, items) = try openMenu()
-            let window = try #require(items.first { $0.title == "Window" })
-            assertEquals(window.isEnabled, true)
-            let submenu = try #require(window.submenu)
-            assertEquals(titles(submenu.items), [TestApp.shared.name ?? "?", "---", "Tiling", "Floating", "Fullscreen"])
-            assertEquals(submenu.items.map(\.state), [.off, .off, .on, .off, .off])
-            assertEquals(submenu.items[0].isEnabled, false)
-            assertEquals(submenu.items[2 ... 4].allSatisfy(\.isEnabled), true)
+        @Test func testArrange() {
+            assertEquals(MenuBarCardAction.arrange(.grid).title(MenuBarCard(status: .running, workspace: "1")), "Arrange the Workspace in a Grid")
+            assertEquals(WorkspaceArrangement.allCases.map(Strings.Menu.arrangeShort), ["Dwindle", "Grid", "Row"])
         }
 
-        /// A workspace without windows: the submenu is disabled
+        /// A workspace without windows: the layouts of the window are disabled, the arrangements aren't
         @Test func testAnEmptyWorkspace() throws {
-            let (card, items) = try openMenu()
+            let (card, content) = try openMenu()
             assertEquals(card.windowLayout, nil)
             assertEquals(card.isEnabled(.setLayout(.floating)), false)
-            assertEquals(items.first { $0.title == "Window" }?.isEnabled, false)
-            assertEquals(items.first?.title, "Workspace \(focus.workspace.name)")
+            assertEquals(content.canSetLayout, false)
+            assertNil(content.windowLayout)
+            assertEquals(content.canArrange, true)
+            assertEquals(content.title, "Workspace \(focus.workspace.name)")
         }
 
-        /// The binding mode, and the problems of the config as items: the first one shows them all
+        /// The binding mode, and the problems of the config: the button shows them all
         @Test func testModeAndProblems() throws {
             config.modes["resize"] = Mode(bindings: [:])
             ServerState.shared.lastConfigLoad = ConfigLoadStatus(
@@ -91,26 +82,23 @@ extension InlayTests {
             defer { ServerState.shared.lastConfigLoad = nil }
             activeMode = "resize"
             defer { activeMode = mainModeId }
-            let (card, items) = try openMenu()
+            let (card, content) = try openMenu()
             assertEquals(card.mode, "resize")
-            assertEquals(items.contains { $0.title.hasPrefix("Binding mode: resize") }, true)
-            let problems = try #require(items.first { $0.title == "Config contains warnings…" })
-            assertEquals(problems.isEnabled, true)
-            let line = try #require(items.first { $0.title == "[WARNING] animations.curve: Unknown curve 'bounce2'" })
-            assertEquals(line.indentationLevel, 1)
+            assertEquals(content.details.contains { $0.hasPrefix("Binding mode: resize") }, true)
+            assertEquals(content.problems, .init(title: "Config contains warnings…", lines: ["[WARNING] animations.curve: Unknown curve 'bounce2'"]))
+            assertEquals(card.isEnabled(.showConfigProblems), true)
         }
 
-        /// The key bindings of the config aren't shown, even when one runs the command of an item
+        /// The key bindings of the config aren't shown, even when one runs the command of a button
         @Test func testNoKeyBindingsOfTheConfig() throws {
             assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
             for (modifiers, key, command) in [(NSEvent.ModifierFlags.option, Key.two, "workspace 2"), ([.option, .shift], .f, "layout floating tiling")] {
                 let binding = HotkeyBinding(modifiers, key, parseCommand(command).cmdOrDie)
                 config.modes[mainModeId]?.bindings[binding.descriptionWithKeyCode] = binding
             }
-            let (_, items) = try openMenu()
-            let all = items + items.compactMap(\.submenu).flatMap(\.items)
-            assertEquals(all.filter { $0.badge != nil }.map(\.title), [])
-            assertEquals(all.filter { !$0.keyEquivalent.isEmpty }.map(\.keyEquivalent), ["r", ",", "e", "q"])
+            let (_, content) = try openMenu()
+            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", ",", "e", "q"])
+            assertEquals(footer(content).contains { $0.contains("⌥") }, false)
         }
 
         @Test func testVersion() {
@@ -122,23 +110,26 @@ extension InlayTests {
         @Test func testPausedAndWithoutThePermission() throws {
             assertEquals(TestWindow.new(id: 1, parent: focus.workspace.rootTilingContainer).focusWindow(), true)
             ServerState.shared.isEnabled = false
-            var (card, items) = try openMenu()
+            var (card, content) = try openMenu()
             assertEquals(card.status, .paused)
             assertEquals(card.windowLayout, nil)
-            assertEquals(items.first?.title, "Inlay-Debug is paused")
-            assertEquals(items.first { $0.title == "Window" }?.isEnabled, false)
+            assertEquals(content.title, "Inlay-Debug is paused")
+            assertEquals(content.canSetLayout, false)
+            assertEquals(content.canArrange, false)
             assertEquals(card.isEnabled(.reloadConfig), false)
-            assertEquals(items.filter { !$0.keyEquivalent.isEmpty && $0.isEnabled }.map(\.keyEquivalent), [",", "e", "q"])
-            assertEquals(items.contains { $0.title == "Resume Inlay-Debug" }, true)
+            assertEquals(content.footer.filter(\.isEnabled).compactMap { $0.action.shortcut }, [",", "e", "q"])
+            assertEquals(footer(content).contains("Resume Inlay-Debug"), true)
 
             ServerState.shared.isEnabled = true
             ServerState.shared.axPermissionStatus = .waiting
             defer { ServerState.shared.axPermissionStatus = .granted }
-            (card, items) = try openMenu()
+            (card, content) = try openMenu()
             assertEquals(card.status, .needsAccessibility)
             // Nothing to do but to grant it, or to quit
-            assertEquals(titles(items), ["Inlay-Debug requires accessibility permission to move windows", "---", "Quit Inlay-Debug"])
-            assertEquals(items[0].isEnabled, true)
+            assertEquals(content.title, "Inlay-Debug requires accessibility permission to move windows")
+            assertEquals(content.prompt, .promptForAccessibility)
+            assertEquals(content.showsLayouts, false)
+            assertEquals(footer(content), ["Quit Inlay-Debug"])
         }
 
         /// The button highlights itself while the mouse is down on it. The shield takes the mouse away from the button

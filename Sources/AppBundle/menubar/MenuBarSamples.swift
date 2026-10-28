@@ -66,7 +66,7 @@ enum MenuBarSamples {
 }
 
 /// `Inlay --render-menu-bar <dir>`: draws the menu bar item off screen, for every theme, in a dark and in a light menu bar,
-/// with the default colors and with custom ones. A way to look at the item without running Inlay
+/// with the default colors and with custom ones, and the menu that it opens. A way to look at them without running Inlay
 ///
 /// - Parameter scale: pixels per point. 2 is what a Retina display gets; more than that gives an enlarged item
 @MainActor
@@ -109,13 +109,14 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
         append("\(theme.rawValue)-per-monitor", MenuBarConfig(theme: theme, perMonitor: true), MenuBarSamples.twoMonitors)
     }
     // The focus on its way from workspace 5 to workspace 2, in the themes whose marker changes shape as it goes
-    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid, .labels] {
+    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid, .labels, .segments, .capsule] {
         for percent in [20, 40, 60, 80] {
             append("\(theme.rawValue)-slide-\(percent)", MenuBarConfig(theme: theme), MenuBarSamples.snapshot, .init(from: "5", progress: Double(percent) / 100))
         }
     }
     append("paused", MenuBarConfig(), paused)
     append("needs-accessibility", MenuBarConfig(), needsAccessibility)
+    try renderMenuSamples(to: directory, scale: scale)
 
 
     let padding: CGFloat = 8
@@ -143,6 +144,44 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
             guard let png = bitmap.representation(using: .png, properties: [:]) else { continue }
             try png.write(to: directory.appending(path: "\(name)-\(isDarkBar ? "dark" : "light").png"))
             rendered.append((name, bitmap))
+        }
+    }
+}
+
+/// The menu that a click on the item opens, in a dark and in a light appearance: menu-<state>-<dark|light>.png.
+/// Over the color of the menus, without their blur
+@MainActor
+private func renderMenuSamples(to directory: URL, scale: CGFloat) throws {
+    let reloaded = Date.now.addingTimeInterval(-3)
+    let cards: [(String, MenuBarCard)] = [
+        ("running", MenuBarCard(status: .running, workspace: "2", focusedApp: "Zed", windowLayout: .tiling, lastReload: reloaded)),
+        ("mode-problems", MenuBarCard(
+            status: .running,
+            configProblems: "Config contains warnings…",
+            workspace: "2",
+            focusedApp: "Zed",
+            windowLayout: .floating,
+            mode: "resize",
+            modeExitKey: "esc",
+            problemLines: ["[WARNING] animations.curve: Unknown curve 'bounce2'"],
+            lastReload: reloaded,
+        )),
+        ("empty", MenuBarCard(status: .running, workspace: "6", lastReload: reloaded)),
+        ("paused", MenuBarCard(status: .paused, workspace: "2", lastReload: reloaded)),
+        ("needs-accessibility", MenuBarCard(status: .needsAccessibility, workspace: "1")),
+    ]
+    for (name, card) in cards {
+        for isDark in [true, false] {
+            let view = MenuBarPanelView(content: MenuBarPanelContent(card), run: { _ in })
+                .background(Color(nsColor: .windowBackgroundColor))
+            let hosting = NSHostingView(rootView: view)
+            hosting.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+            hosting.frame = CGRect(origin: .zero, size: hosting.fittingSize)
+            hosting.layoutSubtreeIfNeeded()
+            let pixels = CGSize(width: hosting.bounds.width * scale, height: hosting.bounds.height * scale)
+            guard let bitmap = NSBitmapImageRep.rgba(pixelsWide: Int(pixels.width), pixelsHigh: Int(pixels.height), scale: scale) else { continue }
+            hosting.cacheDisplay(in: hosting.bounds, to: bitmap)
+            try bitmap.representation(using: .png, properties: [:])?.write(to: directory.appending(path: "menu-\(name)-\(isDark ? "dark" : "light").png"))
         }
     }
 }

@@ -1,104 +1,89 @@
 import AppKit
 import Common
+import SwiftUI
 
-/// The menu of the menu bar item: native items, rebuilt from the model every time it opens. See: MenuBarCard
+/// The menu of the menu bar item: a panel right below the item, rebuilt from the model every time it opens.
+/// See: MenuBarCard, MenuBarPanelView
 ///
-/// What Inlay is doing, the layout of the focused window in a submenu, the config, and Inlay itself. Switching
+/// What Inlay is doing, the layout of the focused window and of its workspace, the config, and Inlay itself. Switching
 /// workspaces, focusing or moving windows and the binding modes are for the key bindings
 @MainActor
-final class MenuBarMenu: NSObject, NSMenuDelegate {
-    let menu = NSMenu()
+final class MenuBarMenu: NSObject {
     /// What the menu shows, as of the last time it opened
     private(set) var card: MenuBarCard?
+    private var panel: MenuBarPanel?
+    private var monitors: [Any] = []
+    /// The window of the menu bar item: a click on it toggles the menu, so it doesn't count as a click outside
+    private weak var itemWindow: NSWindow?
 
-    override init() {
-        super.init()
-        menu.delegate = self
-        // The items are enabled by hand: which ones apply depends on the state of Inlay
-        menu.autoenablesItems = false
-    }
+    var isOpen: Bool { panel?.isVisible == true }
 
-    func menuNeedsUpdate(_ menu: NSMenu) {
+    /// The card of the model as it is now
+    @discardableResult
+    func update() -> MenuBarCard? {
         MenuBarStore.shared.refresh()
-        guard let state = MenuBarStore.shared.state else { return }
+        guard let state = MenuBarStore.shared.state else { return nil }
         let card = MenuBarCard.fromModel(state)
         self.card = card
-        menu.removeAllItems()
-        for item in items(card) { menu.addItem(item) }
+        return card
     }
 
-    private func items(_ card: MenuBarCard) -> [NSMenuItem] {
-        var items: [NSMenuItem] = []
-        // What Inlay is doing: information, not actions
-        switch card.status {
-            case .running:
-                items.append(info(Strings.Menu.workspaceAndApp(card.workspace, card.focusedApp)))
-                if let mode = card.mode { items.append(info(Strings.Menu.modeHelp(mode, card.modeExitKey))) }
-            case .paused:
-                items.append(info(Strings.Menu.paused))
-            case .needsAccessibility:
-                items.append(item(.promptForAccessibility, card))
+    /// Opens the panel with its top left corner at `topLeft`, in screen coordinates, kept inside of `screen`
+    func open(at topLeft: NSPoint, on screen: NSScreen?, itemWindow: NSWindow?) {
+        guard let card = update() else { return }
+        self.itemWindow = itemWindow
+        let panel = panel ?? makePanel()
+        self.panel = panel
+        let host = NSHostingView(rootView: MenuBarPanelView(content: MenuBarPanelContent(card), run: { [weak self] in self?.run($0) }))
+        let size = host.fittingSize
+        panel.setContent(host, size: size)
+        var origin = NSPoint(x: topLeft.x, y: topLeft.y - size.height)
+        if let visible = screen?.visibleFrame {
+            origin.x = min(max(origin.x, visible.minX + Self.screenMargin), visible.maxX - size.width - Self.screenMargin)
         }
-        if let lastReload = card.lastReload {
-            items.append(info(Strings.Menu.reloaded(RelativeDateTimeFormatter().localizedString(for: lastReload, relativeTo: .now))))
+        panel.setFrameOrigin(origin)
+        panel.makeKeyAndOrderFront(nil)
+        startMonitoring()
+    }
+
+    func close() {
+        for monitor in monitors { NSEvent.removeMonitor(monitor) }
+        monitors = []
+        panel?.orderOut(nil)
+    }
+
+    private static let screenMargin: CGFloat = 6
+
+    private func makePanel() -> MenuBarPanel {
+        let panel = MenuBarPanel()
+        panel.onCancel = { [weak self] in self?.close() }
+        panel.onCommandKey = { [weak self] key in
+            guard let self, let card = self.card, let action = MenuBarCardAction.forShortcut(key), card.isEnabled(action) else { return false }
+            self.run(action)
+            return true
         }
-        if card.configProblems != nil {
-            items.append(item(.showConfigProblems, card))
-            for line in card.problemLines {
-                let problem = info(line)
-                problem.indentationLevel = 1
-                items.append(problem)
+        return panel
+    }
+
+    /// A click anywhere but in the panel or on the item closes it, like a menu
+    private func startMonitoring() {
+        guard monitors.isEmpty else { return }
+        let mouseDown: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: mouseDown, handler: { [weak self] _ in
+            MainActor.assumeIsolated { self?.close() }
+        }) { monitors.append(global) }
+        if let local = NSEvent.addLocalMonitorForEvents(matching: mouseDown, handler: { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self, event.window !== self.panel, event.window !== self.itemWindow else { return }
+                self.close()
             }
-        }
-        if card.status == .needsAccessibility {
-            return items + [.separator(), item(.quit, card, key: "q")]
-        }
-        items.append(.separator())
-        items.append(windowItem(card))
-        items.append(.separator())
-        items.append(item(.reloadConfig, card, key: "r"))
-        items.append(item(.openConfig, card))
-        items.append(item(.openSettings, card, key: ","))
-        items.append(.separator())
-        items.append(item(.togglePause, card, key: "e"))
-        items.append(item(.quit, card, key: "q"))
-        return items
+            return event
+        }) { monitors.append(local) }
     }
 
-    /// "Window ▸": the focused window, tiling, floating or fullscreen. Disabled without a focused window
-    private func windowItem(_ card: MenuBarCard) -> NSMenuItem {
-        let submenu = NSMenu(title: Strings.Menu.window)
-        submenu.autoenablesItems = false
-        submenu.addItem(info(card.focusedApp ?? Strings.Menu.noFocusedWindow))
-        submenu.addItem(.separator())
-        for layout in MenuBarCard.WindowLayout.allCases {
-            let item = item(.setLayout(layout), card, title: Strings.Menu.layoutShort(layout))
-            item.state = card.windowLayout == layout ? .on : .off
-            submenu.addItem(item)
-        }
-        let item = NSMenuItem(title: Strings.Menu.window, action: nil, keyEquivalent: "")
-        item.submenu = submenu
-        item.isEnabled = card.windowLayout != nil
-        return item
-    }
-
-    private func item(_ action: MenuBarCardAction, _ card: MenuBarCard, title: String? = nil, key: String = "") -> NSMenuItem {
-        let item = NSMenuItem(title: title ?? action.title(card), action: #selector(run(_:)), keyEquivalent: key)
-        item.target = self
-        item.representedObject = action
-        item.isEnabled = card.isEnabled(action)
-        return item
-    }
-
-    private func info(_ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
-        return item
-    }
-
-    @objc private func run(_ sender: NSMenuItem) {
-        guard let action = sender.representedObject as? MenuBarCardAction else { return }
-        // After the menu is gone: Settings, for one, opens a window
+    private func run(_ action: MenuBarCardAction) {
+        close()
+        // After the panel is gone: Settings, for one, opens a window
         Task.startUnstructured { @MainActor in self.perform(action) }
     }
 
@@ -108,6 +93,8 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
                 if let current = card?.windowLayout {
                     runMenuBarCommands(Self.layoutCommands(from: current, to: layout))
                 }
+            case .arrange(let arrangement):
+                runMenuBarCommands(["arrange-workspace \(arrangement.rawValue)"])
             case .reloadConfig:
                 reloadConfigFromUi(warningsAsErrors: false)
             case .showConfigProblems:
@@ -148,6 +135,8 @@ final class MenuBarMenu: NSObject, NSMenuDelegate {
 enum MenuBarCardAction: Hashable, Sendable {
     /// The focused window becomes tiling, floating or fullscreen
     case setLayout(MenuBarCard.WindowLayout)
+    /// The windows of the focused workspace are arranged again: 'arrange-workspace'
+    case arrange(WorkspaceArrangement)
     case reloadConfig
     case showConfigProblems
     case openConfig
@@ -160,6 +149,7 @@ enum MenuBarCardAction: Hashable, Sendable {
     func title(_ card: MenuBarCard) -> String {
         switch self {
             case .setLayout(let layout): Strings.Menu.layout(layout)
+            case .arrange(let arrangement): Strings.Menu.arrange(arrangement)
             case .reloadConfig: Strings.Menu.reloadConfig
             case .showConfigProblems: card.configProblems ?? ""
             case .openConfig: Strings.Menu.openConfig
@@ -168,6 +158,21 @@ enum MenuBarCardAction: Hashable, Sendable {
             case .promptForAccessibility: Strings.Menu.needsAccessibility
             case .quit: Strings.Menu.quit
         }
+    }
+
+    /// The key that runs the action with ⌘ while the menu is open. The key bindings of the config aren't these
+    var shortcut: String? {
+        switch self {
+            case .reloadConfig: "r"
+            case .openSettings: ","
+            case .togglePause: "e"
+            case .quit: "q"
+            default: nil
+        }
+    }
+
+    static func forShortcut(_ key: String) -> MenuBarCardAction? {
+        [.reloadConfig, .openSettings, .togglePause, .quit].first { $0.shortcut == key.lowercased() }
     }
 }
 
@@ -196,6 +201,7 @@ struct MenuBarCard: Equatable {
         switch action {
             case .reloadConfig: status != .paused
             case .setLayout: windowLayout != nil
+            case .arrange: status == .running
             default: true
         }
     }
@@ -216,6 +222,135 @@ struct MenuBarCard: Equatable {
         card.mode = snapshot.nonMainMode
         card.modeExitKey = card.mode.flatMap { exitKey(of: $0) }
         return card
+    }
+}
+
+/// What the panel shows, line by line, derived from the card. MenuBarPanelView only lays it out
+struct MenuBarPanelContent: Equatable {
+    struct Problems: Equatable {
+        /// The button that shows them all
+        var title: String
+        /// The first ones, one line each
+        var lines: [String]
+    }
+
+    var title: String
+    /// Under the title, dimmed: the binding mode and the key that leaves it, and when the config was loaded last
+    var details: [String] = []
+    var problems: Problems? = nil
+    /// Without the permission there is nothing but asking for it, and quitting
+    var prompt: MenuBarCardAction? = nil
+    /// Tiling, floating or fullscreen, and the arrangements of the workspace. Not shown without the permission
+    var showsLayouts: Bool = true
+    var windowLayout: MenuBarCard.WindowLayout? = nil
+    var canSetLayout: Bool = false
+    var canArrange: Bool = false
+    /// The buttons at the bottom, from left to right
+    var footer: [Button] = []
+
+    struct Button: Equatable {
+        var action: MenuBarCardAction
+        var title: String
+        var symbol: String
+        var isEnabled: Bool
+    }
+
+    init(_ card: MenuBarCard) {
+        let ago = card.lastReload.map { Strings.Menu.reloaded(RelativeDateTimeFormatter().localizedString(for: $0, relativeTo: .now)) }
+        switch card.status {
+            case .running:
+                title = Strings.Menu.workspaceAndApp(card.workspace, card.focusedApp)
+                if let mode = card.mode { details.append(Strings.Menu.modeHelp(mode, card.modeExitKey)) }
+            case .paused:
+                title = Strings.Menu.paused
+            case .needsAccessibility:
+                title = Strings.Menu.needsAccessibility
+                prompt = .promptForAccessibility
+                showsLayouts = false
+        }
+        if let ago { details.append(ago) }
+        problems = card.configProblems.map { Problems(title: $0, lines: card.problemLines) }
+        windowLayout = card.windowLayout
+        canSetLayout = card.isEnabled(.setLayout(.tiling))
+        canArrange = card.isEnabled(.arrange(.dwindle))
+        let actions: [(MenuBarCardAction, String)] = card.status == .needsAccessibility
+            ? [(.quit, "power")]
+            : [
+                (.reloadConfig, "arrow.clockwise"),
+                (.openConfig, "doc.text"),
+                (.openSettings, "gearshape"),
+                (.togglePause, card.status == .paused ? "play" : "pause"),
+                (.quit, "power"),
+            ]
+        footer = actions.map { Button(action: $0.0, title: $0.0.title(card), symbol: $0.1, isEnabled: card.isEnabled($0.0)) }
+    }
+}
+
+/// The window of the menu: borderless, with the material of the menus. It takes the keyboard without making
+/// Inlay the active app, like a menu
+final class MenuBarPanel: NSPanel {
+    /// ⌘ and a key: true if it was one of the menu
+    var onCommandKey: ((String) -> Bool)?
+    /// Esc
+    var onCancel: (() -> Void)?
+    private let effect = NSVisualEffectView()
+    static let cornerRadius: CGFloat = 12
+
+    init() {
+        super.init(contentRect: .zero, styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: true)
+        level = .popUpMenu
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+        isReleasedWhenClosed = false
+        hidesOnDeactivate = false
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = true
+        effect.material = .menu
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.maskImage = .roundedMask(radius: Self.cornerRadius)
+        contentView = effect
+    }
+
+    func setContent(_ view: NSView, size: CGSize) {
+        effect.subviews.forEach { $0.removeFromSuperview() }
+        view.frame = CGRect(origin: .zero, size: size)
+        view.autoresizingMask = [.width, .height]
+        effect.addSubview(view)
+        setContentSize(size)
+        invalidateShadow()
+    }
+
+    override var canBecomeKey: Bool { true }
+
+    override func cancelOperation(_ sender: Any?) { onCancel?() }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { onCancel?() } else { super.keyDown(with: event) }
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           let key = event.charactersIgnoringModifiers, onCommandKey?(key) == true
+        {
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+extension NSImage {
+    /// A mask with round corners that stretches to any size: the shape of a visual effect view
+    fileprivate static func roundedMask(radius: CGFloat) -> NSImage {
+        let side = 2 * radius + 1
+        let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
     }
 }
 

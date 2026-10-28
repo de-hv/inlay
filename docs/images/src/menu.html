@@ -2,52 +2,29 @@
 <html lang="en"><head><meta charset="utf-8"><title>The menu of the menu bar item</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 400px; }
+  body { width: 880px; height: 470px; }
   .bar { position: absolute; left: 0; right: 0; top: 0; height: 30px; background: #2b2f4c; border-radius: 14px 14px 0 0; }
-  .bar .slot { position: absolute; right: 150px; top: 3px; height: 24px; padding: 0 2px; border-radius: 6px; background: rgba(255,255,255,.16); }
+  .bar .slot { position: absolute; right: 150px; top: 3px; height: 24px; padding: 0 2px; }
   .bar .slot img { height: 24px; display: block; filter: invert(1); }
   .bar .clock { position: absolute; right: 22px; top: 6px; font-size: 13px; font-weight: 500; color: #fff; }
   .tag { top: auto; right: auto; left: 28px; bottom: 26px; }
-  .intro { position: absolute; left: 28px; top: 250px; width: 300px; }
+  .intro { position: absolute; left: 28px; top: 330px; width: 300px; }
   .intro h1 { font-size: 17px; font-weight: 700; } .intro p { color: #a3a5b3; font-size: 12.5px; margin-top: 4px; }
-  .menu { position: absolute; left: 528px; top: 38px; width: 324px; padding: 6px; border-radius: 13px; color: #f2f2f7; font-size: 13px; background: #2a2a31;
-    box-shadow: 0 0 0 .5px rgba(255,255,255,.22) inset, 0 16px 40px rgba(0,0,0,.5); }
-  .menu .hd { position: relative; font-size: 11.5px; font-weight: 600; color: #8e8e98; padding: 5px 12px 3px 10px; }
-  .menu .it { height: 24px; display: flex; align-items: center; padding: 0 10px 0 6px; gap: 5px; }
-  .menu .ck { width: 14px; text-align: center; font-size: 11px; font-weight: 700; flex: none; }
-  .menu .n { width: 16px; font-weight: 500; font-variant-numeric: tabular-nums; flex: none; }
-  .menu .t { flex: 1; white-space: nowrap; padding-left: 2px; } .menu .dimt { color: #8e8e98; }
-  .menu .sc { color: #8e8e98; font-size: 13px; letter-spacing: 1px; }
-  .menu .sep { height: 1px; background: rgba(255,255,255,.12); margin: 5px 10px; }
-  .menu .anchor { position: relative; height: 0; }
-  .note2 { position: absolute; right: 100%; top: 4px; margin-right: 34px; width: 330px; text-align: right; font-size: 12px; font-weight: 400; color: #a3a5b3; line-height: 1.4; }
-  .note2 b { color: #e9e9f0; font-size: 12.5px; } .note2 code { color: #ffd27a; font-size: 11.5px; }
-  .menu .pills { display: flex; gap: 5px; padding: 6px 10px 8px; }
-  .menu .pill { height: 22px; min-width: 22px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.14); color: #e9e9f0; }
-  .menu .pill.f { min-width: 40px; background: #f2f2f7; color: #1d1d22; } .menu .pill.e { background: none; color: #6e6e78; }
-  .menu .ico { width: 16px; height: 16px; border-radius: 4px; flex: none; }
-  .note2::after { content: ""; position: absolute; left: 100%; top: 9px; margin-left: 8px; width: 20px; height: 1px; background: #5c5e6e; }
+  .menu { position: absolute; left: 572px; top: 36px; width: 280px; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 0 0 .5px rgba(255,255,255,.22), 0 16px 40px rgba(0,0,0,.5); }
+  .menu img { width: 280px; display: block; }
+  .note { position: absolute; right: 340px; width: 330px; text-align: right; font-size: 12px; color: #a3a5b3; line-height: 1.4; }
+  .note b { color: #e9e9f0; font-size: 12.5px; } .note code { color: #ffd27a; font-size: 11.5px; }
+  .note::after { content: ""; position: absolute; left: 100%; top: 9px; margin-left: 8px; width: 28px; height: 1px; background: #5c5e6e; }
 </style></head>
 <body class="png">
 <div class="bar"><div class="slot"><img src="render/menu-bar-6x/liquid-default-template.png"></div><span class="clock">Mon 12 Oct&nbsp;&nbsp;9:41</span></div>
-<span class="tag illu">Illustration</span>
-<div class="intro"><h1>The menu</h1><p>A <b>click</b> on the item opens it. The right button does nothing.</p></div>
-<div class="menu">
-<div class="anchor"><div class="note2"><b>What Inlay is doing</b><br>Only information, not actions.</div></div>
-<div class="it"><span class="ck"></span><span class="t dimt">Workspace 2 · Zed</span></div>
-<div class="it"><span class="ck"></span><span class="t dimt">Config reloaded 3 sec. ago</span></div>
-<div class="sep"></div>
-<div class="anchor"><div class="note2"><b>The focused window</b><br><code>Tiling</code>, <code>Floating</code> or <code>Fullscreen</code>.</div></div>
-<div class="it"><span class="ck"></span><span class="t">Window</span><span class="sc">›</span></div>
-<div class="sep"></div>
-<div class="anchor"><div class="note2"><b>The config and Settings</b><br>What each reload changed: Settings › Changes.</div></div>
-<div class="it"><span class="ck"></span><span class="t">Reload Config</span><span class="sc">⌘R</span></div>
-<div class="it"><span class="ck"></span><span class="t">Open inlay.toml…</span></div>
-<div class="it"><span class="ck"></span><span class="t">Settings…</span><span class="sc">⌘,</span></div>
-<div class="sep"></div>
-<div class="anchor"><div class="note2"><b>Inlay itself</b><br>Pausing hands the windows back to macOS.</div></div>
-<div class="it"><span class="ck"></span><span class="t">Pause Inlay</span><span class="sc">⌘E</span></div>
-<div class="it"><span class="ck"></span><span class="t">Quit Inlay</span><span class="sc">⌘Q</span></div>
-</div>
+<span class="tag real">Real render</span>
+<div class="intro"><h1>The menu</h1><p>A <b>click</b> on the item opens it, and the selected layout takes the accent color of the system. The right button does nothing.</p></div>
+<div class="menu"><img src="render/menu-bar/menu-running-dark.png"></div>
+<div class="note" style="top:46px"><b>What Inlay is doing</b><br>Only information, not actions.</div>
+<div class="note" style="top:100px"><b>The focused window</b><br><code>Tiling</code>, <code>Floating</code> or <code>Fullscreen</code>, the one in use selected.</div>
+<div class="note" style="top:178px"><b>Its workspace</b><br><code>arrange-workspace</code>: <code>dwindle</code>, <code>grid</code> or <code>row</code>.</div>
+<div class="note" style="top:258px"><b>The config, Settings and Inlay</b><br>Reload ⌘R, open inlay.toml, Settings ⌘,, pause ⌘E and quit ⌘Q.</div>
 <script>fillToml();</script>
 </body></html>

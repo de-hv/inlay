@@ -5,7 +5,7 @@ import SwiftUI
 /// The height of the pages of the settings window, whatever the page
 let settingsContentHeight: CGFloat = 640
 
-/// Shows the settings window: a tab per group of settings, in the toolbar, like the settings of every macOS app.
+/// Shows the settings window: a page per group of settings, picked in a sidebar, like the System Settings of macOS.
 ///
 /// Inlay has no Dock icon, and macOS may refuse to activate such an app: the window would open behind the app in front.
 /// While the window is open, Inlay is a regular app, with its icon in the Dock and in ⌘Tab, and it goes back to being an
@@ -68,7 +68,12 @@ final class SettingsWindowController: NSObject {
         NSApp.setActivationPolicy(.accessory)
     }
 
-    private var tabs: SettingsTabViewController? { window?.contentViewController as? SettingsTabViewController }
+    private var tabs: SettingsTabViewController? { window.flatMap(Self.pages) }
+
+    /// The pages of a settings window. See: SettingsSplitViewController
+    static func pages(of window: NSWindow) -> SettingsTabViewController? {
+        (window.contentViewController as? SettingsSplitViewController)?.pages
+    }
 
     /// Shows a page, from the outside
     func select(_ page: SettingsPageID) {
@@ -98,18 +103,24 @@ final class SettingsWindowController: NSObject {
     func makeWindow(visibleFrame: ((NSWindow) -> CGRect?)? = nil) -> NSWindow {
         let tabs = SettingsTabViewController()
         if let visibleFrame { tabs.visibleFrame = visibleFrame }
-        tabs.tabStyle = .toolbar
+        // The sidebar picks the page: the tab view shows no tabs of its own
+        tabs.tabStyle = .unspecified
         tabs.transitionOptions = []
         for page in SettingsPageID.allCases {
             tabs.addTab(page.title, symbol: page.symbol, Self.view(of: page, model))
         }
-        // A click on a tab of the toolbar: the window opens on it the next time
+        // A page picked in the sidebar: the window opens on it the next time
         tabs.onSelect = { [weak self] index in
             if let page = SettingsPageID.allCases.getOrNil(atIndex: index) { self?.model.page = page }
         }
-        let window = SettingsWindow(contentViewController: tabs)
-        window.styleMask = [.titled, .closable]
+        let split = SettingsSplitViewController(pages: tabs, sidebar: SettingsSidebar(model: model) { [weak self] in self?.select($0) })
+        let window = SettingsWindow(contentViewController: split)
+        // The sidebar goes up to the top of the window, under the buttons of the title bar
+        window.styleMask = [.titled, .closable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.title = model.page.title
+        split.titleLabel.stringValue = model.page.title
         // Kept after closing, so it reopens where it was
         window.isReleasedWhenClosed = false
         tabs.fitWindow(animate: false)
@@ -144,7 +155,8 @@ final class SettingsWindowController: NSObject {
     static func view(of page: SettingsPageID, _ model: SettingsModel) -> some View {
         switch page {
             case .general: GeneralSettingsView(model: model)
-            case .appearance: AppearanceSettingsView(model: model)
+            case .menuBar: MenuBarSettingsView(model: model)
+            case .borders: BordersSettingsView(model: model)
             case .windows: WindowsSettingsView(model: model)
             case .keyboard: KeyboardSettingsView(model: model)
         }
@@ -229,18 +241,31 @@ final class SettingsTabViewController: NSTabViewController {
         tabViewItems.getOrNil(atIndex: selectedTabViewItemIndex)?.viewController as? SettingsPageController
     }
 
+    /// The name of the page, at the top of it, in the title bar
+    weak var titleLabel: NSTextField?
+    /// The sidebar, next to the pages
+    var sidebarWidth: CGFloat = 0
+
     override func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
         super.tabView(tabView, didSelect: tabViewItem)
         onSelect?(selectedTabViewItemIndex)
+        titleLabel?.stringValue = tabViewItem?.label ?? ""
         guard let window = unsafe view.window else { return }
         window.title = tabViewItem?.label ?? Strings.Settings.windowTitle
         fitWindow(animate: window.isVisible)
     }
 
-    /// The title bar and the toolbar. Measured once, before the window is resized: right after a resize, and until the
-    /// next layout pass, `contentLayoutRect` still has the old height, and a chrome worked out from it is wrong by the
-    /// difference (the content then ends up taller than the window, under the toolbar, or shorter, with a gap)
+    /// The title bar. Worked out once from the style of the window, not from `contentLayoutRect`: right after a resize,
+    /// and until the next layout pass, that one still has the old height, and before the first layout of a window
+    /// whose content goes under the title bar it has none (the content then ends up taller than the window, under the
+    /// title bar, or shorter, with a gap)
     private var chromeHeight: CGFloat? = nil
+
+    /// The height of the title bar of a window with this style, whether the content goes under it or not
+    private static func titleBarHeight(_ window: NSWindow) -> CGFloat {
+        let content = CGRect(x: 0, y: 0, width: 100, height: 100)
+        return NSWindow.frameRect(forContentRect: content, styleMask: window.styleMask.subtracting(.fullSizeContentView)).height - content.height
+    }
     /// A resize makes the form and the scroll view change their frames, which asks for a resize again
     private var isFitting = false
 
@@ -261,12 +286,12 @@ final class SettingsTabViewController: NSTabViewController {
     /// Gives the window the size of the selected tab, without leaving the screen. See: SettingsWindowSizing
     func fitWindow(animate: Bool) {
         guard !isFitting, let window = unsafe view.window, let content = selectedPage?.contentSize, content.height > 0 else { return }
-        let chrome = chromeHeight ?? (window.frame.height - window.contentLayoutRect.height)
+        let chrome = chromeHeight ?? Self.titleBarHeight(window)
         chromeHeight = chrome
         let frame = SettingsWindowSizing.frame(
             current: window.frame,
             chromeHeight: chrome,
-            content: CGSize(width: content.width, height: contentHeight),
+            content: CGSize(width: sidebarWidth + content.width, height: contentHeight),
             visible: visibleFrame(window),
         )
         if frame != window.frame {
@@ -276,6 +301,99 @@ final class SettingsTabViewController: NSTabViewController {
         }
         // The scroll view lays itself out again after the window: the form must stay where it belongs
         selectedPage?.settleScroll()
+    }
+}
+
+/// The sidebar with the pages, and the selected page next to it, below the title bar
+final class SettingsSplitViewController: NSSplitViewController {
+    static let sidebarWidth: CGFloat = 190
+    let pages: SettingsTabViewController
+    /// The name of the selected page, in the title bar, over the page
+    let titleLabel = NSTextField(labelWithString: "")
+
+    init(pages: SettingsTabViewController, sidebar: some View) {
+        self.pages = pages
+        super.init(nibName: nil, bundle: nil)
+        pages.sidebarWidth = Self.sidebarWidth
+        pages.titleLabel = titleLabel
+        let sidebarItem = NSSplitViewItem(sidebarWithViewController: NSHostingController(rootView: sidebar))
+        sidebarItem.canCollapse = false
+        sidebarItem.minimumThickness = Self.sidebarWidth
+        sidebarItem.maximumThickness = Self.sidebarWidth
+        addSplitViewItem(sidebarItem)
+        addSplitViewItem(NSSplitViewItem(viewController: SettingsDetailController(pages: pages, titleLabel: titleLabel)))
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        splitView.dividerStyle = .thin
+    }
+
+    /// The divider can't be dragged: the sidebar has a fixed width
+    override func splitView(_ splitView: NSSplitView, effectiveRect proposedEffectiveRect: NSRect, forDrawnRect drawnRect: NSRect, ofDividerAt dividerIndex: Int) -> NSRect {
+        .zero
+    }
+}
+
+/// The selected page below the title bar, and its name in the title bar
+private final class SettingsDetailController: NSViewController {
+    private let pages: SettingsTabViewController
+    private let titleLabel: NSTextField
+
+    init(pages: SettingsTabViewController, titleLabel: NSTextField) {
+        self.pages = pages
+        self.titleLabel = titleLabel
+        super.init(nibName: nil, bundle: nil)
+        addChild(pages)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func loadView() {
+        let view = SettingsDetailView()
+        let content = pages.view
+        content.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        view.addSubview(content)
+        view.addSubview(titleLabel)
+        NSLayoutConstraint.activate([
+            // The page starts below the title bar, which goes over the whole window
+            content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            titleLabel.centerYAnchor.constraint(equalTo: view.topAnchor, constant: 14),
+        ])
+        self.view = view
+    }
+}
+
+/// The background of the window behind the page and its title: the page itself only draws its rows
+private final class SettingsDetailView: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.setFill()
+        dirtyRect.fill()
+    }
+}
+
+/// The pages of the settings, with their symbols. A click shows the page
+struct SettingsSidebar: View {
+    let model: SettingsModel
+    let select: (SettingsPageID) -> Void
+
+    var body: some View {
+        List(selection: Binding(get: { model.page }, set: { $0.map(select) })) {
+            ForEach(SettingsPageID.allCases, id: \.self) { page in
+                Label(page.title, systemImage: page.symbol).tag(page)
+            }
+        }
+        .listStyle(.sidebar)
     }
 }
 

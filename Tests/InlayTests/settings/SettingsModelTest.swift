@@ -396,7 +396,8 @@ extension InlayTests {
             model.refresh()
             let tabs: [(String, AnyView)] = [
                 ("general", AnyView(GeneralSettingsView(model: model))),
-                ("appearance", AnyView(AppearanceSettingsView(model: model))),
+                ("menuBar", AnyView(MenuBarSettingsView(model: model))),
+                ("borders", AnyView(BordersSettingsView(model: model))),
                 ("windows", AnyView(WindowsSettingsView(model: model))),
                 ("keyboard", AnyView(KeyboardSettingsView(model: model))),
             ]

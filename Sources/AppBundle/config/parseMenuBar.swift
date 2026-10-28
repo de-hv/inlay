@@ -43,6 +43,12 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// An SF Symbol per workspace ([menu-bar.symbols]), and the focused one stretched into a pill with its symbol
     /// and its name ([menu-bar.labels]). A workspace without a symbol shows its name
     case labels
+    /// A track with a segment per workspace, and the focused one wider, with its name before the track: the
+    /// "Lines" style of the workspace switcher of Dank Material Shell
+    case segments
+    /// A dot per workspace, a ring if it is empty, and the focused one a capsule with its name: 'dots' and 'liquid'
+    /// in one
+    case capsule
 }
 
 /// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore

@@ -100,7 +100,7 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where layout.style == .chips || layout.style == .dots || layout.style == .labels {
+        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots, .labels, .segments, .capsule].contains(layout.style) {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
         if let marker = layout.marker {
@@ -122,6 +122,8 @@ enum MenuBarRenderer {
             case .glyphs: drawGlyphs(layout, palette, in: cg)
             case .liquid: drawLiquid(layout, palette, in: cg)
             case .labels: drawLabels(layout, palette, in: cg)
+            case .segments: drawSegments(layout, palette, in: cg)
+            case .capsule: drawCapsule(layout, palette, in: cg)
         }
         // 'per-monitor'
         for separator in layout.separators {
@@ -379,6 +381,90 @@ enum MenuBarRenderer {
         cg.restoreGState()
     }
 
+    // MARK: - Segments
+
+    private static func drawSegments(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        // The ends of the track are round, and so are the ones next to the gap between two monitors ('per-monitor')
+        let cells = layout.cells
+        for (index, cell) in cells.enumerated() {
+            let isStart = index == 0 || cell.frame.minX - cells[index - 1].frame.maxX > M.segmentSpacing + 0.5
+            let isEnd = index == cells.count - 1 || cells[index + 1].frame.minX - cell.frame.maxX > M.segmentSpacing + 0.5
+            let left = isStart ? M.segmentEndRadius : M.segmentInnerRadius
+            let right = isEnd ? M.segmentEndRadius : M.segmentInnerRadius
+            // A filled segment says "something is here", a hollow one says "nothing yet"
+            if cell.isOccupied {
+                cg.fill(segmentPath(cell.frame, left: left, right: right), palette.nameColor(of: cell))
+            } else {
+                let inset = M.segmentLineWidth / 2
+                cg.stroke(segmentPath(cell.frame.insetBy(dx: inset, dy: inset), left: left - inset, right: right - inset), lineWidth: M.segmentLineWidth, palette.nameColor(of: cell))
+            }
+        }
+        guard let marker = layout.marker else { return }
+        let color = marker.initial == nil ? palette.focused : palette.modeMarker
+        let path = roundedRect(marker.frame, marker.cornerRadius)
+        cg.fill(path, .black, blendMode: .destinationOut)
+        if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.segmentLineWidth, color)
+        } else {
+            cg.fill(path, color)
+        }
+        if let text = marker.initial ?? layout.label { draw(text, color) }
+    }
+
+    /// A segment of the track: its left and its right corners rounded each their own way
+    private static func segmentPath(_ rect: CGRect, left: CGFloat, right: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        let (left, right) = (min(left, rect.height / 2), min(right, rect.height / 2))
+        path.move(to: CGPoint(x: rect.minX + left, y: rect.minY))
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.maxY), radius: right)
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.maxY), radius: right)
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.minY), radius: left)
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY), radius: left)
+        path.closeSubpath()
+        return path
+    }
+
+    // MARK: - Capsule
+
+    private static func drawCapsule(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        for cell in layout.cells {
+            // The dots of 'dots': a disc says "something is here", a ring says "nothing yet"
+            let dot = CGRect(x: cell.frame.midX - M.dotSide / 2, y: cell.frame.midY - M.dotSide / 2, width: M.dotSide, height: M.dotSide)
+            if cell.isOccupied {
+                cg.fill(roundedRect(dot, M.dotSide / 2), palette.nameColor(of: cell))
+            } else {
+                cg.strokeBorder(dot, M.dotSide / 2, lineWidth: M.dotLineWidth, palette.nameColor(of: cell))
+            }
+        }
+        guard let marker = layout.marker else { return }
+        let path = roundedRect(marker.frame, marker.cornerRadius)
+        cg.fill(path, .black, blendMode: .destinationOut)
+        if let initial = marker.initial {
+            draw(marker, initial, palette, in: cg)
+            return
+        }
+        if marker.isOutlined {
+            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
+        } else {
+            cg.fill(path, palette.focused)
+        }
+        // The names, like the ones of the chips: whatever part of them the capsule covers is what it shows, so the name
+        // of the workspace it leaves goes away as the one of the workspace it reaches comes in
+        cg.saveGState()
+        cg.addPath(path)
+        cg.clip()
+        for cell in layout.cells where cell.focus > 0 {
+            switch (marker.isOutlined, palette.focusedName) {
+                case (true, _): draw(cell.name, palette.focused)
+                case (false, let color?): draw(cell.name, color)
+                case (false, nil): draw(cell.name, .black, blendMode: .destinationOut)
+            }
+        }
+        cg.restoreGState()
+    }
+
     // MARK: - Binding mode
 
     /// The marker of a binding mode, the same in every theme: the initial of the mode cut out of a filled marker
@@ -474,6 +560,15 @@ extension CGContext {
         setFillColor(color.cgColor)
         addPath(path)
         fillPath()
+        restoreGState()
+    }
+
+    fileprivate func stroke(_ path: CGPath, lineWidth: CGFloat, _ color: Rgba) {
+        saveGState()
+        setStrokeColor(color.cgColor)
+        setLineWidth(lineWidth)
+        addPath(path)
+        strokePath()
         restoreGState()
     }
 

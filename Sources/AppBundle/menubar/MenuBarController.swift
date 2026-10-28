@@ -26,11 +26,11 @@ final class MenuBarController: NSObject {
         draw: { [weak self] in self?.draw($0) },
     )
 
-    /// The drop of 'liquid' and the bar of 'underline' stretch on their way: they need longer for it to be seen
+    /// The drop of 'liquid', the bar of 'underline' and the capsule stretch on their way: they need longer for it to be seen
     private static func slideDuration(_ theme: MenuBarTheme?) -> Duration {
         switch theme {
             case .liquid: .milliseconds(340)
-            case .underline: .milliseconds(260)
+            case .underline, .capsule: .milliseconds(260)
             default: .milliseconds(180)
         }
     }
@@ -187,15 +187,18 @@ final class MenuBarController: NSObject {
     private static let menuGap: CGFloat = 3
 
     /// The menu pops up right below the item, without highlighting it: the item looks the same with the menu open.
-    /// A menu attached to the item (`statusItem.menu`) would draw the rounded background of a pressed item behind it
+    /// A click on the item while it is open closes it
     private func openMenu() {
-        guard let button = statusItem?.button else { return }
+        if menu.isOpen {
+            menu.close()
+            return
+        }
+        guard let button = statusItem?.button, let window = button.window else { return }
         // The bottom of the menu bar is the bottom of the window of the item, which is as tall as the bar.
         // The button may be shorter
-        let barBottom = unsafe button.window != nil ? button.convert(NSPoint.zero, from: nil).y : (button.isFlipped ? button.bounds.maxY : button.bounds.minY)
-        let bottom = NSPoint(x: 0, y: barBottom + (button.isFlipped ? Self.menuGap : -Self.menuGap))
-        // Blocks until the menu closes, like any menu
-        menu.menu.popUp(positioning: nil, at: bottom, in: button)
+        let item = window.convertToScreen(button.convert(button.bounds, to: nil))
+        let topLeft = NSPoint(x: item.minX, y: window.frame.minY - Self.menuGap)
+        menu.open(at: topLeft, on: window.screen, itemWindow: window)
     }
 }
 

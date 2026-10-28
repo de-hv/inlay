@@ -165,7 +165,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     # Show the menu bar item. Only this file sets it: with 'false', open Inlay again from Applications to get
     # to the Settings window
     enabled = true
-    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels
+    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels|segments|capsule
     theme = 'liquid'
     dim-empty-workspaces = true
     show-mode = true

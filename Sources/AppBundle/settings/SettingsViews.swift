@@ -748,7 +748,8 @@ private func menuBarBackground(_ isDarkBar: Bool) -> LinearGradient {
 // MARK: - Appearance
 
 /// The look of the item and of the borders: the style of the workspace indicator, and every color on its own
-struct AppearanceSettingsView: View {
+/// The menu bar item: its theme, its options and its colors
+struct MenuBarSettingsView: View {
     let model: SettingsModel
 
     var body: some View {
@@ -810,6 +811,17 @@ struct AppearanceSettingsView: View {
             } footer: {
                 footnote(Strings.Settings.indicatorColorsFooter)
             }
+        }
+    }
+}
+
+/// The borders of the windows: their shape, their colors, and the colors of the binding modes
+struct BordersSettingsView: View {
+    let model: SettingsModel
+
+    var body: some View {
+        SettingsPage {
+            ErrorBanner(model: model)
             BordersSections(model: model)
         }
     }

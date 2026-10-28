@@ -27,10 +27,10 @@ func renderSettingsSamples(to directory: URL, config: URL?) throws {
     }
     // The keys over the rows, as while ⌥ is held: nothing in the rows moves
     model.isOptionHeld = true
-    try render(AppearanceSettingsView(model: model), to: directory.appending(path: "settings-appearance-keys.png"))
+    try render(MenuBarSettingsView(model: model), to: directory.appending(path: "settings-menuBar-keys.png"))
     model.isOptionHeld = false
 
-    // The whole window, with its toolbar, on every page
+    // The whole window, with its sidebar, on every page
     let controller = SettingsWindowController(model: model)
     let window = controller.makeWindow(visibleFrame: { _ in CGRect(x: 0, y: 0, width: 4000, height: 4000) })
     for page in SettingsPageID.allCases {

@@ -25,6 +25,7 @@ enum Strings {
             }
         }
         static let needsAccessibility = "\(inlayAppName) requires accessibility permission to move windows"
+        static let grantAccessibility = "Grant Accessibility Permission…"
         static let paused = "\(inlayAppName) is paused"
         static let noFocusedWindow = "No focused window"
         static func layout(_ layout: MenuBarCard.WindowLayout) -> String {
@@ -39,6 +40,21 @@ enum Strings {
                 case .tiling: "Tiling"
                 case .floating: "Floating"
                 case .fullscreen: "Fullscreen"
+            }
+        }
+        static let arrangeWorkspace = "Arrange Workspace"
+        static func arrange(_ arrangement: WorkspaceArrangement) -> String {
+            switch arrangement {
+                case .dwindle: "Arrange the Workspace in Dwindle"
+                case .grid: "Arrange the Workspace in a Grid"
+                case .row: "Arrange the Workspace in a Row"
+            }
+        }
+        static func arrangeShort(_ arrangement: WorkspaceArrangement) -> String {
+            switch arrangement {
+                case .dwindle: "Dwindle"
+                case .grid: "Grid"
+                case .row: "Row"
             }
         }
         static func modeHelp(_ mode: String, _ exitKey: String?) -> String {
@@ -62,7 +78,8 @@ enum Strings {
     enum Settings {
         static let windowTitle = "\(inlayAppName) Settings"
         static let general = "General"
-        static let appearance = "Appearance"
+        static let menuBarPage = "Menu Bar"
+        static let bordersPage = "Borders"
         static let windowsPage = "Windows"
         static let keyboard = "Keyboard"
         static let workspaceIndicator = "Workspace Indicator"

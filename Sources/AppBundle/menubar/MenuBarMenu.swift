@@ -13,10 +13,36 @@ final class MenuBarMenu: NSObject {
     private(set) var card: MenuBarCard?
     private var panel: MenuBarPanel?
     private var monitors: [Any] = []
-    /// The window of the menu bar item: a click on it toggles the menu, so it doesn't count as a click outside
-    private weak var itemWindow: NSWindow?
+    /// Where the menu bar item is, in screen coordinates: a click on it toggles the menu, so it doesn't count as a
+    /// click outside
+    private var itemFrame: CGRect = .null
+    /// When a click outside closed the menu last
+    private var closedByClickAt: ContinuousClock.Instant?
 
     var isOpen: Bool { panel?.isVisible == true }
+
+    /// A press of the item with the mouse comes after the mouse went down. That mouse down may have closed the menu
+    /// already: the item can get the click through another window of the menu bar than the one of its button (macOS
+    /// draws copies of the item), which the check of `itemFrame` doesn't recognize. Up to this long after a click
+    /// closed the menu, a press of the item is that same click
+    nonisolated static let pressAfterClose: TimeInterval = 0.6
+
+    /// What a press of the item does to the menu: true opens it. A press while it is open closes it, and a press right
+    /// after a click closed it is the end of that click: it closed the menu, and the press leaves it closed
+    nonisolated static func pressOpens(isOpen: Bool, closedByClickAgo: TimeInterval?) -> Bool {
+        !isOpen && !(closedByClickAgo.map { $0 < pressAfterClose } ?? false)
+    }
+
+    /// The item was pressed: opens the menu below the item, or closes it. See: pressOpens
+    func toggle(at topLeft: NSPoint, on screen: NSScreen?, itemFrame: CGRect) {
+        let ago = closedByClickAt.map { (ContinuousClock.now - $0) / .seconds(1) }
+        closedByClickAt = nil
+        if Self.pressOpens(isOpen: isOpen, closedByClickAgo: ago) {
+            open(at: topLeft, on: screen, itemFrame: itemFrame)
+        } else {
+            close()
+        }
+    }
 
     /// The card of the model as it is now
     @discardableResult
@@ -29,9 +55,9 @@ final class MenuBarMenu: NSObject {
     }
 
     /// Opens the panel with its top left corner at `topLeft`, in screen coordinates, kept inside of `screen`
-    func open(at topLeft: NSPoint, on screen: NSScreen?, itemWindow: NSWindow?) {
+    func open(at topLeft: NSPoint, on screen: NSScreen?, itemFrame: CGRect) {
         guard let card = update() else { return }
-        self.itemWindow = itemWindow
+        self.itemFrame = itemFrame
         let panel = panel ?? makePanel()
         self.panel = panel
         let host = NSHostingView(rootView: MenuBarPanelView(content: MenuBarPanelContent(card), run: { [weak self] in self?.run($0) }))
@@ -65,20 +91,26 @@ final class MenuBarMenu: NSObject {
         return panel
     }
 
-    /// A click anywhere but in the panel or on the item closes it, like a menu
+    /// A click anywhere but in the panel or on the item closes it, like a menu. A click on the item is left to the
+    /// item, which toggles the menu. See: toggle
     private func startMonitoring() {
         guard monitors.isEmpty else { return }
         let mouseDown: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
         if let global = NSEvent.addGlobalMonitorForEvents(matching: mouseDown, handler: { [weak self] _ in
-            MainActor.assumeIsolated { self?.close() }
+            MainActor.assumeIsolated { self?.clicked(at: NSEvent.mouseLocation, inPanel: false) }
         }) { monitors.append(global) }
         if let local = NSEvent.addLocalMonitorForEvents(matching: mouseDown, handler: { [weak self] event in
-            MainActor.assumeIsolated {
-                guard let self, event.window !== self.panel, event.window !== self.itemWindow else { return }
-                self.close()
-            }
+            let location = NSEvent.mouseLocation
+            let window = event.window
+            MainActor.assumeIsolated { self?.clicked(at: location, inPanel: window != nil && window === self?.panel) }
             return event
         }) { monitors.append(local) }
+    }
+
+    private func clicked(at location: NSPoint, inPanel: Bool) {
+        guard !inPanel, !itemFrame.contains(location) else { return }
+        close()
+        closedByClickAt = .now
     }
 
     private func run(_ action: MenuBarCardAction) {
@@ -314,10 +346,12 @@ final class MenuBarPanel: NSPanel {
 
     func setContent(_ view: NSView, size: CGSize) {
         effect.subviews.forEach { $0.removeFromSuperview() }
-        view.frame = CGRect(origin: .zero, size: size)
+        // The panel first: the content follows the size of the panel, and a content added to a panel that has yet to
+        // get its size (it has none the first time) would grow by the whole size along with it, to twice its size
+        setContentSize(size)
+        view.frame = effect.bounds
         view.autoresizingMask = [.width, .height]
         effect.addSubview(view)
-        setContentSize(size)
         invalidateShadow()
     }
 

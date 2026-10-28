@@ -132,6 +132,30 @@ extension InlayTests {
             assertEquals(footer(content), ["Quit Inlay-Debug"])
         }
 
+        /// A press of the item opens the menu, and closes it while it is open. A press right after a click closed it
+        /// is the end of that same click (the item got it through another window of the menu bar): the menu stays closed
+        @Test func testThePressToggles() {
+            assertEquals(MenuBarMenu.pressOpens(isOpen: false, closedByClickAgo: nil), true)
+            assertEquals(MenuBarMenu.pressOpens(isOpen: true, closedByClickAgo: nil), false)
+            assertEquals(MenuBarMenu.pressOpens(isOpen: false, closedByClickAgo: 0.1), false)
+            assertEquals(MenuBarMenu.pressOpens(isOpen: false, closedByClickAgo: MenuBarMenu.pressAfterClose + 0.1), true)
+        }
+
+        /// The first time, the panel has no size yet: the content must still take the size of the panel, not grow
+        /// along with it (it was twice as big, and looked moved to the right)
+        @Test func testTheContentHasTheSizeOfThePanel() throws {
+            _ = NSApplication.shared
+            let panel = MenuBarPanel()
+            for size in [CGSize(width: 280, height: 320), CGSize(width: 280, height: 260)] {
+                let content = NSView()
+                panel.setContent(content, size: size)
+                let effect = try #require(panel.contentView)
+                assertEquals(effect.frame.size, size)
+                assertEquals(content.frame, CGRect(origin: .zero, size: size))
+                assertEquals(effect.subviews.count, 1)
+            }
+        }
+
         /// The button highlights itself while the mouse is down on it. The shield takes the mouse away from the button
         @Test func testClickShield_theButtonNeverSeesTheMouse() throws {
             _ = NSApplication.shared

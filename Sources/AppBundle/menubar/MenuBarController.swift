@@ -187,18 +187,14 @@ final class MenuBarController: NSObject {
     private static let menuGap: CGFloat = 3
 
     /// The menu pops up right below the item, without highlighting it: the item looks the same with the menu open.
-    /// A click on the item while it is open closes it
+    /// A click on the item while it is open closes it. See: MenuBarMenu.toggle
     private func openMenu() {
-        if menu.isOpen {
-            menu.close()
-            return
-        }
         guard let button = statusItem?.button, let window = button.window else { return }
         // The bottom of the menu bar is the bottom of the window of the item, which is as tall as the bar.
         // The button may be shorter
         let item = window.convertToScreen(button.convert(button.bounds, to: nil))
         let topLeft = NSPoint(x: item.minX, y: window.frame.minY - Self.menuGap)
-        menu.open(at: topLeft, on: window.screen, itemWindow: window)
+        menu.toggle(at: topLeft, on: window.screen, itemFrame: CGRect(x: item.minX, y: window.frame.minY, width: item.width, height: window.frame.height))
     }
 }
 

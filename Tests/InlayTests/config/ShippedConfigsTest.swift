@@ -21,10 +21,20 @@ extension InlayTests {
             let result = try parse("inlay.toml")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
-            // The tables of Inlay are spelled out with the defaults of the code
-            assertEquals(result.config.tiling, TilingConfig())
-            assertEquals(result.config.menuBar, MenuBarConfig())
-            assertEquals(result.config.borders, BordersConfig())
+            // The tables of Inlay are spelled out: the defaults of the code, but for the look of the author's setup
+            var tiling = TilingConfig()
+            tiling.startupLayout = .dwindle
+            assertEquals(result.config.tiling, tiling)
+            let menuBar = result.config.menuBar
+            assertEquals(menuBar.theme, .capsule)
+            assertEquals([menuBar.colors.focused, menuBar.colors.occupied, menuBar.colors.empty, menuBar.colors.accent].map { "\($0)" }, ["#B59DF7", "#CAC4D0", "#938F99", "#EFB8C8"])
+            assertEquals(menuBar.labels.count, 7)
+            assertEquals(menuBar.symbols.count, 7)
+            let borders = result.config.borders
+            assertEquals(borders.width, 2)
+            assertEquals(borders.squareCorners, false)
+            assertEquals([borders.activeColor, borders.inactiveColor, borders.floatingColor].map { "\($0)" }, ["#B59DF7", "#999D9F", "#EFB8C8"])
+            assertEquals(borders.singleWindow, SingleWindowBorder(enabled: true, width: 2, gap: 2))
             // Saving the file by hand reloads it, which is what keeps the menu bar item and the borders in sync with it
             assertEquals(result.config.autoReloadConfig, true)
             // It is the config that the app falls back to

@@ -89,7 +89,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     new-window-placement = 'dwindle'    # dwindle | after-focused (i3 style)
     split-target         = 'focused'    # the window a new one splits: focused | cursor
     split-ratio          = 0.5          # what the split window keeps: 0.1 … 0.9
-    startup-layout       = 'grid'       # the windows open at startup: grid | row | dwindle
+    startup-layout       = 'dwindle'     # the windows open at startup: grid | row | dwindle
     min-window-size      = 100          # points left by resizing: 20 … 500
 
 [focus-follows-mouse]
@@ -122,50 +122,51 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     enabled              = true
     # pills | chips | square | minimal | dots | underline | glyphs
     # liquid | labels | segments | capsule
-    theme                = 'liquid'
+    theme                = 'capsule'
     dim-empty-workspaces = true
     show-mode            = true        # the initial of the binding mode on the focused workspace
     per-monitor          = false       # group the workspaces by monitor
     system-colors        = false       # draw it like the other menu bar icons, ignoring the colors
 
 # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text)
+# Material You from #6750A4, dark. 'auto' for all four: follow the menu bar
 [menu-bar.colors]
-    focused  = 'auto'
-    occupied = 'auto'    # workspaces with windows
-    empty    = 'auto'    # workspaces without windows
-    accent   = 'auto'    # the focused one in a binding mode. 'auto': as focused
+    focused  = '#B59DF7'
+    occupied = '#CAC4D0'    # workspaces with windows
+    empty    = '#938F99'    # workspaces without windows
+    accent   = '#EFB8C8'    # the focused one in a binding mode. 'auto': as focused
 
 # Only for theme = 'labels'
 [menu-bar.labels]
-    # 1 = 'Terminals'
-    # 2 = 'Code'
-    # 3 = 'Browsers'
-    # 4 = 'Chats'
-    # 5 = 'AI'
-    # 6 = 'Other'
-    # 7 = 'Free'
+    1 = 'Terminals'
+    2 = 'Code'
+    3 = 'Browsers'
+    4 = 'Chats'
+    5 = 'AI'
+    6 = 'Other'
+    7 = 'Free'
 
 # Only for theme = 'labels'. Names from the SF Symbols app
 [menu-bar.symbols]
-    # 1 = 'terminal'
-    # 2 = 'chevron.left.forwardslash.chevron.right'
-    # 3 = 'globe'
-    # 4 = 'bubble.left.and.bubble.right'
-    # 5 = 'sparkles'
-    # 6 = 'square.grid.2x2'
-    # 7 = 'circle.dashed'
+    1 = 'terminal'
+    2 = 'chevron.left.forwardslash.chevron.right'
+    3 = 'globe'
+    4 = 'bubble.left.and.bubble.right'
+    5 = 'sparkles'
+    6 = 'square.grid.2x2'
+    7 = 'circle.dashed'
 
 # ━━ 7 · Borders ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # Colors: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
 [borders]
     enabled        = true
-    width          = 4                  # points: 1 … 20
+    width          = 2                  # points: 1 … 20
     corner-radius  = 16                 # points: 0 … 40
-    square-corners = true               # fill the rounded corners of the windows
-    active-color   = 'system-accent'
-    inactive-color = '#8E8E9373'
-    floating-color = '#BF5AF2'
+    square-corners = false              # fill the rounded corners of the windows
+    active-color   = '#B59DF7'          # Material You, like the menu bar
+    inactive-color = '#999D9F'
+    floating-color = '#EFB8C8'
     glow           = false
     glow-radius    = 12                 # points: 1 … 40
 
@@ -178,7 +179,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 # enabled = false: it fills the screen without a border
 [borders.single-window]
     enabled = true
-    width   = 1                         # points: 1 … 20
+    width   = 2                         # points: 1 … 20
     gap     = 2                         # points: 0 … 40, never less than width
 
 # ━━ 8 · Programs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

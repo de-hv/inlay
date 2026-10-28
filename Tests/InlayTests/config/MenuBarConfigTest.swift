@@ -16,8 +16,6 @@ extension InlayTests {
             assertEquals(menuBar.showMode, true)
             assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
             assertEquals(menuBar.systemColors, false)
-            // The built-in config agrees with the defaults
-            assertEquals(defaultConfig.menuBar, MenuBarConfig())
         }
 
         @Test func testSystemColors() {

@@ -14,8 +14,6 @@ extension InlayTests {
                 result.config.tiling,
                 TilingConfig(newWindowPlacement: .dwindle, splitRatio: 0.5, startupLayout: .grid, splitTarget: .focused, minWindowSize: 100),
             )
-            // The built-in config agrees with the defaults
-            assertEquals(defaultConfig.tiling, TilingConfig())
         }
 
         @Test func testParse() {

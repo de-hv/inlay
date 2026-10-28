@@ -17,6 +17,11 @@ import ServiceManagement
         }
 
         await bootstrapConfig_nonCancellable()
+        switch UserConfigSetup.run() {
+            case .created(let url): print("Created \(url.path) with the built-in config")
+            case .updated(let url, let backup): print("Replaced \(url.path), a default config of a previous version, by the built-in config. The previous one is kept as \(backup.path)")
+            case .unchanged: break
+        }
         _ = await reloadConfig_nonCancellable()
 
         startUnixSocketServer()

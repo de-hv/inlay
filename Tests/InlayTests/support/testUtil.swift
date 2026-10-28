@@ -22,6 +22,10 @@ func setUpWorkspacesForTests() {
     config.enableNormalizationOppositeOrientationForNestedContainers = false // Make layout tests more predictable
     config.defaultRootContainerOrientation = .horizontal // Make default layout predictable
     config.gaps = .zero // The built-in config has gaps, to leave room for the borders. Make the frames predictable
+    // The look of the built-in config is a matter of taste: the tests use the defaults of the code
+    config.tiling = TilingConfig()
+    config.borders = BordersConfig()
+    config.menuBar = MenuBarConfig()
     // A window alone in its workspace fills it, like any other: the frames don't depend on [borders.single-window]
     config.borders.singleWindow.enabled = false
     // Only WindowAnimatorTest turns the animations on: the other tests expect the frames right away

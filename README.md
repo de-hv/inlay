@@ -249,7 +249,9 @@ shell: `install.sh` warns when it sees it set.)
 
 **The shipped config is [`inlay.toml`](./inlay.toml), at the root of the repo.** It is the file that
 `install.sh` copies, and a copy of it travels inside the app as the fallback for when there is no config at
-all. It is a real config rather than a neutral sample: 7 persistent workspaces, key bindings on
+all. An app installed without `install.sh` (Homebrew) does the same when it starts: without a config it creates
+`~/.config/inlay/inlay.toml` with it, and a default config of a previous version, never edited, is replaced (and
+kept as `inlay.toml.backup-<date>`). A config reached through a symbolic link is never written. It is a real config rather than a neutral sample: 7 persistent workspaces, key bindings on
 `cmd-alt-ctrl-…` and `cmd-alt-shift-…`, the `service` and `resize` modes and `on-window-detected` rules that
 send each app to its workspace. Make it yours by editing your copy, or keep your config in a folder of your
 own and link it (the question of `install.sh`, `--config-link`, or `inlay config --use <folder>`).

@@ -121,7 +121,7 @@ private func parseWorkspaceStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktr
 private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarTheme {
     let theme = parseString(raw, backtrace)
         .flatMap { (raw: String) -> ResOrConfigParseDiagnostic<MenuBarTheme> in
-            // Accepted so that a config written for a previous version of Inlay still loads. The settings window wrote it too
+            // Accepted so that a config written for a previous version of Inlay still loads
             if raw == obsoleteChipsIconsTheme {
                 c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: '\(raw)' is treated as 'chips'. Please change it in the config"))
                 return .success(.chips)
@@ -133,7 +133,7 @@ private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace,
     return theme ?? MenuBarConfig().theme
 }
 
-// Accepted so that a config written for a previous version of Inlay still loads. The settings window wrote the key too
+// Accepted so that a config written for a previous version of Inlay still loads
 private func parseObsoleteShowAppIcons(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
     if parseBool(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
         c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: 'show-app-icons' is ignored. Please drop it from the config"))

@@ -6,7 +6,7 @@ import Testing
 
 extension InlayTests {
     /// Editing the config file by hand reloads the config ('auto-reload-config'), which is what brings the new values
-    /// to the settings window, the menu bar item and the borders. See: ConfigAutoReload, FileWatcher
+    /// to the menu bar item and the borders. See: ConfigAutoReload, FileWatcher
     @Suite @MainActor final class ConfigAutoReloadTest {
         private let directory: URL
         private var events = 0
@@ -40,33 +40,13 @@ extension InlayTests {
         @Test func testNeedsReload() {
             assertEquals(ConfigAutoReload.needsReload(loadedText: "a = 1\n", currentText: "a = 2\n"), true)
             // Another file of the directory was saved, or the same contents were saved again,
-            // or it is the file that the settings window has just written and loaded
+            // or it is the file that Inlay has just written and loaded
             assertEquals(ConfigAutoReload.needsReload(loadedText: "a = 1\n", currentText: "a = 1\n"), false)
             // The file is being replaced, or it is gone: the config in effect stays
             assertEquals(ConfigAutoReload.needsReload(loadedText: "a = 1\n", currentText: nil), false)
             // The file couldn't be read when Inlay started, and now it can
             assertEquals(ConfigAutoReload.needsReload(loadedText: nil, currentText: "a = 1\n"), true)
             assertEquals(ConfigAutoReload.needsReload(loadedText: nil, currentText: nil), false)
-        }
-
-        /// No reload loop: what the settings window writes is what the watcher finds, so it doesn't reload again
-        @Test func testTheSettingsWindowWritesAndTheWatcherAgrees() throws {
-            let file = directory.appending(path: "inlay.toml")
-            let before = "[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n"
-            try before.write(to: file, atomically: true, encoding: .utf8)
-            let target = ConfigEditor.Target(url: file, text: before, exists: true)
-            let edit = ConfigEdit(path: TomlKeyPath(["menu-bar"], "theme"), value: .string("square"))
-            assertEquals(ConfigEditor.apply([edit], to: target).errorOrNil, nil)
-            let written = try String(contentsOf: file, encoding: .utf8)
-            assertEquals(written, "[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n")
-            // ConfigEditor told ConfigAutoReload what it wrote
-            config.autoReloadConfig = false
-            ConfigAutoReload.sync(url: file, text: before)
-            assertEquals(ConfigAutoReload.needsReload(currentText: written), true)
-            ConfigAutoReload.didWrite(written)
-            assertEquals(ConfigAutoReload.needsReload(currentText: written), false)
-            // And a change made by hand afterwards is still a change
-            assertEquals(ConfigAutoReload.needsReload(currentText: written + "# by hand\n"), true)
         }
 
         // MARK: - The watcher, with real files
@@ -169,9 +149,9 @@ extension InlayTests {
             try await expectEvent(watcher, "the save after the broken one")
             assertEquals(try String(contentsOf: file, encoding: .utf8), "a = 5\n")
 
-            // The settings window writes through the link: the file of the real directory changes, and the link stays
+            // `config --use` writes through the link: the file of the real directory changes, and the link stays
             try AtomicFileWriter.write("a = 6\n", to: file)
-            try await expectEvent(watcher, "written by the settings window")
+            try await expectEvent(watcher, "written through the link")
             assertEquals(try String(contentsOf: real, encoding: .utf8), "a = 6\n")
             assertEquals(try FileManager.default.destinationOfSymbolicLink(atPath: linkedDirectory.path), dotfiles.path)
             assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])

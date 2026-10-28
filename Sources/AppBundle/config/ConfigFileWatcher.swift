@@ -2,7 +2,7 @@ import Common
 import Foundation
 
 /// Tells when a file may have changed, however it is saved and wherever it really lives:
-/// - written in place, or replaced by another file (the atomic save of most editors, and of the settings window);
+/// - written in place, or replaced by another file (the atomic save of most editors, and of `inlay config --use`);
 /// - reached through symlinks (a config that lives in a dotfiles repo), also when a link is pointed somewhere else;
 /// - deleted and created again.
 ///
@@ -83,7 +83,7 @@ final class FileWatcher {
 enum ConfigAutoReload {
     private static var watcher: FileWatcher? = nil
     private static var debounceTask: Task<Void, any Error>? = nil
-    /// The text of the config file when it was last loaded, or written by the settings window. nil if it couldn't be read
+    /// The text of the config file when it was last loaded. nil if it couldn't be read
     private static var loadedText: String? = nil
 
     private static let debounceDelay: Duration = .milliseconds(200)
@@ -113,12 +113,6 @@ enum ConfigAutoReload {
                 }
             }
         }
-    }
-
-    /// The settings window has written the text to the config file, and it reloads the config on its own
-    /// right after. Without this, the watcher would see the new file and reload the config a second time
-    static func didWrite(_ text: String) {
-        loadedText = text
     }
 
     /// An event of the watcher doesn't mean that the config is different: the watcher also reports the other files

@@ -5,11 +5,14 @@
 #
 #   ./install.sh
 #
-# On a terminal every step is a line of a list, from the start, marked in place as it goes: '·' while it waits,
-# a spinner while it runs, then '✓' (or '!' or '✗') and a short detail. What doesn't fit in a line (a backup that
-# was made, a warning) is said below the list when it is done. Elsewhere, and with --verbose, it is plain text.
+# On a terminal every step is a line of a list, from the start, in three groups (Prepare, Install, Configure),
+# marked in place as it goes: '·' while it waits, a spinner while it runs (the build with a bar), then '✓' (or '!'
+# or '✗') and a short detail. The long values (the commit, the version of the compiler) only go to the log. What
+# doesn't fit in a line (a backup that was made, a warning) is said below the list when it is done. Elsewhere,
+# and with --verbose, it is plain text. With 24-bit colors (COLORTERM=truecolor) it uses the colors of Material 3.
 # First it checks the requirements, all of them, and shows how to fix what is missing. Then the list says what
-# every step is going to do (where it installs, what happens to your config) and asks to go on. Then:
+# every step is going to do (where it installs, what happens to your config) and asks to go on: Enter installs,
+# Esc cancels. Then:
 #   1. builds Inlay.app and signs it with a local identity, so that macOS keeps the Accessibility permission
 #      across rebuilds (see "Signing" below). Its line says how far the build is: its whole output goes to
 #      ~/Library/Logs/Inlay/install-<date>.log (--verbose shows it as it comes);
@@ -79,19 +82,20 @@ set -euo pipefail
 # The comment at the top of this file, without the '#'
 usage() { awk 'NR < 3 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$SCRIPT_PATH"; }
 
-# The header: 'Inlay 0.1.0 installer · <commit>'
+# The header: 'Inlay 0.1.0  installer'. The commit is only in the plain output and in the log
 print_header() {
   local hash
   hash="$(git rev-parse --short HEAD 2>/dev/null || echo SNAPSHOT)"
   if [ -n "$(git status --porcelain 2>/dev/null || true)" ]; then hash="$hash-dirty"; fi
   if [ -n "$C_RESET" ]; then
-    printf '\n  %s%s %s%s %sinstaller · %s%s\n\n' "$C_BOLD" "$APP_NAME" "$REPO_VERSION" "$C_RESET" "$C_DIM" "$hash" "$C_RESET"
+    # The first group of the list brings its own empty line
+    printf '\n  %s%s %s%s  %sinstaller%s\n' "$C_BOLD" "$APP_NAME" "$REPO_VERSION" "$C_RESET" "$C_DIM" "$C_RESET"
   else
     printf '==> %s %s installer (%s)\n' "$APP_NAME" "$REPO_VERSION" "$hash"
   fi
 }
 
-# The steps, in the order of the list. See: checklist_start
+# The steps, in the order of the list, and their groups. See: checklist_start, checklist_groups
 S_REQUIREMENTS=0
 S_BUILD=1
 S_INSTALL=2
@@ -207,18 +211,20 @@ config_plan() {
 # plan <signing> <import aerospace> <reset config> <open>. What every step will do, in the list, before anything is done
 plan() {
   local signing="$1" import="$2" reset="$3" open_app="$4" detail cli_dir
-  detail="Swift $SWIFT_VERSION"
-  if [ ! -e .build/release ]; then detail="$detail · the first build takes a few minutes"; fi
+  detail="release"
   if [ "$signing" = adhoc ]; then
     detail="$detail · ad hoc signature"
-  elif ! has_signing_identity; then
-    detail="$detail · creates a signing identity in your keychain"
+  elif has_signing_identity; then
+    detail="$detail · local signature"
+  else
+    detail="$detail · creates a local signing identity"
   fi
+  if [ ! -e .build/release ]; then detail="$detail · first build: a few minutes"; fi
   CL_DETAILS[S_BUILD]="$detail"
 
   detail="$(pretty_path "$INSTALL_TARGET")"
   if [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" = "$REPO_VERSION" ]; then
-    detail="$detail · reinstalls $PREVIOUS_VERSION"
+    detail="$detail · reinstall"
   elif [ -n "$PREVIOUS_VERSION" ] || [ -d "$INSTALL_TARGET" ]; then
     detail="$detail · replaces ${PREVIOUS_VERSION:-the app that is there}"
   fi
@@ -440,7 +446,10 @@ toml_settings() {
       if (opened > closed) { depth = opened - closed; value = value " ..." }
       id = value
       gsub(/["\047 \t]/, "", id)
-      id = (table ~ /\.binding$/) ? table "=" id : table "." key
+      # A list of one command is that command: ['fullscreen'] = 'fullscreen'
+      if (id ~ /^\[[^],[]*\]$/) id = substr(id, 2, length(id) - 2)
+      # A key written with dots at the top level is the same key as in its table: key-mapping.preset = [key-mapping] preset
+      id = (table ~ /\.binding$/) ? table "=" id : (table == "" ? key : table "." key)
       print id "\t" (table == "" ? "(top level)" : "[" table "]") "\t" key " = " value
     }' "$1"
 }
@@ -916,8 +925,8 @@ open_or_explain() {
 finish() {
   echo
   if [ -n "$C_RESET" ]; then
-    printf '  %s%s %s is installed%s %s· %s · %s uninstall removes it%s\n' "$C_BOLD$C_GREEN" "$APP_NAME" "$REPO_VERSION" "$C_RESET" \
-      "$C_DIM" "$(format_duration $((SECONDS - START_SECONDS)))" "$CLI_NAME" "$C_RESET"
+    printf '  %s✓%s %s%s %s is installed%s  %s%s · %s uninstall removes it%s\n' "$C_GREEN" "$C_RESET" "$C_BOLD" "$APP_NAME" \
+      "$REPO_VERSION" "$C_RESET" "$C_DIM" "$(format_duration $((SECONDS - START_SECONDS)))" "$CLI_NAME" "$C_RESET"
   else
     success "$APP_NAME $REPO_VERSION is installed" "($(format_duration $((SECONDS - START_SECONDS))))"
   fi
@@ -959,7 +968,8 @@ main() {
   if [ "$prompt" = true ] && is_interactive; then CAN_ASK=true; fi
 
   print_header
-  checklist_start Requirements Build Install CLI Config "Open $APP_NAME"
+  checklist_groups "$S_REQUIREMENTS:Prepare" "$S_INSTALL:Install" "$S_CONFIG:Configure"
+  checklist_start Requirements Build App CLI Config "Open $APP_NAME"
   checklist_set "$S_REQUIREMENTS" run
   if ! check_requirements; then
     checklist_set "$S_REQUIREMENTS" bad "$REQ_PROBLEMS to fix"
@@ -970,7 +980,7 @@ main() {
   choose_install_dir
   plan "$signing" "$import" "$reset_config" "$open_app"
   if [ "$CAN_ASK" = true ] && [ "$assume_yes" != true ]; then
-    if ! checklist_ask_yes_no "Install?" y; then
+    if ! checklist_confirm install; then
       checklist_end
       printf '\n  Nothing was done.\n'
       exit 1

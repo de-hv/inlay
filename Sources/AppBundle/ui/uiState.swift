@@ -11,5 +11,4 @@ func publishUiState() {
     DebugStats.count("ui.publish")
     MenuBarStore.shared.refresh()
     BordersController.shared.refresh()
-    SettingsWindowController.shared.modelDidChange()
 }

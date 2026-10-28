@@ -25,7 +25,7 @@ extension InlayTests {
             assertEquals(result.config.tiling, TilingConfig())
             assertEquals(result.config.menuBar, MenuBarConfig())
             assertEquals(result.config.borders, BordersConfig())
-            // Saving the file by hand reloads it, which is what keeps the settings window in sync with it
+            // Saving the file by hand reloads it, which is what keeps the menu bar item and the borders in sync with it
             assertEquals(result.config.autoReloadConfig, true)
             // It is the config that the app falls back to
             assertEquals(defaultConfigUrl.lastPathComponent, "inlay.toml")

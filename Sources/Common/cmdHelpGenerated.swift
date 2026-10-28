@@ -19,6 +19,9 @@ let config_help_generated = """
        OR: config [-h|--help] --all-keys
        OR: config [-h|--help] --config-path
        OR: config [-h|--help] --explain [<key>]
+       OR: config [-h|--help] --use <file|folder>
+       OR: config [-h|--help] --unlink
+       OR: config [-h|--help] --export
     """
 let debug_stats_help_generated = """
     USAGE: debug-stats [-h|--help] [--watch <seconds>]

@@ -1,349 +1,261 @@
-# The config of Inlay.
+# Inlay config
 #
-# This file is the config that Inlay ships with: './install.sh' copies it to ~/.config/inlay/inlay.toml when
-# you have no config yet, and Inlay falls back to the copy inside the app when it finds no config at all.
-# Edit your copy to your liking: Inlay reloads it when you save it (see 'auto-reload-config' below), and the
-# Settings window edits the same file. Every key is here, with its default value when nothing else is said.
+# Inlay reloads this file when you save it. Every key, its values and its default:
+#     inlay config --explain [<key>]          (also in docs/config-reference.toml)
 #
-# Every key, with its possible values and its default:  inlay config --explain [<key>]
-# (the same text is in docs/config-reference.toml)
+# Sections
+#    1  General                 6  Menu bar
+#    2  Callbacks               7  Borders
+#    3  Workspaces & monitors   8  Programs
+#    4  Layout                  9  Key bindings
+#    5  Animations             10  Window rules
 #
-# The sections, in this order:
-#   GENERAL · CALLBACKS · WORKSPACES · GAPS · TILING · ANIMATIONS · MENU BAR · BORDERS · SETTINGS WINDOW ·
-#   PROGRAMS · KEY BINDINGS · WORKSPACES ASSIGNMENT · MONITORS
-# (TOML wants the keys that aren't in a [table] first: GENERAL, CALLBACKS and WORKSPACES come before the tables)
+# TOML puts the keys without a [table] first: sections 1 to 3 start with them.
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    GENERAL
-# └──────────────────────────────────────────────────────────────────────────────┘
-config-version = 2
+# ━━ 1 · General ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# Start Inlay at login
-start-at-login = true
-
-# Reload the config when the config file is saved. It also keeps the Settings window, the menu bar item and
-# the borders in sync with what you write here by hand. Only this file sets it
-auto-reload-config = true
+config-version     = 2
+start-at-login     = true
+auto-reload-config = true    # reload when this file is saved
 
 # Commands that run after Inlay starts
 after-startup-command = []
 
-# You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
-# Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
+# Show again the apps hidden with cmd-h, if you hit it by accident
 automatically-unhide-macos-hidden-apps = false
 
-# The window under the mouse cursor gets the focus
-focus-follows-mouse.enabled = false
-
-# The keyboard layout that the names of the keys in the bindings refer to: qwerty|dvorak|colemak
-key-mapping.preset = 'qwerty'
-# Names of keys of your own, on top of the preset: the name to use in the bindings = the key it stands for.
-# For example: key-mapping.key-notation-to-key-code = { unicorn = 'q' }
-key-mapping.key-notation-to-key-code = {}
-
-# Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
-enable-normalization-flatten-containers = true
+# Normalizations: https://nikitabobko.github.io/AeroSpace/guide#normalization
+enable-normalization-flatten-containers                         = true
 enable-normalization-opposite-orientation-for-nested-containers = true
 
-# Possible values: tiles
-default-root-container-layout = 'tiles'
-
-# Possible values: horizontal|vertical|auto
-# 'auto' means: wide monitor (anything wider than high) gets horizontal orientation,
-#               tall monitor (anything higher than wide) gets vertical orientation
+# tiles · horizontal | vertical | auto (by the shape of the monitor)
+default-root-container-layout      = 'tiles'
 default-root-container-orientation = 'horizontal'
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    CALLBACKS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The mouse follows the focus when the focused monitor or the focused window changes
-# Drop them from your config, if you don't like this behavior
-# See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
-# See https://nikitabobko.github.io/AeroSpace/commands#move-mouse
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-on-focus-changed = ['move-mouse window-lazy-center']
+# ━━ 2 · Callbacks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# Commands that run every time the binding mode changes
+# The mouse follows the focus. Empty them to turn it off
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+on-focus-changed           = ['move-mouse window-lazy-center']
+
+# Commands that run when the binding mode changes
 on-mode-changed = []
 
-# A program that Inlay runs every time the focused workspace changes: the program and its arguments.
-# For example: exec-on-workspace-change = ['/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces']
+# A program (and its arguments) that runs when the focused workspace changes. For example:
+#     ['/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces']
 exec-on-workspace-change = []
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    WORKSPACES
-# └──────────────────────────────────────────────────────────────────────────────┘
-# Named by number, as the menu bar item shows them. The keys are on the right
-# hand, in the order of vim: the first four workspaces on the home row, the
-# other three on the row above, over j k l:
-#
-#     u i o     ->     5 6 7
-#   h j k l     ->   1 2 3 4
-#
-#   "1" = Terminal    cmd-alt-ctrl-h  (move a window: cmd-alt-shift-h)
-#   "2" = Code        cmd-alt-ctrl-j  (cmd-alt-shift-j)
-#   "3" = Browser     cmd-alt-ctrl-k  (cmd-alt-shift-k)
-#   "4" = Chat        cmd-alt-ctrl-l  (cmd-alt-shift-l)
-#   "5" = AI          cmd-alt-ctrl-u  (cmd-alt-shift-u)
-#   "6" = Other       cmd-alt-ctrl-i  (cmd-alt-shift-i)   every app without a workspace,
-#                                                         on the secondary display if there is one
-#   "7" = Empty       cmd-alt-ctrl-o  (cmd-alt-shift-o)   no app goes there on its own: a workspace
-#                                                         that is (almost) always free, on the main display
-#
-# cmd-alt-ctrl goes to a workspace, and cmd-alt-shift with the same key takes the focused window there. The
-# other actions are cmd-alt-shift with a key of the left hand (see KEY BINDINGS). Nothing shorter, so no other
-# app's shortcut ever collides with them.
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
+# ━━ 3 · Workspaces & monitors ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    GAPS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# 8 points around the edges of the screen and 8 between two windows.
-# The window borders (see [borders] below) are drawn outside of the windows, in the gaps: keep the gaps at
-# least twice as big as borders.width, or the borders of two neighbor windows overlap. With the gaps of 8
-# and the default border of 4 they touch; a border of 2 or 3, or gaps of 14, leave air between them
+#   ws  for           go to / move window to          monitor
+#   1   Terminals     cmd-alt-ctrl-h / cmd-alt-shift-h   main
+#   2   Code          cmd-alt-ctrl-j / cmd-alt-shift-j   main
+#   3   Browsers      cmd-alt-ctrl-k / cmd-alt-shift-k   main
+#   4   Chats         cmd-alt-ctrl-l / cmd-alt-shift-l   main
+#   5   AI            cmd-alt-ctrl-u / cmd-alt-shift-u   main
+#   6   Other         cmd-alt-ctrl-i / cmd-alt-shift-i   secondary, or main
+#   7   Free          cmd-alt-ctrl-o / cmd-alt-shift-o   main
+#
+# The keys follow the right hand:   u i o -> 5 6 7
+#                                 h j k l -> 1 2 3 4
+# 7 has no app rule: there is (almost) always a free workspace.
+persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
+
+# Monitors by role, not by name: the same rules hold whatever display is plugged in.
+# 'secondary' only matches with exactly two displays, hence the 'main' fallback for 6.
+# The main display is set in System Settings › Displays.
+[workspace-to-monitor-force-assignment]
+    '1' = 'main'
+    '2' = 'main'
+    '3' = 'main'
+    '4' = 'main'
+    '5' = 'main'
+    '6' = ['secondary', 'main']
+    '7' = 'main'
+
+# ━━ 4 · Layout ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# In points. The borders are drawn in the gaps: keep a gap at least twice borders.width,
+# or the borders of two neighbor windows overlap
 [gaps]
     inner.horizontal = 8
-    inner.vertical =   8
-    outer.left =       8
-    outer.right =      8
-    outer.top =        8
-    outer.bottom =     8
-    # A window alone in its workspace, or in fullscreen, has a gap of its own: see [borders.single-window]
+    inner.vertical   = 8
+    outer.left       = 8
+    outer.right      = 8
+    outer.top        = 8
+    outer.bottom     = 8
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    TILING
-# └──────────────────────────────────────────────────────────────────────────────┘
-# Where the tiling windows are placed. See: inlay config --explain tiling
 [tiling]
-    # dwindle: the new window splits the focused one in two. after-focused: the behavior of AeroSpace
-    new-window-placement = 'dwindle'
-    # The fraction of its space that the split window keeps (0.1 ... 0.9)
-    split-ratio = 0.5
-    # Which window the new window splits: focused|cursor
-    split-target = 'focused'
-    # How the windows that are already open when Inlay starts are arranged in every workspace, once the
-    # 'on-window-detected' rules below have sent them to their workspaces: grid|row|dwindle
-    startup-layout = 'grid'
-    # The smallest width and height, in points, that resizing leaves to a tiling window (20 ... 500)
-    min-window-size = 100
+    new-window-placement = 'dwindle'    # dwindle | after-focused (i3 style)
+    split-target         = 'focused'    # the window a new one splits: focused | cursor
+    split-ratio          = 0.5          # what the split window keeps: 0.1 … 0.9
+    startup-layout       = 'grid'       # the windows open at startup: grid | row | dwindle
+    min-window-size      = 100          # points left by resizing: 20 … 500
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    ANIMATIONS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The windows slide to their place when a window opens or closes, and when one is moved with swap or move.
-# See: inlay config --explain animations
+[focus-follows-mouse]
+    enabled = false
+
+# ━━ 5 · Animations ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Curves: quint | expo | quick | ease-out | linear | ease | ease-in-out | snappy | overshot,
+# or one of [animations.curves]. A strong ease-out hides the frames that other apps skip;
+# a curve that overshoots makes them lay out again
 [animations]
-    enabled = true
-    # In milliseconds (0 ... 500). 0 = no animation
-    duration = 160
-    # How switching workspaces slides the windows: 'horizontal' | 'vertical' | 'auto' | 'off'
-    workspace-switch = 'horizontal'
-    # The timing curve: quint | expo | quick | ease-out | linear | ease | ease-in-out | snappy | overshot, or one of
-    # [animations.curves]. quint is easeOutQuint, the curve of the windows in Hyprland and Omarchy; expo is
-    # easeOutExpo, fast to leave and very gentle to arrive, like the animations of macOS.
-    # The windows of other apps are moved through the Accessibility API, and the apps draw them late: short
-    # animations with a strong ease-out, where most of the movement happens at the start, hide the frames that
-    # an app skips. A curve that overshoots resizes the windows past their tiles, and the apps lay out again
-    curve = 'quint'
-    # Each kind of animation can have its own curve and duration. Without them, the ones above
-    open = { curve = 'quint', duration = 200 }
-    move = { curve = 'quint', duration = 160 }
-    fullscreen = { curve = 'expo', duration = 220 }
-    # It moves every window of the two workspaces at once: workspace-switch = 'off' if it stutters
-    workspace = { curve = 'expo', duration = 140 }
+    enabled          = true
+    duration         = 160             # ms: 0 … 500
+    curve            = 'quint'
+    workspace-switch = 'horizontal'    # horizontal | vertical | auto | off
 
-    # Curves of your own: the name = [x1, y1, x2, y2]
-    [animations.curves]
-        # bounce = [0.34, 1.56, 0.64, 1]
+    # Per kind of animation; without them, curve and duration above
+    open       = { curve = 'quint', duration = 200 }
+    move       = { curve = 'quint', duration = 160 }
+    fullscreen = { curve = 'expo',  duration = 220 }
+    workspace  = { curve = 'expo',  duration = 140 }    # workspace-switch = 'off' if it stutters
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    MENU BAR
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The menu bar item. See: inlay config --explain menu-bar
+# Curves of your own: name = [x1, y1, x2, y2]
+[animations.curves]
+    # bounce = [0.34, 1.56, 0.64, 1]
+
+# ━━ 6 · Menu bar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 [menu-bar]
-    # Show the menu bar item. Only this file sets it: with 'false', open Inlay again from Applications to get
-    # to the Settings window
-    enabled = true
-    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels|segments|capsule
-    theme = 'liquid'
+    enabled              = true
+    # pills | chips | square | minimal | dots | underline | glyphs
+    # liquid | labels | segments | capsule
+    theme                = 'liquid'
     dim-empty-workspaces = true
-    show-mode = true
-    # The workspaces of each monitor together, and a hollow marker on the one another monitor shows
-    per-monitor = false
-    # Draw the item like the other icons of the menu bar, whatever [menu-bar.colors] says. The colors stay in this
-    # file, and apply again with 'false'
-    system-colors = false
+    show-mode            = true        # the initial of the binding mode on the focused workspace
+    per-monitor          = false       # group the workspaces by monitor
+    system-colors        = false       # draw it like the other menu bar icons, ignoring the colors
 
-    # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text, light or dark)
-    [menu-bar.colors]
-        # The focused workspace
-        focused = 'auto'
-        # The workspaces with windows
-        occupied = 'auto'
-        # The workspaces without windows
-        empty = 'auto'
-        # The marker of the focused workspace while a binding mode is active. 'auto': the same as 'focused'
-        accent = 'auto'
+# '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text)
+[menu-bar.colors]
+    focused  = 'auto'
+    occupied = 'auto'    # workspaces with windows
+    empty    = 'auto'    # workspaces without windows
+    accent   = 'auto'    # the focused one in a binding mode. 'auto': as focused
 
-    # The 'labels' theme only: the name of each workspace, shown in the focused one. The other themes ignore it
-    [menu-bar.labels]
-        # 1 = 'Terminals'
-        # 2 = 'Code'
-        # 3 = 'Browsers'
-        # 4 = 'Chats'
-        # 5 = 'AI'
-        # 6 = 'Other'
-        # 7 = 'Free'
+# Only for theme = 'labels'
+[menu-bar.labels]
+    # 1 = 'Terminals'
+    # 2 = 'Code'
+    # 3 = 'Browsers'
+    # 4 = 'Chats'
+    # 5 = 'AI'
+    # 6 = 'Other'
+    # 7 = 'Free'
 
-    # The 'labels' theme only: the SF Symbol of each workspace (the names of the SF Symbols app)
-    [menu-bar.symbols]
-        # 1 = 'terminal'
-        # 2 = 'chevron.left.forwardslash.chevron.right'
-        # 3 = 'globe'
-        # 4 = 'bubble.left.and.bubble.right'
-        # 5 = 'sparkles'
-        # 6 = 'square.grid.2x2'
-        # 7 = 'circle.dashed'
+# Only for theme = 'labels'. Names from the SF Symbols app
+[menu-bar.symbols]
+    # 1 = 'terminal'
+    # 2 = 'chevron.left.forwardslash.chevron.right'
+    # 3 = 'globe'
+    # 4 = 'bubble.left.and.bubble.right'
+    # 5 = 'sparkles'
+    # 6 = 'square.grid.2x2'
+    # 7 = 'circle.dashed'
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    BORDERS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The borders of the windows. See: inlay config --explain borders
+# ━━ 7 · Borders ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Colors: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
 [borders]
-    enabled = true
-    # In points (1 ... 20)
-    width = 4
-    # In points (0 ... 40)
-    corner-radius = 16
-    # The border fills the rounded corners of the windows, which then look square
-    square-corners = true
-    # '#RRGGBB', '#RRGGBBAA' or 'system-accent'
-    active-color = 'system-accent'
+    enabled        = true
+    width          = 4                  # points: 1 … 20
+    corner-radius  = 16                 # points: 0 … 40
+    square-corners = true               # fill the rounded corners of the windows
+    active-color   = 'system-accent'
     inactive-color = '#8E8E9373'
     floating-color = '#BF5AF2'
-    glow = false
-    # In points (1 ... 40)
-    glow-radius = 12
+    glow           = false
+    glow-radius    = 12                 # points: 1 … 40
 
-    # The color of the border of the focused window while a binding mode is active
-    [borders.mode-colors]
-        # resize = '#30D158'
-        # service = '#FF453A'
+# The focused window while a binding mode is active
+[borders.mode-colors]
+    # resize  = '#30D158'
+    # service = '#FF453A'
 
-    # A tiling window alone in its workspace, and a window in fullscreen, look the same: a thin border, in the
-    # colors above, and a small gap from the edges of the screen. With enabled = false they fill the screen,
-    # without a border
-    [borders.single-window]
-        enabled = true
-        # In points (1 ... 20)
-        width = 1
-        # In points (0 ... 40). Never less than 'width'
-        gap = 2
+# A window alone in its workspace, or in fullscreen: a thin border and a small gap.
+# enabled = false: it fills the screen without a border
+[borders.single-window]
+    enabled = true
+    width   = 1                         # points: 1 … 20
+    gap     = 2                         # points: 0 … 40, never less than width
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    SETTINGS WINDOW
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The Settings window. Only this file sets it
-[settings]
-    # Every row shows the key of the config it writes. Without it, a key shows while the mouse is over its row,
-    # or while the option key is held
-    show-keys = false
+# ━━ 8 · Programs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    PROGRAMS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The environment of the programs that Inlay runs: exec-and-forget, exec-on-workspace-change
+# The environment of exec-and-forget and exec-on-workspace-change
 [exec]
-    # The programs inherit the environment of Inlay
     inherit-env-vars = true
 
-    # Variables that are set or replaced. ${NAME} is replaced by the value of the variable
-    [exec.env-vars]
-        PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
+# ${NAME} is replaced by the value of the variable
+[exec.env-vars]
+    PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    KEY BINDINGS
-# └──────────────────────────────────────────────────────────────────────────────┘
+# ━━ 9 · Key bindings ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+#   cmd-alt-ctrl  + right hand   go to a workspace        (see section 3)
+#   cmd-alt-shift + right hand   move the window there
+#   cmd-alt-shift + left hand    an action
+#   arrows: cmd-alt focus · cmd-alt-ctrl swap · cmd-alt-shift move
+
+# The layout the names of the keys refer to: qwerty | dvorak | colemak
+[key-mapping]
+    preset = 'qwerty'
+    key-notation-to-key-code = {}    # names of your own, e.g. { unicorn = 'q' }
+
 [mode.main.binding]
-    # cmd-alt-ctrl + a key of the right hand goes to a workspace, cmd-alt-shift + the same key takes the focused
-    # window there. cmd-alt-shift + a key of the left hand is an action. The arrows: cmd-alt focuses, cmd-alt-ctrl
-    # swaps, cmd-alt-shift moves
+    # ── Workspaces
+    cmd-alt-ctrl-h = ['workspace 1', 'mode main']
+    cmd-alt-ctrl-j = ['workspace 2', 'mode main']
+    cmd-alt-ctrl-k = ['workspace 3', 'mode main']
+    cmd-alt-ctrl-l = ['workspace 4', 'mode main']
+    cmd-alt-ctrl-u = ['workspace 5', 'mode main']
+    cmd-alt-ctrl-i = ['workspace 6', 'mode main']
+    cmd-alt-ctrl-o = ['workspace 7', 'mode main']
 
-    # Go to workspace (see the WORKSPACES note):
-    #     u i o  ->    5 6 7
-    #   h j k l  ->  1 2 3 4
-    cmd-alt-ctrl-h = ['workspace 1', 'mode main'] # terminals
-    cmd-alt-ctrl-j = ['workspace 2', 'mode main'] # code / editors
-    cmd-alt-ctrl-k = ['workspace 3', 'mode main'] # browsers
-    cmd-alt-ctrl-l = ['workspace 4', 'mode main'] # chats (slack, teams, whatsapp, telegram)
-    cmd-alt-ctrl-u = ['workspace 5', 'mode main'] # AI
-    cmd-alt-ctrl-i = ['workspace 6', 'mode main'] # everything else / secondary display
-    cmd-alt-ctrl-o = ['workspace 7', 'mode main'] # empty: no app goes there on its own
+    # ── Move the window to a workspace. It keeps floating or tiling; fullscreen ends
+    cmd-alt-shift-h = 'move-node-to-workspace 1'
+    cmd-alt-shift-j = 'move-node-to-workspace 2'
+    cmd-alt-shift-k = 'move-node-to-workspace 3'
+    cmd-alt-shift-l = 'move-node-to-workspace 4'
+    cmd-alt-shift-u = 'move-node-to-workspace 5'
+    cmd-alt-shift-i = 'move-node-to-workspace 6'
+    cmd-alt-shift-o = 'move-node-to-workspace 7'
 
-    # Move window to workspace (same keys as above). It keeps its layout: a floating window floats in the
-    # other workspace, and a tiling one splits a window there like a new window. A window in fullscreen
-    # leaves it, and takes a place in the layout of the other workspace
-    cmd-alt-shift-h = 'move-node-to-workspace 1' # terminals
-    cmd-alt-shift-j = 'move-node-to-workspace 2' # code / editors
-    cmd-alt-shift-k = 'move-node-to-workspace 3' # browsers
-    cmd-alt-shift-l = 'move-node-to-workspace 4' # chats
-    cmd-alt-shift-u = 'move-node-to-workspace 5' # AI
-    cmd-alt-shift-i = 'move-node-to-workspace 6' # everything else / secondary
-    cmd-alt-shift-o = 'move-node-to-workspace 7' # empty
+    # ── Actions
+    cmd-alt-shift-b     = 'balance-sizes'                               # [b]alance
+    cmd-alt-shift-d     = 'arrange-workspace dwindle'                   # [d]windle (or grid, row)
+    cmd-alt-shift-f     = ['fullscreen off', 'layout floating tiling']  # [f]loating ⇄ tiling
+    cmd-alt-shift-enter = 'fullscreen'
+    cmd-alt-shift-s     = 'mode service'                                # [s]ervice mode
+    cmd-alt-shift-r     = 'mode resize'                                 # [r]esize mode
 
-    # [b]alance: all the windows of the workspace get the same share of their containers again, after resizing them
-    cmd-alt-shift-b = 'balance-sizes'
-
-    # [d]windle: the windows of the workspace are placed again one after another, like new windows: two side by
-    # side, then dwindle. For a workspace left as a row, or with two windows one above the other.
-    # 'arrange-workspace grid' and 'arrange-workspace row' arrange it as a grid or as a row
-    cmd-alt-shift-d = 'arrange-workspace dwindle'
-
-    # [f]loating: the focused window, between floating and tiling: the Window menu of the menu bar item does the
-    # same. A floating window takes a place in the layout like a new window; a tiling one floats in the middle of
-    # the screen; a window in fullscreen leaves it first
-    cmd-alt-shift-f = ['fullscreen off', 'layout floating tiling']
-
-    cmd-alt-shift-enter = ['fullscreen']
-
-    # focus
+    # ── Focus
     cmd-alt-left  = 'focus left'
     cmd-alt-down  = 'focus down'
     cmd-alt-up    = 'focus up'
     cmd-alt-right = 'focus right'
 
-    # Swap the focused window with its neighbor: the two windows trade places, the layout keeps its shape.
-    # Toward two windows (from the right column to a left column with two), the one focused more recently
+    # ── Swap with the neighbor: the layout keeps its shape
     cmd-alt-ctrl-left  = 'swap left'
     cmd-alt-ctrl-down  = 'swap down'
     cmd-alt-ctrl-up    = 'swap up'
     cmd-alt-ctrl-right = 'swap right'
 
-    # Move the focused window: it leaves its column or row and the layout changes its shape
+    # ── Move: the window leaves its column or row, the layout changes
     cmd-alt-shift-left  = 'move left'
     cmd-alt-shift-down  = 'move down'
     cmd-alt-shift-up    = 'move up'
     cmd-alt-shift-right = 'move right'
 
-    # Modes: [s]ervice and [r]esize
-    cmd-alt-shift-s = 'mode service'
-    cmd-alt-shift-r = 'mode resize'
-
-
 [mode.service.binding]
-    esc = ['reload-config', 'mode main']
-    cmd-alt-shift-s = 'mode main' # the key that entered the mode leaves it (toggle)
-    r   = ['flatten-workspace-tree', 'mode main'] # reset layout
-    # Every window back to the workspace of its app: the 'on-window-detected' rules below run again for all
-    # the open windows. They place a window only when it opens, and after waking up plugged to an external
-    # display some windows turn up on a workspace that is not theirs.
-    # It runs every rule, so a window that was moved or made floating on purpose goes back too, and the
-    # tiling windows of the apps without a workspace float again
-    w   = ['run-callback on-window-detected --for-every-window', 'mode main']
-    # Toggle the focused window between floating and tiling. Rescues a window
-    # Inlay mistook for a popup (it floats behind the tiled ones).
-    f   = ['layout floating tiling', 'mode main']
+    esc             = ['reload-config', 'mode main']
+    cmd-alt-shift-s = 'mode main'                                     # leave (toggle)
+    r               = ['flatten-workspace-tree', 'mode main']         # reset the layout
+    f               = ['layout floating tiling', 'mode main']         # rescue a "popup"
+    # Every window back to the workspace of its app (after waking up with an external display).
+    # It runs every rule: windows moved or floated on purpose go back too
+    w               = ['run-callback on-window-detected --for-every-window', 'mode main']
 
     cmd-alt-ctrl-left  = ['join-with left', 'mode main']
     cmd-alt-ctrl-down  = ['join-with down', 'mode main']
@@ -351,219 +263,148 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-ctrl-right = ['join-with right', 'mode main']
 
 [mode.resize.binding]
-    esc = ['reload-config', 'mode main']
-    cmd-alt-shift-r = 'mode main' # the key that entered the mode leaves it (toggle)
-    r   = ['flatten-workspace-tree', 'mode main'] # reset layout
+    esc             = ['reload-config', 'mode main']
+    cmd-alt-shift-r = 'mode main'                                     # leave (toggle)
+    r               = ['flatten-workspace-tree', 'mode main']         # reset the layout
 
-    cmd-alt-ctrl-up = 'resize smart +50'
+    cmd-alt-ctrl-up   = 'resize smart +50'
     cmd-alt-ctrl-down = 'resize smart -50'
 
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    WORKSPACES ASSIGNMENT
-# └──────────────────────────────────────────────────────────────────────────────┘
-# The rules run for every new window, and also for the windows that are already open when Inlay starts:
-# they are sent to their workspaces first, and then every workspace is arranged (see 'startup-layout').
-# They are checked from top to bottom, and the first one that matches a window is the only one that
-# runs for it (no rule here has 'check-further-callbacks = true'). So the order matters:
-#
-#   1. File dialogs float where they open
-#   2. The apps with a workspace go to it: 1 to 5
-#   3. The quick apps, and the settings windows of any app, float where they open
-#   4. Every other window floats where it opens, until cmd-alt-shift-f tiles it
-#
-# Every rule starts with 'layout tiling'. Some apps (Zen, Teams) expose incomplete
-# accessibility attributes while restoring windows on wake/unlock, so Inlay
-# takes them for popups and leaves them floating. `move-node-to-workspace` alone
-# keeps them floating, hidden behind the tiled windows of the workspace.
+# ━━ 10 · Window rules ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# ┌────────────────────┐
-#   File dialogs
-# └────────────────────┘
-# The Open / Save panel an app shows to pick a file or a folder (Zed's "Open",
-# VS Code's "Open Folder") is that app's own window, not Finder's, so it would
-# match the app's rule below and be forced into a column by its 'layout
-# tiling'. It is told apart by its exact title -- the whole title, so a
-# project or a document merely starting with "Open" still tiles -- and has to
-# come before every app rule, since Inlay stops at the first match. English
-# and Spanish titles, for either system language.
+# They run for every new window and for the ones open at startup. The first rule that matches
+# is the only one that runs, so the order matters:
+#   a. File dialogs float
+#   b. Apps with a workspace go to it (1 to 5)
+#   c. Quick apps and settings windows float
+#   d. Everything else floats where it opens (cmd-alt-shift-f tiles it)
+# 'layout tiling' first: some apps (Zen, Teams) look like popups while they restore their windows.
+
+# ── a · File dialogs ──────────────────────────────────────────────────────────────────────
+# The whole title, in English and Spanish: a document that only starts with "Open" still tiles
 [[on-window-detected]]
-if.window-title-regex-substring = '(?i)^(open|open file|open folder|open file or folder|open workspace from file|add folder to workspace|save|save as|save workspace|choose|select|abrir|abrir archivo|abrir carpeta|guardar|guardar como|elegir|seleccionar)( ?…|\.\.\.)?$'
-run = ['layout floating']
+    if.window-title-regex-substring = '(?i)^(open|open file|open folder|open file or folder|open workspace from file|add folder to workspace|save|save as|save workspace|choose|select|abrir|abrir archivo|abrir carpeta|guardar|guardar como|elegir|seleccionar)( ?…|\.\.\.)?$'
+    run = ['layout floating']
 
-
-# ┌────────────────────┐
-#   1 · Terminal
-# └────────────────────┘
+# ── b · 1 Terminals ───────────────────────────────────────────────────────────────────────
 [[on-window-detected]]
-if.app-id = 'com.mitchellh.ghostty'
-run = ['layout tiling', 'move-node-to-workspace 1']
+    if.app-id = 'com.mitchellh.ghostty'               # Ghostty
+    run = ['layout tiling', 'move-node-to-workspace 1']
 
-
-# ┌────────────────────┐
-#   2 · Code
-# └────────────────────┘
+# ── b · 2 Code ────────────────────────────────────────────────────────────────────────────
 [[on-window-detected]]
-if.app-id = 'dev.zed.Zed'
-run = ['layout tiling', 'move-node-to-workspace 2']
+    if.app-id = 'dev.zed.Zed'                         # Zed
+    run = ['layout tiling', 'move-node-to-workspace 2']
 
 [[on-window-detected]]
-if.app-id = 'com.microsoft.VSCode' # VsCode
-run = ['layout tiling', 'move-node-to-workspace 2']
+    if.app-id = 'com.microsoft.VSCode'                # VS Code
+    run = ['layout tiling', 'move-node-to-workspace 2']
 
-# ┌────────────────────┐
-#   3 · Browsers
-# └────────────────────┘
+# ── b · 3 Browsers ────────────────────────────────────────────────────────────────────────
 [[on-window-detected]]
-if.app-id = 'com.google.Chrome'
-run = ['layout tiling', 'move-node-to-workspace 3']
+    if.app-id = 'com.google.Chrome'                   # Chrome
+    run = ['layout tiling', 'move-node-to-workspace 3']
 
 [[on-window-detected]]
-if.app-id = 'app.zen-browser.zen'
-run = ['layout tiling', 'move-node-to-workspace 3']
+    if.app-id = 'app.zen-browser.zen'                 # Zen
+    run = ['layout tiling', 'move-node-to-workspace 3']
 
-# ┌────────────────────┐
-#   4 · Chat
-# └────────────────────┘
+# ── b · 4 Chats ───────────────────────────────────────────────────────────────────────────
 [[on-window-detected]]
-if.app-id = 'com.tinyspeck.slackmacgap'
-run = ['layout tiling', 'move-node-to-workspace 4']
+    if.app-id = 'com.tinyspeck.slackmacgap'           # Slack
+    run = ['layout tiling', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
-if.app-id = 'com.microsoft.teams2'
-run = ['layout tiling', 'move-node-to-workspace 4']
+    if.app-id = 'com.microsoft.teams2'                # Teams
+    run = ['layout tiling', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
-if.app-id = 'ru.keepcoder.Telegram'
-run = ['layout tiling', 'move-node-to-workspace 4']
+    if.app-id = 'ru.keepcoder.Telegram'               # Telegram
+    run = ['layout tiling', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
-if.app-id = 'net.whatsapp.WhatsApp'
-run = ['layout tiling', 'move-node-to-workspace 4']
+    if.app-id = 'net.whatsapp.WhatsApp'               # WhatsApp
+    run = ['layout tiling', 'move-node-to-workspace 4']
 
-
-# ┌────────────────────┐
-#   5 · AI
-# └────────────────────┘
+# ── b · 5 AI ──────────────────────────────────────────────────────────────────────────────
 [[on-window-detected]]
-if.app-id = 'com.anthropic.claudefordesktop' # Claude
-run = ['layout tiling', 'move-node-to-workspace 5']
+    if.app-id = 'com.anthropic.claudefordesktop'      # Claude
+    run = ['layout tiling', 'move-node-to-workspace 5']
 
-# ┌────────────────────┐
-#   Floating Apps
-# └────────────────────┘
-# Quick, fixed-size or occasional windows float where they open instead of
-# taking a column: no workspace of their own, and the tiling around them is
-# left alone.
+# ── c · Floating apps ─────────────────────────────────────────────────────────────────────
+# Quick, fixed-size or occasional windows: no workspace, and the tiling around them stays
 [[on-window-detected]]
-if.app-id = 'com.apple.finder' # Finder: a folder opened from another app floats instead of reflowing the workspace
-run = ['layout floating']
+    if.app-id = 'com.apple.finder'                    # Finder
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.systempreferences' # System Settings
-run = ['layout floating']
+    if.app-id = 'com.apple.systempreferences'         # System Settings
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.SystemProfiler' # System Information
-run = ['layout floating']
+    if.app-id = 'com.apple.SystemProfiler'            # System Information
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.ActivityMonitor' # Activity Monitor
-run = ['layout floating']
+    if.app-id = 'com.apple.ActivityMonitor'           # Activity Monitor
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.Stickies' # Stickies: a note kept over the browser during a call
-run = ['layout floating']
+    if.app-id = 'com.apple.Stickies'                  # Stickies
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.calculator' # Calculator
-run = ['layout floating']
+    if.app-id = 'com.apple.calculator'                # Calculator
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.Preview' # Preview: images and PDFs opened from other apps
-run = ['layout floating']
+    if.app-id = 'com.apple.Preview'                   # Preview
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.DiskUtility' # Disk Utility
-run = ['layout floating']
+    if.app-id = 'com.apple.DiskUtility'               # Disk Utility
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.QuickTimePlayerX' # QuickTime Player
-run = ['layout floating']
+    if.app-id = 'com.apple.QuickTimePlayerX'          # QuickTime Player
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.apple.archiveutility' # Archive Utility
-run = ['layout floating']
+    if.app-id = 'com.apple.archiveutility'            # Archive Utility
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.1password.1password' # 1Password
-run = ['layout floating']
+    if.app-id = 'com.1password.1password'             # 1Password
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.raycast.macos' # Raycast (its settings window)
-run = ['layout floating']
+    if.app-id = 'com.raycast.macos'                   # Raycast (its settings window)
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'com.if.Amphetamine' # Amphetamine
-run = ['layout floating']
+    if.app-id = 'com.if.Amphetamine'                  # Amphetamine
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'info.marcel-dierkes.KeepingYouAwake' # KeepingYouAwake
-run = ['layout floating']
+    if.app-id = 'info.marcel-dierkes.KeepingYouAwake' # KeepingYouAwake
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'net.freemacsoft.AppCleaner' # AppCleaner
-run = ['layout floating']
+    if.app-id = 'net.freemacsoft.AppCleaner'          # AppCleaner
+    run = ['layout floating']
 
 [[on-window-detected]]
-if.app-id = 'cx.c3.theunarchiver' # The Unarchiver
-run = ['layout floating']
+    if.app-id = 'cx.c3.theunarchiver'                 # The Unarchiver
+    run = ['layout floating']
 
-# Settings and preferences windows of any other app, by title. The app rules
-# above come first, so an app sent to a workspace keeps its own rule.
+# The settings windows of any other app, by title
 [[on-window-detected]]
-if.window-title-regex-substring = '(?i)(settings|preferences)'
-run = ['layout floating']
+    if.window-title-regex-substring = '(?i)(settings|preferences)'
+    run = ['layout floating']
 
-# ┌────────────────────┐
-#   Everything else
-# └────────────────────┘
-# The windows of the apps that have no rule above float where they open, in the workspace that is on the
-# screen, instead of taking a place in its layout. cmd-alt-shift-f puts the window in the layout of its
-# workspace: it stops floating. cmd-alt-shift + a workspace key (h j k l u i o) moves it there, still floating.
-#
-# Only the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About" window)
-# floats, so 'window-layout' is 'floating' for it, the rule doesn't match, and it stays where it opens.
-# Popups (menus, tooltips) never get to the rules.
-#
-# It has to be the last rule: Inlay stops at the first one that matches, so it only sees the windows
-# that none of the rules above wanted. To give an app a place of its own, give it a rule above: a workspace
-# of its own, for instance. To have every other window tiled in the workspace where it opens, as AeroSpace
-# does, delete this rule.
+# ── d · Everything else ───────────────────────────────────────────────────────────────────
+# Must be the last rule. A tiling window of an app without a rule floats where it opens.
+# Dialogs already float and popups never get here. Delete it to tile everything, like AeroSpace
 [[on-window-detected]]
-if = 'test %{window-layout} ~= _tiles' # h_tiles or v_tiles: a tiling window
-run = 'layout floating'
-
-# ┌──────────────────────────────────────────────────────────────────────────────┐
-#                                    MONITORS
-# └──────────────────────────────────────────────────────────────────────────────┘
-# Monitors are matched by role instead of by name or index, so the same rules
-# hold whichever display is plugged in:
-#
-#   1 to 5, 7 -> the main display (the one macOS has as "main display")
-#   6         -> the other one
-#
-#   Studio Display as main + MacBook    1-5 and 7 on the Studio Display, 6 on the MacBook
-#   MacBook as main + a portable one    1-5 and 7 on the MacBook, 6 on the portable
-#   MacBook alone                       all seven on the MacBook
-#
-# 'secondary' only matches with exactly two displays, hence the 'main'
-# fallback: alone, or with three, 6 stays on the main display. Which display is
-# the main one is set in System Settings > Displays.
-[workspace-to-monitor-force-assignment]
-'1' = 'main'                  # Terminal
-'2' = 'main'                  # Code
-'3' = 'main'                  # Browser
-'4' = 'main'                  # Chat
-'5' = 'main'                  # AI
-'6' = ['secondary', 'main']   # Everything else
-'7' = 'main'                  # Empty
+    if = 'test %{window-layout} ~= _tiles'
+    run = 'layout floating'

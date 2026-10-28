@@ -4,9 +4,8 @@ import Foundation
 import Testing
 
 extension InlayTests {
-    @Suite @MainActor final class ConfigEditorTest {
+    @Suite @MainActor final class ConfigFilesTest {
         private let directory: URL
-        private let theme = ConfigEdit(path: TomlKeyPath(["menu-bar"], "theme"), value: .string("square"))
 
         init() throws {
             setUpWorkspacesForTests()
@@ -62,9 +61,9 @@ extension InlayTests {
             assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
         }
 
-        /// ~/.config/inlay -> ~/.dotfiles/inlay, the way install.sh links a config folder: the settings window
-        /// patches the file inside of the folder of the user, and the link of the folder stays
-        @Test func testEditInALinkedFolder() throws {
+        /// ~/.config/inlay -> ~/.dotfiles/inlay, the way install.sh links a config folder: `config --use <file>`
+        /// writes the file inside of the folder of the user, and the link of the folder stays
+        @Test func testWriteInALinkedFolder() throws {
             let dotfiles = directory.appending(path: "dotfiles/inlay")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
             let real = dotfiles.appending(path: "inlay.toml")
@@ -74,8 +73,7 @@ extension InlayTests {
             try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
             let config = folder.appending(path: "inlay.toml")
 
-            let edit = ConfigEdit(path: TomlKeyPath(["menu-bar"], "theme"), value: .string("square"))
-            assertEquals(ConfigEditor.apply([edit], to: .init(url: config, text: before, exists: true)).errorOrNil, nil)
+            try AtomicFileWriter.write("# Mine\n[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n", to: config)
             assertEquals(read(real), "# Mine\n[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n")
             assertEquals(read(config), read(real))
             assertEquals(isSymlink(folder), true)
@@ -127,77 +125,43 @@ extension InlayTests {
             }
         }
 
-        // MARK: - ConfigEditor
+        // MARK: - ConfigFiles
 
-        @Test func testPatchValidatesTheConfig() {
-            let text = "[menu-bar]\ntheme = 'chips'\n"
-            assertEquals(ConfigEditor.patch(text, [theme]).okOrNil, "[menu-bar]\ntheme = 'square'\n")
-            // A value the config doesn't accept is never written
-            let pills = ConfigEdit(path: theme.path, value: .string("bubbles"))
-            assertEquals(
-                ConfigEditor.patch(text, [pills]).errorOrNil,
-                .invalidConfig("[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid|labels|segments|capsule)"),
-            )
-            let color = ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#12345"))
-            assertEquals(ConfigEditor.patch(text, [color]).okOrNil, nil)
-            // A key the config doesn't know
-            let unknown = ConfigEdit(path: TomlKeyPath(["menu-bar"], "them"), value: .string("chips"))
-            assertEquals(ConfigEditor.patch(text, [unknown]).errorOrNil, .invalidConfig("[ERROR] menu-bar.them: Unknown key"))
-            // A config that already has errors isn't edited
-            assertEquals(ConfigEditor.patch("unknown-key = 1\n" + text, [theme]).errorOrNil, .invalidConfig("[ERROR] unknown-key: Unknown top-level key"))
-            // A key written with dots is edited in place
-            assertEquals(ConfigEditor.patch("menu-bar.theme = 'chips'\n", [theme]).okOrNil, "menu-bar.theme = 'square'\n")
+        /// Nothing is changed: these fail before anything is written
+        @Test func testUseFailsWithoutWriting() throws {
+            let missing = directory.appending(path: "missing.toml")
+            assertEquals(ConfigFiles.use(missing).errorOrNil, .notFound(missing))
+            let broken = directory.appending(path: "broken.toml")
+            try "[menu-bar]\ntheme = 'bubbles'\n".write(to: broken, atomically: true, encoding: .utf8)
+            assertEquals(ConfigFiles.use(broken).okOrNil, nil)
+            if case .invalidConfig(let errors) = ConfigFiles.use(broken).errorOrNil {
+                assertEquals(errors.count, 1)
+            } else if case .ambiguousConfig = ConfigFiles.use(broken).errorOrNil {
+                // The machine that runs the tests has two configs: nothing to check here
+            } else {
+                Issue.record("A config with errors must not be used")
+            }
         }
 
-        @Test func testPatchSeveralEdits() {
-            let text = "[menu-bar]\ntheme = 'chips'\nshow-app-icons = false\n"
-            let edits = [theme, ConfigEdit(path: TomlKeyPath(["menu-bar"], "show-app-icons"), value: nil)]
-            assertEquals(ConfigEditor.patch(text, edits).okOrNil, "[menu-bar]\ntheme = 'square'\n")
-            // All or nothing
-            let bad = ConfigEdit(path: TomlKeyPath(["menu-bar"], "enabled"), value: .string("yes"))
-            assertEquals(ConfigEditor.patch(text, [theme, bad]).okOrNil, nil)
-        }
-
-        @Test func testPatchTheBuiltInConfig() throws {
-            let text = try String(contentsOf: defaultConfigUrl, encoding: .utf8)
-            let patched = ConfigEditor.patch(text, [
-                theme,
-                ConfigEdit(path: TomlKeyPath(["menu-bar", "colors"], "focused"), value: .string("#D19A66")),
-                ConfigEdit(path: TomlKeyPath(["tiling"], "new-window-placement"), value: .string("after-focused")),
-                ConfigEdit(path: TomlKeyPath([], "start-at-login"), value: .bool(false)),
-                ConfigEdit(path: TomlKeyPath(["menu-bar"], "show-mode"), value: .bool(true)),
-            ]).okOrNil ?? ""
-            let config = parseConfig(patched)
+        @Test func testExportAddsTheMissingKeys() {
+            let shipped = "start-at-login = true\n[menu-bar]\n    theme = 'liquid'\n    show-mode = true\n[mode.main.binding]\n    alt-h = 'focus left'\n"
+            let text = "# Mine\n[menu-bar]\n    theme = 'capsule'\n"
+            let exported = ConfigFiles.exportText(text, shipped: shipped, date: Date(timeIntervalSince1970: 0))
+            let config = parseConfig(exported)
             assertEquals(config.errors, [])
-            assertEquals(config.config.menuBar.theme, .square)
+            // The value of the user stays, the missing keys are added, and the key bindings are the user's own
+            assertEquals(config.config.menuBar.theme, .capsule)
             assertEquals(config.config.menuBar.showMode, true)
-            assertEquals(config.config.menuBar.colors.focused, .rgba(Rgba(hex: "#D19A66").orDie()))
-            assertEquals(config.config.tiling.newWindowPlacement, .afterFocused)
-            assertEquals(config.config.startAtLogin, false)
-            // The comments are still there, and nothing else has changed
-            assertEquals(patched.split(separator: "\n").count, text.split(separator: "\n").count)
-            assertEquals(patched.contains("    # pills|chips|square|minimal|dots|underline|glyphs|liquid|labels|segments|capsule\n    theme = 'square'\n"), true)
-            assertEquals(patched.contains("        focused = '#D19A66'\n"), true)
+            assertEquals(config.config.startAtLogin, true)
+            assertEquals(exported.contains("# Mine\n"), true)
+            assertEquals(exported.contains("alt-h"), false)
+            assertEquals(exported.hasPrefix("# Exported from"), true)
         }
 
-        @Test func testApply() throws {
-            let file = directory.appending(path: "inlay.toml")
-            // The user has no config yet: the file is created from the built-in config
-            let builtIn = "# The built-in config\n[menu-bar]\ntheme = 'chips'\n"
-            assertEquals(ConfigEditor.apply([theme], to: .init(url: file, text: builtIn, exists: false)).errorOrNil, nil)
-            assertEquals(read(file), "# The built-in config\n[menu-bar]\ntheme = 'square'\n")
-            // Created even if the edit changes nothing
-            let other = directory.appending(path: "other.toml")
-            let noop = ConfigEdit(path: theme.path, value: .string("chips"))
-            assertEquals(ConfigEditor.apply([noop], to: .init(url: other, text: builtIn, exists: false)).errorOrNil, nil)
-            assertEquals(read(other), builtIn)
-
-            // A failed edit doesn't touch the file
-            let bad = ConfigEdit(path: theme.path, value: .string("bubbles"))
-            assertEquals(ConfigEditor.apply([bad], to: .init(url: file, text: read(file) ?? "", exists: true)).okOrNil == nil, true)
-            assertEquals(read(file), "# The built-in config\n[menu-bar]\ntheme = 'square'\n")
-            assertEquals(ConfigEditor.apply([ConfigEdit(path: theme.path, value: nil)], to: .init(url: file, text: read(file) ?? "", exists: true)).errorOrNil, nil)
-            assertEquals(read(file), "# The built-in config\n[menu-bar]\n")
+        @Test func testTildePath() {
+            let home = FileManager.default.homeDirectoryForCurrentUser.path
+            assertEquals((home + "/.config/inlay").tildePath, "~/.config/inlay")
+            assertEquals("/tmp/inlay".tildePath, "/tmp/inlay")
         }
     }
 }

@@ -595,25 +595,28 @@ extension InlayTests {
             assertEquals(TomlValue.float(1).matches(1.0), true)
         }
 
-        /// The built-in config and the example of the documentation: every key of the settings window, set and removed
+        /// The built-in config: keys of every kind, written with dots or in their table, set and removed. It's what
+        /// `inlay config --export` does with the keys that a config leaves out
         @Test func testRealConfigs() throws {
             let defaultConfig = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
-            for key in [
-                SettingsKey.startAtLogin, .autoReloadConfig, .newWindowPlacement, .startupLayout, .splitTarget, .minWindowSize,
-                .menuBarEnabled, .menuBarTheme,
-                .menuBarDimEmpty, .menuBarShowMode, .menuBarAccent, .menuBarFocused, .menuBarOccupied, .menuBarEmpty,
-                .bordersEnabled, .bordersWidth, .bordersCornerRadius, .bordersActiveColor, .bordersInactiveColor, .bordersFloatingColor,
-                .bordersGlow, .bordersGlowRadius, .bordersSingleEnabled, .bordersSingleWidth, .bordersSingleGap,
-                .splitRatio, .persistentWorkspaces, .menuBarPerMonitor,
-            ] {
-                let value: TomlValue = switch key.defaultValue {
-                    // The opposite of what the file has, which isn't always the default
-                    case .bool(let value): .bool(!((TomlPatcher.decodedValue(defaultConfig, key.path) as? Bool) ?? value))
-                    case .int(let value): .int(value + 3)
-                    case .float(let value): .float(value + 0.25)
-                    case .string: .string("#123456")
-                    case .strings: .strings(["1", "two words", "3"])
-                }
+            let keys: [(TomlKeyPath, TomlValue)] = [
+                (TomlKeyPath([], "start-at-login"), .bool(false)),
+                (TomlKeyPath([], "auto-reload-config"), .bool(false)),
+                (TomlKeyPath([], "persistent-workspaces"), .strings(["1", "two words", "3"])),
+                (TomlKeyPath(["tiling"], "new-window-placement"), .string("after-focused")),
+                (TomlKeyPath(["tiling"], "split-ratio"), .float(0.75)),
+                (TomlKeyPath(["tiling"], "min-window-size"), .int(103)),
+                (TomlKeyPath(["menu-bar"], "theme"), .string("chips")),
+                (TomlKeyPath(["menu-bar"], "per-monitor"), .bool(true)),
+                (TomlKeyPath(["menu-bar", "colors"], "focused"), .string("#123456")),
+                (TomlKeyPath(["borders"], "width"), .int(7)),
+                (TomlKeyPath(["borders"], "inactive-color"), .string("#123456")),
+                (TomlKeyPath(["borders", "single-window"], "gap"), .int(5)),
+                (TomlKeyPath(["gaps", "inner"], "horizontal"), .int(11)),
+                (TomlKeyPath(["animations"], "duration"), .int(123)),
+            ]
+            for (path, value) in keys {
+                let key = (label: path.description, path: path)
                 let patched = set(defaultConfig, key.path, value)
                 assertEquals(value.matches(TomlPatcher.decodedValue(patched, key.path)), true, additionalMsg: key.label)
                 // Only one line is different

@@ -48,12 +48,13 @@ extension InlayTests {
             assertEquals(content.windowLayout, .tiling)
             assertEquals(content.canSetLayout, true)
             assertEquals(content.canArrange, true)
-            assertEquals(footer(content), ["Reload Config", "Open inlay.toml…", "Settings…", "Pause Inlay-Debug", "Quit Inlay-Debug"])
+            assertEquals(footer(content), ["Reload Config", "Open inlay.toml…", "Pause Inlay-Debug", "Quit Inlay-Debug"])
             assertEquals(content.footer.allSatisfy(\.isEnabled), true)
             // The shortcuts of the menu itself, while it is open
-            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", ",", "e", "q"])
+            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", "e", "q"])
             assertEquals(MenuBarCardAction.forShortcut("R"), .reloadConfig)
             assertNil(MenuBarCardAction.forShortcut("o"))
+            assertNil(MenuBarCardAction.forShortcut(","))
         }
 
         @Test func testArrange() {
@@ -97,7 +98,7 @@ extension InlayTests {
                 config.modes[mainModeId]?.bindings[binding.descriptionWithKeyCode] = binding
             }
             let (_, content) = try openMenu()
-            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", ",", "e", "q"])
+            assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", "e", "q"])
             assertEquals(footer(content).contains { $0.contains("⌥") }, false)
         }
 
@@ -117,7 +118,7 @@ extension InlayTests {
             assertEquals(content.canSetLayout, false)
             assertEquals(content.canArrange, false)
             assertEquals(card.isEnabled(.reloadConfig), false)
-            assertEquals(content.footer.filter(\.isEnabled).compactMap { $0.action.shortcut }, [",", "e", "q"])
+            assertEquals(content.footer.filter(\.isEnabled).compactMap { $0.action.shortcut }, ["e", "q"])
             assertEquals(footer(content).contains("Resume Inlay-Debug"), true)
 
             ServerState.shared.isEnabled = true

@@ -14,7 +14,7 @@ let usage =
 @main
 struct Main {
     static func main() async {
-        let args = CommandLine.arguments.slice(1...) ?? []
+        var args = CommandLine.arguments.slice(1...) ?? []
 
         if args.isEmpty {
             exit(EXIT_CODE_TWO, err: usage)
@@ -77,6 +77,14 @@ struct Main {
             switch ConfigReference.load().flatMap({ $0.explain(key) }) {
                 case .success(let text): exit(EXIT_CODE_ZERO, out: text)
                 case .failure(let message): exit(failExitCode, err: message)
+            }
+        }
+        // The server has a working directory of its own: the path of 'config --use' goes to it absolute
+        if let configArgs = parsedArgs as? ConfigCmdArgs, case .use(let path) = configArgs.mode, !path.hasPrefix("/") {
+            let absolute = URL(filePath: path, relativeTo: URL(filePath: FileManager.default.currentDirectoryPath + "/")).standardizedFileURL.path
+            let array = args.toArray()
+            if let index = array.firstIndex(of: "--use"), array.getOrNil(atIndex: index + 1) == path {
+                args = StrArrSlice.new(array.enumerated().map { $0.offset == index + 1 ? absolute : $0.element }, 0 ..< array.count) ?? args
             }
         }
 

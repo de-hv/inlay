@@ -4,7 +4,7 @@ import Foundation
 import Testing
 
 extension InlayTests {
-    /// The config folder as a link to a folder of the user, from the settings window: the rules of install.sh
+    /// The config folder as a link to a folder of the user, for `inlay config --use`: the rules of install.sh
     @Suite struct ConfigFolderLinkTest {
         private let root: URL
         /// The config folder: ~/.config/inlay

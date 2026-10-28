@@ -74,16 +74,6 @@ private let serverHelp = """
                               default and custom colors), and its menu, and exit. Inlay doesn't start.
                               <scale> is the number of pixels per point (2 by default, 1 ... 8)
       --render-borders <dir>  Draw the window borders in every state to PNG files and exit. Inlay doesn't start
-      --render-settings <dir> [<config>]
-                              Draw the pages of the Settings window to PNG files and exit, as they are with
-                              the shipped config or with the <config> file. Inlay doesn't start, and the
-                              config of the user is neither read nor written
-      --debug-settings <config> [--inspect] [--screen-height <points>]
-                              Open the Settings window alone, editing the <config> file, and exit when it is
-                              closed. Inlay doesn't start: no window is managed and no permission is needed.
-                              --inspect: don't wait; print where the controls of every tab are and whether
-                              they can be reached, and exit. --screen-height: as if the usable part of the
-                              screen was that tall
       --debug-borders [<sec>] Show the borders around the windows that are on the screen for a few seconds
                               (4 by default), print how they are stacked, and exit. It needs no permission,
                               and no window is moved
@@ -91,8 +81,6 @@ private let serverHelp = """
 
 nonisolated(unsafe) private var _serverArgs = ServerArgs()
 var serverArgs: ServerArgs { unsafe _serverArgs }
-/// The same as the '--config-path' flag, for the modes that start without parsing the flags of the server. See: runSettingsDebug
-@MainActor func useConfigLocation(_ path: String) { unsafe _serverArgs.configLocation = path }
 private func initServerArgs() {
     let args = CommandLine.arguments.slice(1...) ?? []
     if args.contains(where: { $0 == "-h" || $0 == "--help" }) {

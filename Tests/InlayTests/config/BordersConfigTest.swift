@@ -119,45 +119,5 @@ extension InlayTests {
             assertEquals(parseConfig("borders = 1").strErrors, ["[ERROR] borders: Expected type is 'Table'. But actual type is 'Int'"])
             assertEquals(parseConfig("borders.mode-colors = 1").strErrors, ["[ERROR] borders.mode-colors: Expected type is 'Table'. But actual type is 'Int'"])
         }
-
-        /// The settings window writes these keys. The defaults it shows must be the ones of the parser
-        @Test func testSettingsKeysAgreeWithTheParser() {
-            let defaults = BordersConfig()
-            assertEquals(SettingsFeatures.borders, true)
-            assertEquals(SettingsKey.bordersEnabled.defaultValue, .bool(defaults.enabled))
-            assertEquals(SettingsKey.bordersWidth.defaultValue, .int(Int(defaults.width)))
-            assertEquals(SettingsKey.bordersCornerRadius.defaultValue, .int(Int(defaults.cornerRadius)))
-            assertEquals(SettingsKey.bordersSquareCorners.defaultValue, .bool(defaults.squareCorners))
-            assertEquals(SettingsKey.bordersActiveColor.defaultValue, .string(defaults.activeColor.description))
-            assertEquals(SettingsKey.bordersInactiveColor.defaultValue, .string(defaults.inactiveColor.description))
-            assertEquals(SettingsKey.bordersFloatingColor.defaultValue, .string(defaults.floatingColor.description))
-            assertEquals(SettingsKey.bordersGlow.defaultValue, .bool(defaults.glow))
-            assertEquals(SettingsKey.bordersGlowRadius.defaultValue, .int(Int(defaults.glowRadius)))
-            // Every key, written by the patcher into an empty config, is accepted by the parser
-            var text = ""
-            for (key, value) in [
-                (SettingsKey.bordersEnabled, TomlValue.bool(false)),
-                (.bordersWidth, .int(20)),
-                (.bordersCornerRadius, .int(0)),
-                (.bordersSquareCorners, .bool(false)),
-                (.bordersActiveColor, .string("#D19A66")),
-                (.bordersInactiveColor, .string("#00000000")),
-                (.bordersFloatingColor, .string("system-accent")),
-                (.bordersGlow, .bool(true)),
-                (.bordersGlowRadius, .int(40)),
-            ] {
-                text = (try? TomlPatcher.set(text, key.path, value)) ?? "<patch failed>"
-            }
-            let result = parseConfig(text)
-            assertEquals(result.errors, [])
-            assertEquals(result.config.borders.enabled, false)
-            assertEquals(result.config.borders.width, 20)
-            assertEquals(result.config.borders.cornerRadius, 0)
-            assertEquals(result.config.borders.squareCorners, false)
-            assertEquals(result.config.borders.inactiveColor.description, "#00000000")
-            assertEquals(result.config.borders.floatingColor, .systemAccent)
-            assertEquals(result.config.borders.glow, true)
-            assertEquals(result.config.borders.glowRadius, 40)
-        }
     }
 }

@@ -2,7 +2,7 @@ import AppKit
 import Common
 
 /// The entry point of the app. Inlay is an agent app: no Dock icon and no main menu,
-/// only the menu bar item, the settings window and the window with the config diagnostics
+/// only the menu bar item and the window with the config diagnostics
 @MainActor
 public func runInlayApp() -> Never {
     // Handled before anything else: it must not ask for permissions or show the menu bar item
@@ -29,18 +29,6 @@ public func runInlayApp() -> Never {
         }
         exit(EXIT_CODE_ZERO, out: "The borders were rendered to \(directory)")
     }
-    if let index = CommandLine.arguments.firstIndex(of: renderSettingsFlag) {
-        guard let directory = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
-            exit(EXIT_CODE_TWO, err: "Missing <dir> in \(renderSettingsFlag) flag")
-        }
-        do {
-            let config = CommandLine.arguments.getOrNil(atIndex: index + 2).map { URL(filePath: $0) }
-            try renderSettingsSamples(to: URL(filePath: directory), config: config)
-        } catch {
-            exit(EXIT_CODE_TWO, err: "Can't render the settings: \(error.localizedDescription)")
-        }
-        exit(EXIT_CODE_ZERO, out: "The settings were rendered to \(directory)")
-    }
     if let index = CommandLine.arguments.firstIndex(of: checkConfigFlag) {
         guard let path = CommandLine.arguments.getOrNil(atIndex: index + 1) else {
             exit(EXIT_CODE_TWO, err: "Missing <path> in \(checkConfigFlag) flag")
@@ -48,16 +36,6 @@ public func runInlayApp() -> Never {
         let report = checkConfigFile(URL(filePath: path))
         if report.isOk { exit(EXIT_CODE_ZERO, out: report.text) }
         exit(EXIT_CODE_TWO, err: report.text)
-    }
-    if let index = CommandLine.arguments.firstIndex(of: debugSettingsFlag) {
-        guard let path = CommandLine.arguments.getOrNil(atIndex: index + 1), FileManager.default.fileExists(atPath: path) else {
-            exit(EXIT_CODE_TWO, err: "Missing <config> in \(debugSettingsFlag) flag, or the file doesn't exist")
-        }
-        let screenHeight = CommandLine.arguments.firstIndex(of: "--screen-height")
-            .flatMap { CommandLine.arguments.getOrNil(atIndex: $0 + 1) }
-            .flatMap(Double.init)
-            .map { CGFloat(min(max($0, 300), 3000)) }
-        runSettingsDebug(config: URL(filePath: path), inspect: CommandLine.arguments.contains("--inspect"), screenHeight: screenHeight)
     }
     if let index = CommandLine.arguments.firstIndex(of: debugBordersFlag) {
         let seconds = CommandLine.arguments.getOrNil(atIndex: index + 1).flatMap(Double.init) ?? 4
@@ -99,10 +77,10 @@ final class InlayAppDelegate: NSObject, NSApplicationDelegate {
         BordersController.shared.start()
     }
 
-    /// Opening Inlay again (from Applications, Spotlight...) shows the settings.
-    /// It's the way back to them when the menu bar item is hidden
+    /// Opening Inlay again (from Applications, Spotlight...) opens the config in an editor.
+    /// It's the way back to it when the menu bar item is hidden
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        SettingsWindowController.shared.show()
+        openConfigInEditor()
         return false
     }
 

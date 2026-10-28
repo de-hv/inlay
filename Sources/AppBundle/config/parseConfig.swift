@@ -163,8 +163,8 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
     "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menu-bar.colors] and [borders]")),
-    "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone: the changes are listed in Settings › Changes")),
-    "settings": Parser(\.settingsWindow, parseSettingsWindow),
+    "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone")),
+    "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
     "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 

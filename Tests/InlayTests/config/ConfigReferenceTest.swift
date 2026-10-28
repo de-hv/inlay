@@ -28,7 +28,6 @@ extension InlayTests {
                 ("borders", Array(bordersParserTable.keys)),
                 ("borders.single-window", Array(singleWindowBorderParserTable.keys)),
                 ("animations", Array(animationsParserTable.keys)),
-                ("settings", Array(settingsWindowParserTable.keys)),
                 ("on-window-detected", Array(windowDetectedParser.keys)),
                 ("on-window-detected.if", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode

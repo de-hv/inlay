@@ -1,13 +1,15 @@
 #!/bin/bash
 # Regenerates the images of the README in docs/images from their sources in docs/images/src:
 #
-#   - the real renders of the app (menu bar item, borders, Settings), drawn off screen by build/Inlay.app
-#     with --render-menu-bar, --render-borders and --render-settings. The app is not started as the window manager
+#   - the real renders of the app (menu bar item, borders), drawn off screen by build/Inlay.app with
+#     --render-menu-bar and --render-borders. The app is not started as the window manager
+#   - an image per theme of the menu bar item, for the gallery of the README: docs/images/themes/<theme>.png
 #   - the sheets that gather those renders with their captions, and the illustrations: HTML pages turned into PNG
 #     files by a headless Chrome
 #   - the animations: HTML pages whose frames gif.swift turns into GIF files
 #
-# Usage: scripts/make-docs-images.sh [--no-build] [name ...]     (without names: all the images)
+# Usage: scripts/make-docs-images.sh [--no-build] [name ...]     (without names: all the images; 'themes' or
+#        'theme-<name>' for the gallery of themes)
 #
 # It needs Google Chrome and the Xcode Command Line Tools. Nothing is installed, and Inlay, its config and
 # /Applications are not touched. The renders show the accent color of this Mac.
@@ -26,7 +28,7 @@ names=()
 for arg in "$@"; do
   case "$arg" in
     --no-build) build=0 ;;
-    -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h | --help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) names+=("$arg") ;;
   esac
 done
@@ -43,17 +45,6 @@ mkdir -p "$WORK"
 "$APP" --render-menu-bar "$WORK/menu-bar" >/dev/null
 "$APP" --render-menu-bar "$WORK/menu-bar-6x" 6 >/dev/null
 "$APP" --render-borders "$WORK/borders" >/dev/null
-"$APP" --render-settings "$WORK/settings" >/dev/null
-# The Borders page with other values of 'width', for the animation of the file and the window in sync
-for width in 2 8; do
-  sed "s/^    width = 4\$/    width = $width/" inlay.toml >"$WORK/width-$width.toml"
-  "$APP" --render-settings "$WORK/settings-width-$width" "$WORK/width-$width.toml" >/dev/null
-done
-# The render of a page, and the name of its image: settings-<page>.png
-for page in general:general menuBar:menu-bar borders:borders windows:windows keyboard:keyboard window-menuBar:window-menu-bar; do
-  render=${page%%:*} name=${page##*:}
-  if wanted "settings-$name"; then cp "$WORK/settings/settings-$render.png" "$OUT/settings-$name.png"; echo "settings-$name.png"; fi
-done
 
 chrome() { # chrome <width> <height> <scale> <more options...>
   local width=$1 height=$2 scale=$3
@@ -66,7 +57,6 @@ chrome() { # chrome <width> <height> <scale> <more options...>
 # --- PNG: name:width:height (in points; rendered at 2x) ---
 PAGES=(
   hero:1280:800
-  menu-bar-themes:880:870
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500
@@ -76,7 +66,7 @@ PAGES=(
   borders-corner-radius:880:310
   borders-glow:880:310
   borders-gaps:880:310
-  terminal-install:880:520
+  terminal-install:880:610
   terminal-cli:880:486
   terminal-uninstall:880:700
 )
@@ -87,9 +77,18 @@ for page in "${PAGES[@]}"; do
   echo "$name.png  ${width}x${height}@2x"
 done
 
+# --- PNG: a theme of the menu bar item per image, for the gallery of the README ---
+THEMES=(liquid pills chips square minimal dots underline glyphs labels segments capsule)
+mkdir -p "$OUT/themes"
+for theme in "${THEMES[@]}"; do
+  wanted "theme-$theme" || wanted themes || continue
+  chrome 880 112 2 --screenshot="$OUT/themes/$theme.png" "file://$SRC/menu-bar-theme.html?theme=$theme" >/dev/null
+  echo "themes/$theme.png  880x112@2x"
+done
+
 # --- GIF ---
 ANIMATIONS=(tiling-dwindle tiling-startup-layout tiling-split-target tiling-split-ratio tiling-min-window-size
-  tiling-minimize gaps settings-sync)
+  tiling-minimize gaps)
 gif_tool="$WORK/gif"
 if [ ! -x "$gif_tool" ] || [ "$SRC/gif.swift" -nt "$gif_tool" ]; then
   swiftc -O "$SRC/gif.swift" -o "$gif_tool"

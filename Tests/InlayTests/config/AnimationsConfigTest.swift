@@ -67,14 +67,5 @@ extension InlayTests {
             assertEquals(parseConfig("animations.duration = -1").errors.count, 1)
             assertEquals(parseConfig("animations.speed = 1").strErrors, ["[ERROR] animations.speed: Unknown key"])
         }
-
-        /// The settings window writes these keys. The defaults it shows must be the ones of the parser
-        @Test func testSettingsKeysAgreeWithTheParser() {
-            let defaults = AnimationsConfig()
-            assertEquals(SettingsKey.animationsEnabled.defaultValue, .bool(defaults.enabled))
-            assertEquals(SettingsKey.animationsDuration.defaultValue, .int(defaults.duration))
-            assertEquals(SettingsKey.animationsWorkspaceSwitch.defaultValue, .string(defaults.workspaceSwitch.rawValue))
-            assertEquals(defaults.workspaceSwitch, .horizontal)
-        }
     }
 }

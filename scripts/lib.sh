@@ -26,12 +26,21 @@ SIGN_KEYCHAIN="${INLAY_SIGN_KEYCHAIN:-}"
 # Colors and symbols only go to a terminal that shows them: not to a pipe or a log, and not with NO_COLOR
 # (https://no-color.org) or TERM=dumb. Without them the output is the plain one: '==>', 'warning:', 'error:'
 use_color() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; }
+# The colors of Material 3, as Pixel phones have them, on a terminal that shows 24-bit colors: tones in the middle of
+# their palettes, readable on a dark and on a light background. Elsewhere, the 16 colors of the terminal
+use_true_color() { case "${COLORTERM:-}" in truecolor|24bit) return 0 ;; *) return 1 ;; esac; }
 # set_styles <prefix> <file descriptor>: <prefix>_BOLD, <prefix>_DIM... are escape sequences, or empty
 set_styles() {
   local bold="" dim="" red="" green="" yellow="" blue="" cyan="" magenta="" reset=""
   if use_color "$2"; then
-    bold=$'\033[1m' dim=$'\033[2m' red=$'\033[31m' green=$'\033[32m' yellow=$'\033[33m'
-    blue=$'\033[34m' cyan=$'\033[36m' magenta=$'\033[35m' reset=$'\033[0m'
+    bold=$'\033[1m' dim=$'\033[2m' reset=$'\033[0m'
+    if use_true_color; then
+      # Blue 400 (the primary color, also for 'cyan'), green 400, yellow 600, red 400 and purple 400 (tertiary)
+      blue=$'\033[38;2;102;157;246m' cyan="$blue" green=$'\033[38;2;91;185;116m' yellow=$'\033[38;2;249;171;0m'
+      red=$'\033[38;2;238;103;92m' magenta=$'\033[38;2;175;92;247m'
+    else
+      red=$'\033[31m' green=$'\033[32m' yellow=$'\033[33m' blue=$'\033[34m' cyan=$'\033[36m' magenta=$'\033[35m'
+    fi
   fi
   eval "${1}_BOLD=\$bold ${1}_DIM=\$dim ${1}_RED=\$red ${1}_GREEN=\$green ${1}_YELLOW=\$yellow"
   eval "${1}_BLUE=\$blue ${1}_CYAN=\$cyan ${1}_MAGENTA=\$magenta ${1}_RESET=\$reset"
@@ -361,6 +370,32 @@ kill_tree() {
   kill "$1" 2>/dev/null || true
 }
 
+# build_phase <line>. What a '==> ' line of build-app.sh says, short: the long values (the commit, the version of the
+# compiler, the identity) stay in the log
+build_phase() {
+  case "$1" in
+    "==> Building"*) printf 'compiling\n' ;;
+    "==> Assembling"*) printf 'assembling the app\n' ;;
+    "==> Signing with"*) printf 'signing · if macOS asks for your keychain password, choose "Always Allow"\n' ;;
+    "==> Signing"*) printf 'signing\n' ;;
+    "==> Verifying"*) printf 'verifying the signature\n' ;;
+    "==> Built"*) printf 'done\n' ;;
+    *) printf 'starting\n' ;;
+  esac
+}
+
+# progress_bar <count> <total> <cells>. '━━━━━━━━━━──────', the part that is done in the primary color
+progress_bar() {
+  local filled=0 i=0 bar="$C_CYAN"
+  if [ "$2" -gt 0 ] 2>/dev/null; then filled=$(($1 * $3 / $2)); fi
+  while [ "$i" -lt "$3" ]; do
+    if [ "$i" -eq "$filled" ]; then bar="$bar$C_RESET$C_DIM"; fi
+    bar="${bar}━"
+    i=$((i + 1))
+  done
+  printf '%s%s' "$bar" "$C_RESET"
+}
+
 # spin_command <log> <command>... Runs the command with its output in the log. On a terminal that shows colors,
 # one line redrawn in place says how far it got: the '[n/m]' of swift build, or the last '==>' line. Elsewhere, and
 # with VERBOSE=true, the output is shown as it comes, and it also goes to the log. Returns the status of the
@@ -419,11 +454,7 @@ spin_command() {
         fi
         ;;
       *)
-        text="${line#==> }"
-        case "$text" in
-          "Signing with"*) text="Signing · if macOS asks for your keychain password, choose \"Always Allow\"" ;;
-          "") text="Starting" ;;
-        esac
+        text="$(build_phase "$line")"
         room=$((width - 18))
         [ "$room" -gt 0 ] || room=0
         printf '\r\033[2K  %s%s%s %s  %s%s%s' "$C_CYAN" "$spinner" "$C_RESET" "${text:0:$room}" "$C_DIM" \
@@ -616,6 +647,8 @@ choose_many() {
 
 CL_ACTIVE=false
 CL_STTY=""
+# The title of the group that starts at a step, or nothing. See: checklist_groups
+CL_GROUPS=()
 CL_NAMES=()
 CL_STATES=()
 CL_DETAILS=()
@@ -626,12 +659,22 @@ CL_DRAWN=false
 # The rows that the last redraw printed: the steps, and the options of a menu
 CL_ROWS=0
 CL_FRAME=""
-CL_NAME_WIDTH=14
+CL_NAME_WIDTH=13
+# The '[n/m]' of the build, for the bar of the step that runs. See: checklist_spin_until
+CL_PROGRESS=()
 CL_WIDTH=80
 # The options of the menu that is open, drawn right below the line of the step it belongs to. See: checklist_menu
 CL_MENU_AT=-1
 CL_MENU_STEP=0
 CL_MENU_LINES=()
+
+# checklist_groups <index>:<title>... The steps in groups, from the step at <index> to the next group: a title
+# over them, with how many are done, and no borders. Before checklist_start
+checklist_groups() {
+  local entry
+  CL_GROUPS=()
+  for entry in "$@"; do CL_GROUPS[${entry%%:*}]="${entry#*:}"; done
+}
 
 # checklist_start <name>... Draws the list, every step waiting
 checklist_start() {
@@ -639,6 +682,7 @@ checklist_start() {
   CL_NAMES=("$@")
   CL_STATES=()
   CL_DETAILS=()
+  CL_PROGRESS=()
   CL_NOTES=()
   while [ "$i" -lt "$#" ]; do
     CL_STATES[i]=pending
@@ -677,21 +721,41 @@ checklist_set() {
 
 # The line of a step
 checklist_line() {
-  local mark detail="${CL_DETAILS[$1]}" style="$C_DIM" room
+  local mark detail="${CL_DETAILS[$1]}" style="$C_DIM" room bar="" progress="${CL_PROGRESS[$1]:-}"
   case "${CL_STATES[$1]}" in
     pending) mark="${C_DIM}·$C_RESET" ;;
-    run) mark="$C_CYAN$CL_FRAME$C_RESET" ;;
+    run) mark="$C_CYAN$CL_FRAME$C_RESET" style="" ;;
     ok) mark="${C_GREEN}✓$C_RESET" ;;
     warn) mark="$C_YELLOW!$C_RESET" style="$C_YELLOW" ;;
     bad) mark="${C_RED}✗$C_RESET" style="$C_RED" ;;
     ask) mark="$C_CYAN?$C_RESET" style="" ;;
   esac
   # The detail gets what is left of the width of the terminal, and an ellipsis if it is cut
-  room=$((CL_WIDTH - 5 - CL_NAME_WIDTH))
+  room=$((CL_WIDTH - 7 - CL_NAME_WIDTH))
+  # The build, while it runs: a bar before its detail, if both fit
+  if [ "${CL_STATES[$1]}" = run ] && [ -n "$progress" ] && [ "$room" -ge $((17 + ${#detail})) ]; then
+    bar="$(progress_bar "${progress%/*}" "${progress#*/}" 16) "
+    room=$((room - 17))
+  fi
   if [ "${#detail}" -gt "$room" ]; then
     if [ "$room" -gt 1 ]; then detail="${detail:0:$((room - 1))}…"; else detail=""; fi
   fi
-  printf '\033[2K  %s %s%-*s%s %s%s%s\n' "$mark" "$C_BOLD" "$CL_NAME_WIDTH" "${CL_NAMES[$1]}" "$C_RESET" "$style" "$detail" "$C_RESET"
+  printf '\033[2K    %s %-*s %s%s%s%s\n' "$mark" "$CL_NAME_WIDTH" "${CL_NAMES[$1]}" "$bar" "$style" "$detail" "$C_RESET"
+}
+
+# The title of a group: 'Prepare  1/2', the steps of the group that are done out of all of them
+checklist_group_line() {
+  local i=$(($1 + 1)) count=1 done=0
+  while [ "$i" -lt "${#CL_NAMES[@]}" ] && [ -z "${CL_GROUPS[$i]:-}" ]; do
+    count=$((count + 1))
+    i=$((i + 1))
+  done
+  i="$1"
+  while [ "$i" -lt $(($1 + count)) ]; do
+    case "${CL_STATES[$i]}" in ok|warn) done=$((done + 1)) ;; esac
+    i=$((i + 1))
+  done
+  printf '\033[2K\n\033[2K  %s%s%s  %s%d/%d%s\n' "$C_BOLD$C_MAGENTA" "${CL_GROUPS[$1]}" "$C_RESET" "$C_DIM" "$done" "$count" "$C_RESET"
 }
 
 # Draws the list again where it is, and removes what is below it. If it can't be reached anymore (a small terminal
@@ -710,6 +774,10 @@ checklist_draw() {
     fi
   fi
   while [ "$i" -lt "$count" ]; do
+    if [ -n "${CL_GROUPS[$i]:-}" ]; then
+      checklist_group_line "$i"
+      printed=$((printed + 2))
+    fi
     checklist_line "$i"
     printed=$((printed + 1))
     if [ "$i" -eq "$CL_MENU_AT" ] && [ "${#CL_MENU_LINES[@]}" -gt 0 ]; then
@@ -801,11 +869,13 @@ checklist_spin_until() {
       "["*)
         count="${line#[}" && count="${count%%/*}"
         total="${line#*/}" && total="${total%%]*}"
+        CL_PROGRESS[index]="$count/$total"
         text="$count/$total"
         ;;
-      "==> Signing with"*) text="signing · if macOS asks for your keychain password, choose \"Always Allow\"" ;;
-      "==> "*) text="${line#==> }" ;;
-      *) text="starting" ;;
+      *)
+        CL_PROGRESS[index]=""
+        text="$(build_phase "$line")"
+        ;;
     esac
     CL_DETAILS[index]="$text · $(format_duration $((SECONDS - start)))"
     checklist_draw
@@ -813,6 +883,7 @@ checklist_spin_until() {
     sleep 0.15
   done
   wait "$pid" || status=$?
+  CL_PROGRESS[index]=""
   trap 'printf "\r\033[J"; checklist_restore_terminal; printf "\n"; exit 130' INT
   return "$status"
 }
@@ -845,6 +916,26 @@ checklist_ask_yes_no() {
     "") [ "$default" = y ] ;;
     *) return 1 ;;
   esac
+}
+
+# checklist_confirm <action>. Below the list: '↵ <action>   esc cancel', a key and nothing else. Enter (or y) goes on,
+# Esc (or n, q) doesn't. Without the redraw: ask_yes_no
+checklist_confirm() {
+  if [ "$CL_ACTIVE" != true ]; then
+    ask_yes_no "$(printf '%s' "${1:0:1}" | tr '[:lower:]' '[:upper:]')${1:1}?" y
+    return
+  fi
+  checklist_flush_input
+  printf '\033[2K\n\033[2K  %s↵%s %s%s%s   %sesc%s %scancel%s' "$C_BOLD$C_CYAN" "$C_RESET" "$C_BOLD" "$1" "$C_RESET" \
+    "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
+  CL_EXTRA=$((CL_EXTRA + 1))
+  while true; do
+    read_key
+    case "$KEY" in
+      enter|y|Y) printf '\n'; CL_EXTRA=$((CL_EXTRA + 1)); return 0 ;;
+      escape|n|N|q|Q) printf '\n'; CL_EXTRA=$((CL_EXTRA + 1)); return 1 ;;
+    esac
+  done
 }
 
 # checklist_ask_path <label>. ask_path, below the list. Sets ANSWER

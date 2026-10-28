@@ -115,7 +115,7 @@ final class MenuBarMenu: NSObject {
 
     private func run(_ action: MenuBarCardAction) {
         close()
-        // After the panel is gone: Settings, for one, opens a window
+        // After the panel is gone: the config, for one, opens in an editor
         Task.startUnstructured { @MainActor in self.perform(action) }
     }
 
@@ -135,8 +135,6 @@ final class MenuBarMenu: NSObject {
                 openConfigInEditor()
             case .togglePause:
                 runMenuBarCommand("enable toggle", force: true)
-            case .openSettings:
-                SettingsWindowController.shared.show()
             case .promptForAccessibility:
                 ServerState.shared.axPermissionStatus = .waitingWithPrompt
             case .quit:
@@ -173,7 +171,6 @@ enum MenuBarCardAction: Hashable, Sendable {
     case showConfigProblems
     case openConfig
     case togglePause
-    case openSettings
     case promptForAccessibility
     case quit
 
@@ -186,7 +183,6 @@ enum MenuBarCardAction: Hashable, Sendable {
             case .showConfigProblems: card.configProblems ?? ""
             case .openConfig: Strings.Menu.openConfig
             case .togglePause: card.status == .paused ? Strings.Menu.resume : Strings.Menu.pause
-            case .openSettings: Strings.Menu.settings
             case .promptForAccessibility: Strings.Menu.needsAccessibility
             case .quit: Strings.Menu.quit
         }
@@ -196,7 +192,6 @@ enum MenuBarCardAction: Hashable, Sendable {
     var shortcut: String? {
         switch self {
             case .reloadConfig: "r"
-            case .openSettings: ","
             case .togglePause: "e"
             case .quit: "q"
             default: nil
@@ -204,7 +199,7 @@ enum MenuBarCardAction: Hashable, Sendable {
     }
 
     static func forShortcut(_ key: String) -> MenuBarCardAction? {
-        [.reloadConfig, .openSettings, .togglePause, .quit].first { $0.shortcut == key.lowercased() }
+        [.reloadConfig, .togglePause, .quit].first { $0.shortcut == key.lowercased() }
     }
 }
 
@@ -310,7 +305,6 @@ struct MenuBarPanelContent: Equatable {
             : [
                 (.reloadConfig, "arrow.clockwise"),
                 (.openConfig, "doc.text"),
-                (.openSettings, "gearshape"),
                 (.togglePause, card.status == .paused ? "play" : "pause"),
                 (.quit, "power"),
             ]
@@ -386,6 +380,21 @@ extension NSImage {
         image.resizingMode = .stretch
         return image
     }
+}
+
+/// "cmd-alt-ctrl-j" -> "⌃⌥⌘J", in the order macOS shows the modifiers
+func prettyKeyNotation(_ binding: String) -> String {
+    let symbols: [String: String] = ["ctrl": "⌃", "alt": "⌥", "shift": "⇧", "cmd": "⌘"]
+    let keys: [String: String] = [
+        "left": "←", "right": "→", "up": "↑", "down": "↓", "enter": "↩", "esc": "⎋", "space": "Space", "tab": "⇥",
+        "backspace": "⌫", "comma": ",", "period": ".", "slash": "/", "semicolon": ";", "minus": "-", "equal": "=",
+        "leftSquareBracket": "[", "rightSquareBracket": "]", "quote": "'", "backtick": "`", "backslash": "\\",
+    ]
+    var parts = binding.split(separator: "-", omittingEmptySubsequences: false).map(String.init)
+    // 'cmd-alt-minus' is written that way; a bare '-' would be an empty part
+    let key = parts.popLast() ?? ""
+    let modifiers = ["ctrl", "alt", "shift", "cmd"].filter(parts.contains).compactMap { symbols[$0] }.joined()
+    return modifiers + (keys[key] ?? key.uppercased())
 }
 
 /// The key of a binding mode that goes back to main: esc if it does, else the first one in the order of the keys

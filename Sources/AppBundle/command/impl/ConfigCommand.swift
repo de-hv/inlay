@@ -5,7 +5,7 @@ struct ConfigCommand: Command {
     let args: ConfigCmdArgs
     /*conforms*/ let shouldResetClosedWindowsCache = false
 
-    func run(_ env: CmdEnv, _ io: CmdIo) -> BinaryExitCode {
+    func run(_ env: CmdEnv, _ io: CmdIo) async -> BinaryExitCode {
         switch args.mode {
             case .getKey(let key):
                 return getKey(io, args: args, key: key)
@@ -23,6 +23,16 @@ struct ConfigCommand: Command {
                 return .succ(io.out(allKeys.joined(separator: "\n")))
             case .configPath:
                 return .succ(io.out(configUrl.absoluteURL.path))
+            case .use(let path):
+                return await changeConfig(io, ConfigFiles.use(URL(filePath: path)))
+            case .unlink:
+                return await changeConfig(io, ConfigFiles.unlink())
+            case .export:
+                let url = findCustomConfigUrl().urlOrNil ?? defaultConfigUrl
+                return switch Result(catching: { try String(contentsOf: url, encoding: .utf8) }) {
+                    case .success(let text): .succ(io.out(ConfigFiles.exportText(text)))
+                    case .failure(let error): .fail(io.err("Can't read \(url.path): \(error.localizedDescription)"))
+                }
             case .explain(let key):
                 // The CLI answers it on its own, without the server. This is for 'config --explain' run by a binding
                 return switch ConfigReference.load().flatMap({ $0.explain(key) }) {
@@ -30,6 +40,19 @@ struct ConfigCommand: Command {
                     case .failure(let message): .fail(io.err(message))
                 }
         }
+    }
+}
+
+/// After --use or --unlink: says what was done, and loads the config that is now in use
+@MainActor private func changeConfig(_ io: CmdIo, _ result: Result<String, ConfigFiles.UseError>) async -> BinaryExitCode {
+    switch result {
+        case .success(let message):
+            io.out(message)
+            let reload = await reloadConfig_nonCancellable()
+            if !reload.stderr.isEmpty { io.err(reload.stderr) }
+            return .from(bool: reload.isOk)
+        case .failure(let error):
+            return .fail(io.err(error.message))
     }
 }
 

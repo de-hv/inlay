@@ -2,7 +2,7 @@ import Common
 import Foundation
 
 /// The config folder (~/.config/inlay) as a symbolic link to a folder of the user, a dotfiles repo for example: the
-/// question that scripts/install.sh asks, from the settings window, with the same rules. Inlay reads and writes the
+/// question that scripts/install.sh asks, for `inlay config --use <folder>`, with the same rules. Inlay reads the
 /// inlay.toml of that folder; nothing else of it is touched. A real config folder is never deleted (it is renamed),
 /// and the folder that a link points to is never written, but for the inlay.toml it is given when it has none
 enum ConfigFolderLink {

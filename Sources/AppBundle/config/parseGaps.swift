@@ -7,8 +7,6 @@ struct Gaps: ConvenienceMutable, Equatable, Sendable {
     var _smart: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 
     static let zero = Gaps(inner: .zero, outer: .zero)
-    /// What the sliders of the settings window offer. The config takes any value
-    static let settingsRange = 0 ... 60
 
     struct Inner: ConvenienceMutable, Equatable, Sendable {
         var vertical: DynamicConfigValue<Int>

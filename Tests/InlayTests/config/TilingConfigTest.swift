@@ -14,10 +14,6 @@ extension InlayTests {
                 result.config.tiling,
                 TilingConfig(newWindowPlacement: .dwindle, splitRatio: 0.5, startupLayout: .grid, splitTarget: .focused, minWindowSize: 100),
             )
-            // The settings window shows the same defaults
-            assertEquals(SettingsKey.startupLayout.defaultValue, .string(TilingConfig().startupLayout.rawValue))
-            assertEquals(SettingsKey.splitTarget.defaultValue, .string(TilingConfig().splitTarget.rawValue))
-            assertEquals(SettingsKey.minWindowSize.defaultValue, .int(Int(TilingConfig().minWindowSize)))
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.tiling, TilingConfig())
         }

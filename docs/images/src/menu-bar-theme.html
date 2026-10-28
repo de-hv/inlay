@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>A theme of the menu bar item</title>
+<link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
+<style>
+  body { width: 880px; height: 112px; }
+  .sheet { padding-top: 14px; padding-bottom: 14px; }
+  .cap { margin: 0 0 8px; }
+  .pair { display: grid; grid-template-columns: 404px 404px; gap: 16px; }
+  .pair > div { border-radius: 8px; overflow: hidden; height: 36px; } .pair > div:first-child { background: #383d5c; } .pair > div:last-child { background: #e6e6e6; }
+  .item { display: block; height: 36px; }
+</style></head>
+<body class="png">
+<!-- One theme, a real render on a dark and on a light menu bar: menu-bar-theme.html?theme=<name>. What each one is: the
+     gallery of the README. See: scripts/make-docs-images.sh -->
+<div class="sheet">
+  <div class="cap"><code id="name"></code></div>
+  <div class="pair"><div><img class="item" id="dark"></div><div><img class="item" id="light"></div></div>
+</div>
+<script>
+  const theme = new URLSearchParams(location.search).get('theme') || 'liquid';
+  document.getElementById('name').textContent = `theme = '${theme}'`;
+  document.getElementById('dark').src = `render/menu-bar-6x/${theme}-default-dark.png`;
+  document.getElementById('light').src = `render/menu-bar-6x/${theme}-default-light.png`;
+</script>
+</body></html>

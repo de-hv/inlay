@@ -65,6 +65,24 @@ enum MenuBarSamples {
     }
 }
 
+extension MenuBarSamples {
+    /// The item over a small menu bar: the thumbnail of a theme in the pop-up of the settings
+    @MainActor
+    static func thumbnail(_ config: MenuBarConfig, isDarkBar: Bool, height: CGFloat = 20) -> NSImage? {
+        guard let item = image(withSampleLabels(config), isDarkBar: isDarkBar, scale: 2) else { return nil }
+        let zoom = (height - 4) / item.size.height
+        let itemSize = CGSize(width: item.size.width * zoom, height: item.size.height * zoom)
+        let padding: CGFloat = 6
+        let bar = isDarkBar ? NSColor(srgbRed: 0.24, green: 0.25, blue: 0.37, alpha: 1) : NSColor(srgbRed: 0.90, green: 0.90, blue: 0.91, alpha: 1)
+        return NSImage(size: CGSize(width: itemSize.width + 2 * padding, height: height), flipped: false) { rect in
+            bar.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: 4, yRadius: 4).fill()
+            item.draw(in: CGRect(x: padding, y: (rect.height - itemSize.height) / 2, width: itemSize.width, height: itemSize.height))
+            return true
+        }
+    }
+}
+
 /// `Inlay --render-menu-bar <dir>`: draws the menu bar item off screen, for every theme, in a dark and in a light menu bar,
 /// with the default colors and with custom ones, and the menu that it opens. A way to look at them without running Inlay
 ///

@@ -305,6 +305,19 @@ extension InlayTests {
             assertEquals(text, "menu-bar.theme = 'chips'\nmenu-bar.show-mode = false\ntiling = { new-window-placement = 'dwindle' }\n[mode.main.binding]\n")
         }
 
+        /// The switch only writes 'system-colors': the colors stay in the file, and apply again when it's off
+        @Test func testSystemColors() throws {
+            let model = try model("[menu-bar]\n    theme = 'capsule'\n[menu-bar.colors]\n    focused = '#D19A66'\n[mode.main.binding]\n")
+            assertEquals(model.bool(.menuBarSystemColors), false)
+            assertEquals(model.menuBarConfig.effectiveColors.focused, .rgba(Rgba(hex: "#D19A66").orDie()))
+            model.set(.menuBarSystemColors, .bool(true))
+            assertEquals(text, "[menu-bar]\n    theme = 'capsule'\n    system-colors = true\n[menu-bar.colors]\n    focused = '#D19A66'\n[mode.main.binding]\n")
+            assertEquals(model.menuBarConfig.effectiveColors, MenuBarColors())
+            assertEquals(model.string(.menuBarFocused), "#D19A66")
+            model.set(.menuBarSystemColors, .bool(false))
+            assertEquals(model.menuBarConfig.effectiveColors.focused, .rgba(Rgba(hex: "#D19A66").orDie()))
+        }
+
         @Test func testGaps() throws {
             let model = try model(
                 """

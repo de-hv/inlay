@@ -81,10 +81,10 @@ extension InlayTests {
             assertTrue(runs("cmd-alt-shift-d", "arrange-workspace dwindle"))
             assertTrue(runs("cmd-alt-shift-f", "fullscreen off; layout floating tiling"))
             assertTrue(runs("cmd-alt-shift-enter", "fullscreen"))
-            assertTrue(runs("cmd-alt-ctrl-s", "mode service"))
-            assertTrue(runs("cmd-alt-ctrl-r", "mode resize"))
-            assertTrue(runs("cmd-alt-ctrl-s", "mode main", mode: "service"))
-            assertTrue(runs("cmd-alt-ctrl-r", "mode main", mode: "resize"))
+            assertTrue(runs("cmd-alt-shift-s", "mode service"))
+            assertTrue(runs("cmd-alt-shift-r", "mode resize"))
+            assertTrue(runs("cmd-alt-shift-s", "mode main", mode: "service"))
+            assertTrue(runs("cmd-alt-shift-r", "mode main", mode: "resize"))
             assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
         }
 

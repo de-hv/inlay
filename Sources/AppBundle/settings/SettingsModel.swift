@@ -169,6 +169,7 @@ final class SettingsModel {
                 occupied: color(.menuBarOccupied),
                 empty: color(.menuBarEmpty),
             ),
+            systemColors: bool(.menuBarSystemColors),
             perMonitor: bool(.menuBarPerMonitor),
             labels: config.menuBar.labels.merging(pendingStrings(SettingsKey.menuBarLabel)) { $1 }.filter { !$0.value.isEmpty },
             symbols: config.menuBar.symbols.merging(pendingStrings(SettingsKey.menuBarSymbol)) { $1 }.filter { !$0.value.isEmpty },

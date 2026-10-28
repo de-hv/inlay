@@ -318,6 +318,13 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): per-monitor = false
     per-monitor = false
 
+    # Draw the item like the other icons of the menu bar: in the color of the menu bar text, as a template image that
+    # macOS colors (and dims on a display that isn't the active one), whatever [menu-bar.colors] says. The colors of
+    # that table stay in the config and apply again when this is 'false'. Settings > Menu Bar has it as a switch
+    # Possible values: true|false
+    # Fallback value (if you omit the key): system-colors = false
+    system-colors = false
+
     # Colors of the item.
     # Possible values:
     # - '#RRGGBB' or '#RRGGBBAA'
@@ -326,7 +333,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #                    For 'accent': the same as 'focused'
     # With a fixed color in 'focused', the name of the workspace is drawn in black or white,
     # whichever has more contrast. A fixed color doesn't adapt to the menu bar: it is the same in the light and
-    # in the dark appearance. Settings > Appearance edits them
+    # in the dark appearance. 'system-colors = true' overrides them all. Settings > Menu Bar edits them
     [menu-bar.colors]
         # The marker of the focused workspace while it shows the binding mode (see 'show-mode').
         # With a fixed color, the initial is drawn in white, or in black over a light color

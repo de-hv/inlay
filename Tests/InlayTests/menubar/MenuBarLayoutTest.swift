@@ -665,6 +665,26 @@ extension InlayTests {
             assertEquals((44 ..< 68).allSatisfy { alpha(bitmap, $0, 22) == 255 }, true)
         }
 
+        /// 'system-colors': the colors of [menu-bar.colors] are kept, but the item is a template image, like the other
+        /// icons of the menu bar, also while it shows a binding mode
+        @Test func testSystemColors() throws {
+            let colors = MenuBarColors(
+                accent: .rgba(Rgba(red: 0, green: 1, blue: 0)),
+                focused: .rgba(Rgba(red: 1, green: 0, blue: 0)),
+                occupied: .systemAccent,
+                empty: .rgba(Rgba(red: 0, green: 0, blue: 1)),
+            )
+            let config = MenuBarConfig(theme: .capsule, showMode: true, colors: colors, systemColors: true)
+            assertEquals(config.colors, colors)
+            assertEquals(config.effectiveColors, MenuBarColors())
+            assertEquals(MenuBarConfig(colors: colors).effectiveColors, colors)
+            for needsColor in [false, true] {
+                let palette = MenuBarPalette.resolve(config, style: .capsule, isDarkBar: true, systemAccent: .white, needsColor: needsColor)
+                assertEquals(palette.isTemplate, true)
+                assertEquals(palette, MenuBarPalette.resolve(MenuBarConfig(theme: .capsule, showMode: true), style: .capsule, isDarkBar: true, systemAccent: .white, needsColor: needsColor))
+            }
+        }
+
         /// The initial of the binding mode is cut out of the chip of the focused workspace, where its name was
         @Test func testModeInTheChip() throws {
             var snapshot = MenuBarSamples.snapshot

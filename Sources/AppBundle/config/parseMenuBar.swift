@@ -7,6 +7,9 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
+    /// The item takes the colors of the other icons of the menu bar, whatever [menu-bar.colors] says: the colors stay
+    /// in the config, and they apply again when this is off
+    var systemColors: Bool = false
     /// The workspaces grouped by the monitor they are on, and a hollow marker on the one that another monitor shows
     var perMonitor: Bool = false
     /// [menu-bar.labels]. Workspace -> the name that the 'labels' theme shows in the focused workspace. Only that theme uses it
@@ -51,6 +54,12 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     case capsule
 }
 
+extension MenuBarConfig {
+    /// The colors the item is drawn with: all 'auto' with 'system-colors', so that macOS colors it like the other
+    /// icons of the menu bar. See: MenuBarPalette.isTemplate
+    var effectiveColors: MenuBarColors { systemColors ? MenuBarColors() : colors }
+}
+
 /// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore
 private let obsoleteChipsIconsTheme = "chips-icons"
 
@@ -73,6 +82,7 @@ let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "dim-empty-workspaces": Parser(\.dimEmptyWorkspaces, parseBool),
     "show-mode": Parser(\.showMode, parseBool),
     "colors": Parser(\.colors, parseMenuBarColors),
+    "system-colors": Parser(\.systemColors, parseBool),
     "per-monitor": Parser(\.perMonitor, parseBool),
     "labels": Parser(\.labels, parseWorkspaceStrings),
     "symbols": Parser(\.symbols, parseWorkspaceStrings),

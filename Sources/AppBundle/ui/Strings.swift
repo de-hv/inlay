@@ -87,6 +87,8 @@ enum Strings {
         static let borderColors = "Border Colors"
         static let indicatorColors = "Indicator Colors"
         static let indicatorColorsFooter = "'auto' draws the item in the color of the menu bar text, so it follows the light and the dark menu bar. A fixed color stays the same over both."
+        static let systemColors = "Use system colors"
+        static let systemColorsDetail = "The item looks like the other icons of the menu bar, whatever the colors below say. They stay in the config, and apply again when this is off."
         static let activeWorkspaceColor = "Active workspace"
         static let inactiveWorkspaceColor = "Inactive workspaces (with windows)"
         static let emptyWorkspaceColor = "Empty workspaces"

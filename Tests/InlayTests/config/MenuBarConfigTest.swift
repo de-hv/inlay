@@ -15,8 +15,26 @@ extension InlayTests {
             assertEquals(menuBar.dimEmptyWorkspaces, true)
             assertEquals(menuBar.showMode, true)
             assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
+            assertEquals(menuBar.systemColors, false)
             // The built-in config agrees with the defaults
             assertEquals(defaultConfig.menuBar, MenuBarConfig())
+        }
+
+        @Test func testSystemColors() {
+            let result = parseConfig(
+                """
+                config-version = 2
+                [menu-bar]
+                    system-colors = true
+                [menu-bar.colors]
+                    focused = '#D19A66'
+                """,
+            )
+            assertEquals(result.errors, [])
+            assertEquals(result.config.menuBar.systemColors, true)
+            // The colors are kept for when it's off again
+            assertEquals(result.config.menuBar.colors.focused, .rgba(Rgba(hex: "#D19A66").orDie()))
+            assertEquals(result.config.menuBar.effectiveColors, MenuBarColors())
         }
 
         @Test func testParse() {

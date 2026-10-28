@@ -171,6 +171,9 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     show-mode = true
     # The workspaces of each monitor together, and a hollow marker on the one another monitor shows
     per-monitor = false
+    # Draw the item like the other icons of the menu bar, whatever [menu-bar.colors] says. The colors stay in this
+    # file, and apply again with 'false'
+    system-colors = false
 
     # '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text, light or dark)
     [menu-bar.colors]
@@ -324,13 +327,13 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
     cmd-alt-shift-right = 'move right'
 
     # Modes: [s]ervice and [r]esize
-    cmd-alt-ctrl-s = 'mode service'
-    cmd-alt-ctrl-r = 'mode resize'
+    cmd-alt-shift-s = 'mode service'
+    cmd-alt-shift-r = 'mode resize'
 
 
 [mode.service.binding]
     esc = ['reload-config', 'mode main']
-    cmd-alt-ctrl-s = 'mode main' # the key that entered the mode leaves it (toggle)
+    cmd-alt-shift-s = 'mode main' # the key that entered the mode leaves it (toggle)
     r   = ['flatten-workspace-tree', 'mode main'] # reset layout
     # Every window back to the workspace of its app: the 'on-window-detected' rules below run again for all
     # the open windows. They place a window only when it opens, and after waking up plugged to an external
@@ -349,7 +352,7 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
 [mode.resize.binding]
     esc = ['reload-config', 'mode main']
-    cmd-alt-ctrl-r = 'mode main' # the key that entered the mode leaves it (toggle)
+    cmd-alt-shift-r = 'mode main' # the key that entered the mode leaves it (toggle)
     r   = ['flatten-workspace-tree', 'mode main'] # reset layout
 
     cmd-alt-ctrl-up = 'resize smart +50'

@@ -745,9 +745,61 @@ private func menuBarBackground(_ isDarkBar: Bool) -> LinearGradient {
     return LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
 }
 
-// MARK: - Appearance
+/// The style of the indicator: a pop-up button whose items show each theme as Inlay draws it, over a small menu bar,
+/// next to its name. The closed button shows the chosen one the same way. The thumbnails take the colors and the
+/// options of the item
+private struct MenuBarThemePopUp: NSViewRepresentable {
+    let theme: MenuBarTheme
+    let config: MenuBarConfig
+    let select: (MenuBarTheme) -> Void
 
-/// The look of the item and of the borders: the style of the workspace indicator, and every color on its own
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSPopUpButton {
+        let button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.picked(_:))
+        button.imagePosition = .imageLeading
+        button.setAccessibilityLabel(Strings.Settings.style)
+        return button
+    }
+
+    func updateNSView(_ button: NSPopUpButton, context: Context) {
+        context.coordinator.select = select
+        let isDarkBar = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        // The thumbnails only depend on the rest of the item and on the appearance: made again when one changes
+        let thumbnails = Coordinator.Thumbnails(config: config.copy(\.theme, MenuBarConfig().theme), isDarkBar: isDarkBar)
+        if context.coordinator.thumbnails != thumbnails {
+            context.coordinator.thumbnails = thumbnails
+            button.removeAllItems()
+            for theme in MenuBarTheme.allCases {
+                let title = theme == MenuBarConfig().theme ? "\(theme.rawValue) · \(Strings.Settings.defaultValue)" : theme.rawValue
+                button.addItem(withTitle: title)
+                button.lastItem?.image = MenuBarSamples.thumbnail(config.copy(\.theme, theme), isDarkBar: isDarkBar)
+            }
+        }
+        button.selectItem(at: MenuBarTheme.allCases.firstIndex(of: theme) ?? 0)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        struct Thumbnails: Equatable {
+            var config: MenuBarConfig
+            var isDarkBar: Bool
+        }
+
+        var select: ((MenuBarTheme) -> Void)?
+        var thumbnails: Thumbnails?
+
+        @objc func picked(_ sender: NSPopUpButton) {
+            guard let theme = MenuBarTheme.allCases.getOrNil(atIndex: sender.indexOfSelectedItem) else { return }
+            select?(theme)
+        }
+    }
+}
+
+// MARK: - Menu bar
+
 /// The menu bar item: its theme, its options and its colors
 struct MenuBarSettingsView: View {
     let model: SettingsModel
@@ -757,13 +809,8 @@ struct MenuBarSettingsView: View {
             ErrorBanner(model: model)
             Section {
                 SettingsRow(model: model, title: Strings.Settings.style, key: .menuBarTheme) {
-                    Picker("", selection: Binding(get: { model.menuBarTheme }, set: { model.setTheme($0) })) {
-                        ForEach(MenuBarTheme.allCases, id: \.self) { theme in
-                            Text(theme == MenuBarConfig().theme ? "\(theme.rawValue) · \(Strings.Settings.defaultValue)" : theme.rawValue).tag(theme)
-                        }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    MenuBarThemePopUp(theme: model.menuBarTheme, config: model.menuBarConfig) { model.setTheme($0) }
+                        .fixedSize()
                 }
                 // The item as Inlay draws it, with the colors below: over a dark and over a light menu bar
                 HStack(spacing: 10) {
@@ -802,10 +849,15 @@ struct MenuBarSettingsView: View {
                 }
             }
             Section {
-                ColorRow(model: model, title: Strings.Settings.activeWorkspaceColor, key: .menuBarFocused, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.inactiveWorkspaceColor, key: .menuBarOccupied, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.emptyWorkspaceColor, key: .menuBarEmpty, allowsAuto: true)
-                ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: true)
+                ToggleRow(model: model, title: Strings.Settings.systemColors, detail: Strings.Settings.systemColorsDetail, key: .menuBarSystemColors)
+                // Overridden while the item takes the colors of the menu bar, but kept: they apply again when it's off
+                Group {
+                    ColorRow(model: model, title: Strings.Settings.activeWorkspaceColor, key: .menuBarFocused, allowsAuto: true)
+                    ColorRow(model: model, title: Strings.Settings.inactiveWorkspaceColor, key: .menuBarOccupied, allowsAuto: true)
+                    ColorRow(model: model, title: Strings.Settings.emptyWorkspaceColor, key: .menuBarEmpty, allowsAuto: true)
+                    ColorRow(model: model, title: Strings.Settings.accent, detail: Strings.Settings.accentDetail, key: .menuBarAccent, allowsAuto: true)
+                }
+                .disabled(model.bool(.menuBarSystemColors))
             } header: {
                 tableHeader(Strings.Settings.indicatorColors, SettingsKey.menuBarFocused)
             } footer: {

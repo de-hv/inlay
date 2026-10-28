@@ -578,6 +578,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `true` |
 | `per-monitor` | `true`, `false` | `false` |
+| `system-colors` | `true`, `false` | `false` |
 | `[menu-bar.labels]`, `[menu-bar.symbols]` `<workspace>` | a name, an SF Symbol (only for `'labels'`) | empty tables |
 | `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
 
@@ -631,6 +632,16 @@ changes nothing. Every theme supports it.
 The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
 still accepted so that a config that has them loads (the Settings window wrote them): they give a warning,
 the theme is treated as `'chips'` and the key is ignored. Picking a theme in Settings removes both.
+
+**`system-colors`**: draws the item like the other icons of the menu bar, whatever theme is in use and
+whatever `[menu-bar.colors]` says: in the color of the menu bar text, as an image that macOS colors itself. The
+colors of `[menu-bar.colors]` stay in the file, and apply again with `false`. In **Settings › Menu Bar** it is the
+*Use system colors* switch, and the color rows are disabled while it is on.
+
+```toml
+[menu-bar]
+    system-colors = true
+```
 
 **Colors**: there are no palettes. Every color is set on its own: the ones of the item in `[menu-bar.colors]`
 (below) and the ones of the borders in `[borders]` (active, inactive and floating). **Settings › Menu Bar** and
@@ -725,9 +736,10 @@ A sidebar with five pages, like the System Settings of macOS:
   deleted: it is renamed to `~/.config/inlay.backup-<date>`; a previous link is only replaced, and the folder it
   pointed to isn't touched. **Unlink** makes `~/.config/inlay` a folder of its own again, with a copy of the
   linked `inlay.toml`. Not with a `~/.inlay.toml`: a config folder would be a second config.
-- **Menu Bar**: the style of the workspace indicator, with a preview over a dark and a light menu bar, its
-  options (*Dim empty workspaces*, *Show the binding mode*, *Group by monitor*) and, with `labels`, the names and
-  symbols; and the colors of the indicator (active, inactive and empty workspaces, binding mode).
+- **Menu Bar**: the style of the workspace indicator, picked in a pop-up whose items show each theme as Inlay
+  draws it, next to its name; a preview over a dark and a light menu bar; its options (*Dim empty workspaces*,
+  *Show the binding mode*, *Group by monitor*) and, with `labels`, the names and symbols; and the colors of the
+  indicator: *Use system colors*, and the active, inactive and empty workspaces and the binding mode.
 - **Borders**: width, corners, glow, a single window, their three colors and the colors of the binding modes.
 - **Windows**: tiling (placement, window to split, split ratio, the windows already open, minimum size), gaps and
   animations.
@@ -750,7 +762,7 @@ These are the pages with the shipped config (click one to see it at full size):
 <table>
 <tr>
 <td valign="top"><a href="docs/images/settings-general.png"><img src="docs/images/settings-general.png" alt="Real render of the General tab of Settings: Open at login; Configuration, with the path of the file, Show in Finder and Open, the config folder with Link to a Folder, the status of the last load with Reload Now, and Export complete config; and Permissions, with 'Accessibility: granted'" width="280"></a></td>
-<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar page of Settings: the style of the indicator ('liquid · default') with its preview over a dark and a light menu bar and its three options; and the colors of the indicator, all 'auto'" width="280"></a></td>
+<td valign="top"><a href="docs/images/settings-menu-bar.png"><img src="docs/images/settings-menu-bar.png" alt="Real render of the Menu Bar page of Settings: the style of the indicator, a pop-up with the thumbnail of 'liquid · default', with its preview over a dark and a light menu bar and its three options; and the colors of the indicator: the Use system colors switch, off, and the four colors, all 'auto'" width="280"></a></td>
 <td valign="top"><a href="docs/images/settings-windows.png"><img src="docs/images/settings-windows.png" alt="Real render of the Windows tab of Settings: New Windows (placement, window to split, split ratio), Arrangement (windows already open, minimum window size), the inner and outer gaps at 8 pt, and the animations" width="280"></a></td>
 </tr>
 <tr><td align="center"><sub>General</sub></td><td align="center"><sub>Menu Bar</sub></td><td align="center"><sub>Windows</sub></td></tr>

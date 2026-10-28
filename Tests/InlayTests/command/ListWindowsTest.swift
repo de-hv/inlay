@@ -178,7 +178,7 @@ extension InlayTests {
 
         @Test func testRunFilterByAppBundleId() async {
             TestWindow.new(id: 1, parent: Workspace.get(byName: "a").rootTilingContainer)
-            let matching = await parseCommand("list-windows --monitor all --app-bundle-id com.davidhiguita.Inlay.test-app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            let matching = await parseCommand("list-windows --monitor all --app-bundle-id com.dehv.Inlay.test-app --format '%{window-id}'").cmdOrDie.run(.defaultEnv, .emptyStdin)
             assertEquals(matching.exitCode.rawValue, 0)
             assertEquals(matching.stdout, ["1"])
 

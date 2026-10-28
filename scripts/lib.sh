@@ -12,7 +12,7 @@ esac
 
 APP_NAME="Inlay"
 CLI_NAME="inlay"
-BUNDLE_ID="com.davidhiguita.inlay"
+BUNDLE_ID="com.dehv.inlay"
 CLT_DIR="/Library/Developer/CommandLineTools"
 # Where the CLI lives inside the bundle. It can't sit next to Contents/MacOS/Inlay: on a case-insensitive file
 # system 'inlay' and 'Inlay' are the same file
@@ -191,7 +191,7 @@ CNF
 # INLAY_LSREGISTER and INLAY_TMP_DIR exist so that the scripts can be tried without touching the Launch Services
 # database or the files of a running Inlay
 LSREGISTER="${INLAY_LSREGISTER:-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister}"
-# Where Inlay keeps its runtime files (/tmp/com.davidhiguita.inlay)
+# Where Inlay keeps its runtime files (/tmp/com.dehv.inlay)
 RUNTIME_TMP_DIR="${INLAY_TMP_DIR:-/tmp}"
 
 inlay_is_running() { pgrep -x "$APP_NAME" >/dev/null 2>&1; }

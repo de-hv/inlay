@@ -987,7 +987,7 @@ It touches nothing of AeroSpace, AeroMenu or `borders`: to go back to them, open
 `brew services start borders`.
 
 The Accessibility entry is only removed when it is checked (`tccutil reset Accessibility
-com.davidhiguita.inlay`). The signing identity is never removed: delete it in *Keychain Access* if you want.
+com.dehv.inlay`). The signing identity is never removed: delete it in *Keychain Access* if you want.
 
 ## Development
 
@@ -1047,7 +1047,7 @@ build/Inlay.app/Contents/MacOS/Inlay --check-config ~/.aerospace.toml
 |---|---|
 | `Sources/InlayApp` | Entry point of the app (the `InlayApp` product, which in the bundle is `Contents/MacOS/Inlay`) |
 | `Sources/AppBundle` | The window manager: tree, commands, configuration, server, interface |
-| `Sources/Cli` | The `inlay` CLI (client of the `/tmp/com.davidhiguita.inlay-$USER.sock` socket) |
+| `Sources/Cli` | The `inlay` CLI (client of the `/tmp/com.dehv.inlay-$USER.sock` socket) |
 | `Sources/Common` | Code shared by the app and the CLI |
 | `Sources/BuildInfo` | Version and git hash, which `build-app.sh` passes through environment variables |
 | `Sources/PrivateApi` | Header of `_AXUIElementGetWindow` |

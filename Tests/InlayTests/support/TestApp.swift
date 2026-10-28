@@ -12,7 +12,7 @@ final class TestApp: AbstractApp {
 
     private init() {
         self.pid = 0
-        self.rawAppBundleId = "com.davidhiguita.Inlay.test-app"
+        self.rawAppBundleId = "com.dehv.Inlay.test-app"
         self.name = rawAppBundleId
     }
 

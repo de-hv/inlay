@@ -234,7 +234,7 @@ extension InlayTests {
             let window = TestWindow.new(id: 1, parent: Workspace.get(byName: name).rootTilingContainer)
             let obj = AeroObj.window(.forTest(window: window, title: nil))
             assertPrimitive(FormatVar.app(.appPid).expandFormatVar(obj: obj), .int(Int64(0)))
-            assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
+            assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.dehv.Inlay.test-app"))
         }
 
         @Test func testExpandWorkspaceVars() {
@@ -272,8 +272,8 @@ extension InlayTests {
 
         @Test func testExpandAppVars() {
             let obj = AeroObj.app(TestApp.shared)
-            assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
-            assertPrimitive(FormatVar.app(.appName).expandFormatVar(obj: obj), .string("com.davidhiguita.Inlay.test-app"))
+            assertPrimitive(FormatVar.app(.appBundleId).expandFormatVar(obj: obj), .string("com.dehv.Inlay.test-app"))
+            assertPrimitive(FormatVar.app(.appName).expandFormatVar(obj: obj), .string("com.dehv.Inlay.test-app"))
             assertPrimitive(FormatVar.app(.appPid).expandFormatVar(obj: obj), .int(Int64(0)))
             assertPrimitive(FormatVar.app(.appExecPath).expandFormatVar(obj: obj), .string("NULL-APP-EXEC-PATH"))
             assertPrimitive(FormatVar.app(.appBundlePath).expandFormatVar(obj: obj), .string("NULL-APP-BUNDLE-PATH"))

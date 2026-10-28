@@ -125,7 +125,7 @@ extension InlayTests {
             }
 
             assertEquals(
-                await parseCommand("test %{app-bundle-id} = com.davidhiguita.Inlay.test-app").cmdOrDie.run(.defaultEnv, .emptyStdin),
+                await parseCommand("test %{app-bundle-id} = com.dehv.Inlay.test-app").cmdOrDie.run(.defaultEnv, .emptyStdin),
                 CmdResult(stdout: [], stderr: [], exitCode: Int32ExitCode(rawValue: 0)),
             )
 

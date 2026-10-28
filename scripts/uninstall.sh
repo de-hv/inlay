@@ -30,7 +30,7 @@
 # The config backups are the ones that 'install.sh' made outside of that folder (~/.config/inlay.backup-<date>,
 # ~/.inlay.toml.backup-<date>). A backup that is a symbolic link is removed the same way: only the link.
 #
-# The Accessibility entry is only removed when it is checked: 'tccutil reset Accessibility com.davidhiguita.inlay'.
+# The Accessibility entry is only removed when it is checked: 'tccutil reset Accessibility com.dehv.inlay'.
 # Never removed: the signing identity that 'install.sh' created (delete "Inlay Local Code Signing" in Keychain
 # Access).
 #

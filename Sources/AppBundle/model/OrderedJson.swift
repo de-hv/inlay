@@ -74,8 +74,13 @@ enum OrderedJson: Encodable, Equatable { // todo rename to Dto (data transfer ob
         if case .dict(let value) = self { value } else { nil }
     }
 
+    /// An empty table of keys too: `{}` of the Lua config is either one
     var asArrayOrNil: JsonArray? {
-        if case .array(let value) = self { value } else { nil }
+        switch self {
+            case .array(let value): value
+            case .dict(let value) where value.isEmpty: []
+            default: nil
+        }
     }
 
     var tomlType: TomlType {

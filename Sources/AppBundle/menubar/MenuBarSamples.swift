@@ -18,16 +18,6 @@ enum MenuBarSamples {
         focusedWindow: .init(isFloating: false, isFullscreen: false),
     )
 
-    /// The names and the symbols of the 'labels' theme for the sample workspaces. 6 has neither: it shows its name
-    static let labels = ["1": "Terminal", "2": "Code", "3": "Web", "4": "Chat", "5": "AI"]
-    static let symbols = ["1": "terminal", "2": "chevron.left.forwardslash.chevron.right", "3": "globe", "4": "bubble.left", "5": "sparkles"]
-
-    /// The config, with the sample labels and symbols if it is the 'labels' theme and it has none of its own
-    static func withSampleLabels(_ config: MenuBarConfig) -> MenuBarConfig {
-        guard config.theme == .labels, config.labels.isEmpty, config.symbols.isEmpty else { return config }
-        return config.copy(\.labels, labels).copy(\.symbols, symbols)
-    }
-
     /// Two monitors: 1 to 4 on the left one, 5 and 6 on the right one, which shows 5
     static let twoMonitors = MenuBarSnapshot(
         workspaces: [
@@ -91,7 +81,7 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
 
     var variants: [(name: String, config: MenuBarConfig, snapshot: MenuBarSnapshot, transition: MenuBarFocusTransition?)] = []
     func append(_ name: String, _ config: MenuBarConfig, _ snapshot: MenuBarSnapshot, _ transition: MenuBarFocusTransition? = nil) {
-        variants.append((name, MenuBarSamples.withSampleLabels(config), snapshot, transition))
+        variants.append((name, config, snapshot, transition))
     }
     for theme in MenuBarTheme.allCases {
         append("\(theme.rawValue)-default", MenuBarConfig(theme: theme), MenuBarSamples.snapshot)
@@ -104,12 +94,14 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     }
     append("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot)
     append("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot)
-    // 'per-monitor': the workspaces of each monitor together, and 5 shown by the other monitor
+    // 'per-monitor': the workspaces of each monitor together, and 5 shown by the other monitor. And the same monitors
+    // without it, to compare
     for theme in MenuBarTheme.allCases {
         append("\(theme.rawValue)-per-monitor", MenuBarConfig(theme: theme, perMonitor: true), MenuBarSamples.twoMonitors)
+        append("\(theme.rawValue)-two-monitors", MenuBarConfig(theme: theme), MenuBarSamples.twoMonitors)
     }
     // The focus on its way from workspace 5 to workspace 2, in the themes whose marker changes shape as it goes
-    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid, .labels, .segments, .capsule] {
+    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid] {
         for percent in [20, 40, 60, 80] {
             append("\(theme.rawValue)-slide-\(percent)", MenuBarConfig(theme: theme), MenuBarSamples.snapshot, .init(from: "5", progress: Double(percent) / 100))
         }

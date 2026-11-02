@@ -73,8 +73,8 @@ extension InlayTests {
             try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
             let config = folder.appending(path: "inlay.toml")
 
-            try AtomicFileWriter.write("# Mine\n[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n", to: config)
-            assertEquals(read(real), "# Mine\n[menu-bar]\ntheme = 'square'\n[mode.main.binding]\n")
+            try AtomicFileWriter.write("# Mine\n[menu-bar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
+            assertEquals(read(real), "# Mine\n[menu-bar]\ntheme = 'hypr'\n[mode.main.binding]\n")
             assertEquals(read(config), read(real))
             assertEquals(isSymlink(folder), true)
             assertEquals(isSymlink(config), false)
@@ -145,12 +145,12 @@ extension InlayTests {
 
         @Test func testExportAddsTheMissingKeys() {
             let shipped = "start-at-login = true\n[menu-bar]\n    theme = 'liquid'\n    show-mode = true\n[mode.main.binding]\n    alt-h = 'focus left'\n"
-            let text = "# Mine\n[menu-bar]\n    theme = 'capsule'\n"
+            let text = "# Mine\n[menu-bar]\n    theme = 'hypr'\n"
             let exported = ConfigFiles.exportText(text, shipped: shipped, date: Date(timeIntervalSince1970: 0))
             let config = parseConfig(exported)
             assertEquals(config.errors, [])
             // The value of the user stays, the missing keys are added, and the key bindings are the user's own
-            assertEquals(config.config.menuBar.theme, .capsule)
+            assertEquals(config.config.menuBar.theme, .hypr)
             assertEquals(config.config.menuBar.showMode, true)
             assertEquals(config.config.startAtLogin, true)
             assertEquals(exported.contains("# Mine\n"), true)

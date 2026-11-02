@@ -12,8 +12,6 @@ extension InlayTests {
                 case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
                 case .modeInitial: CGSize(width: 8, height: 12)
                 case .chipModeInitial: CGSize(width: 9, height: 13)
-                // A symbol that exists is 12 pt wide. 'nope' doesn't exist
-                case .symbol: string == "nope" ? .zero : CGSize(width: 12, height: 11)
             }
         }
 
@@ -147,27 +145,6 @@ extension InlayTests {
             assertEquals(initial.frame.midY, layout.cells[1].name.frame.midY)
         }
 
-        // MARK: - Glyphs
-
-        @Test func testGlyphs() throws {
-            typealias M = MenuBarMetrics
-            let layout = layout(MenuBarConfig(theme: .glyphs))
-            assertEquals(layout.style, .glyphs)
-            assertEquals(layout.size, CGSize(width: 4 * M.ringSide + 3 * M.ringSpacing, height: M.height))
-            assertEquals(layout.cells.map(\.focus), [0, 1, 0, 0])
-            assertEquals(layout.marker?.frame, layout.cells[1].frame)
-            // The focus fades from one glyph to the other: halfway, both are half focused
-            let middle = self.layout(MenuBarConfig(theme: .glyphs), transition: .init(from: "4", progress: 0.5))
-            assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
-            // In a binding mode the target becomes a disc that holds the initial
-            var snapshot = snapshot
-            snapshot.mode = "resize"
-            let mode = try #require(self.layout(MenuBarConfig(theme: .glyphs, showMode: true), snapshot).marker)
-            assertEquals(mode.frame.size, CGSize(width: M.modeSquare, height: M.modeSquare))
-            assertEquals(mode.cornerRadius, M.modeSquare / 2)
-            assertEquals(mode.initial?.string, "R")
-        }
-
         // MARK: - Liquid
 
         @Test func testLiquid() throws {
@@ -194,79 +171,6 @@ extension InlayTests {
                 assertEquals(trail.midX <= start.midX, true, additionalMsg: "\(progress)")
             }
             assertNil(layout(config, transition: .init(from: "4", progress: 1)).marker?.trail)
-        }
-
-        // MARK: - Segments
-
-        @Test func testSegments() throws {
-            typealias M = MenuBarMetrics
-            let layout = layout(MenuBarConfig(theme: .segments))
-            assertEquals(layout.style, .segments)
-            // The slot of the name is as wide as the widest name (7 pt), then the track: 2 is the wide segment
-            let start = 7 + M.segmentLabelGap
-            assertEquals(layout.cells.map(\.frame.width), [M.segmentWidth, M.segmentFocusedWidth, M.segmentWidth, M.segmentWidth])
-            assertEquals(layout.cells[0].frame.minX, start)
-            assertEquals(layout.size.width, start + 3 * M.segmentWidth + M.segmentFocusedWidth + 3 * M.segmentSpacing)
-            let marker = try #require(layout.marker)
-            assertEquals(marker.frame, layout.cells[1].frame)
-            assertNil(marker.initial)
-            // The name of the focused workspace before the track
-            assertEquals(layout.label?.string, "2")
-            assertEquals(try #require(layout.label).frame.maxX <= start, true)
-        }
-
-        /// In a binding mode its initial takes the place of the name, and the item is as wide as in the main mode
-        @Test func testSegmentsShowTheMode() throws {
-            var snapshot = snapshot
-            snapshot.mode = "resize"
-            let main = layout(MenuBarConfig(theme: .segments, showMode: true))
-            let mode = layout(MenuBarConfig(theme: .segments, showMode: true), snapshot)
-            assertNil(mode.label)
-            assertEquals(try #require(mode.marker?.initial).string, "R")
-            assertEquals(mode.needsColor, true)
-            assertEquals(mode.size, main.size)
-        }
-
-        @Test func testSegmentsSlide() throws {
-            let config = MenuBarConfig(theme: .segments)
-            let half = layout(config, transition: .init(from: "4", progress: 0.5))
-            // Both segments half way, and the marker between them
-            assertEquals(half.cells[1].frame.width, half.cells[3].frame.width)
-            let marker = try #require(half.marker)
-            assertEquals(marker.frame.midX > half.cells[1].frame.midX && marker.frame.midX < half.cells[3].frame.midX, true)
-        }
-
-        // MARK: - Capsule
-
-        @Test func testCapsule() throws {
-            typealias M = MenuBarMetrics
-            let layout = layout(MenuBarConfig(theme: .capsule))
-            assertEquals(layout.style, .capsule)
-            // Dots, and 2 as wide as the capsule
-            assertEquals(layout.cells.map(\.frame.width), [M.dotSide, M.capsuleMinWidth, M.dotSide, M.dotSide])
-            assertEquals(layout.size.width, 3 * M.dotSide + M.capsuleMinWidth + 3 * M.dotSpacing)
-            let marker = try #require(layout.marker)
-            assertEquals(marker.frame.size, CGSize(width: M.capsuleMinWidth, height: M.capsuleHeight))
-            assertEquals(marker.frame.midX, layout.cells[1].frame.midX)
-            assertEquals(marker.cornerRadius, M.capsuleHeight / 2)
-        }
-
-        /// A long name makes the capsule wider
-        @Test func testCapsuleFitsTheName() throws {
-            typealias M = MenuBarMetrics
-            let snapshot = MenuBarSnapshot(workspaces: [.init(name: "code", isOccupied: true)], focusedWorkspace: "code")
-            let marker = try #require(layout(MenuBarConfig(theme: .capsule), snapshot).marker)
-            assertEquals(marker.frame.width, 4 * 7 + 2 * M.capsulePadding)
-        }
-
-        /// The capsule stretches towards the next workspace, then shrinks into it
-        @Test func testCapsuleStretches() throws {
-            typealias M = MenuBarMetrics
-            let config = MenuBarConfig(theme: .capsule)
-            let half = try #require(layout(config, transition: .init(from: "4", progress: 0.5)).marker)
-            assertEquals(half.frame.width > M.capsuleMinWidth, true)
-            assertEquals(half.frame.height, M.capsuleHeight)
-            assertEquals(layout(config, transition: .init(from: "4", progress: 1)).marker, layout(config).marker)
         }
 
         // MARK: - Chips
@@ -317,7 +221,7 @@ extension InlayTests {
         @Test func testFullscreen() {
             snapshot.isFocusedWorkspaceFullscreen = true
             assertEquals(layout().marker?.isOutlined, true)
-            assertEquals(layout(MenuBarConfig(theme: .square)).marker?.isOutlined, true)
+            assertEquals(layout(MenuBarConfig(theme: .hypr)).marker?.isOutlined, true)
         }
 
         /// 'show-mode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
@@ -394,35 +298,41 @@ extension InlayTests {
 
         // MARK: - Square
 
-        @Test func testSquare() {
-            let layout = layout(MenuBarConfig(theme: .square))
-            assertEquals(layout.style, .square)
-            // Slots of 15 pt from the left edge, like the chips, 17 pt for the focused one
+        @Test func testHypr() {
+            let layout = layout(MenuBarConfig(theme: .hypr))
+            assertEquals(layout.style, .hypr)
+            // Slots of 18 pt from the left edge, the focused one as wide as the others
             assertEquals(layout.cells.map(\.frame), [
-                CGRect(x: 0, y: 0, width: 15, height: 22),
-                CGRect(x: 15, y: 0, width: 17, height: 22),
-                CGRect(x: 32, y: 0, width: 15, height: 22),
-                CGRect(x: 47, y: 0, width: 15, height: 22),
+                CGRect(x: 0, y: 0, width: 18, height: 22),
+                CGRect(x: 18, y: 0, width: 18, height: 22),
+                CGRect(x: 36, y: 0, width: 18, height: 22),
+                CGRect(x: 54, y: 0, width: 18, height: 22),
             ])
-            assertEquals(layout.size, CGSize(width: 62, height: 22))
-            assertEquals(layout.cells[0].name.frame, CGRect(x: 3.5, y: 3, width: 8, height: 16))
+            assertEquals(layout.size, CGSize(width: 72, height: 22))
+            assertEquals(layout.cells[0].name.frame, CGRect(x: 5, y: 3, width: 8, height: 16))
             // A square of 8.5 pt in the place of the focused workspace
-            assertEquals(layout.marker, .init(frame: CGRect(x: 19.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(layout.marker, .init(frame: CGRect(x: 22.75, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             assertEquals(layout.needsColor, false)
         }
 
-        @Test func testSquareMode() {
+        /// A name too wide for the slot makes it wider
+        @Test func testHyprFitsTheName() {
+            let snapshot = MenuBarSnapshot(workspaces: [.init(name: "web", isOccupied: true)], focusedWorkspace: "web")
+            assertEquals(layout(MenuBarConfig(theme: .hypr), snapshot).cells[0].frame.width, 3 * 8 + 4)
+        }
+
+        @Test func testHyprMode() {
             snapshot.mode = "resize"
             // Without 'show-mode' the square is the one of the main mode
-            let main = layout(MenuBarConfig(theme: .square, showMode: false))
-            assertEquals(main.marker, .init(frame: CGRect(x: 19.25, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            let main = layout(MenuBarConfig(theme: .hypr, showMode: false))
+            assertEquals(main.marker, .init(frame: CGRect(x: 22.75, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
-            let layout = layout(MenuBarConfig(theme: .square, showMode: true))
+            let layout = layout(MenuBarConfig(theme: .hypr, showMode: true))
             assertEquals(layout.marker, .init(
-                frame: CGRect(x: 16.5, y: 4, width: 14, height: 14),
+                frame: CGRect(x: 20, y: 4, width: 14, height: 14),
                 cornerRadius: 3.5,
                 isOutlined: false,
-                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 19.5, y: 5, width: 8, height: 12)),
+                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 23, y: 5, width: 8, height: 12)),
             ))
             assertEquals(layout.needsColor, true)
             // Nothing shifts when the mode changes: the slot of the focused workspace is always wide enough
@@ -456,20 +366,20 @@ extension InlayTests {
             assertEquals(middle.marker?.frame, CGRect(x: 39, y: 2.5, width: 22, height: 17))
         }
 
-        @Test func testSlideOfTheSquare() {
-            let middle = layout(MenuBarConfig(theme: .square), transition: .init(from: "4", progress: 0.5))
-            // Both slots are half way between 15 and 17 pt
-            assertEquals(middle.cells.map(\.frame.width), [15, 16, 15, 16])
+        @Test func testSlideOfTheHyprSquare() {
+            let middle = layout(MenuBarConfig(theme: .hypr), transition: .init(from: "4", progress: 0.5))
+            // The slots don't move: only the square slides
+            assertEquals(middle.cells.map(\.frame), layout(MenuBarConfig(theme: .hypr)).cells.map(\.frame))
             assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
-            assertEquals(middle.marker?.frame.midX, (23 + 54) / 2)
-            assertEquals(middle.size.width, 62)
+            assertEquals(middle.marker?.frame.midX, (27 + 63) / 2)
+            assertEquals(middle.size.width, 72)
         }
 
         // MARK: - Placeholders
 
         @Test func testPlaceholders() {
             snapshot.status = .paused
-            let paused = layout(MenuBarConfig(theme: .square, showMode: true))
+            let paused = layout(MenuBarConfig(theme: .hypr, showMode: true))
             assertEquals(paused.cells, [])
             assertEquals(paused.marker, nil)
             assertEquals(paused.placeholder?.symbolName, "pause.fill")
@@ -543,7 +453,7 @@ extension InlayTests {
         }
 
         @Test func testSquareNamesAreNotFaded() {
-            let palette = palette(style: .square)
+            let palette = palette(style: .hypr)
             assertEquals(palette.isTemplate, true)
             assertEquals(palette.occupiedName, .black)
             assertEquals(palette.emptyName, Rgba.black.withAlpha(0.35))
@@ -674,14 +584,14 @@ extension InlayTests {
                 occupied: .systemAccent,
                 empty: .rgba(Rgba(red: 0, green: 0, blue: 1)),
             )
-            let config = MenuBarConfig(theme: .capsule, showMode: true, colors: colors, systemColors: true)
+            let config = MenuBarConfig(theme: .liquid, showMode: true, colors: colors, systemColors: true)
             assertEquals(config.colors, colors)
             assertEquals(config.effectiveColors, MenuBarColors())
             assertEquals(MenuBarConfig(colors: colors).effectiveColors, colors)
             for needsColor in [false, true] {
-                let palette = MenuBarPalette.resolve(config, style: .capsule, isDarkBar: true, systemAccent: .white, needsColor: needsColor)
+                let palette = MenuBarPalette.resolve(config, style: .liquid, isDarkBar: true, systemAccent: .white, needsColor: needsColor)
                 assertEquals(palette.isTemplate, true)
-                assertEquals(palette, MenuBarPalette.resolve(MenuBarConfig(theme: .capsule, showMode: true), style: .capsule, isDarkBar: true, systemAccent: .white, needsColor: needsColor))
+                assertEquals(palette, MenuBarPalette.resolve(MenuBarConfig(theme: .liquid, showMode: true), style: .liquid, isDarkBar: true, systemAccent: .white, needsColor: needsColor))
             }
         }
 
@@ -735,8 +645,8 @@ extension InlayTests {
             let oneColor = MenuBarTheme.allCases.flatMap { theme in
                 ["default", "fullscreen", "mode-fullscreen", "mode"].map { "\(theme.rawValue)-\($0)" }
             }
-            let slides = ["pills", "dots", "underline", "liquid", "labels", "segments", "capsule"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
-            let templates = (oneColor + slides + MenuBarTheme.allCases.map { "\($0.rawValue)-per-monitor" } + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
+            let slides = ["pills", "dots", "underline", "liquid"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
+            let templates = (oneColor + slides + MenuBarTheme.allCases.flatMap { ["\($0.rawValue)-per-monitor", "\($0.rawValue)-two-monitors"] } + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
             assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), templates.sorted())
             // The item is as wide in a binding mode as in the main mode, in every theme
             for theme in MenuBarTheme.allCases {

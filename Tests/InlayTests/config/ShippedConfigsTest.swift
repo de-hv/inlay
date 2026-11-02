@@ -26,10 +26,8 @@ extension InlayTests {
             tiling.startupLayout = .dwindle
             assertEquals(result.config.tiling, tiling)
             let menuBar = result.config.menuBar
-            assertEquals(menuBar.theme, .capsule)
+            assertEquals(menuBar.theme, .hypr)
             assertEquals([menuBar.colors.focused, menuBar.colors.occupied, menuBar.colors.empty, menuBar.colors.accent].map { "\($0)" }, ["#B59DF7", "#CAC4D0", "#938F99", "#EFB8C8"])
-            assertEquals(menuBar.labels.count, 7)
-            assertEquals(menuBar.symbols.count, 7)
             let borders = result.config.borders
             assertEquals(borders.width, 2)
             assertEquals(borders.squareCorners, false)

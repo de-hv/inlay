@@ -41,7 +41,7 @@ extension InlayTests {
                 config-version = 2
                 [menu-bar]
                     enabled = false
-                    theme = 'square'
+                    theme = 'hypr'
                     dim-empty-workspaces = false
                     show-mode = true
                 [menu-bar.colors]
@@ -55,7 +55,7 @@ extension InlayTests {
             assertEquals(result.warnings, [])
             let expected = MenuBarConfig(
                 enabled: false,
-                theme: .square,
+                theme: .hypr,
                 dimEmptyWorkspaces: false,
                 showMode: true,
                 colors: MenuBarColors(
@@ -69,7 +69,7 @@ extension InlayTests {
         }
 
         @Test func testThemes() {
-            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "square", "minimal", "dots", "underline", "glyphs", "liquid", "labels", "segments", "capsule"])
+            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid"])
             for theme in MenuBarTheme.allCases {
                 let result = parseConfig("config-version = 2\nmenu-bar.theme = '\(theme.rawValue)'")
                 assertEquals(result.errors, [])
@@ -89,12 +89,12 @@ extension InlayTests {
             assertEquals(theme.config.menuBar, MenuBarConfig(theme: .chips, showMode: true))
 
             for value in ["true", "false"] {
-                let key = parseConfig("config-version = 2\n[menu-bar]\ntheme = 'square'\nshow-app-icons = \(value)\ndim-empty-workspaces = false")
+                let key = parseConfig("config-version = 2\n[menu-bar]\ntheme = 'hypr'\nshow-app-icons = \(value)\ndim-empty-workspaces = false")
                 assertEquals(key.strErrors, [])
                 assertEquals(key.strWarnings, [
                     "[WARNING] menu-bar.show-app-icons: The menu bar item doesn't show app icons anymore: 'show-app-icons' is ignored. Please drop it from the config",
                 ])
-                assertEquals(key.config.menuBar, MenuBarConfig(theme: .square, dimEmptyWorkspaces: false))
+                assertEquals(key.config.menuBar, MenuBarConfig(theme: .hypr, dimEmptyWorkspaces: false))
             }
 
             let both = parseConfig("config-version = 2\nmenu-bar.theme = 'chips-icons'\nmenu-bar.show-app-icons = true")
@@ -108,8 +108,17 @@ extension InlayTests {
         @Test func testErrors() {
             assertEquals(
                 parseConfig("menu-bar.theme = 'bubbles'").strErrors,
-                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|square|minimal|dots|underline|glyphs|liquid|labels|segments|capsule)"],
+                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid)"],
             )
+            // The themes and the tables of the past are gone, with no compatibility
+            for theme in ["square", "glyphs", "labels", "segments", "capsule"] {
+                assertEquals(
+                    parseConfig("menu-bar.theme = '\(theme)'").strErrors,
+                    ["[ERROR] menu-bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid)"],
+                )
+            }
+            assertEquals(parseConfig("[menu-bar.labels]\n1 = 'Code'").strErrors, ["[ERROR] menu-bar.labels: Unknown key"])
+            assertEquals(parseConfig("[menu-bar.symbols]\n1 = 'globe'").strErrors, ["[ERROR] menu-bar.symbols: Unknown key"])
             assertEquals(parseConfig("menu-bar.them = 'chips'").strErrors, ["[ERROR] menu-bar.them: Unknown key"])
             assertEquals(parseConfig("menu-bar.colors.focus = 'auto'").strErrors, ["[ERROR] menu-bar.colors.focus: Unknown key"])
             assertEquals(

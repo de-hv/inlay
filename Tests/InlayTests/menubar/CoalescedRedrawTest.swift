@@ -112,7 +112,7 @@ extension InlayTests {
             assertEquals(first, second)
 
             var other = key
-            other.state.config.theme = .square
+            other.state.config.theme = .hypr
             #expect(key != other)
             #expect(try #require(MenuBarRenderer.image(other)?.tiffRepresentation) != first)
         }

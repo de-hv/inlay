@@ -1,0 +1,87 @@
+@testable import AppBundle
+import AppKit
+import Common
+import Testing
+
+extension InlayTests {
+    /// The workspaces grouped by monitor
+    @Suite @MainActor struct MenuBarPerMonitorTest {
+        init() { setUpWorkspacesForTests() }
+
+        /// Every character is 7 pt wide
+        private static func measure(_ string: String, _ font: MenuBarFont) -> CGSize {
+            CGSize(width: 7 * CGFloat(string.count), height: 15)
+        }
+
+        private let snapshot = MenuBarSnapshot(
+            workspaces: [
+                .init(name: "1", isOccupied: true),
+                .init(name: "2", isOccupied: true),
+                .init(name: "3", isOccupied: false),
+            ],
+            focusedWorkspace: "2",
+        )
+
+        /// 2 and 3 on the left monitor, 1 on the right one, which shows it
+        private let twoMonitors = MenuBarSnapshot(
+            workspaces: [
+                .init(name: "1", isOccupied: true, monitor: 1, isVisible: true),
+                .init(name: "2", isOccupied: true, monitor: 0, isVisible: true),
+                .init(name: "3", isOccupied: false, monitor: 0),
+            ],
+            focusedWorkspace: "2",
+        )
+
+        private func layout(_ config: MenuBarConfig, _ snapshot: MenuBarSnapshot? = nil) -> MenuBarLayout {
+            MenuBarLayout.make(snapshot ?? self.snapshot, config, measure: Self.measure)
+        }
+
+        @Test func testParse() {
+            let result = parseConfig("config-version = 2\n[menu-bar]\nper-monitor = true\n")
+            assertEquals(result.errors, [])
+            assertEquals(result.config.menuBar.perMonitor, true)
+            assertEquals(MenuBarConfig().perMonitor, false)
+        }
+
+        @Test func testPerMonitor() {
+            typealias M = MenuBarMetrics
+            let grouped = layout(MenuBarConfig(theme: .chips, perMonitor: true), twoMonitors)
+            // Monitor by monitor, from left to right
+            assertEquals(grouped.cells.map(\.workspace), ["2", "3", "1"])
+            assertEquals(grouped.separators.count, 1)
+            assertEquals(grouped.separators[0].size, CGSize(width: M.monitorSeparatorWidth, height: M.monitorSeparatorHeight))
+            assertEquals(grouped.cells[2].frame.minX - grouped.cells[1].frame.maxX, M.chipSpacing + M.monitorSeparatorSpace)
+            // The other monitor shows 1: a hollow marker on it
+            assertEquals(grouped.cells.map(\.isVisibleElsewhere), [false, false, true])
+            assertEquals(grouped.visibleElsewhere.map(\.frame), [grouped.cells[2].frame])
+            // Without the key, nothing changes
+            let flat = layout(MenuBarConfig(theme: .chips), twoMonitors)
+            assertEquals(flat.cells.map(\.workspace), ["1", "2", "3"])
+            assertEquals(flat.cells.map(\.isVisibleElsewhere), [false, false, false])
+            assertEquals(flat.separators, [])
+            assertEquals(flat.visibleElsewhere, [])
+            // A single monitor: no separator, no other visible workspace
+            assertEquals(layout(MenuBarConfig(theme: .chips, perMonitor: true)).separators, [])
+        }
+
+        /// The divider of hypr is bolder, and the workspace that the other monitor shows gets a frame around its name
+        @Test func testPerMonitor_hypr() throws {
+            typealias M = MenuBarMetrics
+            let grouped = layout(MenuBarConfig(theme: .hypr, perMonitor: true), twoMonitors)
+            assertEquals(grouped.cells.map(\.workspace), ["2", "3", "1"])
+            assertEquals(grouped.cells[2].frame.minX - grouped.cells[1].frame.maxX, M.hyprSeparatorSpace)
+            let separator = try #require(grouped.separators.first)
+            assertEquals(separator.size, CGSize(width: M.hyprSeparatorWidth, height: M.hyprSeparatorHeight))
+            // In the middle of the room between the monitors
+            assertEquals(separator.midX, (grouped.cells[1].frame.maxX + grouped.cells[2].frame.minX) / 2)
+            let frame = try #require(grouped.visibleElsewhere.first)
+            assertEquals(frame.isOutlined, true)
+            assertEquals(frame.cornerRadius, M.hyprFrameCornerRadius)
+            assertEquals(frame.frame.size, CGSize(width: M.hyprFrame, height: M.hyprFrame))
+            // Around the name, which stays in sight
+            let name = grouped.cells[2].name.frame
+            assertEquals(frame.frame.midX, name.midX)
+            assertEquals(frame.frame.minX < name.minX && frame.frame.maxX > name.maxX, true)
+        }
+    }
+}

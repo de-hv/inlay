@@ -31,10 +31,7 @@ extension MenuBarFont {
     static func size(of string: String, _ font: MenuBarFont) -> CGSize {
         let measured = Measured(string: string, font: font)
         if let size = sizes.withLock({ $0[measured] }) { return size }
-        let size = font == .symbol
-            ? NSImage(systemSymbolName: string, accessibilityDescription: nil)?
-                .withSymbolConfiguration(.init(pointSize: MenuBarMetrics.labelSymbolSize, weight: .regular))?.size ?? .zero
-            : NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
+        let size = NSAttributedString(string: string, attributes: [.font: font.nsFont]).size()
         sizes.withLock {
             if $0.count >= maxCachedSizes { $0.removeAll() }
             $0[measured] = size
@@ -100,7 +97,7 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots, .labels, .segments, .capsule].contains(layout.style) {
+        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots].contains(layout.style) {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
         if let marker = layout.marker {
@@ -116,18 +113,15 @@ enum MenuBarRenderer {
         }
         switch layout.style {
             case .chips: drawChips(layout, palette, in: cg)
-            case .square: drawSquare(layout, palette, in: cg)
+            case .hypr: drawHypr(layout, palette, in: cg)
             case .dots: drawDots(layout, palette, in: cg)
             case .underline: drawUnderline(layout, palette, in: cg)
-            case .glyphs: drawGlyphs(layout, palette, in: cg)
             case .liquid: drawLiquid(layout, palette, in: cg)
-            case .labels: drawLabels(layout, palette, in: cg)
-            case .segments: drawSegments(layout, palette, in: cg)
-            case .capsule: drawCapsule(layout, palette, in: cg)
         }
         // 'per-monitor'
+        let separatorOpacity = layout.style == .hypr ? MenuBarMetrics.hyprSeparatorOpacity : MenuBarMetrics.emptyWorkspaceOpacity
         for separator in layout.separators {
-            cg.fill(CGPath(rect: separator, transform: nil), palette.base.opacity(MenuBarMetrics.emptyWorkspaceOpacity))
+            cg.fill(CGPath(rect: separator, transform: nil), palette.base.opacity(separatorOpacity))
         }
         for marker in layout.visibleElsewhere {
             cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: MenuBarMetrics.outlineWidth, palette.focused)
@@ -176,13 +170,13 @@ enum MenuBarRenderer {
         cg.restoreGState()
     }
 
-    // MARK: - Square
+    // MARK: - Hypr
 
-    private static func drawSquare(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+    private static func drawHypr(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
         typealias M = MenuBarMetrics
         for cell in layout.cells {
-            // The name gives way to the marker
-            let color = palette.nameColor(of: cell).opacity(1 - cell.focus)
+            // The name gives way to the marker. The one that another monitor shows is in sight there: never dimmed
+            let color = (cell.isVisibleElsewhere ? palette.occupiedName : palette.nameColor(of: cell)).opacity(1 - cell.focus)
             draw(cell.name, color)
         }
         guard let marker = layout.marker else { return }
@@ -248,36 +242,6 @@ enum MenuBarRenderer {
         }
     }
 
-    // MARK: - Glyphs
-
-    private static func drawGlyphs(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        let isOutlined = layout.marker?.isOutlined == true
-        for cell in layout.cells {
-            let center = CGPoint(x: cell.frame.midX, y: cell.frame.midY)
-            func circle(_ side: CGFloat) -> CGRect { CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side) }
-            // The glyph of the workspace fades out while the target of the focus grows over it
-            let rest = palette.nameColor(of: cell).opacity(1 - cell.focus)
-            if cell.isOccupied {
-                cg.fill(roundedRect(circle(M.ringDiscSide), M.ringDiscSide / 2), rest)
-            } else {
-                cg.strokeBorder(circle(M.ringEmptySide), M.ringEmptySide / 2, lineWidth: M.ringLineWidth, rest)
-            }
-            guard cell.focus > 0 else { continue }
-            let ring = M.ringEmptySide + (M.ringSide - M.ringEmptySide) * cell.focus
-            let color = palette.focused.opacity(cell.focus)
-            cg.strokeBorder(circle(ring), ring / 2, lineWidth: M.ringLineWidth, color)
-            // A fullscreen window leaves the target hollow, like the outlined marker of the other themes
-            if !isOutlined {
-                cg.fill(roundedRect(circle(M.ringCenterSide), M.ringCenterSide / 2), color)
-            }
-        }
-        guard let marker = layout.marker, let initial = marker.initial else { return }
-        let clearance = marker.frame.insetBy(dx: -M.markerClearance, dy: -M.markerClearance)
-        cg.fill(roundedRect(clearance, clearance.height / 2), .black, blendMode: .destinationOut)
-        draw(marker, initial, palette, in: cg)
-    }
-
     // MARK: - Liquid
 
     private static func drawLiquid(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
@@ -333,136 +297,6 @@ enum MenuBarRenderer {
         path.addQuadCurve(to: CGPoint(x: trail.midX, y: y + trailRadius), control: CGPoint(x: midX, y: y + neck))
         path.closeSubpath()
         return [CGPath(ellipseIn: trail, transform: nil), path, CGPath(ellipseIn: drop, transform: nil)]
-    }
-
-    // MARK: - Labels
-
-    private static func drawLabels(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        for cell in layout.cells {
-            let color = palette.nameColor(of: cell)
-            if let symbol = cell.symbol {
-                drawSymbol(symbol.string, pointSize: M.labelSymbolSize, centeredIn: symbol.frame, color)
-            } else {
-                draw(cell.name, color)
-            }
-        }
-        guard let marker = layout.marker else { return }
-        let path = roundedRect(marker.frame, marker.cornerRadius)
-        // Clears the symbol under the marker
-        cg.fill(path, .black, blendMode: .destinationOut)
-        if let initial = marker.initial {
-            draw(marker, initial, palette, in: cg)
-            return
-        }
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
-        } else {
-            cg.fill(path, palette.focused)
-        }
-        // Whatever the marker covers, cut out of it or over it, like the names of the chips: the symbol and the label of
-        // the workspaces it leaves or reaches, and the symbol of the ones it passes over on its way
-        cg.saveGState()
-        cg.addPath(path)
-        cg.clip()
-        for cell in layout.cells {
-            let texts = cell.focus > 0 ? cell.expanded : [cell.symbol ?? cell.name]
-            for text in texts {
-                let color = marker.isOutlined ? palette.focused : palette.focusedName
-                if text.font == .symbol {
-                    drawSymbol(text.string, pointSize: M.labelSymbolSize, centeredIn: text.frame, color ?? .black, cutOut: color == nil)
-                } else if let color {
-                    draw(text, color)
-                } else {
-                    draw(text, .black, blendMode: .destinationOut)
-                }
-            }
-        }
-        cg.restoreGState()
-    }
-
-    // MARK: - Segments
-
-    private static func drawSegments(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        // The ends of the track are round, and so are the ones next to the gap between two monitors ('per-monitor')
-        let cells = layout.cells
-        for (index, cell) in cells.enumerated() {
-            let isStart = index == 0 || cell.frame.minX - cells[index - 1].frame.maxX > M.segmentSpacing + 0.5
-            let isEnd = index == cells.count - 1 || cells[index + 1].frame.minX - cell.frame.maxX > M.segmentSpacing + 0.5
-            let left = isStart ? M.segmentEndRadius : M.segmentInnerRadius
-            let right = isEnd ? M.segmentEndRadius : M.segmentInnerRadius
-            // A filled segment says "something is here", a hollow one says "nothing yet"
-            if cell.isOccupied {
-                cg.fill(segmentPath(cell.frame, left: left, right: right), palette.nameColor(of: cell))
-            } else {
-                let inset = M.segmentLineWidth / 2
-                cg.stroke(segmentPath(cell.frame.insetBy(dx: inset, dy: inset), left: left - inset, right: right - inset), lineWidth: M.segmentLineWidth, palette.nameColor(of: cell))
-            }
-        }
-        guard let marker = layout.marker else { return }
-        let color = marker.initial == nil ? palette.focused : palette.modeMarker
-        let path = roundedRect(marker.frame, marker.cornerRadius)
-        cg.fill(path, .black, blendMode: .destinationOut)
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.segmentLineWidth, color)
-        } else {
-            cg.fill(path, color)
-        }
-        if let text = marker.initial ?? layout.label { draw(text, color) }
-    }
-
-    /// A segment of the track: its left and its right corners rounded each their own way
-    private static func segmentPath(_ rect: CGRect, left: CGFloat, right: CGFloat) -> CGPath {
-        let path = CGMutablePath()
-        let (left, right) = (min(left, rect.height / 2), min(right, rect.height / 2))
-        path.move(to: CGPoint(x: rect.minX + left, y: rect.minY))
-        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.maxY), radius: right)
-        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.maxY), radius: right)
-        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.minY), radius: left)
-        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY), radius: left)
-        path.closeSubpath()
-        return path
-    }
-
-    // MARK: - Capsule
-
-    private static func drawCapsule(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        for cell in layout.cells {
-            // The dots of 'dots': a disc says "something is here", a ring says "nothing yet"
-            let dot = CGRect(x: cell.frame.midX - M.dotSide / 2, y: cell.frame.midY - M.dotSide / 2, width: M.dotSide, height: M.dotSide)
-            if cell.isOccupied {
-                cg.fill(roundedRect(dot, M.dotSide / 2), palette.nameColor(of: cell))
-            } else {
-                cg.strokeBorder(dot, M.dotSide / 2, lineWidth: M.dotLineWidth, palette.nameColor(of: cell))
-            }
-        }
-        guard let marker = layout.marker else { return }
-        let path = roundedRect(marker.frame, marker.cornerRadius)
-        cg.fill(path, .black, blendMode: .destinationOut)
-        if let initial = marker.initial {
-            draw(marker, initial, palette, in: cg)
-            return
-        }
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
-        } else {
-            cg.fill(path, palette.focused)
-        }
-        // The names, like the ones of the chips: whatever part of them the capsule covers is what it shows, so the name
-        // of the workspace it leaves goes away as the one of the workspace it reaches comes in
-        cg.saveGState()
-        cg.addPath(path)
-        cg.clip()
-        for cell in layout.cells where cell.focus > 0 {
-            switch (marker.isOutlined, palette.focusedName) {
-                case (true, _): draw(cell.name, palette.focused)
-                case (false, let color?): draw(cell.name, color)
-                case (false, nil): draw(cell.name, .black, blendMode: .destinationOut)
-            }
-        }
-        cg.restoreGState()
     }
 
     // MARK: - Binding mode

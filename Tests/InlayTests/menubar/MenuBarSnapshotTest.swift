@@ -122,10 +122,10 @@ extension InlayTests {
             assertEquals(published.last?.snapshot.workspaces.first?.isOccupied, true)
 
             // The config
-            config.menuBar.theme = .square
+            config.menuBar.theme = .hypr
             publishUiState()
             assertEquals(published.count, 2)
-            assertEquals(published.last?.config.theme, .square)
+            assertEquals(published.last?.config.theme, .hypr)
 
             // The mode publishes on its own, without waiting for the end of the session
             config.modes["resize"] = Mode(bindings: [:])

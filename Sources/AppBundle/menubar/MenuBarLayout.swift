@@ -1,7 +1,7 @@
 import Common
 import Foundation
 
-/// The metrics of the menu bar item, in points. The ones of the chips and of the square are the ones of Aeromenu
+/// The metrics of the menu bar item, in points. The ones of the chips and of the square of hypr are the ones of Aeromenu
 enum MenuBarMetrics {
     static let height: CGFloat = 22
 
@@ -20,14 +20,17 @@ enum MenuBarMetrics {
     static let emptyWorkspaceOpacity: Double = 0.35
     static let outlineWidth: CGFloat = 1.5
 
-    static let workspaceWidth: CGFloat = 15
-    static let focusedWorkspaceWidth: CGFloat = 17
     static let workspaceFontSize: CGFloat = 13.5
+    /// The hypr theme: every workspace in a slot this wide
+    static let hyprSlot: CGFloat = 18
+    /// The hypr theme: the frame around the name of a workspace that another monitor shows ('per-monitor')
+    static let hyprFrame: CGFloat = 15
+    static let hyprFrameCornerRadius: CGFloat = 3.5
     static let focusSquare: CGFloat = 8.5
     static let focusSquareCornerRadius: CGFloat = 2
     static let markerClearance: CGFloat = 1.5
 
-    /// The square of the square style while it shows the initial of the binding mode
+    /// The square of the hypr theme while it shows the initial of the binding mode
     static let modeSquare: CGFloat = 14
     static let modeSquareCornerRadius: CGFloat = 3.5
     static let modeSquareFontSize: CGFloat = 10.5
@@ -49,14 +52,6 @@ enum MenuBarMetrics {
     /// The names go up this much, to make room for the bar
     static let underlineLift: CGFloat = 1.5
 
-    /// The glyphs theme: the target of the focused workspace, the ring of an empty one and the disc of one with windows
-    static let ringSide: CGFloat = 12
-    static let ringEmptySide: CGFloat = 8.5
-    static let ringDiscSide: CGFloat = 7
-    static let ringCenterSide: CGFloat = 5
-    static let ringSpacing: CGFloat = 4.5
-    static let ringLineWidth: CGFloat = 1.4
-
     /// The liquid theme: the dots in slots this wide, the drop over the focused one and its trail
     static let liquidSlot: CGFloat = 17
     static let liquidDrop: CGFloat = 17
@@ -64,33 +59,15 @@ enum MenuBarMetrics {
     static let liquidEmptyDot: CGFloat = 3.6
     static let liquidOccupiedDot: CGFloat = 5
 
-    /// The labels theme: the SF Symbols of the workspaces, and the room around the symbol and the name in the focused pill
-    static let labelSymbolSize: CGFloat = 11.5
-    static let labelPadding: CGFloat = 7
-    static let labelSymbolGap: CGFloat = 4
-    static let labelSpacing: CGFloat = 3
-
-    /// The segments theme: a segment per workspace, the focused one this wide, and the name of the focused workspace
-    /// before the track
-    static let segmentWidth: CGFloat = 12
-    static let segmentFocusedWidth: CGFloat = 24
-    static let segmentHeight: CGFloat = 6
-    static let segmentSpacing: CGFloat = 2
-    /// The rounding of the ends of the track, and of the focused segment
-    static let segmentEndRadius: CGFloat = 3
-    /// The rounding of the corners between two segments
-    static let segmentInnerRadius: CGFloat = 1
-    static let segmentLineWidth: CGFloat = 1
-    static let segmentLabelGap: CGFloat = 5
-
-    /// The capsule theme: the dots of 'dots', and the focused workspace a capsule with its name
-    static let capsuleHeight: CGFloat = 16
-    static let capsuleMinWidth: CGFloat = 24
-    static let capsulePadding: CGFloat = 6
-
     /// 'per-monitor': the room between the workspaces of two monitors, with a line in the middle
     static let monitorSeparatorSpace: CGFloat = 9
+    static let monitorSeparatorWidth: CGFloat = 1
     static let monitorSeparatorHeight: CGFloat = 11
+    /// The divider of the hypr theme: bolder, like the one of the Monitor Workspaces plugin
+    static let hyprSeparatorSpace: CGFloat = 10
+    static let hyprSeparatorWidth: CGFloat = 2
+    static let hyprSeparatorHeight: CGFloat = 12
+    static let hyprSeparatorOpacity: Double = 0.65
 
     static let glyphSide: CGFloat = 6
     static let glyphGap: CGFloat = 1.5
@@ -114,9 +91,6 @@ enum MenuBarFont: Equatable, Sendable {
     case modeInitial
     /// SF 11 pt heavy: the initial of the binding mode in a chip
     case chipModeInitial
-    /// An SF Symbol, at MenuBarMetrics.labelSymbolSize: the string is the name of the symbol. A symbol that
-    /// doesn't exist measures zero
-    case symbol
 }
 
 /// The focus marker on its way from the previously focused workspace to the focused one: one frame of the slide
@@ -133,14 +107,10 @@ struct MenuBarLayout: Equatable, Sendable {
     enum Style: Equatable, Sendable {
         /// 'chips', 'pills' and 'minimal' themes
         case chips
-        case square
+        case hypr
         case dots
         case underline
-        case glyphs
         case liquid
-        case labels
-        case segments
-        case capsule
     }
 
     struct Text: Equatable, Sendable {
@@ -152,7 +122,7 @@ struct MenuBarLayout: Equatable, Sendable {
     /// One workspace
     struct Cell: Equatable, Sendable {
         var workspace: String
-        /// The chip, or the slot of the name in the square style
+        /// The chip, or the slot of the name in the hypr style
         var frame: CGRect
         var name: Text
         var isOccupied: Bool
@@ -160,17 +130,13 @@ struct MenuBarLayout: Equatable, Sendable {
         var isDimmed: Bool
         /// 1 under the focus marker, 0 away from it, in between while the marker slides
         var focus: Double
-        /// The labels theme: the symbol drawn in place of the name, if the workspace has one
-        var symbol: Text? = nil
-        /// The labels theme: what the marker shows over the workspace, its symbol and its label, centered in the frame
-        var expanded: [Text] = []
+        /// 'per-monitor': another monitor shows the workspace
+        var isVisibleElsewhere: Bool = false
 
         func offsetBy(dx: CGFloat) -> Cell {
             var cell = self
             cell.frame = frame.offsetBy(dx: dx, dy: 0)
             cell.name.frame = name.frame.offsetBy(dx: dx, dy: 0)
-            cell.symbol?.frame = (symbol?.frame ?? .zero).offsetBy(dx: dx, dy: 0)
-            cell.expanded = expanded.map { Text(string: $0.string, font: $0.font, frame: $0.frame.offsetBy(dx: dx, dy: 0)) }
             return cell
         }
     }
@@ -206,9 +172,6 @@ struct MenuBarLayout: Equatable, Sendable {
     var size: CGSize
     var cells: [Cell] = []
     var marker: Marker? = nil
-    /// The segments theme: the name of the focused workspace before the track. In a binding mode, the initial of the
-    /// mode takes its place: it is the initial of the marker
-    var label: Text? = nil
     /// 'per-monitor': the lines between the workspaces of two monitors
     var separators: [CGRect] = []
     /// 'per-monitor': the hollow markers of the workspaces that another monitor shows
@@ -248,14 +211,10 @@ extension MenuBarLayout {
             case .pills: pills(snapshot, config, focusAmount, measure)
             case .chips: chips(snapshot, config, snapshot.workspaces, focusAmount, measure)
             case .minimal: chips(snapshot, config, snapshot.workspaces.filter { $0.name == snapshot.focusedWorkspace }, focusAmount, measure)
-            case .square: square(snapshot, config, focusAmount, measure)
+            case .hypr: hypr(snapshot, config, focusAmount, measure)
             case .dots: dots(snapshot, config, focusAmount, measure)
             case .underline: underline(snapshot, config, focusAmount, measure)
-            case .glyphs: glyphs(snapshot, config, focusAmount, measure)
             case .liquid: liquid(snapshot, config, focusAmount, measure)
-            case .labels: labels(snapshot, config, focusAmount, measure)
-            case .segments: segments(snapshot, config, focusAmount, measure)
-            case .capsule: capsule(snapshot, config, focusAmount, measure)
         }
         if config.perMonitor { layout.separateMonitors(snapshot) }
         layout.placeMarker(snapshot, mode: config.showMode ? snapshot.nonMainMode : nil, from: from, progress: from == nil ? 1 : progress, measure)
@@ -325,9 +284,11 @@ extension MenuBarLayout {
         return MenuBarLayout(style: .chips, cornerRadius: M.chipSide / 2, size: CGSize(width: max(0, x - M.pillSpacing), height: M.height), cells: cells)
     }
 
-    // MARK: - Square
+    // MARK: - Hypr
 
-    private static func square(
+    /// The names in slots of the same width, like the Monitor Workspaces plugin of the Omarchy bar. The slot of a name too
+    /// wide for it grows to hold it
+    private static func hypr(
         _ snapshot: MenuBarSnapshot,
         _ config: MenuBarConfig,
         _ focusAmount: (String) -> Double,
@@ -337,27 +298,12 @@ extension MenuBarLayout {
         var cells: [Cell] = []
         var x: CGFloat = 0
         for workspace in snapshot.workspaces {
-            let focus = focusAmount(workspace.name)
             let nameSize = measure(workspace.name, .squareName)
-            // The slot is wide enough for the square of a binding mode while focused, in every mode, so nothing shifts
-            // when the mode changes
-            let slot = CGRect(
-                x: x,
-                y: 0,
-                width: max(nameSize.width, M.workspaceWidth + (M.focusedWorkspaceWidth - M.workspaceWidth) * focus),
-                height: M.height,
-            )
-            cells.append(Cell(
-                workspace: workspace.name,
-                frame: slot,
-                name: Text(string: workspace.name, font: .squareName, frame: nameSize.centered(in: slot)),
-                isOccupied: workspace.isOccupied,
-                isDimmed: !workspace.isOccupied && config.dimEmptyWorkspaces,
-                focus: focus,
-            ))
+            let slot = CGRect(x: x, y: 0, width: max(M.hyprSlot, nameSize.width + 4), height: M.height)
+            cells.append(cell(workspace, config, frame: slot, font: .squareName, focus: focusAmount(workspace.name), measure))
             x = slot.maxX
         }
-        return MenuBarLayout(style: .square, size: CGSize(width: x, height: M.height), cells: cells)
+        return MenuBarLayout(style: .hypr, size: CGSize(width: x, height: M.height), cells: cells)
     }
 
     // MARK: - Dots
@@ -385,7 +331,7 @@ extension MenuBarLayout {
 
     // MARK: - Underline
 
-    /// The names, like in the square style, a bit higher to leave room for the bar under the focused one
+    /// The names, like in the hypr style, a bit higher to leave room for the bar under the focused one
     private static func underline(
         _ snapshot: MenuBarSnapshot,
         _ config: MenuBarConfig,
@@ -404,27 +350,6 @@ extension MenuBarLayout {
             x = slot.maxX
         }
         return MenuBarLayout(style: .underline, size: CGSize(width: x, height: M.height), cells: cells)
-    }
-
-    // MARK: - Glyphs
-
-    /// A glyph per workspace. The focus fades from one glyph to the other instead of sliding
-    private static func glyphs(
-        _ snapshot: MenuBarSnapshot,
-        _ config: MenuBarConfig,
-        _ focusAmount: (String) -> Double,
-        _ measure: Measure,
-    ) -> MenuBarLayout {
-        typealias M = MenuBarMetrics
-        let top = (M.height - M.ringSide) / 2
-        var cells: [Cell] = []
-        var x: CGFloat = 0
-        for workspace in snapshot.workspaces {
-            let frame = CGRect(x: x, y: top, width: M.ringSide, height: M.ringSide)
-            cells.append(cell(workspace, config, frame: frame, font: .chipName, focus: focusAmount(workspace.name), measure))
-            x = frame.maxX + M.ringSpacing
-        }
-        return MenuBarLayout(style: .glyphs, cornerRadius: M.ringSide / 2, size: CGSize(width: max(0, x - M.ringSpacing), height: M.height), cells: cells)
     }
 
     // MARK: - Liquid
@@ -446,100 +371,6 @@ extension MenuBarLayout {
             x = frame.maxX
         }
         return MenuBarLayout(style: .liquid, cornerRadius: M.liquidDrop / 2, size: CGSize(width: x, height: M.height), cells: cells)
-    }
-
-    // MARK: - Labels
-
-    /// The pills, with an SF Symbol in place of the name. The focused one stretches to show its symbol and its label.
-    /// [menu-bar.labels] and [menu-bar.symbols] only apply here
-    private static func labels(
-        _ snapshot: MenuBarSnapshot,
-        _ config: MenuBarConfig,
-        _ focusAmount: (String) -> Double,
-        _ measure: Measure,
-    ) -> MenuBarLayout {
-        typealias M = MenuBarMetrics
-        let top = (M.height - M.chipSide) / 2
-        var cells: [Cell] = []
-        var x: CGFloat = 0
-        for workspace in snapshot.workspaces {
-            let focus = focusAmount(workspace.name)
-            // A symbol that doesn't exist measures zero: the name is shown instead
-            let symbol: (name: String, size: CGSize)? = config.symbols[workspace.name].flatMap { name in
-                let size = measure(name, .symbol)
-                return size.width > 0 ? (name, size) : nil
-            }
-            let nameSize = measure(workspace.name, .chipName)
-            let narrow = max(M.chipSide, (symbol?.size.width ?? nameSize.width) + 2 * M.chipPadding)
-            let label = config.labels[workspace.name] ?? workspace.name
-            let labelSize = measure(label, .chipName)
-            let content = (symbol.map { $0.size.width + M.labelSymbolGap } ?? 0) + labelSize.width
-            let wide = max(narrow, content + 2 * M.labelPadding)
-            let frame = CGRect(x: x, y: top, width: narrow + (wide - narrow) * focus, height: M.chipSide)
-            var cell = cell(workspace, config, frame: frame, font: .chipName, focus: focus, measure)
-            cell.symbol = symbol.map { Text(string: $0.name, font: .symbol, frame: $0.size.centered(in: frame)) }
-            var contentX = frame.midX - content / 2
-            if let symbol {
-                cell.expanded.append(Text(string: symbol.name, font: .symbol, frame: CGRect(x: contentX, y: frame.midY - symbol.size.height / 2, width: symbol.size.width, height: symbol.size.height)))
-                contentX += symbol.size.width + M.labelSymbolGap
-            }
-            cell.expanded.append(Text(string: label, font: .chipName, frame: CGRect(x: contentX, y: frame.midY - labelSize.height / 2, width: labelSize.width, height: labelSize.height)))
-            cells.append(cell)
-            x = frame.maxX + M.labelSpacing
-        }
-        return MenuBarLayout(style: .labels, cornerRadius: M.chipSide / 2, size: CGSize(width: max(0, x - M.labelSpacing), height: M.height), cells: cells)
-    }
-
-    // MARK: - Segments
-
-    /// A track with a segment per workspace, and the focused one wider: the width follows the focus while the marker
-    /// slides, like in the pills. Before the track, the name of the focused workspace, in a slot as wide as the widest
-    /// name, so that nothing moves when the focus does
-    private static func segments(
-        _ snapshot: MenuBarSnapshot,
-        _ config: MenuBarConfig,
-        _ focusAmount: (String) -> Double,
-        _ measure: Measure,
-    ) -> MenuBarLayout {
-        typealias M = MenuBarMetrics
-        let slot = snapshot.workspaces.map { measure($0.name, .chipName).width }.max() ?? 0
-        let top = (M.height - M.segmentHeight) / 2
-        var cells: [Cell] = []
-        var x = slot + M.segmentLabelGap
-        for workspace in snapshot.workspaces {
-            let focus = focusAmount(workspace.name)
-            let frame = CGRect(x: x, y: top, width: M.segmentWidth + (M.segmentFocusedWidth - M.segmentWidth) * focus, height: M.segmentHeight)
-            var cell = cell(workspace, config, frame: frame, font: .chipName, focus: focus, measure)
-            // The name goes before the track, not in the segment
-            cell.name.frame = measure(workspace.name, .chipName).centered(in: CGRect(x: 0, y: 0, width: slot, height: M.height))
-            cells.append(cell)
-            x = frame.maxX + M.segmentSpacing
-        }
-        return MenuBarLayout(style: .segments, cornerRadius: M.segmentEndRadius, size: CGSize(width: max(0, x - M.segmentSpacing), height: M.height), cells: cells)
-    }
-
-    // MARK: - Capsule
-
-    /// The dots of 'dots', and the focused one stretched into a capsule that holds its name. The width follows the focus
-    /// while the marker slides, like in the pills
-    private static func capsule(
-        _ snapshot: MenuBarSnapshot,
-        _ config: MenuBarConfig,
-        _ focusAmount: (String) -> Double,
-        _ measure: Measure,
-    ) -> MenuBarLayout {
-        typealias M = MenuBarMetrics
-        var cells: [Cell] = []
-        var x: CGFloat = 0
-        for workspace in snapshot.workspaces {
-            let focus = focusAmount(workspace.name)
-            let wide = max(M.capsuleMinWidth, measure(workspace.name, .chipName).width + 2 * M.capsulePadding)
-            let height = M.dotSide + (M.capsuleHeight - M.dotSide) * focus
-            let frame = CGRect(x: x, y: (M.height - height) / 2, width: M.dotSide + (wide - M.dotSide) * focus, height: height)
-            cells.append(cell(workspace, config, frame: frame, font: .chipName, focus: focus, measure))
-            x = frame.maxX + M.dotSpacing
-        }
-        return MenuBarLayout(style: .capsule, cornerRadius: M.capsuleHeight / 2, size: CGSize(width: max(0, x - M.dotSpacing), height: M.height), cells: cells)
     }
 
     private static func cell(
@@ -569,7 +400,7 @@ extension MenuBarLayout {
         let start = from.flatMap { from in cells.first { $0.workspace == from } }?.frame ?? end
         let midX = start.midX + (end.midX - start.midX) * progress
         switch style {
-            case .chips, .labels:
+            case .chips:
                 let width = start.width + (end.width - start.width) * progress
                 let frame = CGRect(x: midX - width / 2, y: end.minY, width: width, height: end.height)
                 marker = Marker(
@@ -579,7 +410,7 @@ extension MenuBarLayout {
                     // The chip is at least as wide as it is tall, so one character always fits
                     initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },
                 )
-            case .square:
+            case .hypr:
                 let side = mode == nil ? M.focusSquare : M.modeSquare
                 let frame = CGRect(x: midX - side / 2, y: end.midY - side / 2, width: side, height: side)
                 marker = Marker(
@@ -620,17 +451,6 @@ extension MenuBarLayout {
                     isOutlined: snapshot.isFocusedWorkspaceFullscreen,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: nameArea, measure) },
                 )
-            case .glyphs:
-                // The glyphs fade into each other (see Cell.focus): the marker only matters in a binding mode, where
-                // the target becomes a disc that holds the initial
-                let side = mode == nil ? M.ringSide : M.modeSquare
-                let frame = CGRect(x: end.midX - side / 2, y: end.midY - side / 2, width: side, height: side)
-                marker = Marker(
-                    frame: frame,
-                    cornerRadius: side / 2,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
-                    initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
-                )
             case .liquid:
                 // The drop leads, and its trail follows it later: stretched in between, one round drop again at the end
                 let trailProgress = pow(progress, 2.4)
@@ -648,65 +468,34 @@ extension MenuBarLayout {
                         height: M.liquidTrail,
                     ),
                 )
-            case .segments:
-                // The wide segment slides and stretches like the pill of the dots. The name before the track is the one
-                // of the workspace the marker is closest to, or the initial of the binding mode in its place
-                let width = start.width + (end.width - start.width) * progress
-                marker = Marker(
-                    frame: CGRect(x: midX - width / 2, y: end.minY, width: width, height: end.height),
-                    cornerRadius: M.segmentEndRadius,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
-                )
-                // The initial goes with the marker, so that it takes the color of the binding mode (see needsColor)
-                let slot = CGRect(x: 0, y: 0, width: max(0, (cells.first?.frame.minX ?? 0) - M.segmentLabelGap), height: M.height)
-                marker?.initial = mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: slot, measure) }
-                label = mode == nil ? cells.max(by: { $0.focus < $1.focus })?.name : nil
-            case .capsule:
-                // The edge on the side of the move leaves first and the other one catches up, like the bar of the
-                // underline: the capsule stretches towards the next workspace, then shrinks into it
-                func capsule(_ workspace: String?, around slot: CGRect) -> CGRect {
-                    let name = cells.first { $0.workspace == workspace }?.name.frame.width ?? 0
-                    let width = max(M.capsuleMinWidth, name + 2 * M.capsulePadding)
-                    return CGRect(x: slot.midX - width / 2, y: (M.height - M.capsuleHeight) / 2, width: width, height: M.capsuleHeight)
-                }
-                let to = capsule(snapshot.focusedWorkspace, around: end)
-                let origin = from.map { capsule($0, around: start) } ?? to
-                let lead = min(1, progress * 1.7)
-                let trail = max(0, (progress - 0.4) / 0.6)
-                let isRight = to.minX >= origin.minX
-                let minX = origin.minX + (to.minX - origin.minX) * (isRight ? trail : lead)
-                let maxX = origin.maxX + (to.maxX - origin.maxX) * (isRight ? lead : trail)
-                let frame = CGRect(x: minX, y: to.minY, width: maxX - minX, height: to.height)
-                marker = Marker(
-                    frame: frame,
-                    cornerRadius: M.capsuleHeight / 2,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
-                    initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },
-                )
         }
     }
 
     /// 'per-monitor': room and a line between the workspaces of two monitors (they are already in the order of the
-    /// monitors), and a hollow marker on the workspaces that another monitor shows
+    /// monitors), and a hollow marker on the workspaces that another monitor shows. The divider of hypr is bolder
     private mutating func separateMonitors(_ snapshot: MenuBarSnapshot) {
         typealias M = MenuBarMetrics
+        let (space, width, height) = style == .hypr
+            ? (M.hyprSeparatorSpace, M.hyprSeparatorWidth, M.hyprSeparatorHeight)
+            : (M.monitorSeparatorSpace, M.monitorSeparatorWidth, M.monitorSeparatorHeight)
         let workspaces = Dictionary(snapshot.workspaces.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         var shift: CGFloat = 0
         for index in cells.indices {
             let monitor = workspaces[cells[index].workspace]?.monitor
             if index > 0, monitor != workspaces[cells[index - 1].workspace]?.monitor {
                 let previous = cells[index - 1].frame.maxX
-                shift += M.monitorSeparatorSpace
+                shift += space
                 let next = cells[index].frame.minX + shift
-                separators.append(CGRect(x: ((previous + next) / 2).rounded(), y: (M.height - M.monitorSeparatorHeight) / 2, width: 1, height: M.monitorSeparatorHeight))
+                separators.append(CGRect(x: ((previous + next) / 2).rounded() - (width / 2).rounded(.down), y: (M.height - height) / 2, width: width, height: height))
             }
             if shift > 0 { cells[index] = cells[index].offsetBy(dx: shift) }
         }
         size.width += shift
-        visibleElsewhere = cells.compactMap { cell in
-            guard cell.workspace != snapshot.focusedWorkspace, workspaces[cell.workspace]?.isVisible == true else { return nil }
-            return restMarker(cell.frame)
+        for index in cells.indices {
+            let cell = cells[index]
+            cells[index].isVisibleElsewhere = cell.workspace != snapshot.focusedWorkspace && workspaces[cell.workspace]?.isVisible == true
         }
+        visibleElsewhere = cells.filter(\.isVisibleElsewhere).map { restMarker($0.frame) }
     }
 
     /// The shape of the marker of a theme around a workspace at rest, hollow: where another monitor shows it
@@ -714,15 +503,13 @@ extension MenuBarLayout {
         typealias M = MenuBarMetrics
         func centered(_ side: CGFloat) -> CGRect { CGRect(x: slot.midX - side / 2, y: slot.midY - side / 2, width: side, height: side) }
         let (frame, radius): (CGRect, CGFloat) = switch style {
-            case .chips, .labels: (slot, cornerRadius)
+            case .chips: (slot, cornerRadius)
             case .dots: (slot.insetBy(dx: -2, dy: -2), slot.height / 2 + 2)
-            case .square: (centered(M.focusSquare), M.focusSquareCornerRadius)
+            // Around the name, which stays in sight
+            case .hypr: (centered(M.hyprFrame), M.hyprFrameCornerRadius)
             case .underline:
                 (CGRect(x: slot.midX - M.underlineWidth / 2, y: M.underlineTop - 0.75, width: M.underlineWidth, height: M.underlineHeight + 1.5), (M.underlineHeight + 1.5) / 2)
-            case .glyphs: (centered(M.ringSide), M.ringSide / 2)
             case .liquid: (centered(M.liquidDrop), M.liquidDrop / 2)
-            case .segments: (slot.insetBy(dx: -1.5, dy: -1.5), M.segmentEndRadius + 1.5)
-            case .capsule: (centered(M.dotSide + 4), (M.dotSide + 4) / 2)
         }
         return Marker(frame: frame, cornerRadius: radius, isOutlined: true)
     }

@@ -38,8 +38,8 @@ struct MenuBarPalette: Equatable, Sendable {
         let base: Rgba = isTemplate || !isDarkBar ? .black : .white
         func fixed(_ color: ConfigColor) -> Rgba? { color == .auto ? nil : color.resolve(auto: base, systemAccent: systemAccent) }
 
-        // The names of the square and underline styles have no background to stand out from, so they aren't faded
-        let nameOpacity = style == .square || style == .underline ? 1 : M.chipNameOpacity
+        // The names of the hypr and underline styles have no background to stand out from, so they aren't faded
+        let nameOpacity = style == .hypr || style == .underline ? 1 : M.chipNameOpacity
         let occupiedName = fixed(colors.occupied) ?? base.opacity(nameOpacity)
         let accent = fixed(colors.accent)
         let focused = fixed(colors.focused) ?? base

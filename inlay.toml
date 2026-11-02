@@ -120,9 +120,8 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 
 [menu-bar]
     enabled              = true
-    # pills | chips | square | minimal | dots | underline | glyphs
-    # liquid | labels | segments | capsule
-    theme                = 'capsule'
+    # pills | chips | hypr | minimal | dots | underline | liquid
+    theme                = 'hypr'
     dim-empty-workspaces = true
     show-mode            = true        # the initial of the binding mode on the focused workspace
     per-monitor          = false       # group the workspaces by monitor
@@ -135,26 +134,6 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
     occupied = '#CAC4D0'    # workspaces with windows
     empty    = '#938F99'    # workspaces without windows
     accent   = '#EFB8C8'    # the focused one in a binding mode. 'auto': as focused
-
-# Only for theme = 'labels'
-[menu-bar.labels]
-    1 = 'Terminals'
-    2 = 'Code'
-    3 = 'Browsers'
-    4 = 'Chats'
-    5 = 'AI'
-    6 = 'Other'
-    7 = 'Free'
-
-# Only for theme = 'labels'. Names from the SF Symbols app
-[menu-bar.symbols]
-    1 = 'terminal'
-    2 = 'chevron.left.forwardslash.chevron.right'
-    3 = 'globe'
-    4 = 'bubble.left.and.bubble.right'
-    5 = 'sparkles'
-    6 = 'square.grid.2x2'
-    7 = 'circle.dashed'
 
 # ━━ 7 · Borders ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

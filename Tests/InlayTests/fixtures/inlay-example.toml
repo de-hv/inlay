@@ -110,8 +110,8 @@ enabled = true
 # Forma del item:
 #   'chips'        Solo los workspaces: fondo tenue si tienen ventanas, sólido
 #                  el enfocado, atenuados los vacíos. El de Aeromenu.
-#   'square'       Icono del layout, nombres sin fondo y un cuadrado en lugar
-#                  del enfocado (lleva la inicial del modo si no es main).
+#   'hypr'         Nombres sin fondo en huecos del mismo ancho y un cuadrado en
+#                  lugar del enfocado (lleva la inicial del modo si no es main).
 #   'minimal'      Solo el workspace enfocado.
 #   'liquid'       Un punto por workspace y una gota con el nombre del enfocado,
 #                  que fluye al siguiente dejando una estela.
@@ -121,7 +121,7 @@ theme = 'liquid'                                              # defecto: 'liquid
 dim-empty-workspaces = true
 
 # Mostrar el modo de atajos cuando no es 'main': su inicial en el marcador del
-# workspace enfocado (el chip, o el cuadrado de 'square'), sin cambiar el ancho
+# workspace enfocado (el chip, o el cuadrado de 'hypr'), sin cambiar el ancho
 # del item.                                                   (defecto: false)
 show-mode = true
 

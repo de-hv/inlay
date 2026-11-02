@@ -41,12 +41,11 @@ revision (installing without options, `inlay.toml` as the shipped config, the qu
 environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
 the focused workspace, the menu without icons, the config folder
 linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the border and the gap
-of a window alone in its workspace or in fullscreen (`[borders.single-window]`), and the four themes taken from
-Hyprland setups (`dots`, `underline`, `glyphs`, `liquid`): they are checked with tests and renders, including the
-frames of their animations. The same goes for the curves of the animations, the `labels` theme with
-`[menu-bar.labels]` and `[menu-bar.symbols]`, `per-monitor`, undo, the export of the config, and the latest
+of a window alone in its workspace or in fullscreen (`[borders.single-window]`), and the themes taken from
+Hyprland setups (`dots`, `underline`, `liquid`, `hypr`): they are checked with tests and renders, including the
+frames of their animations. The same goes for the curves of the animations, `per-monitor`, undo, the export of the config, and the latest
 revision, which simplified the look: no palettes (every color is set on its own), no notice after a reload
-(the menu says when the config was reloaded last), and a menu of native items. Untried in real use too: the `segments` and `capsule` themes, and the menu as a panel with
+(the menu says when the config was reloaded last), and a menu of native items. Untried in real use too: the menu as a panel with
 the layouts of the window and of its workspace. The newest: **there is no Settings window anymore**. Everything
 that can be changed without touching the code is in the config file, like the tools of a Linux desktop that are
 configured from dotfiles, and `inlay config --use`, `--unlink` and `--export` do from the CLI what the window did
@@ -605,24 +604,23 @@ A curve that overshoots also resizes the window past its tile for a moment: some
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
 is configured in the `[menu-bar]` table of the config; `inlay config --explain menu-bar` documents it.
 
-<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: an outline around the focused workspace when it has a fullscreen window, a hollow square for the same in the 'square' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: an outline around the focused workspace when it has a fullscreen window, a hollow square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'pills'`, `'chips'`, `'square'`, `'minimal'`, `'dots'`, `'underline'`, `'glyphs'`, `'liquid'`, `'labels'`, `'segments'`, `'capsule'` | `'liquid'` |
+| `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'`, `'underline'`, `'liquid'` | `'liquid'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `true` |
 | `per-monitor` | `true`, `false` | `false` |
 | `system-colors` | `true`, `false` | `false` |
-| `[menu-bar.labels]`, `[menu-bar.symbols]` `<workspace>` | a name, an SF Symbol (only for `'labels'`) | empty tables |
 | `[menu-bar.colors]` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
 
 **`theme`**: the shape of the item.
 
 ```toml
 [menu-bar]
-    theme = 'liquid'  # 'pills' | 'chips' | 'square' | 'minimal' | 'dots' | 'underline' | 'glyphs' | 'liquid' | 'labels' | 'segments' | 'capsule'
+    theme = 'liquid'  # 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots' | 'underline' | 'liquid'
 ```
 
 **Pick a theme** from this gallery: each one as Inlay draws it, on a dark and on a light menu bar, with
@@ -632,52 +630,33 @@ workspace 2 focused and 6 empty. Copy its line into `[menu-bar]`.
 <tr><td valign="middle"><code>'liquid'</code><br><sub><b>the default</b>: a dot per workspace, and a drop with the name of the focused one</sub></td><td><img src="docs/images/themes/liquid.png" alt="Real render of the 'liquid' theme of the menu bar item, on a dark and on a light menu bar: the default: a dot per workspace, and a drop with the name of the focused one" width="560"></td></tr>
 <tr><td valign="middle"><code>'pills'</code><br><sub>round workspaces, and the focused one a wider pill</sub></td><td><img src="docs/images/themes/pills.png" alt="Real render of the 'pills' theme of the menu bar item, on a dark and on a light menu bar: round workspaces, and the focused one a wider pill" width="560"></td></tr>
 <tr><td valign="middle"><code>'chips'</code><br><sub>the workspaces alone, as rounded squares</sub></td><td><img src="docs/images/themes/chips.png" alt="Real render of the 'chips' theme of the menu bar item, on a dark and on a light menu bar: the workspaces alone, as rounded squares" width="560"></td></tr>
-<tr><td valign="middle"><code>'square'</code><br><sub>the names, and a square in place of the focused workspace</sub></td><td><img src="docs/images/themes/square.png" alt="Real render of the 'square' theme of the menu bar item, on a dark and on a light menu bar: the names, and a square in place of the focused workspace" width="560"></td></tr>
+<tr><td valign="middle"><code>'hypr'</code><br><sub>the names, and a square in place of the focused workspace</sub></td><td><img src="docs/images/themes/hypr.png" alt="Real render of the 'hypr' theme of the menu bar item, on a dark and on a light menu bar: the names, and a square in place of the focused workspace" width="560"></td></tr>
 <tr><td valign="middle"><code>'minimal'</code><br><sub>only the focused workspace</sub></td><td><img src="docs/images/themes/minimal.png" alt="Real render of the 'minimal' theme of the menu bar item, on a dark and on a light menu bar: only the focused workspace" width="560"></td></tr>
 <tr><td valign="middle"><code>'dots'</code><br><sub>a dot per workspace, a ring if it is empty, and the focused one a pill</sub></td><td><img src="docs/images/themes/dots.png" alt="Real render of the 'dots' theme of the menu bar item, on a dark and on a light menu bar: a dot per workspace, a ring if it is empty, and the focused one a pill" width="560"></td></tr>
 <tr><td valign="middle"><code>'underline'</code><br><sub>the names, and a bar under the focused one</sub></td><td><img src="docs/images/themes/underline.png" alt="Real render of the 'underline' theme of the menu bar item, on a dark and on a light menu bar: the names, and a bar under the focused one" width="560"></td></tr>
-<tr><td valign="middle"><code>'glyphs'</code><br><sub>a disc per workspace with windows, a ring per empty one, and a target for the focused one</sub></td><td><img src="docs/images/themes/glyphs.png" alt="Real render of the 'glyphs' theme of the menu bar item, on a dark and on a light menu bar: a disc per workspace with windows, a ring per empty one, and a target for the focused one" width="560"></td></tr>
-<tr><td valign="middle"><code>'labels'</code><br><sub>an SF Symbol per workspace, and the focused one with its name (<code>[menu-bar.labels]</code>, <code>[menu-bar.symbols]</code>)</sub></td><td><img src="docs/images/themes/labels.png" alt="Real render of the 'labels' theme of the menu bar item, on a dark and on a light menu bar: an SF Symbol per workspace, and the focused one with its name ([menu-bar.labels], [menu-bar.symbols])" width="560"></td></tr>
-<tr><td valign="middle"><code>'segments'</code><br><sub>a segment per workspace, the focused one wider, with its name before the track</sub></td><td><img src="docs/images/themes/segments.png" alt="Real render of the 'segments' theme of the menu bar item, on a dark and on a light menu bar: a segment per workspace, the focused one wider, with its name before the track" width="560"></td></tr>
-<tr><td valign="middle"><code>'capsule'</code><br><sub>a dot per workspace, a ring if it is empty, and a capsule with the name of the focused one</sub></td><td><img src="docs/images/themes/capsule.png" alt="Real render of the 'capsule' theme of the menu bar item, on a dark and on a light menu bar: a dot per workspace, a ring if it is empty, and a capsule with the name of the focused one" width="560"></td></tr>
 </table>
 
-When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). The
-four themes taken from Hyprland setups move in their own way: the pill of **`dots`** stretches on its way,
+When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). Some of
+the themes taken from Hyprland setups move in their own way: the pill of **`dots`** stretches on its way,
 like the page indicator of iOS; the bar of **`underline`** leaves by its leading edge, stretches towards the
-new workspace and then shrinks into it; the target of **`glyphs`** fades from one workspace to the other; and
-the drop of **`liquid`** flows to the new workspace with a trail behind it that catches up at the end. The two
-themes taken from the workspace switcher of Dank Material Shell move like them: the wide segment of
-**`segments`** slides and stretches like the pill of `dots`, and the name before the track follows it; the
-**`capsule`** stretches like the bar of `underline`, and the name of the workspace it reaches comes in as the
-other one goes. With "Reduce motion" nothing slides.
+new workspace and then shrinks into it; and the drop of **`liquid`** flows to the new workspace with a trail
+behind it that catches up at the end. With "Reduce motion" nothing slides.
 
-**`segments`** and **`capsule`** use the same four colors as the rest: a segment or a dot in `occupied` for a
-workspace with windows, hollow in `empty` for one without, and the focused one in `focused` (`accent` with a
-binding mode, whose initial takes the place of the name).
-
-**`labels`** draws an SF Symbol per workspace, and stretches the focused one into a pill with its symbol and its
-name: the purpose of each workspace at a glance. The names and the symbols are two tables of the config that
-**only this theme uses**: the other themes ignore them, so they can stay in the file while another theme is in use.
-A workspace without a symbol (or with a name that isn't an SF Symbol) shows its own name, and one without a label
-shows its name in the pill.
-
-```toml
-[menu-bar]
-    theme = 'labels'
-
-[menu-bar.labels]
-    1 = 'Terminals'
-    2 = 'Code'
-
-[menu-bar.symbols]                  # the names of the SF Symbols app
-    1 = 'terminal'
-    2 = 'chevron.left.forwardslash.chevron.right'
-```
+**`hypr`** is the workspace indicator of the [Monitor Workspaces](https://github.com/vadim-su/omarchy-monitor-workspaces)
+plugin of the Omarchy bar: the names in slots of the same width, and a square in place of the focused one. It
+is made for `per-monitor`: a frame goes around the name of the workspace that another monitor shows, and a bolder
+line divides the monitors.
 
 **`per-monitor`** groups the workspaces by the monitor they are on, from left to right, with a line between
 the monitors, and draws a hollow marker on the workspace that another monitor shows. With a single monitor it
-changes nothing. Every theme supports it.
+changes nothing. Every theme supports it, and it is off by default.
+
+```toml
+[menu-bar]
+    per-monitor = true
+```
+
+<p align="center"><img src="docs/images/menu-bar-per-monitor.png" alt="Real render of per-monitor in every theme, on a dark menu bar: workspaces 1 to 4 on the left monitor and 5 and 6 on the right one, which shows 5. Without per-monitor the workspaces are in one row; with it, a line divides the two monitors and a hollow marker is on workspace 5. In 'hypr' the line is bolder and the marker is a frame around the 5" width="880"></p>
 
 The item shows no app icons. `theme = 'chips-icons'` and the `show-app-icons` key, of a previous version, are
 still accepted so that a config that has them loads: they give a warning, the theme is treated as `'chips'`
@@ -708,14 +687,14 @@ Inlay again from Applications opens the config in an editor.
 
 With `show-mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
 focused workspace carries the initial of the mode**, the way Aeromenu did it. In `chips` and `minimal` the
-initial takes the place of the name in the chip; in `square` the square grows from 8.5 to 14 pt to hold it.
-In `dots` the pill grows taller to hold it, in `glyphs` the target becomes a disc with the initial, in
+initial takes the place of the name in the chip; in `hypr` the square grows from 8.5 to 14 pt to hold it.
+In `dots` the pill grows taller to hold it, in
 `underline` the initial takes the place of the name and in `liquid` the drop shows it.
 Nothing is added next to the workspaces, so the item is exactly as wide in every mode and nothing in the menu
 bar moves. While a window of the workspace is fullscreen, the marker is an outline and the initial is drawn
-inside it. The key governs every theme (`square` used to show the mode always).
+inside it. The key governs every theme.
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'square', the item as wide as before; and the same with a fullscreen window, the R inside of an outline" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim-empty-workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show-mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, the R inside of an outline" width="880"></p>
 
 **`[menu-bar.colors]`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
 the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'`, the
@@ -731,7 +710,7 @@ the same as `focused`, and over a fixed color the initial is white, or black if 
     empty = 'auto'             # the workspaces without windows
 ```
 
-<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their TOML, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, the R of the resize mode cut out of the focused one. accent = 'system-accent': that chip in the accent color of the system, with a white R. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'square' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their TOML, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, the R of the resize mode cut out of the focused one. accent = 'system-accent': that chip in the accent color of the system, with a white R. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'hypr' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
 
 **The item and its menu**
 

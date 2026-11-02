@@ -12,10 +12,6 @@ struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var systemColors: Bool = false
     /// The workspaces grouped by the monitor they are on, and a hollow marker on the one that another monitor shows
     var perMonitor: Bool = false
-    /// [menu-bar.labels]. Workspace -> the name that the 'labels' theme shows in the focused workspace. Only that theme uses it
-    var labels: [String: String] = [:]
-    /// [menu-bar.symbols]. Workspace -> the SF Symbol that the 'labels' theme draws for it. Only that theme uses it
-    var symbols: [String: String] = [:]
 
     /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
     var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
@@ -27,8 +23,9 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     case pills
     /// The workspaces alone. The Chips style of Aeromenu
     case chips
-    /// The Square style of Aeromenu without its layout icon: the names, and a square in place of the focused workspace
-    case square
+    /// The names in slots of the same width, a square in place of the focused workspace and a frame around the one that
+    /// another monitor shows: the workspace indicator of the Monitor Workspaces plugin of the Omarchy bar (Hyprland)
+    case hypr
     /// Only the focused workspace
     case minimal
     /// A dot per workspace, without names, and the focused one stretched into a pill: the page indicator of iOS,
@@ -37,21 +34,9 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// The names, and a bar under the focused one that stretches towards the next one and catches up with it:
     /// the border-bottom of the workspaces of waybar
     case underline
-    /// A ring for an empty workspace, a disc for one with windows and a target for the focused one: the Nerd Font
-    /// icons of many waybar setups, drawn by Inlay
-    case glyphs
     /// A dot per workspace, and a drop over the focused one that flows to the next one leaving a trail behind:
     /// the "gooey" effect of the bars made with eww, AGS or Quickshell
     case liquid
-    /// An SF Symbol per workspace ([menu-bar.symbols]), and the focused one stretched into a pill with its symbol
-    /// and its name ([menu-bar.labels]). A workspace without a symbol shows its name
-    case labels
-    /// A track with a segment per workspace, and the focused one wider, with its name before the track: the
-    /// "Lines" style of the workspace switcher of Dank Material Shell
-    case segments
-    /// A dot per workspace, a ring if it is empty, and the focused one a capsule with its name: 'dots' and 'liquid'
-    /// in one
-    case capsule
 }
 
 extension MenuBarConfig {
@@ -84,8 +69,6 @@ let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "colors": Parser(\.colors, parseMenuBarColors),
     "system-colors": Parser(\.systemColors, parseBool),
     "per-monitor": Parser(\.perMonitor, parseBool),
-    "labels": Parser(\.labels, parseWorkspaceStrings),
-    "symbols": Parser(\.symbols, parseWorkspaceStrings),
 ]
 
 let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
@@ -101,21 +84,6 @@ func parseMenuBar(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout C
 
 private func parseMenuBarColors(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarColors {
     parseTable(raw, MenuBarColors(), menuBarColorsParserTable, backtrace, &c)
-}
-
-/// [menu-bar.labels] and [menu-bar.symbols]: a string per workspace
-private func parseWorkspaceStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: String] {
-    guard case .dict(let table) = raw else {
-        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
-        return [:]
-    }
-    var result: [String: String] = [:]
-    for (workspace, value) in table {
-        if let string = parseString(value, backtrace + .key(workspace)).getOrNil(appendErrorTo: &c.errors), !string.isEmpty {
-            result[workspace] = string
-        }
-    }
-    return result
 }
 
 private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> MenuBarTheme {

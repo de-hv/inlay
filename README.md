@@ -65,14 +65,45 @@ There is a copy of that documentation in [`docs/upstream-aerospace`](./docs/upst
 
 ## Requirements
 
-- macOS 14 or later (tested on macOS 27, Apple Silicon).
-- Xcode Command Line Tools with Swift 6.2 or later: `xcode-select --install`.
-- Internet connection the first time it is built (SwiftPM downloads four dependencies from GitHub).
+- macOS 14 or later on Apple Silicon (tested on macOS 27).
+- To build it from source: Xcode Command Line Tools with Swift 6.2 or later (`xcode-select --install`), and an
+  Internet connection the first time it is built (SwiftPM downloads four dependencies from GitHub).
 
 ## Installation
 
+### With Homebrew
+
 ```sh
-git clone <this repo> inlay && cd inlay
+brew install --cask de-hv/tap/inlay
+```
+
+It installs the app of the latest [release](https://github.com/de-hv/inlay/releases) in `/Applications` and links
+the `inlay` CLI in the `bin` folder of Homebrew. Nothing is built, so the Command Line Tools are not needed.
+
+- **The first time, macOS blocks it**: the app is not notarized by Apple. Click *Done* (not *Move to Trash*),
+  then *System Settings → Privacy & Security → Open Anyway*. Or remove the quarantine:
+  `xattr -dr com.apple.quarantine /Applications/Inlay.app`. Each upgrade brings a new download, blocked again.
+- **The config**: without one, Inlay creates `~/.config/inlay/inlay.toml` with the built-in config when it
+  starts. To use a folder of your own instead: `inlay config --use ~/.dotfiles/inlay` (see
+  [Changing the config from the CLI](#changing-the-config-from-the-cli)).
+- **Start at login**: open Inlay once (`open -a Inlay`). With `start-at-login = true` in the config (the built-in
+  one has it) it adds itself to the login items.
+- Then allow it in the Accessibility permission (see [Before opening Inlay](#before-opening-inlay)).
+
+To update it:
+
+```sh
+brew update
+brew upgrade --cask inlay
+```
+
+Homebrew quits Inlay before replacing it; open it again afterwards. Your config is outside of the app: an upgrade
+never touches it.
+
+### From source
+
+```sh
+git clone https://github.com/de-hv/inlay.git && cd inlay
 ./install.sh
 ```
 
@@ -921,6 +952,17 @@ rest every `per-sec` should be 0. The one that is not tells what is going on:
 | `config.watcher.*`, `config.load` | Events of the config file watcher, and loads of the config |
 
 ## Uninstallation
+
+Installed with Homebrew:
+
+```sh
+brew uninstall --cask inlay
+```
+
+It quits Inlay and removes the app and the CLI link; your config is kept. `--zap` also removes the logs. To also
+remove the Accessibility entry: `tccutil reset Accessibility com.dehv.inlay`.
+
+Installed with `install.sh`:
 
 ```sh
 inlay uninstall           # pick what to remove in a list, see what is removed and what is kept, confirm

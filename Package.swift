@@ -61,6 +61,12 @@ let package = Package(
             path: "Sources/PrivateApi",
             publicHeadersPath: "include",
         ),
+        // Lua 5.4: runs the config. See Sources/CLua/README.md
+        .target(
+            name: "CLua",
+            exclude: ["README.md"],
+            cSettings: [.define("LUA_USE_POSIX")],
+        ),
         // Version and git hash of the build
         .target(
             name: "BuildInfo",
@@ -81,6 +87,7 @@ let package = Package(
                 .product(name: "HotKey", package: "HotKey"),
                 .product(name: "ISSoundAdditions", package: "ISSoundAdditions"),
                 .product(name: "TOMLDecoder", package: "TOMLDecoder"),
+                .target(name: "CLua"),
                 .target(name: "Common"),
                 .target(name: "PrivateApi"),
             ],

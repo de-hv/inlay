@@ -120,7 +120,7 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7']
 
 [menu-bar]
     enabled              = true
-    # pills | chips | hypr | minimal | dots | underline | liquid
+    # pills | chips | hypr | minimal | dots | underline | liquid | dms
     theme                = 'hypr'
     dim-empty-workspaces = true
     show-mode            = true        # the initial of the binding mode on the focused workspace

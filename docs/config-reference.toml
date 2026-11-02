@@ -263,7 +263,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     enabled = true
 
     # The shape of the item. All the existing workspaces are shown, and the focused one is marked
-    # Possible values: pills|chips|hypr|minimal|dots|underline|liquid
+    # Possible values: pills|chips|hypr|minimal|dots|underline|liquid|dms
     # - pills.   Round workspaces, and the focused one a wider pill, like the workspace indicator of GNOME
     #            and of many Hyprland setups. Otherwise like chips.
     # - chips.   The workspaces alone. The ones with windows have a faint background,
@@ -281,6 +281,10 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #            initial of the mode takes the place of the name.
     # - liquid.  A dot per workspace, and a drop with the name of the focused one, which flows to the next
     #            workspace leaving a trail behind. In a binding mode the drop shows the initial of the mode.
+    # - dms.     Small round workspaces on a faint track, and the focused one a wider pill with its name,
+    #            like the workspace switcher of Dank Material Shell. With 'per-monitor' each monitor gets its
+    #            own track. Material 3 colors suit it:
+    #            focused = '#D0BCFF', occupied = '#CCC2DC', empty = '#938F99', accent = '#EFB8C8'
     # ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')
     # Fallback value (if you omit the key): theme = 'liquid'
     theme = 'liquid'
@@ -295,15 +299,15 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     dim-empty-workspaces = true
 
     # Show the binding mode when it isn't 'main': its initial ('R' for 'resize') on the marker of the focused
-    # workspace. In 'chips', 'pills', 'minimal', 'underline' and 'liquid' the initial takes the place of the name; in
+    # workspace. In 'chips', 'pills', 'minimal', 'underline', 'liquid' and 'dms' the initial takes the place of the name; in
     # 'hypr' and 'dots' the marker grows to hold it. The item keeps its width: nothing moves when the mode changes
     # Possible values: true|false
     # Fallback value (if you omit the key): show-mode = true
     show-mode = true
 
     # Group the workspaces by monitor, from left to right, with a line between the monitors, and draw a hollow
-    # marker on the workspace that another monitor shows ('hypr': a frame around its name). With one monitor it changes
-    # nothing
+    # marker on the workspace that another monitor shows ('hypr': a frame around its name; 'dms': a track per monitor
+    # instead of the line). With one monitor it changes nothing
     # Possible values: true|false
     # Fallback value (if you omit the key): per-monitor = false
     per-monitor = false

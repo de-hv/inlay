@@ -12,6 +12,7 @@ extension MenuBarFont {
             .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium),
             .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy),
             .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy),
+            .dmsName: .monospacedDigitSystemFont(ofSize: M.dmsFontSize, weight: .semibold),
         ]
     }()
 
@@ -97,9 +98,10 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots].contains(layout.style) {
+        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots, .dms].contains(layout.style) {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
+        layout.tracks = layout.tracks.map(snap)
         if let marker = layout.marker {
             let frame = snap(marker.frame)
             layout.marker?.frame = frame
@@ -117,6 +119,7 @@ enum MenuBarRenderer {
             case .dots: drawDots(layout, palette, in: cg)
             case .underline: drawUnderline(layout, palette, in: cg)
             case .liquid: drawLiquid(layout, palette, in: cg)
+            case .dms: drawDms(layout, palette, in: cg)
         }
         // 'per-monitor'
         let separatorOpacity = layout.style == .hypr ? MenuBarMetrics.hyprSeparatorOpacity : MenuBarMetrics.emptyWorkspaceOpacity
@@ -131,7 +134,6 @@ enum MenuBarRenderer {
     // MARK: - Chips
 
     private static func drawChips(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
         // The row as if no workspace was focused
         for cell in layout.cells {
             // Only the workspaces with windows get a chip, so the background itself says "something is here"
@@ -140,6 +142,12 @@ enum MenuBarRenderer {
             }
             draw(cell.name, palette.nameColor(of: cell))
         }
+        drawMarkerOverNames(layout, palette, in: cg)
+    }
+
+    /// The marker of the chips and of dms, filled, with the names of the workspaces cut out of it
+    private static func drawMarkerOverNames(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
         guard let marker = layout.marker else { return }
         let path = roundedRect(marker.frame, marker.cornerRadius)
         // Clears the faint chip under the marker
@@ -168,6 +176,22 @@ enum MenuBarRenderer {
             }
         }
         cg.restoreGState()
+    }
+
+    // MARK: - Dms
+
+    private static func drawDms(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
+        for track in layout.tracks {
+            cg.fill(roundedRect(track, track.height / 2), palette.track)
+        }
+        // The pills are cut out of the track first: in a template image their opacity would add up with its own.
+        // Only the focused one has a name, in the marker
+        for cell in layout.cells {
+            let path = roundedRect(cell.frame, layout.cornerRadius)
+            cg.fill(path, .black, blendMode: .destinationOut)
+            cg.fill(path, palette.nameColor(of: cell))
+        }
+        drawMarkerOverNames(layout, palette, in: cg)
     }
 
     // MARK: - Hypr

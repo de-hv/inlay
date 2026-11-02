@@ -69,7 +69,7 @@ extension InlayTests {
         }
 
         @Test func testThemes() {
-            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid"])
+            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid", "dms"])
             for theme in MenuBarTheme.allCases {
                 let result = parseConfig("config-version = 2\nmenu-bar.theme = '\(theme.rawValue)'")
                 assertEquals(result.errors, [])
@@ -108,13 +108,13 @@ extension InlayTests {
         @Test func testErrors() {
             assertEquals(
                 parseConfig("menu-bar.theme = 'bubbles'").strErrors,
-                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid)"],
+                ["[ERROR] menu-bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
             )
             // The themes and the tables of the past are gone, with no compatibility
             for theme in ["square", "glyphs", "labels", "segments", "capsule"] {
                 assertEquals(
                     parseConfig("menu-bar.theme = '\(theme)'").strErrors,
-                    ["[ERROR] menu-bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid)"],
+                    ["[ERROR] menu-bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
                 )
             }
             assertEquals(parseConfig("[menu-bar.labels]\n1 = 'Code'").strErrors, ["[ERROR] menu-bar.labels: Unknown key"])

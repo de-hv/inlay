@@ -101,7 +101,7 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
         append("\(theme.rawValue)-two-monitors", MenuBarConfig(theme: theme), MenuBarSamples.twoMonitors)
     }
     // The focus on its way from workspace 5 to workspace 2, in the themes whose marker changes shape as it goes
-    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid] {
+    for theme in [MenuBarTheme.pills, .dots, .underline, .liquid, .dms] {
         for percent in [20, 40, 60, 80] {
             append("\(theme.rawValue)-slide-\(percent)", MenuBarConfig(theme: theme), MenuBarSamples.snapshot, .init(from: "5", progress: Double(percent) / 100))
         }

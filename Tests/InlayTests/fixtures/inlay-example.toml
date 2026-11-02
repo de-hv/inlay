@@ -115,6 +115,8 @@ enabled = true
 #   'minimal'      Solo el workspace enfocado.
 #   'liquid'       Un punto por workspace y una gota con el nombre del enfocado,
 #                  que fluye al siguiente dejando una estela.
+#   'dms'          Workspaces redondos sobre una pista tenue y el enfocado una
+#                  píldora con su nombre, como Dank Material Shell.
 theme = 'liquid'                                              # defecto: 'liquid'
 
 # Dibujar más tenues los workspaces sin ventanas.             (defecto: true)

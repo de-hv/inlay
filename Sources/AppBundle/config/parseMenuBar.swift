@@ -37,6 +37,9 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// A dot per workspace, and a drop over the focused one that flows to the next one leaving a trail behind:
     /// the "gooey" effect of the bars made with eww, AGS or Quickshell
     case liquid
+    /// Small round workspaces on a tonal track, and the focused one stretched into a pill with its name: the workspace
+    /// switcher of Dank Material Shell (Quickshell, Material 3)
+    case dms
 }
 
 extension MenuBarConfig {

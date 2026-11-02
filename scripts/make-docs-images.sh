@@ -60,7 +60,7 @@ PAGES=(
   menu-bar-states:880:330
   menu-bar-options:880:476
   menu-bar-colors:880:500
-  menu-bar-per-monitor:880:494
+  menu-bar-per-monitor:880:540
   menu:880:470
   borders-states:880:586
   borders-width:880:290
@@ -79,7 +79,7 @@ for page in "${PAGES[@]}"; do
 done
 
 # --- PNG: a theme of the menu bar item per image, for the gallery of the README ---
-THEMES=(liquid pills chips hypr minimal dots underline)
+THEMES=(liquid pills chips hypr minimal dots underline dms)
 mkdir -p "$OUT/themes"
 for theme in "${THEMES[@]}"; do
   wanted "theme-$theme" || wanted themes || continue

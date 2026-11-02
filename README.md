@@ -24,9 +24,9 @@ new windows (*dwindle*), without the *accordion* layout, with its own menu bar i
 | Build, install and uninstall without Xcode | Done | Clean build from scratch with the Command Line Tools; `install.sh` and `inlay uninstall` run end to end in an isolated environment (another `HOME`, another install folder) |
 | Window manager (tree, workspaces, commands, CLI) | The one of AeroSpace `74a1bf1`, under another name | Tests (simulated windows) |
 | *Dwindle*-style auto-tiling, no *accordion* layout | Done (see [Tiling](#tiling)) | Tests (simulated windows), including a pseudorandom session of 800 steps |
-| Menu bar item with eleven themes, configured only in the file | Done (see [Menu bar](#menu-bar)) | Tests and rendered images |
+| Menu bar item with eight themes, configured only in the file | Done (see [Menu bar](#menu-bar)) | Tests and rendered images |
 | Window borders | Done, with public API (see [Window borders](#window-borders)) | Tests, rendered images and `--debug-borders` on real windows |
-| Tests | 757 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
+| Tests | 762 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
 
 The "How it is verified" column says what has been verified automatically. In addition, Inlay has already been
 installed and used with the Accessibility permission in two rounds (2026-10-11). In the second one, with the
@@ -640,7 +640,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'`, `'underline'`, `'liquid'` | `'liquid'` |
+| `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'`, `'underline'`, `'liquid'`, `'dms'` | `'liquid'` |
 | `dim-empty-workspaces` | `true`, `false` | `true` |
 | `show-mode` | `true`, `false` | `true` |
 | `per-monitor` | `true`, `false` | `false` |
@@ -651,7 +651,7 @@ is configured in the `[menu-bar]` table of the config; `inlay config --explain m
 
 ```toml
 [menu-bar]
-    theme = 'liquid'  # 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots' | 'underline' | 'liquid'
+    theme = 'liquid'  # 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots' | 'underline' | 'liquid' | 'dms'
 ```
 
 **Pick a theme** from this gallery: each one as Inlay draws it, on a dark and on a light menu bar, with
@@ -665,18 +665,35 @@ workspace 2 focused and 6 empty. Copy its line into `[menu-bar]`.
 <tr><td valign="middle"><code>'minimal'</code><br><sub>only the focused workspace</sub></td><td><img src="docs/images/themes/minimal.png" alt="Real render of the 'minimal' theme of the menu bar item, on a dark and on a light menu bar: only the focused workspace" width="560"></td></tr>
 <tr><td valign="middle"><code>'dots'</code><br><sub>a dot per workspace, a ring if it is empty, and the focused one a pill</sub></td><td><img src="docs/images/themes/dots.png" alt="Real render of the 'dots' theme of the menu bar item, on a dark and on a light menu bar: a dot per workspace, a ring if it is empty, and the focused one a pill" width="560"></td></tr>
 <tr><td valign="middle"><code>'underline'</code><br><sub>the names, and a bar under the focused one</sub></td><td><img src="docs/images/themes/underline.png" alt="Real render of the 'underline' theme of the menu bar item, on a dark and on a light menu bar: the names, and a bar under the focused one" width="560"></td></tr>
+<tr><td valign="middle"><code>'dms'</code><br><sub>round workspaces on a track, and the focused one a pill with its name</sub></td><td><img src="docs/images/themes/dms.png" alt="Real render of the 'dms' theme of the menu bar item, on a dark and on a light menu bar: round workspaces on a track, and the focused one a pill with its name" width="560"></td></tr>
 </table>
 
 When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). Some of
 the themes taken from Hyprland setups move in their own way: the pill of **`dots`** stretches on its way,
 like the page indicator of iOS; the bar of **`underline`** leaves by its leading edge, stretches towards the
 new workspace and then shrinks into it; and the drop of **`liquid`** flows to the new workspace with a trail
-behind it that catches up at the end. With "Reduce motion" nothing slides.
+behind it that catches up at the end. The pills of **`dms`** make room for each other, and the track follows
+them. With "Reduce motion" nothing slides.
 
 **`hypr`** is the workspace indicator of the [Monitor Workspaces](https://github.com/vadim-su/omarchy-monitor-workspaces)
 plugin of the Omarchy bar: the names in slots of the same width, and a square in place of the focused one. It
 is made for `per-monitor`: a frame goes around the name of the workspace that another monitor shows, and a bolder
 line divides the monitors.
+
+**`dms`** is the workspace switcher of [Dank Material Shell](https://github.com/AvengeMedia/DankMaterialShell)
+(Quickshell, Material 3): small round workspaces on a tonal track, and the focused one a wider pill with its
+name. With `'auto'` colors it follows the menu bar like every theme; Material 3 colors suit it, and with
+`per-monitor` each monitor gets its own track instead of a line.
+
+```toml
+[menu-bar]
+    theme = 'dms'
+[menu-bar.colors]
+    focused  = '#D0BCFF'    # primary
+    occupied = '#CCC2DC'    # secondary
+    empty    = '#938F99'    # outline, and the track at 16%
+    accent   = '#EFB8C8'    # tertiary
+```
 
 **`per-monitor`** groups the workspaces by the monitor they are on, from left to right, with a line between
 the monitors, and draws a hollow marker on the workspace that another monitor shows. With a single monitor it

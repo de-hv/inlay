@@ -12,6 +12,7 @@ extension InlayTests {
                 case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
                 case .modeInitial: CGSize(width: 8, height: 12)
                 case .chipModeInitial: CGSize(width: 9, height: 13)
+                case .dmsName: CGSize(width: 6 * CGFloat(string.count), height: 12)
             }
         }
 
@@ -94,6 +95,70 @@ extension InlayTests {
             assertEquals(marker.frame.size, CGSize(width: M.dotFocusedWidth, height: M.modeSquare))
             assertEquals(marker.frame.midY, M.height / 2)
             assertEquals(marker.initial?.string, "R")
+            assertEquals(mode.size, main.size)
+        }
+
+        // MARK: - Dms
+
+        @Test func testDms() throws {
+            typealias M = MenuBarMetrics
+            let layout = layout(MenuBarConfig(theme: .dms))
+            assertEquals(layout.style, .dms)
+            assertEquals(layout.cornerRadius, M.dmsPill / 2)
+            // The focused workspace is a wider pill, the others are round
+            let focused = try #require(layout.cells.firstIndex { $0.workspace == snapshot.focusedWorkspace })
+            for (index, cell) in layout.cells.enumerated() {
+                assertEquals(cell.frame.size, CGSize(width: index == focused ? M.dmsFocusedWidth : M.dmsPill, height: M.dmsPill))
+                assertEquals(cell.frame.midY, M.height / 2)
+                assertEquals(cell.name.font, .dmsName)
+            }
+            for (a, b) in zip(layout.cells, layout.cells.dropFirst()) {
+                assertEquals(b.frame.minX - a.frame.maxX, M.dmsSpacing)
+            }
+            // The marker is the focused pill
+            let marker = try #require(layout.marker)
+            assertEquals(marker.frame, layout.cells[focused].frame)
+            assertEquals(marker.cornerRadius, M.dmsPill / 2)
+            // One track behind all of them, as wide as the item
+            assertEquals(layout.tracks, [CGRect(x: 0, y: (M.height - M.dmsTrackHeight) / 2, width: layout.size.width, height: M.dmsTrackHeight)])
+            assertEquals(layout.cells.first?.frame.minX, M.dmsTrackPadding)
+            assertEquals(layout.cells.last.map { layout.size.width - $0.frame.maxX }, M.dmsTrackPadding)
+        }
+
+        @Test func testDmsFitsTheName() {
+            var snapshot = snapshot
+            snapshot.workspaces[1].name = "code"
+            snapshot.focusedWorkspace = "code"
+            let pill = layout(MenuBarConfig(theme: .dms), snapshot).cells[1]
+            assertEquals(pill.frame.width, 6 * 4 + 2 * MenuBarMetrics.dmsNamePadding)
+            assertEquals(pill.name.frame.midX, pill.frame.midX)
+        }
+
+        /// The pills make room for each other while the marker slides, and the track follows them
+        @Test func testDmsStretchesWhileTheMarkerSlides() throws {
+            typealias M = MenuBarMetrics
+            let end = layout(MenuBarConfig(theme: .dms))
+            let middle = layout(MenuBarConfig(theme: .dms), transition: .init(from: "4", progress: 0.5))
+            let from = try #require(middle.cells.first { $0.workspace == "4" })
+            let to = try #require(middle.cells.first { $0.workspace == snapshot.focusedWorkspace })
+            assertEquals(from.frame.width, (M.dmsPill + M.dmsFocusedWidth) / 2)
+            assertEquals(to.frame.width, (M.dmsPill + M.dmsFocusedWidth) / 2)
+            assertEquals(middle.size.width, end.size.width)
+            assertEquals(middle.tracks, end.tracks)
+        }
+
+        /// The initial of the mode in place of the name, and the outline while a window is fullscreen
+        @Test func testDmsModeAndFullscreen() throws {
+            var snapshot = snapshot
+            snapshot.mode = "resize"
+            snapshot.isFocusedWorkspaceFullscreen = true
+            let main = layout(MenuBarConfig(theme: .dms, showMode: true))
+            let mode = layout(MenuBarConfig(theme: .dms, showMode: true), snapshot)
+            let marker = try #require(mode.marker)
+            assertEquals(marker.isOutlined, true)
+            assertEquals(marker.initial?.string, "R")
+            assertEquals(marker.initial?.font, .modeInitial)
+            assertEquals(marker.initial?.frame.midX, marker.frame.midX)
             assertEquals(mode.size, main.size)
         }
 
@@ -645,7 +710,7 @@ extension InlayTests {
             let oneColor = MenuBarTheme.allCases.flatMap { theme in
                 ["default", "fullscreen", "mode-fullscreen", "mode"].map { "\(theme.rawValue)-\($0)" }
             }
-            let slides = ["pills", "dots", "underline", "liquid"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
+            let slides = ["pills", "dots", "underline", "liquid", "dms"].flatMap { theme in [20, 40, 60, 80].map { "\(theme)-slide-\($0)" } }
             let templates = (oneColor + slides + MenuBarTheme.allCases.flatMap { ["\($0.rawValue)-per-monitor", "\($0.rawValue)-two-monitors"] } + ["chips-no-dim", "needs-accessibility", "paused"]).map { "\($0)-template.png" }
             assertEquals(files.filter { $0.hasSuffix("-template.png") }.sorted(), templates.sorted())
             // The item is as wide in a binding mode as in the main mode, in every theme

@@ -83,5 +83,24 @@ extension InlayTests {
             assertEquals(frame.frame.midX, name.midX)
             assertEquals(frame.frame.minX < name.minX && frame.frame.maxX > name.maxX, true)
         }
+
+        /// dms has no divider: each monitor gets its own track, and the gap between them is the divider
+        @Test func testPerMonitor_dms() throws {
+            typealias M = MenuBarMetrics
+            let grouped = layout(MenuBarConfig(theme: .dms, perMonitor: true), twoMonitors)
+            assertEquals(grouped.cells.map(\.workspace), ["2", "3", "1"])
+            assertEquals(grouped.separators, [])
+            assertEquals(grouped.tracks.count, 2)
+            assertEquals(grouped.tracks[1].minX - grouped.tracks[0].maxX, M.dmsTrackGap)
+            assertEquals(grouped.tracks[0].maxX, grouped.cells[1].frame.maxX + M.dmsTrackPadding)
+            assertEquals(grouped.tracks[1].maxX, grouped.size.width)
+            // A ring around the pill that the other monitor shows, inside of its track
+            let ring = try #require(grouped.visibleElsewhere.first)
+            assertEquals(ring.isOutlined, true)
+            assertEquals(ring.frame, grouped.cells[2].frame.insetBy(dx: -2, dy: -2))
+            assertEquals(grouped.tracks[1].contains(ring.frame), true)
+            // Without the key, one track
+            assertEquals(layout(MenuBarConfig(theme: .dms), twoMonitors).tracks.count, 1)
+        }
     }
 }

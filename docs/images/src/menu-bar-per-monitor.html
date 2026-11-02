@@ -2,7 +2,7 @@
 <html lang="en"><head><meta charset="utf-8"><title>per-monitor in every theme</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
-  body { width: 880px; height: 494px; }
+  body { width: 880px; height: 540px; }
   .rows { display: grid; grid-template-columns: 110px auto auto; gap: 10px 26px; align-items: center; justify-content: start; margin-top: 16px; }
   .head { font-size: 11px; font-weight: 600; color: #8f91a0; }
   .box { border-radius: 8px; overflow: hidden; background: #383d5c; height: 36px; display: inline-block; } .box img { display: block; height: 36px; }
@@ -10,14 +10,14 @@
 <body class="png">
 <div class="sheet"><span class="tag real">Real render</span>
   <h1>per-monitor, in every theme</h1>
-  <div class="sub">Workspaces 1 to 4 on the left monitor, 5 and 6 on the right one, which shows 5. Off by default; with it a line divides the monitors and 5 gets a hollow marker. <code>'hypr'</code> has a bolder line and a frame around the name.</div>
+  <div class="sub">Workspaces 1 to 4 on the left monitor, 5 and 6 on the right one, which shows 5. Off by default; with it a line divides the monitors and 5 gets a hollow marker. <code>'hypr'</code> has a bolder line and a frame around the name; <code>'dms'</code> a track per monitor.</div>
   <div class="rows" id="rows">
     <div></div><div class="head mono">per-monitor = false</div><div class="head mono">per-monitor = true</div>
   </div>
 </div>
 <script>
   const rows = document.getElementById('rows');
-  for (const theme of ['liquid', 'pills', 'chips', 'hypr', 'minimal', 'dots', 'underline']) {
+  for (const theme of ['liquid', 'pills', 'chips', 'hypr', 'minimal', 'dots', 'underline', 'dms']) {
     rows.insertAdjacentHTML('beforeend',
       `<div class="mono" style="color:#ffd27a">'${theme}'</div>` +
       `<div><div class="box"><img class="item" src="render/menu-bar-6x/${theme}-two-monitors-dark.png"></div></div>` +

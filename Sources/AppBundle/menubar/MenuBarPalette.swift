@@ -18,6 +18,8 @@ struct MenuBarPalette: Equatable, Sendable {
     var modeMarker: Rgba
     /// The initial of the binding mode. nil: it is cut out of the marker
     var modeInitial: Rgba?
+    /// The dms theme: the capsule behind the workspaces, a faint 'empty'
+    var track: Rgba
 
     /// - Parameter needsColor: the marker shows the initial of the binding mode. See: MenuBarLayout.needsColor
     /// - Parameter allowsTemplate: false to get the colors of the menu bar text baked in, for an image that isn't
@@ -56,6 +58,7 @@ struct MenuBarPalette: Equatable, Sendable {
             modeMarker: accent ?? focused,
             // White, like the system does over the accent color, unless the accent is too light for it
             modeInitial: accent.map { $0.luminance > 0.6 ? .black : .white } ?? focusedName,
+            track: fixed(colors.empty)?.opacity(M.chipColorOpacity) ?? base.opacity(M.chipOpacity),
         )
     }
 

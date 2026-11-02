@@ -26,11 +26,11 @@ final class MenuBarController: NSObject {
         draw: { [weak self] in self?.draw($0) },
     )
 
-    /// The drop of 'liquid' and the bar of 'underline' stretch on their way: they need longer for it to be seen
+    /// The drop of 'liquid', the bar of 'underline' and the track of 'dms' stretch on their way: they need longer for it to be seen
     private static func slideDuration(_ theme: MenuBarTheme?) -> Duration {
         switch theme {
             case .liquid: .milliseconds(340)
-            case .underline: .milliseconds(260)
+            case .underline, .dms: .milliseconds(260)
             default: .milliseconds(180)
         }
     }

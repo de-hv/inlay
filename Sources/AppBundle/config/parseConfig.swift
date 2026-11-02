@@ -261,23 +261,37 @@ struct ParseConfigResult {
 }
 
 @MainActor func parseConfig(_ rawToml: String) -> ParseConfigResult {
-    var errors = NonCopyable([ConfigParseDiagnostic]())
+    var errors: [ConfigParseDiagnostic] = []
+    let rawTable = tomlToJson(rawToml, &errors)
+    return parseConfig(json: rawTable, errors: errors)
+}
 
-    let rawTable: OrderedJson.JsonDict
+@MainActor func parseConfig(_ lua: LuaConfig) -> ParseConfigResult {
+    parseConfig(json: lua.table, errors: lua.errors)
+}
+
+/// The table of a TOML document. Empty if it isn't valid TOML
+func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> OrderedJson.JsonDict {
     do {
         let dict: [String: Any] = try .init(try TOMLTable(source: rawToml))
-        let json = tomlAnyToOrderedJsonRecursive(any: dict, .emptyRoot, &errors.value)
+        let json = tomlAnyToOrderedJsonRecursive(any: dict, .emptyRoot, &errors)
         switch json {
-            case .dict(let dict): rawTable = dict
+            case .dict(let dict): return dict
             default: // dead code
                 let msg = "Config parsing error: the top level type must be a TOML Table. But got: \((json ?? .null).tomlType)"
-                errors.value.append(.init(.emptyRoot, msg, preventConfigReload: true))
-                rawTable = [:]
+                errors.append(.init(.emptyRoot, msg, preventConfigReload: true))
+                return [:]
         }
     } catch {
-        errors.value.append(.init(.emptyRoot, error.description, preventConfigReload: true))
-        rawTable = [:]
+        errors.append(.init(.emptyRoot, error.description, preventConfigReload: true))
+        return [:]
     }
+}
+
+/// The config from its table, whatever the format of the file it comes from.
+/// - Parameter errors: the ones of reading the file
+@MainActor func parseConfig(json rawTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = []) -> ParseConfigResult {
+    var errors = NonCopyable(errors)
 
     let configVersion: ConfigVersion = rawTable[configVersionConfigRootKey]
         .flatMap { parseConfigVersion($0, .rootKey(configVersionConfigRootKey)).getOrNil(appendErrorTo: &errors.value) }

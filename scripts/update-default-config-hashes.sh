@@ -4,13 +4,13 @@
 #
 #   scripts/update-default-config-hashes.sh
 #
-# 'install.sh' replaces a config that is identical to one of them by the current inlay.toml: such a config was
+# 'install.sh' replaces a config that is identical to one of them by the current inlay.lua: such a config was
 # installed by a previous version and never edited, so nothing of the user is lost (and a backup is kept anyway).
 # A config that isn't in the list is the user's own, and it is never replaced.
 #
 # The list is every version, in the history of git, of the files that have been the default config, plus the
-# inlay.toml of the working tree. Run it after changing inlay.toml, and commit the result with the change:
-# ShippedConfigsTest fails while the current inlay.toml isn't in the list.
+# inlay.lua of the working tree. Run it after changing inlay.lua, and commit the result with the change:
+# ShippedConfigsTest fails while the current inlay.lua isn't in the list.
 
 set -euo pipefail
 
@@ -23,7 +23,7 @@ case "${1:-}" in
 esac
 
 # The files that have been the default config, oldest first
-DEFAULT_CONFIG_PATHS="docs/config-examples/default-config.toml inlay.toml"
+DEFAULT_CONFIG_PATHS="docs/config-examples/default-config.toml inlay.toml inlay.lua"
 OUT="scripts/default-config-hashes.txt"
 
 git rev-parse --git-dir >/dev/null 2>&1 || fail "this is not a git repository: the history is needed."
@@ -43,7 +43,10 @@ fi
         fi
       done
     done
-    printf '%s  %s\n' "$(sha256_of_stdin < inlay.toml)" inlay.toml
+    # The working tree: inlay.lua last, the current default config
+    for path in $DEFAULT_CONFIG_PATHS; do
+      if [ -f "$path" ]; then printf '%s  %s\n' "$(sha256_of_stdin < "$path")" "$path"; fi
+    done
   } | awk '!seen[$1]++' # A version that came back (a revert), or the working tree that is already committed
 } > "$OUT"
 

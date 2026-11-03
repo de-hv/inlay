@@ -3,8 +3,9 @@ import Foundation
 
 /// The config folder (~/.config/inlay) as a symbolic link to a folder of the user, a dotfiles repo for example: the
 /// question that scripts/install.sh asks, for `inlay config --use <folder>`, with the same rules. Inlay reads the
-/// inlay.toml of that folder; nothing else of it is touched. A real config folder is never deleted (it is renamed),
-/// and the folder that a link points to is never written, but for the inlay.toml it is given when it has none
+/// inlay.lua of that folder, and the modules it requires; nothing else of it is touched. A real config folder is never
+/// deleted (it is renamed), and the folder that a link points to is never written, but for the inlay.lua it is given
+/// when it has none
 enum ConfigFolderLink {
     /// ${XDG_CONFIG_HOME}/inlay, ~/.config/inlay by default: the folder of the config that Inlay creates
     static var configFolder: URL { newUserConfigUrl.deletingLastPathComponent() }
@@ -19,7 +20,7 @@ enum ConfigFolderLink {
     }
 
     enum LinkError: Error, Equatable {
-        /// The user picked a file that isn't an inlay.toml
+        /// The user picked a file that isn't an inlay.lua
         case notAConfig(URL)
         case notAFolder(URL)
         /// The folder is the config folder itself
@@ -37,7 +38,7 @@ enum ConfigFolderLink {
         return FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDirectory) && isDirectory.boolValue ? .folder : .none
     }
 
-    /// The folder to link, from what the user picked: a folder, or the inlay.toml in it. Fails, saying why, if the
+    /// The folder to link, from what the user picked: a folder, or the inlay.lua in it. Fails, saying why, if the
     /// config folder can't be linked to it
     static func folder(of picked: URL, dir: URL = configFolder) -> Result<URL, LinkError> {
         var isDirectory: ObjCBool = false
@@ -62,7 +63,7 @@ enum ConfigFolderLink {
         URL(filePath: url.standardizedFileURL.path, directoryHint: .notDirectory)
     }
 
-    /// The folder has the inlay.toml that Inlay looks for
+    /// The folder has the inlay.lua that Inlay looks for
     static func hasConfig(_ folder: URL) -> Bool {
         let file = folder.appending(path: configFileName).path
         return FileManager.default.fileExists(atPath: file) || (try? FileManager.default.destinationOfSymbolicLink(atPath: file)) != nil
@@ -70,7 +71,7 @@ enum ConfigFolderLink {
 
     /// Makes the config folder a link to the folder. A previous link is replaced; a real config folder is renamed to
     /// <folder>.backup-<date>, which is returned.
-    /// - Parameter config: the text of the inlay.toml that the folder gets if it has none
+    /// - Parameter config: the text of the inlay.lua that the folder gets if it has none
     @discardableResult
     static func link(_ dir: URL = configFolder, to folder: URL, writing config: String?, now: Date = .now) throws(LinkError) -> URL? {
         let fileManager = FileManager.default
@@ -97,17 +98,20 @@ enum ConfigFolderLink {
         }
     }
 
-    /// The config folder becomes a real folder again, with a copy of the inlay.toml that it was linked to. The folder
-    /// that it pointed to is not touched
+    /// The config folder becomes a real folder again, with a copy of the .lua files of the folder that it was linked
+    /// to: inlay.lua and its modules. The folder that it pointed to is not touched
     static func unlink(_ dir: URL = configFolder) throws(LinkError) {
         guard case .linked = state(of: dir) else { return }
         let fileManager = FileManager.default
         do {
-            let text = try? String(contentsOf: dir.appending(path: configFileName), encoding: .utf8)
+            let names = (try? fileManager.contentsOfDirectory(atPath: dir.path))?.filter { $0.hasSuffix(".lua") } ?? []
+            let files = names.compactMap { name in
+                (try? String(contentsOf: dir.appending(path: name), encoding: .utf8)).map { (name, $0) }
+            }
             try fileManager.removeItem(at: dir)
             try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
-            if let text {
-                try Data(text.utf8).write(to: dir.appending(path: configFileName))
+            for (name, text) in files {
+                try Data(text.utf8).write(to: dir.appending(path: name))
             }
         } catch {
             throw .failed(error.localizedDescription)

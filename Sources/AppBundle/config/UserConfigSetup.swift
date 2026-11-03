@@ -3,10 +3,12 @@ import Foundation
 
 /// The config of the user, ready before Inlay reads it at startup. scripts/install.sh does the same, but an app
 /// installed in another way (Homebrew) never runs it:
-/// - without a config, ~/.config/inlay/inlay.toml is created with the built-in config, for the user to edit or to
+/// - without a config, ~/.config/inlay/inlay.lua is created with the built-in config, for the user to edit or to
 ///   replace with `inlay config --use`;
 /// - a config that is a default config of a previous version, never edited, is replaced by the built-in one, and
-///   kept next to it as inlay.toml.backup-<date>.
+///   kept next to it as inlay.lua.backup-<date>. Also the inlay.toml of Inlay 0.2: it is kept as
+///   inlay.toml.backup-<date>, and inlay.lua takes its place. An inlay.toml that was edited stays, and isn't read
+///   (see: legacyConfigMessage).
 /// A config reached through a symbolic link (a dotfiles folder) is the user's own: it is never written
 enum UserConfigSetup {
     enum Outcome: Equatable {
@@ -45,6 +47,21 @@ enum UserConfigSetup {
                 do {
                     try data.write(to: backup, options: .withoutOverwriting)
                     try AtomicFileWriter.write(builtIn, to: target)
+                } catch {
+                    return .unchanged
+                }
+                return .updated(target, backup: backup)
+            case .legacyConfig(let url):
+                let legacy = folder.appending(path: legacyConfigFileName)
+                guard url.standardizedFileURL.path == legacy.standardizedFileURL.path,
+                      (try? FileManager.default.destinationOfSymbolicLink(atPath: legacy.path)) == nil,
+                      let data = try? Data(contentsOf: legacy),
+                      knownHashes.contains(sha256(data))
+                else { return .unchanged }
+                let backup = ConfigFolderLink.backupUrl(legacy, now: now)
+                do {
+                    try FileManager.default.moveItem(at: legacy, to: backup)
+                    try Data(builtIn.utf8).write(to: target, options: .withoutOverwriting)
                 } catch {
                     return .unchanged
                 }

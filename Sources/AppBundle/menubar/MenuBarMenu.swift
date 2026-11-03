@@ -449,7 +449,7 @@ func getTextEditorToOpenConfig() -> URL {
 func openConfigInEditor() {
     let editor = getTextEditorToOpenConfig()
     switch findCustomConfigUrl() {
-        case .file(let url):
+        case .file(let url), .legacyConfig(let url):
             url.open(with: editor)
         case .noCustomConfigExists:
             let url = newUserConfigUrl

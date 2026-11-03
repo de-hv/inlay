@@ -8,6 +8,8 @@ struct ReadConfigResult {
     let configUrl: URL
     /// The contents of the file. nil if it wasn't read
     var text: String? = nil
+    /// The main file and its modules, with the text that was run
+    var files: [LuaConfigFile] = []
     let parseConfigResult: ParseConfigResult
 
     @MainActor static func fatal(configUrl: URL, message: String) -> Self {
@@ -31,6 +33,7 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
         switch findCustomConfigUrl() {
             case .file(let url): configUrl = url
             case .noCustomConfigExists: configUrl = defaultConfigUrl
+            case .legacyConfig(let url): return .fatal(configUrl: url, message: legacyConfigMessage(url))
             case .ambiguousConfigError(let candidates):
                 let msg = """
                     Ambiguous config error. Several configs found:
@@ -39,14 +42,9 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
                 return .fatal(configUrl: defaultConfigUrl, message: msg)
         }
     }
-    let configStr: String
-    do {
-        configStr = try String(contentsOf: configUrl, encoding: .utf8)
-    } catch {
-        let msg = "Can't read contents of \(configUrl.path.singleQuoted) as a utf8 string: \(error.localizedDescription)"
-        return .fatal(configUrl: configUrl, message: msg)
-    }
-    return ReadConfigResult(configUrl: configUrl, text: configStr, parseConfigResult: parseConfig(configStr))
+    let lua = LuaConfigLoader.load(file: configUrl)
+    // A file that can't be read has no files
+    return ReadConfigResult(configUrl: configUrl, text: lua.files.first?.text, files: lua.files, parseConfigResult: parseConfig(lua))
 }
 
 struct ConfigParseDiagnostic: Error, Equatable {

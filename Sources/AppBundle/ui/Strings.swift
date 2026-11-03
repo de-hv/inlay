@@ -75,4 +75,4 @@ enum Strings {
     }
 }
 
-let configFileName = "inlay.toml"
+let configFileName = "inlay.lua"

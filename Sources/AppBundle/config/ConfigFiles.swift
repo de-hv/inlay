@@ -64,7 +64,7 @@ enum ConfigFiles {
     }
 
     /// `--use <path>`. A folder: ~/.config/inlay becomes a link to it, with the rules of ConfigFolderLink (a folder
-    /// without inlay.toml gets a copy of the config in use). A file: its text replaces the config in use, which is
+    /// without inlay.lua gets a copy of the config in use). A file: its text replaces the config in use, which is
     /// kept next to it as <file>.backup-<date>. Returns what was done, for the user
     @MainActor
     static func use(_ path: URL, now: Date = .now) -> Result<String, UseError> {
@@ -73,7 +73,7 @@ enum ConfigFiles {
         switch findCustomConfigUrl() {
             case .ambiguousConfigError(let candidates): return .failure(.ambiguousConfig(candidates))
             case .file(let url): current = url
-            case .noCustomConfigExists: current = nil
+            case .noCustomConfigExists, .legacyConfig: current = nil
         }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDirectory) else { return .failure(.notFound(path)) }
@@ -108,7 +108,8 @@ enum ConfigFiles {
     @MainActor
     private static func useFile(_ path: URL, current: URL?, now: Date) -> Result<String, UseError> {
         guard let text = path.readText() else { return .failure(.unreadable(path.path)) }
-        let errors = parseConfig(text).errors
+        // With the modules of its folder: the copy has none
+        let errors = parseConfig(LuaConfigLoader.load(file: path)).errors
         if !errors.isEmpty { return .failure(.invalidConfig(errors.map { $0.description(.error) })) }
         let target = current ?? newUserConfigUrl
         let resolved = (try? AtomicFileWriter.resolveSymlinks(target)) ?? target
@@ -127,7 +128,7 @@ enum ConfigFiles {
         return .success(lines.joined(separator: "\n"))
     }
 
-    /// `--unlink`: ~/.config/inlay becomes a folder of its own again, with a copy of the inlay.toml it was linked to
+    /// `--unlink`: ~/.config/inlay becomes a folder of its own again, with a copy of the config it was linked to
     @MainActor
     static func unlink() -> Result<String, UseError> {
         guard case .linked(let folder) = ConfigFolderLink.state() else { return .failure(.notLinked) }
@@ -136,7 +137,7 @@ enum ConfigFiles {
         } catch {
             return .failure(.link(error))
         }
-        return .success("\(ConfigFolderLink.configFolder.path.tildePath) is a folder again, with a copy of \(folder.appending(path: configFileName).path.tildePath)")
+        return .success("\(ConfigFolderLink.configFolder.path.tildePath) is a folder again, with a copy of the .lua files of \(folder.path.tildePath)")
     }
 
     /// `--export`: the config in use, complete: its own text, with its comments, and every key of the shipped config

@@ -28,11 +28,7 @@ struct ConfigCommand: Command {
             case .unlink:
                 return await changeConfig(io, ConfigFiles.unlink())
             case .export:
-                let url = findCustomConfigUrl().urlOrNil ?? defaultConfigUrl
-                return switch Result(catching: { try String(contentsOf: url, encoding: .utf8) }) {
-                    case .success(let text): .succ(io.out(ConfigFiles.exportText(text)))
-                    case .failure(let error): .fail(io.err("Can't read \(url.path): \(error.localizedDescription)"))
-                }
+                return .fail(io.err("--export is gone: the config is Lua since Inlay 0.3.0, and its files are the whole config"))
             case .explain(let key):
                 // The CLI answers it on its own, without the server. This is for 'config --explain' run by a binding
                 return switch ConfigReference.load().flatMap({ $0.explain(key) }) {

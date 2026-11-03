@@ -137,7 +137,7 @@ extension InlayTests {
         // MARK: - The old keys
 
         @Test func testTheKeysOfThePast() {
-            let result = parseConfig("configVersion = 2\n[gaps]\nsmart = true\n[borders]\nhideWhenSingle = true\n")
+            let result = parseConfig(lua: "return { configVersion = 2, gaps = { smart = true }, borders = { hideWhenSingle = true } }")
             assertEquals(result.errors, [])
             assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
             assertEquals(result.config.borders.singleWindow, SingleWindowBorder())

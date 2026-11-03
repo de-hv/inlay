@@ -268,6 +268,11 @@ struct ParseConfigResult {
     parseConfig(json: lua.table, errors: lua.errors)
 }
 
+/// The config from the text of an inlay.lua that has no modules
+@MainActor func parseConfig(lua text: String) -> ParseConfigResult {
+    parseConfig(LuaConfigLoader.load(text))
+}
+
 /// The table of a TOML document. Empty if it isn't valid TOML
 func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> OrderedJson.JsonDict {
     do {

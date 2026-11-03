@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig("configVersion = 2")
+            let result = parseConfig(lua: "return { configVersion = 2 }")
             assertEquals(result.errors, [])
             let menuBar = result.config.menuBar
             assertEquals(menuBar.enabled, true)
@@ -19,13 +19,14 @@ extension InlayTests {
         }
 
         @Test func testSystemColors() {
-            let result = parseConfig(
-                """
-                configVersion = 2
-                [menuBar]
-                    systemColors = true
-                [menuBar.colors]
-                    focused = '#D19A66'
+            let result = parseConfig(lua: """
+                return {
+                  configVersion = 2,
+                  menuBar = {
+                    systemColors = true,
+                    colors = { focused = '#D19A66' },
+                  },
+                }
                 """,
             )
             assertEquals(result.errors, [])
@@ -36,19 +37,22 @@ extension InlayTests {
         }
 
         @Test func testParse() {
-            let result = parseConfig(
-                """
-                configVersion = 2
-                [menuBar]
-                    enabled = false
-                    theme = 'hypr'
-                    dimEmptyWorkspaces = false
-                    showMode = true
-                [menuBar.colors]
-                    accent = '#E06C75'
-                    focused = 'system-accent'
-                    occupied = '#abb2bf'
-                    empty = '#CDD6F466'
+            let result = parseConfig(lua: """
+                return {
+                  configVersion = 2,
+                  menuBar = {
+                    enabled = false,
+                    theme = 'hypr',
+                    dimEmptyWorkspaces = false,
+                    showMode = true,
+                    colors = {
+                      accent = '#E06C75',
+                      focused = 'system-accent',
+                      occupied = '#abb2bf',
+                      empty = '#CDD6F466',
+                    },
+                  },
+                }
                 """,
             )
             assertEquals(result.errors, [])
@@ -71,7 +75,7 @@ extension InlayTests {
         @Test func testThemes() {
             assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid", "dms"])
             for theme in MenuBarTheme.allCases {
-                let result = parseConfig("configVersion = 2\nmenuBar.theme = '\(theme.rawValue)'")
+                let result = parseConfig(lua: "return { configVersion = 2, menuBar = { theme = '\(theme.rawValue)' } }")
                 assertEquals(result.errors, [])
                 assertEquals(result.warnings, [])
                 assertEquals(result.config.menuBar.theme, theme)
@@ -81,7 +85,7 @@ extension InlayTests {
         /// The item showed the icons of the apps once: the 'chips-icons' theme and the 'showAppIcons' key, which the
         /// settings window wrote to the config of the user. Such a config still loads
         @Test func testAppIconsOfThePast_acceptedWithAWarning() {
-            let theme = parseConfig("configVersion = 2\n[menuBar]\ntheme = 'chips-icons'\nshowMode = true")
+            let theme = parseConfig(lua: "return { configVersion = 2, menuBar = { theme = 'chips-icons', showMode = true } }")
             assertEquals(theme.strErrors, [])
             assertEquals(theme.strWarnings, [
                 "[WARNING] menuBar.theme: The menu bar item doesn't show app icons anymore: 'chips-icons' is treated as 'chips'. Please change it in the config",
@@ -89,7 +93,7 @@ extension InlayTests {
             assertEquals(theme.config.menuBar, MenuBarConfig(theme: .chips, showMode: true))
 
             for value in ["true", "false"] {
-                let key = parseConfig("configVersion = 2\n[menuBar]\ntheme = 'hypr'\nshowAppIcons = \(value)\ndimEmptyWorkspaces = false")
+                let key = parseConfig(lua: "return { configVersion = 2, menuBar = { theme = 'hypr', showAppIcons = \(value), dimEmptyWorkspaces = false } }")
                 assertEquals(key.strErrors, [])
                 assertEquals(key.strWarnings, [
                     "[WARNING] menuBar.showAppIcons: The menu bar item doesn't show app icons anymore: 'showAppIcons' is ignored. Please drop it from the config",
@@ -97,7 +101,7 @@ extension InlayTests {
                 assertEquals(key.config.menuBar, MenuBarConfig(theme: .hypr, dimEmptyWorkspaces: false))
             }
 
-            let both = parseConfig("configVersion = 2\nmenuBar.theme = 'chips-icons'\nmenuBar.showAppIcons = true")
+            let both = parseConfig(lua: "return { configVersion = 2, menuBar = { theme = 'chips-icons', showAppIcons = true } }")
             assertEquals(both.strErrors, [])
             assertEquals(both.warnings.count, 2)
             assertEquals(both.config.menuBar, MenuBarConfig(theme: .chips))
@@ -107,48 +111,48 @@ extension InlayTests {
 
         @Test func testErrors() {
             assertEquals(
-                parseConfig("menuBar.theme = 'bubbles'").strErrors,
+                parseConfig(lua: "return { menuBar = { theme = 'bubbles' } }").strErrors,
                 ["[ERROR] menuBar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
             )
             // The themes and the tables of the past are gone, with no compatibility
             for theme in ["square", "glyphs", "labels", "segments", "capsule"] {
                 assertEquals(
-                    parseConfig("menuBar.theme = '\(theme)'").strErrors,
+                    parseConfig(lua: "return { menuBar = { theme = '\(theme)' } }").strErrors,
                     ["[ERROR] menuBar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
                 )
             }
-            assertEquals(parseConfig("[menuBar.labels]\n1 = 'Code'").strErrors, ["[ERROR] menuBar.labels: Unknown key"])
-            assertEquals(parseConfig("[menuBar.symbols]\n1 = 'globe'").strErrors, ["[ERROR] menuBar.symbols: Unknown key"])
-            assertEquals(parseConfig("menuBar.them = 'chips'").strErrors, ["[ERROR] menuBar.them: Unknown key"])
-            assertEquals(parseConfig("menuBar.colors.focus = 'auto'").strErrors, ["[ERROR] menuBar.colors.focus: Unknown key"])
+            assertEquals(parseConfig(lua: "return { menuBar = { labels = { ['1'] = 'Code' } } }").strErrors, ["[ERROR] menuBar.labels: Unknown key"])
+            assertEquals(parseConfig(lua: "return { menuBar = { symbols = { ['1'] = 'globe' } } }").strErrors, ["[ERROR] menuBar.symbols: Unknown key"])
+            assertEquals(parseConfig(lua: "return { menuBar = { them = 'chips' } }").strErrors, ["[ERROR] menuBar.them: Unknown key"])
+            assertEquals(parseConfig(lua: "return { menuBar = { colors = { focus = 'auto' } } }").strErrors, ["[ERROR] menuBar.colors.focus: Unknown key"])
             assertEquals(
-                parseConfig("menuBar.enabled = 'yes'").strErrors,
+                parseConfig(lua: "return { menuBar = { enabled = 'yes' } }").strErrors,
                 ["[ERROR] menuBar.enabled: Expected type is 'Bool'. But actual type is 'String'"],
             )
             assertEquals(
-                parseConfig("menuBar.showAppIcons = 1").strErrors,
+                parseConfig(lua: "return { menuBar = { showAppIcons = 1 } }").strErrors,
                 ["[ERROR] menuBar.showAppIcons: Expected type is 'Bool'. But actual type is 'Int'"],
             )
-            assertEquals(parseConfig("configVersion = 2\nmenuBar.showAppIcons = 1").strWarnings, [])
+            assertEquals(parseConfig(lua: "return { configVersion = 2, menuBar = { showAppIcons = 1 } }").strWarnings, [])
             assertEquals(
-                parseConfig("menuBar = 'chips'").strErrors,
+                parseConfig(lua: "return { menuBar = 'chips' }").strErrors,
                 ["[ERROR] menuBar: Expected type is 'Table'. But actual type is 'String'"],
             )
             assertEquals(
-                parseConfig("menuBar.colors.focused = 'red'").strErrors,
+                parseConfig(lua: "return { menuBar = { colors = { focused = 'red' } } }").strErrors,
                 ["[ERROR] menuBar.colors.focused: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent', 'auto'"],
             )
             // 'auto' for the accent: the marker of a binding mode is the one of the focused workspace
-            let auto = parseConfig("configVersion = 2\nmenuBar.colors.accent = 'auto'")
+            let auto = parseConfig(lua: "return { configVersion = 2, menuBar = { colors = { accent = 'auto' } } }")
             assertEquals(auto.strErrors, [])
             assertEquals(auto.config.menuBar.colors.accent, .auto)
-            assertEquals(parseConfig("configVersion = 2\nmenuBar.colors.accent = 'system-accent'").config.menuBar.colors.accent, .systemAccent)
+            assertEquals(parseConfig(lua: "return { configVersion = 2, menuBar = { colors = { accent = 'system-accent' } } }").config.menuBar.colors.accent, .systemAccent)
             assertEquals(
-                parseConfig("menuBar.colors.empty = 0xFF0000").strErrors,
+                parseConfig(lua: "return { menuBar = { colors = { empty = 16711680 } } }").strErrors,
                 ["[ERROR] menuBar.colors.empty: Expected type is 'String'. But actual type is 'Int'"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig("menuBar.colors.focused = 'red'").config.menuBar.colors.focused, .auto)
+            assertEquals(parseConfig(lua: "return { menuBar = { colors = { focused = 'red' } } }").config.menuBar.colors.focused, .auto)
         }
     }
 

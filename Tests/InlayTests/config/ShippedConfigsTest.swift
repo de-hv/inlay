@@ -6,19 +6,19 @@ import Testing
 
 extension InlayTests {
     /// The configs that ship with Inlay, and the commented example of the design documentation
-    /// (Tests/InlayTests/fixtures/inlay-example.toml), must load with the real parser without errors or warnings
+    /// (Tests/InlayTests/fixtures/inlay-example.lua), must load with the real parser without errors or warnings
     @Suite @MainActor struct ShippedConfigsTest {
         init() { setUpWorkspacesForTests() }
 
+        /// The file runs with the modules of its folder
         private func parse(_ relativePath: String) throws -> (config: Config, errors: [String], warnings: [String]) {
-            let text = try String(contentsOf: projectRoot.appending(path: relativePath), encoding: .utf8)
-            let result = parseConfig(text)
+            let result = parseConfig(LuaConfigLoader.load(file: projectRoot.appending(path: relativePath)))
             return (result.config, result.strErrors, result.strWarnings)
         }
 
-        /// inlay.toml, at the root of the repo: the config that install.sh copies and that the app bundle carries
+        /// inlay.lua, at the root of the repo: the config that install.sh copies and that the app bundle carries
         @Test func testBuiltInConfig() throws {
-            let result = try parse("inlay.toml")
+            let result = try parse("inlay.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
             // The tables of Inlay are spelled out: the defaults of the code, but for the look of the author's setup
@@ -36,14 +36,14 @@ extension InlayTests {
             // Saving the file by hand reloads it, which is what keeps the menu bar item and the borders in sync with it
             assertEquals(result.config.autoReloadConfig, true)
             // It is the config that the app falls back to
-            assertEquals(defaultConfigUrl.lastPathComponent, "inlay.toml")
-            assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8))
+            assertEquals(defaultConfigUrl.lastPathComponent, "inlay.lua")
+            assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8))
         }
 
         /// install.sh replaces a config that is identical to a default config that Inlay has shipped, and only such
-        /// a config. The list of their hashes must have the inlay.toml of right now: otherwise the config that
+        /// a config. The list of their hashes must have the inlay.lua of right now: otherwise the config that
         /// this version installs would be taken for the user's own by the next one, and never updated.
-        /// It fails after a change in inlay.toml until scripts/update-default-config-hashes.sh is run
+        /// It fails after a change in inlay.lua until scripts/update-default-config-hashes.sh is run
         @Test func testBuiltInConfig_isInTheListOfDefaultConfigs() throws {
             let list = try String(contentsOf: projectRoot.appending(path: "scripts/default-config-hashes.txt"), encoding: .utf8)
             let entries = list.split(separator: "\n").filter { !$0.hasPrefix("#") }.map { $0.components(separatedBy: "  ") }
@@ -55,9 +55,11 @@ extension InlayTests {
             }
             let hashes = entries.map { $0[0] }
             assertEquals(hashes.count, Set(hashes).count)
-            let current = SHA256.hash(data: try Data(contentsOf: projectRoot.appending(path: "inlay.toml"))).map { String(format: "%02x", $0) }.joined()
-            assertEquals(hashes.contains(current), true, additionalMsg: "inlay.toml has changed: run scripts/update-default-config-hashes.sh and commit the result")
-            assertEquals(entries.last, [current, "inlay.toml"])
+            let current = SHA256.hash(data: try Data(contentsOf: projectRoot.appending(path: "inlay.lua"))).map { String(format: "%02x", $0) }.joined()
+            assertEquals(hashes.contains(current), true, additionalMsg: "inlay.lua has changed: run scripts/update-default-config-hashes.sh and commit the result")
+            assertEquals(entries.last, [current, "inlay.lua"])
+            // The inlay.toml of Inlay 0.2, never edited, is replaced by inlay.lua. See: UserConfigSetup
+            assertTrue(hashes.contains("25543c4b23fc316894420ec65050900dd4499e2d92d077c0fe76ca74bc3289d6"))
             // The default configs of the versions before inlay.toml: the config of AeroSpace, without any rule.
             // It is the one that the first installations got
             assertEquals(entries.filter { $0[1] == "docs/config-examples/default-config.toml" }.count, 11)
@@ -66,7 +68,7 @@ extension InlayTests {
 
         /// What the built-in config gives to somebody who installs Inlay without a config of their own
         @Test func testBuiltInConfig_workspacesAndBindings() throws {
-            let config = try parse("inlay.toml").config
+            let config = try parse("inlay.lua").config
             assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6", "7"])
             assertEquals(config.modes.keys.sorted(), ["main", "resize", "service"])
             func runs(_ binding: String, _ command: String, mode: String = mainModeId) -> Bool {
@@ -93,13 +95,13 @@ extension InlayTests {
             assertTrue(runs("cmd-alt-shift-r", "mode resize"))
             assertTrue(runs("cmd-alt-shift-s", "mode main", mode: "service"))
             assertTrue(runs("cmd-alt-shift-r", "mode main", mode: "resize"))
-            assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
+            assertTrue(runs("w", "run-callback onWindowDetected --for-every-window; mode main", mode: "service"))
         }
 
         /// Nothing of the accordion layout, which Inlay doesn't have, and nothing that talks to AeroSpace
         @Test func testBuiltInConfig_noAccordionAndNoAeroSpaceCli() throws {
-            let text = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
-            let code = text.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("#") }.joined(separator: "\n")
+            let text = try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8)
+            let code = text.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("--") }.joined(separator: "\n")
             assertEquals(text.lowercased().contains("accordion"), false)
             assertEquals(code.lowercased().contains("aerospace"), false)
             assertEquals(code.contains("exec-and-forget"), false)
@@ -108,7 +110,7 @@ extension InlayTests {
 
         /// The rules that send the windows of an app to its workspace
         @Test func testBuiltInConfig_windowRules() throws {
-            let config = try parse("inlay.toml").config
+            let config = try parse("inlay.lua").config
             func workspace(of appId: String) -> String? {
                 config.onWindowDetected.lazy.compactMap { rule -> String? in
                     guard case .legacy(let matcher) = rule.matcher, matcher.appId == appId else { return nil }
@@ -136,13 +138,13 @@ extension InlayTests {
         }
 
         @Test func testI3LikeExample() throws {
-            let result = try parse("docs/config-examples/i3-like-config-example.toml")
+            let result = try parse("docs/config-examples/i3-like-config-example.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
         }
 
         @Test func testDesignExample() throws {
-            let result = try parse("Tests/InlayTests/fixtures/inlay-example.toml")
+            let result = try parse("Tests/InlayTests/fixtures/inlay-example.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
             // The example spells out the defaults of every new table. Only the colors per mode are its own
@@ -151,7 +153,7 @@ extension InlayTests {
             assertEquals(result.config.borders.copy(\.modeColors, [:]), BordersConfig())
             assertEquals(result.config.borders.modeColors.keys.sorted(), ["resize", "service"])
             // The persistent workspaces are the ones of the built-in config
-            assertEquals(result.config.persistentWorkspaces, try parse("inlay.toml").config.persistentWorkspaces)
+            assertEquals(result.config.persistentWorkspaces, try parse("inlay.lua").config.persistentWorkspaces)
         }
     }
 }

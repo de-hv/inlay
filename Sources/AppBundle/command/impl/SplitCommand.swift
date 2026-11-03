@@ -7,7 +7,7 @@ struct SplitCommand: Command {
 
     func run(_ env: CmdEnv, _ io: CmdIo) -> BinaryExitCode {
         if config.enableNormalizationFlattenContainers {
-            return .fail(io.err("'split' has no effect when 'enable-normalization-flatten-containers' normalization enabled. My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'."))
+            return .fail(io.err("'split' has no effect when 'enableNormalizationFlattenContainers' normalization enabled. My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'."))
         }
         guard let target = args.resolveTargetOrReportError(env, io) else { return .fail }
         guard let window = target.windowOrNil else {

@@ -21,7 +21,6 @@ let config_help_generated = """
        OR: config [-h|--help] --explain [<key>]
        OR: config [-h|--help] --use <file|folder>
        OR: config [-h|--help] --unlink
-       OR: config [-h|--help] --export
     """
 let debug_stats_help_generated = """
     USAGE: debug-stats [-h|--help] [--watch <seconds>]
@@ -151,8 +150,8 @@ let resize_help_generated = """
     USAGE: resize [-h|--help] [--window-id <window-id>] (smart|smart-opposite|width|height) [+|-]<number>
     """
 let run_callback_help_generated = """
-    USAGE: run-callback [-h|--help] [--for-every-window|--window-id <window-id>] on-window-detected
-       OR: run-callback [-h|--help] (on-focus-changed|on-focused-monitor-changed)
+    USAGE: run-callback [-h|--help] [--for-every-window|--window-id <window-id>] onWindowDetected
+       OR: run-callback [-h|--help] (onFocusChanged|onFocusedMonitorChanged)
     """
 let split_help_generated = """
     USAGE: split [-h|--help] [--window-id <window-id>] (horizontal|vertical|opposite)

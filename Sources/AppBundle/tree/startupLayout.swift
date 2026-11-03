@@ -2,18 +2,18 @@ import AppKit
 import Common
 
 /// Arranges the windows that are already open when Inlay starts to manage the windows: when it starts, and when
-/// `enable on` resumes it. See: 'tiling.startup-layout' config option
+/// `enable on` resumes it. See: 'tiling.startupLayout' config option
 ///
 /// The windows found by the first complete refresh session are first placed one after another, like new windows.
 /// With a lot of windows in a workspace, dwindle leaves the last ones tiny. So, at the end of that session, the tiling
 /// tree of every workspace that got one of those windows is rebuilt as a grid or as a row.
-/// The windows that appear later are new windows: 'tiling.new-window-placement' decides about them
+/// The windows that appear later are new windows: 'tiling.newWindowPlacement' decides about them
 @MainActor
 enum StartupArrangement {
     private static var isPending = false
     /// The windows registered since `begin`
     private static var detectedWindowIds: Set<UInt32> = []
-    /// The windows whose 'on-window-detected' rules are running right now. See: whileDetecting
+    /// The windows whose 'onWindowDetected' rules are running right now. See: whileDetecting
     private static var detectionsInFlight = 0
 
     /// Inlay is about to look for the windows that already exist
@@ -27,7 +27,7 @@ enum StartupArrangement {
         if isPending { detectedWindowIds.insert(window.windowId) }
     }
 
-    /// Notes the window, and runs what places it for good: its 'on-window-detected' rules. See: Window.afterRegistration
+    /// Notes the window, and runs what places it for good: its 'onWindowDetected' rules. See: Window.afterRegistration
     ///
     /// The rules suspend (they ask the app for the title of the window), and the refresh sessions interleave: a second
     /// session, started by an app that got activated or by a window that got the focus while the first one is still
@@ -68,7 +68,7 @@ extension Workspace {
     ///   normalized one: the root container is horizontal for a single row, and vertical with a horizontal container
     ///   per row otherwise. A row of one window is the window itself
     /// - dwindle: the windows come back one after another, and each one splits the previous one like a new window:
-    ///   two side by side on a wide screen, then a spiral. With the 'tiling.split-ratio' of the config
+    ///   two side by side on a wide screen, then a spiral. With the 'tiling.splitRatio' of the config
     @MainActor
     func arrangeTilingWindows(_ layout: StartupLayout) {
         let windows = rootTilingContainer.allLeafWindowsRecursive

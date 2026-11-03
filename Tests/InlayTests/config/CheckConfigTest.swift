@@ -25,40 +25,40 @@ extension InlayTests {
         }
 
         @Test func testBuiltInConfig() {
-            let url = projectRoot.appending(path: "inlay.toml")
+            let url = projectRoot.appending(path: "inlay.lua")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(report.text, "'\(url.path)' has no errors or warnings")
         }
 
-        /// install.sh checks ~/.config/inlay/inlay.toml, and ~/.config/inlay may be a link to a folder of the user
+        /// install.sh checks ~/.config/inlay/inlay.lua, and ~/.config/inlay may be a link to a folder of the user
         @Test func testConfigInALinkedFolder() throws {
             let folder = directory.appending(path: "dotfiles")
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try "config-version = 2\n[mode.main.binding]\n".write(to: folder.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try "return { configVersion = 2, mode = { main = { binding = {} } } }".write(to: folder.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
             let link = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: folder)
-            let url = link.appending(path: "inlay.toml")
+            let url = link.appending(path: "inlay.lua")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(report.text, "'\(url.path)' has no errors or warnings")
         }
 
         @Test func testWarningsAreNotErrors() throws {
-            let url = try file("warnings.toml", "config-version = 2\naccordion-padding = 30\n[mode.main.binding]\n")
+            let url = try file("warnings.lua", "return { configVersion = 2, accordionPadding = 30, mode = { main = { binding = {} } } }")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(
                 report.text,
                 """
                 '\(url.path)': 0 error(s), 1 warning(s)
-                [WARNING] accordion-padding: Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config
+                [WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config
                 """,
             )
         }
 
         @Test func testErrors() throws {
-            let url = try file("errors.toml", "config-version = 2\nnope = 1\n[borders]\nwidth = 99\n[mode.main.binding]\n")
+            let url = try file("errors.lua", "return { configVersion = 2, nope = 1, borders = { width = 99 }, mode = { main = { binding = {} } } }")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, false)
             assertEquals(
@@ -73,8 +73,8 @@ extension InlayTests {
 
         /// The config is a symbolic link to a file of the user, like the one that install.sh offers to create
         @Test func testSymlinkAndMissingFile() throws {
-            let real = try file("mine.toml", "config-version = 2\n[mode.main.binding]\n")
-            let link = directory.appending(path: "inlay.toml")
+            let real = try file("mine.lua", "return { configVersion = 2, mode = { main = { binding = {} } } }")
+            let link = directory.appending(path: "inlay.lua")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
             assertEquals(checkConfigFile(link).isOk, true)
             try FileManager.default.removeItem(at: real)
@@ -115,7 +115,7 @@ extension InlayTests {
             assertEquals(shippedFile(inResources: "scripts/lib.sh", inRepo: "scripts/lib.sh", executable: cli.path)?.path, projectRoot.appending(path: "scripts/lib.sh").path)
             assertEquals(shippedFile(inResources: "nope", inRepo: "nope", executable: cli.path), nil)
             // What the app and the CLI ship with
-            for (inResources, inRepo) in [("config-reference.toml", "docs/config-reference.toml"), ("inlay.toml", "inlay.toml")] {
+            for (inResources, inRepo) in [("config-reference.lua", "docs/config-reference.lua"), ("inlay.lua", "inlay.lua")] {
                 assertEquals(shippedFile(inResources: inResources, inRepo: inRepo, executable: "/nowhere/inlay") != nil, true, additionalMsg: inRepo)
             }
         }

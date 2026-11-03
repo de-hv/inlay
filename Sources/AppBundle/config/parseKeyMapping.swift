@@ -3,7 +3,7 @@ import HotKey
 
 let keyMappingParser: [String: any ParserProtocol<KeyMapping>] = [
     "preset": Parser(\.preset, parsePreset),
-    "key-notation-to-key-code": Parser(\.rawKeyNotationToKeyCode, parseKeyNotationToKeyCode),
+    "keyNotationToKeyCode": Parser(\.rawKeyNotationToKeyCode, parseKeyNotationToKeyCode),
 ]
 
 struct KeyMapping: ConvenienceMutable, Equatable, Sendable {
@@ -38,7 +38,7 @@ private func parsePreset(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> Re
 private func parseKeyNotationToKeyCode(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: Key] {
     var result: [String: Key] = [:]
     guard let table = raw.asDictOrNil else {
-        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace))
         return result
     }
     for (key, value): (String, OrderedJson) in table {

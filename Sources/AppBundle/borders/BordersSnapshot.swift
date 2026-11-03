@@ -73,7 +73,7 @@ extension BordersSnapshot {
     /// the tiling ones, and the normal windows that float. No heuristics of its own: everything comes from the tree,
     /// and from what the window was taken for when it was detected.
     ///
-    /// The tiling window alone in its workspace and the fullscreen window have the border of [borders.single-window], in
+    /// The tiling window alone in its workspace and the fullscreen window have the border of [borders.singleWindow], in
     /// the gap that the layout leaves around them. Without it (and in fullscreen with --no-outer-gaps) they fill the
     /// screen without a border.
     ///
@@ -104,7 +104,7 @@ extension BordersSnapshot {
             let workspace = monitor.activeWorkspace
             let tiling = workspace.rootTilingContainer.allLeafWindowsRecursive
             // The fullscreen window has no lastAppliedLayoutPhysicalRect: the layout gives it the area of
-            // [borders.single-window]. The other tiling windows are behind it, and their borders would stick out
+            // [borders.singleWindow]. The other tiling windows are behind it, and their borders would stick out
             if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
                 if single.enabled && !fullscreen.noOuterGapsInFullscreen {
                     add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.singleWindowRect, isFloating: false, width: single.width)
@@ -124,7 +124,7 @@ extension BordersSnapshot {
                 // A dialog comes and goes with the window it belongs to. Only the windows that the user sees as windows
                 // are decorated. A dialog that the user made a tiling window is in the tiling tree, and it has a border there
                 guard window.detectedType != .dialog, let rect = window.lastKnownFloatingRect else { continue }
-                // A floating window that was made fullscreen looks like a fullscreen tiling window: [borders.single-window]
+                // A floating window that was made fullscreen looks like a fullscreen tiling window: [borders.singleWindow]
                 // (the layout gives it the area of a window alone in its workspace, one point shorter: see layoutFullscreen)
                 let full = monitor.singleWindowRect
                 let coversMonitor = rect.minX <= full.minX && rect.minY <= full.minY && rect.maxX >= full.maxX && rect.maxY >= full.maxY - 1

@@ -2,7 +2,7 @@ import Common
 
 func parseWorkspaceToMonitorAssignment(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: [MonitorDescription]] {
     guard let rawTable = raw.asDictOrNil else {
-        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace)]
+        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace)]
         return [:]
     }
     var result: [String: [MonitorDescription]] = [:]
@@ -29,7 +29,7 @@ func parseMonitorDescription(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -
     } else if let int = raw.asIntOrNil {
         rawString = String(int)
     } else {
-        return .failure(expectedActualTypeDiagnostic(expected: [.string, .int], actual: raw.tomlType, backtrace))
+        return .failure(expectedActualTypeDiagnostic(expected: [.string, .int], actual: raw.valueType, backtrace))
     }
 
     return parseMonitorDescription(rawString).toParsedConfig(backtrace)

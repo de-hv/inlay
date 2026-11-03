@@ -18,9 +18,9 @@
 #      ~/Library/Logs/Inlay/install-<date>.log (--verbose shows it as it comes);
 #   2. installs it into /Applications (or ~/Applications if /Applications isn't writable);
 #   3. links the 'inlay' CLI into ~/.local/bin, /opt/homebrew/bin or /usr/local/bin;
-#   4. creates ~/.config/inlay/inlay.toml from the inlay.toml of the repo if you have no Inlay config yet
+#   4. creates ~/.config/inlay/inlay.lua from the inlay.lua of the repo if you have no Inlay config yet
 #      (what happens to a config that you already have: see "Your config" below), and asks, every time, where
-#      your config should live, in a menu right below its line: where it is, the inlay.toml of the repo, or a
+#      your config should live, in a menu right below its line: where it is, the inlay.lua of the repo, or a
 #      folder of your own through a symbolic link (see "Your own config folder" below). Enter keeps what you have;
 #   5. opens Inlay. The last lines say what to do the first time (the Accessibility permission).
 # Running it again updates the installed app: the running copy is quit first.
@@ -28,39 +28,43 @@
 # Your config: a config that you already have is yours, and it is never edited, replaced or deleted without
 # asking. With one exception: a config that is identical, byte for byte, to a default config that a previous
 # version of Inlay installed (scripts/default-config-hashes.txt) was never edited by anybody, so it is replaced
-# by the current inlay.toml, and the old one is kept next to it as inlay.toml.backup-<date>. Any other config is
-# kept as it is, and its line says how many settings of the inlay.toml of the repo it doesn't have. On a terminal
-# the menu of the question can switch to the inlay.toml of the repo (yours is kept as inlay.toml.backup-<date>),
-# and 'd' shows the missing settings and the whole diff. --reset-config is how you switch without being asked.
+# by the current inlay.lua, and the old one is kept next to it as a backup (inlay.lua.backup-<date>). Any other
+# config is kept as it is, and its line says whether it differs from the inlay.lua of the repo. On a terminal
+# the menu of the question can switch to the inlay.lua of the repo (yours is kept as a backup), and 'd' shows
+# the diff. --reset-config is how you switch without being asked.
+#
+# The config of Inlay 0.2, inlay.toml, isn't read by Inlay 0.3, whose config is Lua. A default inlay.toml that
+# nobody edited is replaced by the inlay.lua of the repo (and kept as inlay.toml.backup-<date>). Any other one
+# stays where it is and its line says that it isn't read: write your config in Lua as inlay.lua, next to it,
+# starting from the inlay.lua of the repo (the menu of the question can copy it there).
 #
 # Your own config folder: the question lists the folders of a dotfiles repo that it finds (~/.dotfiles/inlay,
 # ~/dotfiles/inlay…): pick one with the arrows, or "Another folder..." to type a path (Tab completes it).
-# ~/.config/inlay becomes a symbolic link to that folder. Inlay reads and writes the inlay.toml in it; nothing
-# else of the folder is touched.
-#   - A folder of the list without inlay.toml gets a copy of the inlay.toml of the repo.
+# ~/.config/inlay becomes a symbolic link to that folder. Inlay reads the inlay.lua in it, and the files of the
+# folder that inlay.lua requires; nothing else of the folder is touched.
+#   - A folder of the list without inlay.lua gets a copy of the inlay.lua of the repo.
 #   - A typed folder that doesn't exist, or can't be linked: the script says why and asks again. Enter with
-#     nothing keeps your config as it is. A typed folder without inlay.toml: the script asks whether to copy
-#     the inlay.toml of the repo into it. If you say no, it asks for another folder.
+#     nothing keeps your config as it is. A typed folder without inlay.lua: the script asks whether to copy
+#     the inlay.lua of the repo into it. If you say no, it asks for another folder.
 #   - You already had a real ~/.config/inlay: it is not deleted. It is renamed to ~/.config/inlay.backup-<date>.
 #   - ~/.config/inlay already is a link: the first option keeps it. Linking another folder only replaces the
 #     link: the folder it pointed to is not touched.
-#   - A previous version linked the file instead (~/.config/inlay/inlay.toml -> your file). It still works and
-#     it is left alone; the folder that holds that file is in the list, to link it instead.
-# A linked folder is yours: its inlay.toml is never replaced, not even when it is identical to an old default
+#   - A previous version linked the file instead (~/.config/inlay/inlay.toml -> your file). It is left alone;
+#     the folder that holds that file is in the list, to link it instead.
+# A linked folder is yours: its files are never replaced, not even when they are identical to an old default
 # config.
 #
 # Options (none of them is needed):
 #   --config-link <folder> link ~/.config/inlay to <folder> without asking, with the same rules as above. A
-#                          folder without inlay.toml is only filled in if there is a terminal to ask on
+#                          folder without inlay.lua is only filled in if there is a terminal to ask on
 #   -y, --yes              don't ask before starting. The questions about the config are still asked
 #   --no-prompt            don't ask anything: keep the config as it is. It's what happens on its own when
 #                          there is no terminal to ask on
-#   --reset-config         replace your config by the inlay.toml of the repo, whatever is in it. Your config is
-#                          kept next to it as inlay.toml.backup-<date>. Nothing that a symbolic link points to
-#                          is ever written, moved or deleted: with a linked folder, the link itself is renamed
-#                          to ~/.config/inlay.backup-<date> and ~/.config/inlay becomes a real folder with the
-#                          inlay.toml of the repo; with a linked file, the link becomes the backup
-#   --import-aerospace     start from your AeroSpace config (~/.aerospace.toml) instead of inlay.toml
+#   --reset-config         replace your config by the inlay.lua of the repo, whatever is in it. Your config is
+#                          kept next to it as a backup (<file>.backup-<date>). Nothing that a symbolic link
+#                          points to is ever written, moved or deleted: with a linked folder, the link itself is
+#                          renamed to ~/.config/inlay.backup-<date> and ~/.config/inlay becomes a real folder
+#                          with the inlay.lua of the repo; with a linked file, the link becomes the backup
 #   --no-open              don't open Inlay when done
 #   --adhoc-signing        sign ad hoc instead of with the local identity
 #   --verbose              show the output of the build as it comes
@@ -188,29 +192,32 @@ explain_requirements() {
 
 # What will happen to the config, for its line in the list before anything happens. Changes nothing. See config_step
 config_plan() {
-  local import="$1" reset="$2" dir xdg dotfile
+  local reset="$1" dir xdg dotfile legacy replaced
   dir="$(config_home)/inlay"
-  xdg="$dir/inlay.toml"
-  dotfile="$HOME/.inlay.toml"
+  xdg="$dir/inlay.lua"
+  dotfile="$HOME/.inlay.lua"
+  legacy="$dir/inlay.toml"
+  replaced="$([ "$reset" = true ] && echo " · replaced by the repo's (--reset-config)")"
   if path_exists "$dotfile" && path_exists "$xdg"; then
     printf '%s and %s · two configs\n' "$(pretty_path "$dotfile")" "$(pretty_path "$xdg")"
   elif path_exists "$dotfile"; then
     printf '%s\n' "$(pretty_path "$dotfile")"
   elif [ -L "$dir" ]; then
-    printf '%s → %s%s\n' "$(pretty_path "$dir")" "$(pretty_path "$(readlink "$dir")")" \
-      "$([ "$reset" = true ] && echo " · replaced by the repo's (--reset-config)")"
+    printf '%s → %s%s\n' "$(pretty_path "$dir")" "$(pretty_path "$(readlink "$dir")")" "$replaced"
   elif path_exists "$xdg"; then
-    printf '%s%s\n' "$(pretty_path "$xdg")" "$([ "$reset" = true ] && echo " · replaced by the repo's (--reset-config)")"
-  elif [ "$import" = true ] && aerospace_config >/dev/null; then
-    printf '%s · new, from %s\n' "$(pretty_path "$xdg")" "$(pretty_path "$(aerospace_config)")"
+    printf '%s%s\n' "$(pretty_path "$xdg")" "$replaced"
+  elif path_exists "$legacy"; then
+    printf '%s · Inlay 0.2%s\n' "$(pretty_path "$legacy")" "$replaced"
+  elif path_exists "$HOME/.inlay.toml"; then
+    printf '%s · Inlay 0.2%s\n' "$(pretty_path "$HOME/.inlay.toml")" "$replaced"
   else
     printf '%s · new, a copy of the repo'"'"'s\n' "$(pretty_path "$xdg")"
   fi
 }
 
-# plan <signing> <import aerospace> <reset config> <open>. What every step will do, in the list, before anything is done
+# plan <signing> <reset config> <open>. What every step will do, in the list, before anything is done
 plan() {
-  local signing="$1" import="$2" reset="$3" open_app="$4" detail cli_dir
+  local signing="$1" reset="$2" open_app="$3" detail cli_dir
   detail="release"
   if [ "$signing" = adhoc ]; then
     detail="$detail · ad hoc signature"
@@ -236,7 +243,7 @@ plan() {
   if ! dir_is_in_path "$cli_dir"; then detail="$detail · not in your PATH"; fi
   CL_DETAILS[S_CLI]="$detail"
 
-  CL_DETAILS[S_CONFIG]="$(config_plan "$import" "$reset")"
+  CL_DETAILS[S_CONFIG]="$(config_plan "$reset")"
   if [ "$open_app" != true ]; then CL_DETAILS[S_OPEN]="not opened (--no-open)"; fi
   checklist_draw
 }
@@ -386,18 +393,6 @@ LIST
   printf '%s\n' "$HOME/.local/bin"
 }
 
-# Prints the path of the user's AeroSpace config, if there is one
-aerospace_config() {
-  local candidate
-  for candidate in "$HOME/.aerospace.toml" "$(config_home)/aerospace/aerospace.toml"; do
-    if [ -f "$candidate" ]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-  return 1
-}
-
 # Prints a name for the backup of <config> that isn't taken: <config>.backup-20261012-153000
 backup_path() {
   local base n=1 candidate
@@ -412,53 +407,15 @@ backup_path() {
 
 path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
 
-# replace_config <config>. Puts the inlay.toml of the repo in the place of the config. The config is renamed, not
-# copied: if it is a symbolic link, it is the link that becomes the backup, and the file it points to is never
-# written, moved or deleted. Sets CONFIG_BACKUP
+# replace_config <config> [<new config>]. Puts the inlay.lua of the repo in the place of the config (or at <new
+# config>: the inlay.lua that takes the place of an inlay.toml). The config is renamed, not copied: if it is a
+# symbolic link, it is the link that becomes the backup, and the file it points to is never written, moved or
+# deleted. Sets CONFIG_BACKUP
 replace_config() {
-  local config="$1"
+  local config="$1" new="${2:-$1}"
   CONFIG_BACKUP="$(backup_path "$config")"
   mv "$config" "$CONFIG_BACKUP"
-  cp inlay.toml "$config"
-}
-
-# toml_settings <file>. The settings of a TOML config, one per line: "<id><TAB><[table]><TAB><key = value>". The
-# id of a key binding is its command, not its key: a binding that a config has under another key is not missing.
-# The rules ([[on-window-detected]]) are not settings, and they are left out
-toml_settings() {
-  awk '
-    function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
-    depth > 0 { depth += gsub(/\[/, "[") - gsub(/\]/, "]"); next }
-    /^[ \t]*(#|$)/ { next }
-    /^[ \t]*\[\[/ { rules = 1; next }
-    /^[ \t]*\[/ { t = $0; sub(/^[ \t]*\[/, "", t); sub(/\].*$/, "", t); table = trim(t); rules = 0; next }
-    rules { next }
-    {
-      eq = index($0, "=")
-      if (eq == 0) next
-      key = trim(substr($0, 1, eq - 1))
-      value = trim(substr($0, eq + 1))
-      sub(/[ \t]+#.*$/, "", value)
-      gsub(/["\047 \t]/, "", key)
-      v = value
-      opened = gsub(/\[/, "[", v)
-      closed = gsub(/\]/, "]", v)
-      if (opened > closed) { depth = opened - closed; value = value " ..." }
-      id = value
-      gsub(/["\047 \t]/, "", id)
-      # A list of one command is that command: ['fullscreen'] = 'fullscreen'
-      if (id ~ /^\[[^],[]*\]$/) id = substr(id, 2, length(id) - 2)
-      # A key written with dots at the top level is the same key as in its table: key-mapping.preset = [key-mapping] preset
-      id = (table ~ /\.binding$/) ? table "=" id : (table == "" ? key : table "." key)
-      print id "\t" (table == "" ? "(top level)" : "[" table "]") "\t" key " = " value
-    }' "$1"
-}
-
-# missing_settings <config> <reference>. The settings of the reference that the config doesn't have:
-# "<[table]><TAB><key = value>", one per line
-missing_settings() {
-  awk -F "$TAB" 'NR == FNR { have[$1] = 1; next } !($1 in have) { print $2 "\t" $3 }' \
-    <(toml_settings "$1") <(toml_settings "$2")
+  cp inlay.lua "$new"
 }
 
 # Folders where people keep the config of Inlay in a dotfiles repo, the ones that exist. Prints one per line
@@ -488,33 +445,19 @@ LIST
   printf '%s' "$found"
 }
 
-# What to look at in a config that was written for AeroSpace. Only tells: the copy is never edited
-review_imported_config() {
-  local file="$1"
-  note "Review it. Inlay reads it as it is ('accordion' is accepted with a warning and treated as 'tiles'):"
-  note "'$CLI_NAME reload-config' and the menu bar item list the warnings and the errors."
-  if grep -Eq '^[[:space:]]*start-at-login[[:space:]]*=[[:space:]]*true' "$file"; then
-    note "- It has 'start-at-login = true': Inlay will add itself to the login items the first time it runs."
-    note "  If AeroSpace also starts at login, both will start. Set it to false until you pick one."
-  fi
-  if grep -Eq '^[^#]*(aerospace|AEROSPACE_)' "$file"; then
-    note "- It mentions 'aerospace' outside of the comments. Commands and scripts that call the 'aerospace'"
-    note "  CLI talk to AeroSpace, not to Inlay: they should call '$CLI_NAME'. Scripts can read INLAY_*"
-    note "  variables (the AEROSPACE_* ones are still set for them)."
-  fi
-  note "- The window borders are 4 points thick, outside of the windows: with gaps under 8 the borders of two"
-  note "  neighbors overlap, and with gaps of 8 they touch. The built-in config uses 14."
-}
-
 # ~~~ Your config ~~~
 
 # What the config step found and did: the line of the step, and its mark
 CONFIG_DETAIL=""
 CONFIG_STATE=ok
-# How many settings of the inlay.toml of the repo the config doesn't have. And whether the config can give way to
-# that inlay.toml (not when it is in a folder of the user, or when it is the copy that was just made)
-CONFIG_MISSING=0
+# Whether the config differs from the inlay.lua of the repo. And whether the config can give way to that inlay.lua
+# (not when it is in a folder of the user, or when it is the copy that was just made)
+CONFIG_DIFFERS=false
 CONFIG_REPLACEABLE=false
+# An inlay.toml of Inlay 0.2 that stays: CONFIG_LEGACY_PATH, and the inlay.lua that can take its place
+CONFIG_LEGACY=false
+CONFIG_LEGACY_PATH=""
+CONFIG_NEW_PATH=""
 
 # say_problem <text>. A problem with an answer, right below the question
 say_problem() {
@@ -525,51 +468,41 @@ say_hint() {
   if [ "$CL_ACTIVE" = true ]; then checklist_print "        $C_DIM$*$C_RESET"; else hint "$*"; fi
 }
 
-# The settings of the inlay.toml of the repo that the config doesn't have, then the whole diff: what 'd' shows
+# What 'd' shows: the diff between the config and the inlay.lua of the repo
 show_config_differences() {
-  local config="$1" missing table setting
-  missing="$(missing_settings "$config" inlay.toml)"
-  printf '%sThe inlay.toml of the repo has these settings, and %s doesn'"'"'t:%s\n\n' "$C_BOLD" "$(pretty_path "$config")" "$C_RESET"
-  printf '%s\n' "$missing" | while IFS="$TAB" read -r table setting; do
-    [ -n "$table" ] || continue
-    printf '  %s+%s %s%-22s%s %s\n' "$C_GREEN" "$C_RESET" "$C_DIM" "$table" "$C_RESET" "$setting"
-  done
-  printf '\n%sThe whole diff: yours, then the one of the repo%s\n\n' "$C_BOLD" "$C_RESET"
-  diff -u "$config" inlay.toml || true
+  local config="$1"
+  printf '%sThe diff: yours, then the inlay.lua of the repo%s\n\n' "$C_BOLD" "$C_RESET"
+  diff -u "$config" inlay.lua || true
 }
 
-# config_kept <config> <label>. A config that stays as it is: sets CONFIG_DETAIL and CONFIG_MISSING
+# config_kept <config> <label>. A config that stays as it is: sets CONFIG_DETAIL and CONFIG_DIFFERS
 config_kept() {
-  local config="$1" label="$2" count
-  CONFIG_MISSING=0
+  local config="$1" label="$2"
+  CONFIG_DIFFERS=false
   if [ ! -e "$config" ]; then
     CONFIG_STATE=warn
     CONFIG_DETAIL="$label · leads nowhere"
     warn "$(pretty_path "$config") is a symbolic link to a file that doesn't exist: Inlay uses its built-in config."
     return 0
   fi
-  if cmp -s "$config" inlay.toml; then
+  if cmp -s "$config" inlay.lua; then
     CONFIG_DETAIL="$label · up to date"
     return 0
   fi
-  count="$(missing_settings "$config" inlay.toml | grep -c . || true)"
-  CONFIG_MISSING="$count"
-  case "$count" in
-    0) CONFIG_DETAIL="$label · yours" ;;
-    1) CONFIG_DETAIL="$label · yours, 1 setting missing" ;;
-    *) CONFIG_DETAIL="$label · yours, $count settings missing" ;;
-  esac
-  if ! grep -Eq '^[[:space:]]*\[\[on-window-detected\]\]' "$config"; then
-    warn "Your config has no [[on-window-detected]] rule: every window stays in the workspace where it opens."
+  CONFIG_DIFFERS=true
+  CONFIG_DETAIL="$label · yours"
+  # The rules may be in a file that inlay.lua requires
+  if ! grep -qs onWindowDetected "$(dirname "$config")"/*.lua; then
+    warn "Your config has no onWindowDetected rule: every window stays in the workspace where it opens."
   fi
-  if [ "$count" -gt 0 ] && [ "$CAN_ASK" != true ]; then
-    hint "What the inlay.toml of the repo has and yours doesn't:  diff \"$config\" \"$PWD/inlay.toml\""
+  if [ "$CAN_ASK" != true ]; then
+    hint "How yours differs from the inlay.lua of the repo:  diff \"$config\" \"$PWD/inlay.lua\""
     hint "To switch to it (yours is kept as a backup):  ./install.sh --reset-config"
   fi
 }
 
-# config_file <config> <reset: true|false>. A config file that is already there: ~/.config/inlay/inlay.toml in a
-# real folder, or ~/.inlay.toml. Only replaced with --reset-config, or when it is a default config of a previous
+# config_file <config> <reset: true|false>. A config file that is already there: ~/.config/inlay/inlay.lua in a
+# real folder, or ~/.inlay.lua. Only replaced with --reset-config, or when it is a default config of a previous
 # version that nobody edited, and then it is kept as a backup. See "Your config"
 config_file() {
   local config="$1" reset="$2" label target=""
@@ -581,13 +514,13 @@ config_file() {
   CONFIG_REPLACEABLE=true
   if [ "$reset" = true ]; then
     replace_config "$config"
-    CONFIG_DETAIL="$(pretty_path "$config") · the repo's inlay.toml (--reset-config)"
+    CONFIG_DETAIL="$(pretty_path "$config") · the repo's inlay.lua (--reset-config)"
     CONFIG_REPLACEABLE=false
     note "Your previous config is kept as $(pretty_path "$CONFIG_BACKUP")"
     if [ -n "$target" ]; then note "It was a link to $target: only the link was replaced, that file wasn't touched."; fi
     return 0
   fi
-  if [ -z "$target" ] && ! cmp -s "$config" inlay.toml && is_known_default_config "$config" scripts/default-config-hashes.txt; then
+  if [ -z "$target" ] && ! cmp -s "$config" inlay.lua && is_known_default_config "$config" scripts/default-config-hashes.txt; then
     replace_config "$config"
     CONFIG_DETAIL="$(pretty_path "$config") · updated: it was an old default config"
     CONFIG_REPLACEABLE=false
@@ -607,8 +540,8 @@ config_linked_folder() {
     CONFIG_BACKUP="$(backup_path "$dir")"
     mv "$dir" "$CONFIG_BACKUP"
     mkdir -p "$dir"
-    cp inlay.toml "$dir/inlay.toml"
-    CONFIG_DETAIL="$(pretty_path "$dir/inlay.toml") · the repo's inlay.toml (--reset-config)"
+    cp inlay.lua "$dir/inlay.lua"
+    CONFIG_DETAIL="$(pretty_path "$dir/inlay.lua") · the repo's inlay.lua (--reset-config)"
     note "$(pretty_path "$dir") was a link to $(pretty_path "$target"): the link is kept as $(pretty_path "$CONFIG_BACKUP"), and that folder wasn't touched."
     return 0
   fi
@@ -616,45 +549,71 @@ config_linked_folder() {
     CONFIG_STATE=warn
     CONFIG_DETAIL="$(pretty_path "$dir") → $(pretty_path "$target") · the folder doesn't exist"
     warn "Inlay can't read your config, and uses its built-in one until $(pretty_path "$target") is back."
-  elif ! path_exists "$dir/inlay.toml"; then
+  elif ! path_exists "$dir/inlay.lua" && path_exists "$dir/inlay.toml"; then
     CONFIG_STATE=warn
-    CONFIG_DETAIL="$(pretty_path "$dir") → $(pretty_path "$target") · no inlay.toml"
-    warn "Inlay uses its built-in config until $(pretty_path "$target") has an inlay.toml."
+    CONFIG_DETAIL="$(pretty_path "$dir") → $(pretty_path "$target") · inlay.toml of Inlay 0.2, not read"
+    warn "$(pretty_path "$target") has the inlay.toml of Inlay 0.2, which Inlay $REPO_VERSION doesn't read: the config is Lua"
+    warn "now, with camelCase keys. Inlay uses its built-in config until the folder has an inlay.lua. Write it there,"
+    warn "starting from the inlay.lua of the repo:  cp \"$PWD/inlay.lua\" \"$target/\""
+  elif ! path_exists "$dir/inlay.lua"; then
+    CONFIG_STATE=warn
+    CONFIG_DETAIL="$(pretty_path "$dir") → $(pretty_path "$target") · no inlay.lua"
+    warn "Inlay uses its built-in config until $(pretty_path "$target") has an inlay.lua."
   else
-    config_kept "$dir/inlay.toml" "$(pretty_path "$dir") → $(pretty_path "$target")"
+    config_kept "$dir/inlay.lua" "$(pretty_path "$dir") → $(pretty_path "$target")"
   fi
 }
 
-# config_create <config folder> <config file> <import aerospace: true|false>. There is no config yet
+# config_legacy <inlay.toml> <the inlay.lua that takes its place> <reset: true|false>. The config of Inlay 0.2, and
+# no inlay.lua: Inlay doesn't read it. Replaced by the inlay.lua of the repo when it is a default config that nobody
+# edited, or with --reset-config, and then kept as a backup. Otherwise it stays, and the menu of the question can
+# put the inlay.lua of the repo in its place
+config_legacy() {
+  local legacy="$1" xdg="$2" reset="$3"
+  if [ "$reset" = true ] || { [ ! -L "$legacy" ] && is_known_default_config "$legacy" scripts/default-config-hashes.txt; }; then
+    replace_config "$legacy" "$xdg"
+    CONFIG_PATH="$xdg"
+    CONFIG_DETAIL="$(pretty_path "$xdg") · the repo's, in place of the inlay.toml of Inlay 0.2"
+    note "The inlay.toml of Inlay 0.2 is kept as $(pretty_path "$CONFIG_BACKUP")"
+    return 0
+  fi
+  # Not something that the parser of Inlay can check
+  CONFIG_PATH=""
+  CONFIG_LEGACY=true
+  CONFIG_LEGACY_PATH="$legacy"
+  CONFIG_NEW_PATH="$xdg"
+  CONFIG_REPLACEABLE=true
+  CONFIG_STATE=warn
+  CONFIG_DETAIL="$(pretty_path "$legacy") · Inlay 0.2, not read"
+  warn "$(pretty_path "$legacy") is the config of Inlay 0.2, which Inlay $REPO_VERSION doesn't read: the config is Lua now,"
+  warn "with camelCase keys. Inlay uses its built-in config until $(pretty_path "$xdg") exists. Write it there,"
+  if [ "$CAN_ASK" = true ]; then
+    warn "starting from the inlay.lua of the repo, which the question below can put there (yours is kept as a backup)."
+  else
+    warn "starting from the inlay.lua of the repo:  ./install.sh --reset-config  (yours is kept as a backup)."
+  fi
+}
+
+# config_create <config folder> <config file>. There is no config yet
 config_create() {
-  local dir="$1" xdg="$2" import="$3" source
+  local dir="$1" xdg="$2"
   # Remembered: a folder that this run has just created is not worth a backup when it gives way to a link
   if [ ! -d "$dir" ]; then CONFIG_CREATED=true; fi
   mkdir -p "$dir"
   CONFIG_REPLACEABLE=false
-  if [ "$import" = true ] && source="$(aerospace_config)"; then
-    # cp follows a symlink, so the result is a regular file of your own
-    cp "$source" "$xdg"
-    CONFIG_DETAIL="$(pretty_path "$xdg") · new, from $(pretty_path "$source")"
-    review_imported_config "$xdg"
-  else
-    if [ "$import" = true ]; then
-      warn "--import-aerospace: no AeroSpace config found (~/.aerospace.toml). The default config was used."
-    fi
-    cp inlay.toml "$xdg"
-    CONFIG_DETAIL="$(pretty_path "$xdg") · new, a copy of the repo's"
-  fi
+  cp inlay.lua "$xdg"
+  CONFIG_DETAIL="$(pretty_path "$xdg") · new, a copy of the repo's"
 }
 
-# check_link_target <config folder> <folder> <link now: a folder, or empty> <a folder without inlay.toml: ask, copy
+# check_link_target <config folder> <folder> <link now: a folder, or empty> <a folder without inlay.lua: ask, copy
 # or no>. Whether the config folder can be linked to <folder>, saying why not right below the question. Returns 0 if
-# it can, 1 if it can't and 2 if it already is. A folder without inlay.toml gets the one of the repo: if the user
+# it can, 1 if it can't and 2 if it already is. A folder without inlay.lua gets the one of the repo: if the user
 # says so (ask), or without asking (copy: the user picked it in a list that said so)
 check_link_target() {
-  local dir="$1" target="$2" current="$3" missing_toml="$4" pretty
+  local dir="$1" target="$2" current="$3" missing_config="$4" pretty
   pretty="$(pretty_path "$target")"
   if [ -f "$target" ]; then
-    say_problem "$pretty is a file. The link is to the folder that holds your inlay.toml: $(pretty_path "$(dirname "$target")")"
+    say_problem "$pretty is a file. The link is to the folder that holds your inlay.lua: $(pretty_path "$(dirname "$target")")"
     return 1
   fi
   if [ ! -d "$target" ]; then
@@ -666,14 +625,14 @@ check_link_target() {
     say_problem "$pretty is the config folder itself: it can't be a link to itself."
     return 1
   fi
-  path_exists "$target/inlay.toml" && return 0
-  if [ "$missing_toml" = copy ] || { [ "$missing_toml" = ask ] && checklist_ask_yes_no "$pretty has no inlay.toml. Copy the repo's into it?" y; }; then
-    cp inlay.toml "$target/inlay.toml"
-    note "Copied the inlay.toml of the repo to $pretty/inlay.toml"
+  path_exists "$target/inlay.lua" && return 0
+  if [ "$missing_config" = copy ] || { [ "$missing_config" = ask ] && checklist_ask_yes_no "$pretty has no inlay.lua. Copy the repo's into it?" y; }; then
+    cp inlay.lua "$target/inlay.lua"
+    note "Copied the inlay.lua of the repo to $pretty/inlay.lua"
     return 0
   fi
-  if [ "$missing_toml" = no ]; then
-    warn "$pretty has no inlay.toml, and there is no terminal to ask about copying one: nothing was linked."
+  if [ "$missing_config" = no ]; then
+    warn "$pretty has no inlay.lua, and there is no terminal to ask about copying one: nothing was linked."
   fi
   return 1
 }
@@ -687,7 +646,7 @@ link_config_dir() {
     note "The previous link, to $(pretty_path "$current"), was removed. That folder wasn't touched."
   elif [ -d "$dir" ]; then
     # The copy that this run has just made, alone in a folder that this run has just made: nothing to keep
-    if [ "$CONFIG_CREATED" = true ] && rm -f "$dir/inlay.toml" && rmdir "$dir" 2>/dev/null; then
+    if [ "$CONFIG_CREATED" = true ] && rm -f "$dir/inlay.lua" && rmdir "$dir" 2>/dev/null; then
       :
     else
       backup="$(backup_path "$dir")"
@@ -696,17 +655,18 @@ link_config_dir() {
     fi
   fi
   ln -s "$target" "$dir"
-  CONFIG_PATH="$dir/inlay.toml"
+  CONFIG_PATH="$dir/inlay.lua"
   CONFIG_CREATED=false
   CONFIG_STATE=ok
   CONFIG_REPLACEABLE=false
+  CONFIG_LEGACY=false
   config_kept "$CONFIG_PATH" "$(pretty_path "$dir") → $(pretty_path "$target")"
 }
 
 # config_place <config folder> <link: a folder, or empty> <prompt: true|false>. Where the config lives: the folder of
 # --config-link, or the answer to the question, which is asked on every run. See "Your own config folder"
 config_place() {
-  local dir="$1" link="$2" prompt="$3" current="" legacy suggestion="" found candidate target status hint extra
+  local dir="$1" link="$2" prompt="$3" current="" legacy file suggestion="" found candidate target status hint extra
   local options actions action
   if [ -L "$dir" ]; then current="$(readlink "$dir")"; fi
 
@@ -725,10 +685,12 @@ config_place() {
   [ "$prompt" = true ] && [ "$CAN_ASK" = true ] || return 0
 
   # A previous version linked the file instead: the folder that holds it is the obvious one to link
-  if [ -z "$current" ] && [ -L "$dir/inlay.toml" ]; then
-    legacy="$(readlink "$dir/inlay.toml")"
-    if [ "$(basename "$legacy")" = inlay.toml ]; then suggestion="$(dirname "$(absolute_path "$legacy" "$dir")")"; fi
-  fi
+  for file in inlay.lua inlay.toml; do
+    if [ -z "$current" ] && [ -z "$suggestion" ] && [ -L "$dir/$file" ]; then
+      legacy="$(readlink "$dir/$file")"
+      if [ "$(basename "$legacy")" = "$file" ]; then suggestion="$(dirname "$(absolute_path "$legacy" "$dir")")"; fi
+    fi
+  done
   found="$(link_candidates "$dir" "$suggestion")"
   while true; do
     options=()
@@ -739,16 +701,21 @@ config_place() {
       options[${#options[@]}]="Keep it${TAB}${CONFIG_DETAIL#* · }"
     fi
     actions[${#actions[@]}]=keep
-    if [ "$CONFIG_MISSING" -gt 0 ] && [ "$CONFIG_REPLACEABLE" = true ]; then
-      options[${#options[@]}]="Use the repo's inlay.toml${TAB}yours is kept as a backup"
+    if [ "$CONFIG_LEGACY" = true ]; then
+      options[${#options[@]}]="Use the repo's inlay.lua${TAB}your inlay.toml is kept as a backup"
+      actions[${#actions[@]}]=repo
+    elif [ "$CONFIG_DIFFERS" = true ] && [ "$CONFIG_REPLACEABLE" = true ]; then
+      options[${#options[@]}]="Use the repo's inlay.lua${TAB}yours is kept as a backup"
       actions[${#actions[@]}]=repo
     fi
     while IFS= read -r candidate; do
       [ -n "$candidate" ] || continue
-      if path_exists "$candidate/inlay.toml"; then
-        options[${#options[@]}]="Use $(pretty_path "$candidate")${TAB}has inlay.toml"
+      if path_exists "$candidate/inlay.lua"; then
+        options[${#options[@]}]="Use $(pretty_path "$candidate")${TAB}has inlay.lua"
+      elif path_exists "$candidate/inlay.toml"; then
+        options[${#options[@]}]="Use $(pretty_path "$candidate")${TAB}has an inlay.toml of 0.2: gets the repo's inlay.lua"
       else
-        options[${#options[@]}]="Use $(pretty_path "$candidate")${TAB}gets a copy of the repo's inlay.toml"
+        options[${#options[@]}]="Use $(pretty_path "$candidate")${TAB}gets a copy of the repo's inlay.lua"
       fi
       actions[${#actions[@]}]="link$TAB$candidate"
     done <<LIST
@@ -758,8 +725,8 @@ LIST
     actions[${#actions[@]}]=another
     hint="↑↓ · Enter"
     extra=""
-    if [ "$CONFIG_MISSING" -gt 0 ]; then
-      hint="$hint · d shows what's missing"
+    if [ "$CONFIG_DIFFERS" = true ]; then
+      hint="$hint · d shows the diff with the repo's"
       extra=d
     fi
 
@@ -776,9 +743,16 @@ LIST
     case "$action" in
       keep) return 0 ;;
       repo)
-        replace_config "$CONFIG_PATH"
-        CONFIG_DETAIL="$(pretty_path "$CONFIG_PATH") · the repo's inlay.toml"
-        CONFIG_MISSING=0
+        if [ "$CONFIG_LEGACY" = true ]; then
+          replace_config "$CONFIG_LEGACY_PATH" "$CONFIG_NEW_PATH"
+          CONFIG_PATH="$CONFIG_NEW_PATH"
+        else
+          replace_config "$CONFIG_PATH"
+        fi
+        CONFIG_DETAIL="$(pretty_path "$CONFIG_PATH") · the repo's inlay.lua"
+        CONFIG_STATE=ok
+        CONFIG_DIFFERS=false
+        CONFIG_LEGACY=false
         CONFIG_REPLACEABLE=false
         note "Your previous config is kept as $(pretty_path "$CONFIG_BACKUP")"
         return 0
@@ -841,18 +815,20 @@ check_config() {
   fi
 }
 
-# config_step <import aerospace: true|false> <link: a folder, or empty> <prompt: true|false> <reset: true|false>
+# config_step <link: a folder, or empty> <prompt: true|false> <reset: true|false>
 # Creates the config when there is none, says what happens to the one that is there, and asks where it should live.
-# See "Your config". Sets CONFIG_PATH to the config that Inlay will read, or to nothing if it can't tell (two configs)
+# See "Your config". Sets CONFIG_PATH to the config that Inlay will read, or to nothing if it can't tell (two configs,
+# or an inlay.toml of Inlay 0.2 that isn't read)
 config_step() {
-  local import="$1" link="$2" prompt="$3" reset="$4" dir xdg dotfile
+  local link="$1" prompt="$2" reset="$3" dir xdg dotfile
   dir="$(config_home)/inlay"
-  xdg="$dir/inlay.toml"
-  dotfile="$HOME/.inlay.toml"
+  xdg="$dir/inlay.lua"
+  dotfile="$HOME/.inlay.lua"
   CONFIG_PATH=""
   CONFIG_CREATED=false
   CONFIG_STATE=ok
-  CONFIG_MISSING=0
+  CONFIG_DIFFERS=false
+  CONFIG_LEGACY=false
   checklist_set "$S_CONFIG" run
 
   if path_exists "$dotfile"; then
@@ -865,11 +841,10 @@ config_step() {
       CONFIG_PATH="$dotfile"
       config_file "$dotfile" "$reset"
     fi
-    if [ "$import" = true ]; then note "--import-aerospace was ignored: you already have an Inlay config."; fi
-    # Inlay reads either file, never both: a linked folder next to ~/.inlay.toml would be a second config
+    # Inlay reads either file, never both: a linked folder next to ~/.inlay.lua would be a second config
     if [ -n "$link" ]; then
-      warn "--config-link was ignored: your config is ~/.inlay.toml. To use a config folder, move that file into the"
-      warn "folder as inlay.toml and run this script again."
+      warn "--config-link was ignored: your config is ~/.inlay.lua. To use a config folder, move that file into the"
+      warn "folder as inlay.lua and run this script again."
     fi
   else
     if [ -L "$dir" ]; then
@@ -878,18 +853,20 @@ config_step() {
     elif path_exists "$xdg"; then
       CONFIG_PATH="$xdg"
       config_file "$xdg" "$reset"
+    elif path_exists "$dir/inlay.toml"; then
+      config_legacy "$dir/inlay.toml" "$xdg" "$reset"
+    elif path_exists "$HOME/.inlay.toml"; then
+      config_legacy "$HOME/.inlay.toml" "$dotfile" "$reset"
     else
       CONFIG_PATH="$xdg"
       if [ "$reset" = true ]; then note "--reset-config: you had no Inlay config to replace."; fi
-      config_create "$dir" "$xdg" "$import"
-      import=false
+      config_create "$dir" "$xdg"
     fi
-    if [ "$import" = true ]; then note "--import-aerospace was ignored: you already have an Inlay config."; fi
     config_place "$dir" "$link" "$prompt"
   fi
   if [ "${XDG_CONFIG_HOME:-$HOME/.config}" != "$HOME/.config" ]; then
     note "XDG_CONFIG_HOME is set in this shell. Inlay only finds the config there if it is also set for the apps that"
-    note "macOS starts (launchctl setenv). Otherwise it reads ~/.config/inlay/inlay.toml."
+    note "macOS starts (launchctl setenv). Otherwise it reads ~/.config/inlay/inlay.lua."
   fi
   check_config
   checklist_set "$S_CONFIG" "$CONFIG_STATE" "$CONFIG_DETAIL"
@@ -939,14 +916,14 @@ finish() {
 }
 
 main() {
-  local open_app=true signing=stable import=false config_link="" prompt=true reset_config=false assume_yes=false
+  local open_app=true signing=stable config_link="" prompt=true reset_config=false assume_yes=false
   VERBOSE=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-open) open_app=false ;;
       --stable-signing) signing=stable ;;
       --adhoc-signing) signing=adhoc ;;
-      --import-aerospace) import=true ;;
+      --import-aerospace) fail "--import-aerospace is gone: the config of Inlay is Lua since 0.3.0, and an aerospace.toml can't be read." ;;
       --no-prompt) prompt=false ;;
       --reset-config) reset_config=true ;;
       -y|--yes) assume_yes=true ;;
@@ -978,7 +955,7 @@ main() {
   fi
   checklist_set "$S_REQUIREMENTS" ok "macOS $REQ_MACOS · Swift $SWIFT_VERSION · codesign"
   choose_install_dir
-  plan "$signing" "$import" "$reset_config" "$open_app"
+  plan "$signing" "$reset_config" "$open_app"
   if [ "$CAN_ASK" = true ] && [ "$assume_yes" != true ]; then
     if ! checklist_confirm install; then
       checklist_end
@@ -992,7 +969,7 @@ main() {
   build_app "$signing"
   install_app
   link_cli
-  config_step "$import" "$config_link" "$prompt" "$reset_config"
+  config_step "$config_link" "$prompt" "$reset_config"
   open_or_explain "$open_app"
   checklist_end
   finish

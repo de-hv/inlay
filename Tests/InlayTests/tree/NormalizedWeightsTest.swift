@@ -41,7 +41,7 @@ extension InlayTests {
         }
 
         /// Regression: shrinking a small window used to give it a negative width. Now the resize command stops
-        /// at 'tiling.min-window-size', long before the floor of the layout
+        /// at 'tiling.minWindowSize', long before the floor of the layout
         @Test func testResizeBelowZero_theWindowKeepsAPositiveSize() async throws {
             workspace.rootTilingContainer.apply {
                 TestWindow.new(id: 1, parent: $0, adaptiveWeight: 1800)

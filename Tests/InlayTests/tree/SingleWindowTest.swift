@@ -3,7 +3,7 @@ import AppKit
 import Common
 import Testing
 
-/// A workspace with a single tiling window, and a fullscreen window: [borders.single-window].
+/// A workspace with a single tiling window, and a fullscreen window: [borders.singleWindow].
 /// The test monitor is 1920x1080. The layout takes 1920x1079 (see Workspace.layoutWorkspace)
 extension InlayTests {
     @Suite @MainActor struct SingleWindowTest {
@@ -137,7 +137,7 @@ extension InlayTests {
         // MARK: - The old keys
 
         @Test func testTheKeysOfThePast() {
-            let result = parseConfig("config-version = 2\n[gaps]\nsmart = true\n[borders]\nhide-when-single = true\n")
+            let result = parseConfig(lua: "return { configVersion = 2, gaps = { smart = true }, borders = { hideWhenSingle = true } }")
             assertEquals(result.errors, [])
             assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
             assertEquals(result.config.borders.singleWindow, SingleWindowBorder())

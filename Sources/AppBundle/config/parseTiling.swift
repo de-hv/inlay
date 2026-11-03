@@ -2,11 +2,11 @@ import Common
 import Foundation
 
 let tilingParserTable: [String: any ParserProtocol<TilingConfig>] = [
-    "new-window-placement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
-    "split-ratio": Parser(\.splitRatio, parseSplitRatio),
-    "startup-layout": Parser(\.startupLayout, parseStartupLayout),
-    "split-target": Parser(\.splitTarget, parseSplitTarget),
-    "min-window-size": Parser(\.minWindowSize, parseMinWindowSize),
+    "newWindowPlacement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
+    "splitRatio": Parser(\.splitRatio, parseSplitRatio),
+    "startupLayout": Parser(\.startupLayout, parseStartupLayout),
+    "splitTarget": Parser(\.splitTarget, parseSplitTarget),
+    "minWindowSize": Parser(\.minWindowSize, parseMinWindowSize),
 ]
 
 func parseTiling(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> TilingConfig {
@@ -37,14 +37,14 @@ private func parseSplitTarget(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) 
 private func parseMinWindowSize(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<CGFloat> {
     let range = TilingConfig.minWindowSizeRange
     return parseInt(raw, backtrace)
-        .filter(.init(backtrace, "min-window-size must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
+        .filter(.init(backtrace, "minWindowSize must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
         .map { CGFloat($0) }
 }
 
 private func parseSplitRatio(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<CGFloat> {
     let range = TilingConfig.splitRatioRange
     return raw.asDoubleOrNil
-        .toResult(expectedActualTypeDiagnostic(expected: .float, actual: raw.tomlType, backtrace))
+        .toResult(expectedActualTypeDiagnostic(expected: .float, actual: raw.valueType, backtrace))
         .map { CGFloat($0) }
-        .filter(.init(backtrace, "split-ratio must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
+        .filter(.init(backtrace, "splitRatio must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
 }

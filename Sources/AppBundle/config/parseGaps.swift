@@ -3,7 +3,7 @@ import Common
 struct Gaps: ConvenienceMutable, Equatable, Sendable {
     var inner: Inner
     var outer: Outer
-    /// 'smart' is a key of the past: [borders.single-window] decides the gap around a window alone in its workspace
+    /// 'smart' is a key of the past: [borders.singleWindow] decides the gap around a window alone in its workspace
     var _smart: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 
     static let zero = Gaps(inner: .zero, outer: .zero)
@@ -87,7 +87,7 @@ struct ResolvedGaps {
 let gapsParser: [String: any ParserProtocol<Gaps>] = [
     "inner": Parser(\.inner, parseInner),
     "outer": Parser(\.outer, parseOuter),
-    "smart": Parser(\._smart, parseObsolete("Smart gaps are gone: [borders.single-window] decides the border and the gap of a window alone in its workspace")),
+    "smart": Parser(\._smart, parseObsolete("Smart gaps are gone: [borders.singleWindow] decides the border and the gap of a window alone in its workspace")),
 ]
 
 let gapsInnerParser: [String: any ParserProtocol<Gaps.Inner>] = [

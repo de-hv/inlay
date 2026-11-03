@@ -17,13 +17,13 @@ var defaultConfigUrl: URL {
     if isUnitTest {
         return getDefaultConfigUrlFromProject()
     } else {
-        return Bundle.main.url(forResource: "inlay", withExtension: "toml")
+        return Bundle.main.url(forResource: "inlay", withExtension: "lua")
             // Useful for debug builds that are not app bundles
             ?? getDefaultConfigUrlFromProject()
     }
 }
 @MainActor let defaultConfig: Config = {
-    let parsedConfig = parseConfig(Result { try String(contentsOf: defaultConfigUrl, encoding: .utf8) }.getOrDie())
+    let parsedConfig = parseConfig(LuaConfigLoader.load(file: defaultConfigUrl))
     if !parsedConfig.errors.isEmpty {
         die("Can't parse default config: \(parsedConfig.errors)")
     }

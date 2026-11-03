@@ -33,7 +33,7 @@ final class TestWindow: Window, CustomStringConvertible {
     }
 
     /// Places the window the same way as a new tiling window detected by the real app (MacWindow.getOrRegister).
-    /// See: 'tiling.new-window-placement' config option
+    /// See: 'tiling.newWindowPlacement' config option
     @discardableResult
     @MainActor
     static func newTiling(id: UInt32, workspace: Workspace, app: any AbstractApp = TestApp.shared) -> TestWindow {

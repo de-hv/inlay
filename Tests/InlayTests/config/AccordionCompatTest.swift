@@ -12,58 +12,61 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testConfig_defaultRootContainerLayout() {
-            let result = parseConfig(
-                """
-                config-version = 2
-                default-root-container-layout = 'accordion'
+            let result = parseConfig(lua: """
+                return { configVersion = 2, defaultRootContainerLayout = 'accordion' }
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerLayout, .tiles)
             assertEquals(
                 result.strWarnings,
-                ["[WARNING] default-root-container-layout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'"],
+                ["[WARNING] defaultRootContainerLayout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'"],
             )
 
             assertEquals(
-                parseConfig("default-root-container-layout = 'accordeon'").strErrors,
-                ["[ERROR] default-root-container-layout: Can't parse layout 'accordeon'"],
+                parseConfig(lua: "return { defaultRootContainerLayout = 'accordeon' }").strErrors,
+                ["[ERROR] defaultRootContainerLayout: Can't parse layout 'accordeon'"],
             )
         }
 
         @Test func testConfig_accordionPadding() {
-            let result = parseConfig(
-                """
-                config-version = 2
-                accordion-padding = 30
+            let result = parseConfig(lua: """
+                return { configVersion = 2, accordionPadding = 30 }
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(
                 result.strWarnings,
-                ["[WARNING] accordion-padding: Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config"],
+                ["[WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config"],
             )
 
             assertEquals(
-                parseConfig("accordion-padding = 'wide'").strErrors,
-                ["[ERROR] accordion-padding: Expected type is 'Int'. But actual type is 'String'"],
+                parseConfig(lua: "return { accordionPadding = 'wide' }").strErrors,
+                ["[ERROR] accordionPadding: Expected type is 'Int'. But actual type is 'String'"],
             )
         }
 
         @Test func testConfig_layoutCommands() {
-            let result = parseConfig(
-                """
-                config-version = 2
-                after-startup-command = ['layout tiles', 'layout accordion']
-
-                [mode.main.binding]
-                    alt-a = 'layout accordion horizontal vertical'
-                    alt-b = ['layout h_accordion', 'mode main']
-                    alt-c = 'layout tiles horizontal vertical'
-
-                [[on-window-detected]]
-                    if.app-id = 'com.apple.finder'
-                    run = 'layout v_accordion'
+            let result = parseConfig(lua: """
+                return {
+                  configVersion = 2,
+                  afterStartupCommand = { 'layout tiles', 'layout accordion' },
+                  mode = {
+                    main = {
+                      binding = {
+                        ['alt-a'] = 'layout accordion horizontal vertical',
+                        ['alt-b'] = { 'layout h_accordion', 'mode main' },
+                        ['alt-c'] = 'layout tiles horizontal vertical',
+                      },
+                    },
+                  },
+                  onWindowDetected = {
+                    {
+                      match = { appId = 'com.apple.finder' },
+                      run = 'layout v_accordion',
+                    },
+                  },
+                }
                 """,
             )
             assertEquals(result.errors, [])
@@ -71,29 +74,14 @@ extension InlayTests {
             assertEquals(
                 result.strWarnings.sorted(),
                 [
-                    "[WARNING] after-startup-command[1]: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
+                    "[WARNING] afterStartupCommand[1]: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
                     "[WARNING] mode.main.binding.alt-a: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
                     "[WARNING] mode.main.binding.alt-b[0]: Inlay has no accordion layout: 'h_accordion' is treated as 'h_tiles'",
-                    "[WARNING] on-window-detected[0].run: Inlay has no accordion layout: 'v_accordion' is treated as 'v_tiles'",
+                    "[WARNING] onWindowDetected[0].run: Inlay has no accordion layout: 'v_accordion' is treated as 'v_tiles'",
                 ],
             )
             assertEquals(result.config.onWindowDetected.count, 1)
             assertEquals(result.config.modes[mainModeId]?.bindings.count, 3)
-        }
-
-        /// The default config of AeroSpace (which uses 'accordion-padding' and 'layout accordion horizontal vertical')
-        /// must load without errors
-        @Test func testConfig_aerospaceDefaultConfigLoads() throws {
-            let url = projectRoot.appending(path: "docs/upstream-aerospace/config-examples/default-config.toml")
-            let result = parseConfig(try String(contentsOf: url, encoding: .utf8))
-            assertEquals(result.errors, [])
-            assertEquals(
-                result.strWarnings.sorted(),
-                [
-                    "[WARNING] accordion-padding: Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config",
-                    "[WARNING] mode.main.binding.alt-comma: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
-                ],
-            )
         }
 
         @Test func testParseCommand() {

@@ -29,7 +29,7 @@ struct MoveNodeToWorkspaceCommand: Command {
 }
 
 /// - Parameter index: The index of the tiling window in the root container of the target workspace.
-///   nil means that the window is placed as a new window of the target workspace. See: 'tiling.new-window-placement' config option
+///   nil means that the window is placed as a new window of the target workspace. See: 'tiling.newWindowPlacement' config option
 @MainActor
 func moveWindowToWorkspace(_ window: Window, _ targetWorkspace: Workspace, _ io: CmdIo, focusFollowsWindow: Bool, failIfNoop: Bool, index: Int? = nil) -> BinaryExitCode {
     if window.nodeWorkspace == targetWorkspace {

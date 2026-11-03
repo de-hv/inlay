@@ -7,12 +7,12 @@ extension InlayTests {
     /// The config of the user at startup, for an app that wasn't installed with install.sh (Homebrew)
     @Suite struct UserConfigSetupTest {
         private let root: URL
-        /// ~/.config/inlay/inlay.toml
+        /// ~/.config/inlay/inlay.lua
         private let target: URL
 
         init() {
             root = FileManager.default.temporaryDirectory.appending(path: "inlay-user-config-\(UUID().uuidString)")
-            target = root.appending(path: "config/inlay/inlay.toml")
+            target = root.appending(path: "config/inlay/inlay.lua")
         }
 
         private func write(_ text: String, _ url: URL) throws {
@@ -41,7 +41,7 @@ extension InlayTests {
             assertEquals(url, target)
             assertEquals(read(target), "built-in")
             assertEquals(read(backup), "old default")
-            assertEquals(backup.lastPathComponent.hasPrefix("inlay.toml.backup-"), true)
+            assertEquals(backup.lastPathComponent.hasPrefix("inlay.lua.backup-"), true)
         }
 
         /// A config that isn't in the list is the user's own
@@ -52,25 +52,25 @@ extension InlayTests {
             assertEquals(read(target), "mine")
         }
 
-        /// The config folder linked to a dotfiles folder is never written, even without an inlay.toml
+        /// The config folder linked to a dotfiles folder is never written, even without an inlay.lua
         @Test func testLinkedFolder_isNeverWritten() throws {
             let dotfiles = root.appending(path: "dotfiles/inlay")
-            try write("old default", dotfiles.appending(path: "inlay.toml"))
+            try write("old default", dotfiles.appending(path: "inlay.lua"))
             try FileManager.default.createDirectory(at: target.deletingLastPathComponent().deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.createSymbolicLink(at: target.deletingLastPathComponent(), withDestinationURL: dotfiles)
 
             let known: Set = [hash("old default")]
             assertEquals(UserConfigSetup.run(found: .file(target), builtIn: "built-in", knownHashes: known, target: target, now: now), .unchanged)
-            assertEquals(read(dotfiles.appending(path: "inlay.toml")), "old default")
+            assertEquals(read(dotfiles.appending(path: "inlay.lua")), "old default")
 
-            try FileManager.default.removeItem(at: dotfiles.appending(path: "inlay.toml"))
+            try FileManager.default.removeItem(at: dotfiles.appending(path: "inlay.lua"))
             assertEquals(UserConfigSetup.run(found: .noCustomConfigExists, builtIn: "built-in", knownHashes: known, target: target, now: now), .unchanged)
-            assertNil(read(dotfiles.appending(path: "inlay.toml")))
+            assertNil(read(dotfiles.appending(path: "inlay.lua")))
         }
 
-        /// A linked inlay.toml is the user's own too
+        /// A linked inlay.lua is the user's own too
         @Test func testLinkedFile_isNeverWritten() throws {
-            let file = root.appending(path: "dotfiles/inlay.toml")
+            let file = root.appending(path: "dotfiles/inlay.lua")
             try write("old default", file)
             try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.createSymbolicLink(at: target, withDestinationURL: file)
@@ -79,14 +79,42 @@ extension InlayTests {
             assertEquals(read(file), "old default")
         }
 
-        /// ~/.inlay.toml is left alone
+        /// ~/.inlay.lua is left alone
         @Test func testDotfileConfig_isKept() throws {
-            let dotfile = root.appending(path: ".inlay.toml")
+            let dotfile = root.appending(path: ".inlay.lua")
             try write("old default", dotfile)
             let outcome = UserConfigSetup.run(found: .file(dotfile), builtIn: "built-in", knownHashes: [hash("old default")], target: target, now: now)
             assertEquals(outcome, .unchanged)
             assertEquals(read(dotfile), "old default")
             assertNil(read(target))
+        }
+
+        /// The inlay.toml of Inlay 0.2, never edited: inlay.lua takes its place, and it is kept as a backup
+        @Test func testUneditedConfigOfInlay02_isReplacedByLua() throws {
+            let legacy = target.deletingLastPathComponent().appending(path: "inlay.toml")
+            try write("old default", legacy)
+            let outcome = UserConfigSetup.run(found: .legacyConfig(legacy), builtIn: "built-in", knownHashes: [hash("old default")], target: target, now: now)
+            guard case .updated(let url, let backup) = outcome else { Issue.record("\(outcome)"); return }
+            assertEquals(url, target)
+            assertEquals(read(target), "built-in")
+            assertEquals(read(backup), "old default")
+            assertEquals(backup.lastPathComponent.hasPrefix("inlay.toml.backup-"), true)
+            assertNil(read(legacy))
+        }
+
+        /// An inlay.toml that was edited is the user's own: it stays, and nothing takes its place. The app says that it
+        /// isn't read (see: legacyConfigMessage)
+        @Test func testEditedConfigOfInlay02_isKept() throws {
+            let legacy = target.deletingLastPathComponent().appending(path: "inlay.toml")
+            try write("mine", legacy)
+            let outcome = UserConfigSetup.run(found: .legacyConfig(legacy), builtIn: "built-in", knownHashes: [hash("old default")], target: target, now: now)
+            assertEquals(outcome, .unchanged)
+            assertEquals(read(legacy), "mine")
+            assertNil(read(target))
+            // ~/.inlay.toml too, even never edited
+            let dotfile = root.appending(path: ".inlay.toml")
+            try write("old default", dotfile)
+            assertEquals(UserConfigSetup.run(found: .legacyConfig(dotfile), builtIn: "built-in", knownHashes: [hash("old default")], target: target, now: now), .unchanged)
         }
 
         /// The list that the app reads is the one of the repo, and it has the built-in config

@@ -59,7 +59,7 @@ func parseDynamicValue<T>(
 
         return .perMonitor(rules, default: defaultValue)
     } else {
-        c.errors.append(.init(backtrace, "Unsupported type: \(raw.tomlType), expected: \(valueType) or array"))
+        c.errors.append(.init(backtrace, "Unsupported type: \(raw.valueType), expected: \(valueType) or array"))
         return .constant(fallback)
     }
 }
@@ -80,7 +80,7 @@ func parsePerMonitorValues<T>(_ array: OrderedJson.JsonArray, _ backtrace: Confi
         guard let monitorDescription = monitorDescriptionResult.getOrNil(appendErrorTo: &c.errors) else { return nil }
 
         guard let value = parseSimpleType(value, ofType: T.self) else {
-            c.errors.append(.init(backtrace, "Expected type is '\(T.self)'. But actual type is '\(value.tomlType)'"))
+            c.errors.append(.init(backtrace, "Expected type is '\(T.self)'. But actual type is '\(value.valueType)'"))
             return nil
         }
 

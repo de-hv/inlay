@@ -1,13 +1,14 @@
 import AppKit
 import Common
 import HotKey
-import TOMLDecoder
 import OrderedCollections
 
 struct ReadConfigResult {
     let configUrl: URL
     /// The contents of the file. nil if it wasn't read
     var text: String? = nil
+    /// The main file and its modules, with the text that was run
+    var files: [LuaConfigFile] = []
     let parseConfigResult: ParseConfigResult
 
     @MainActor static func fatal(configUrl: URL, message: String) -> Self {
@@ -31,6 +32,7 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
         switch findCustomConfigUrl() {
             case .file(let url): configUrl = url
             case .noCustomConfigExists: configUrl = defaultConfigUrl
+            case .legacyConfig(let url): return .fatal(configUrl: url, message: legacyConfigMessage(url))
             case .ambiguousConfigError(let candidates):
                 let msg = """
                     Ambiguous config error. Several configs found:
@@ -39,20 +41,15 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
                 return .fatal(configUrl: defaultConfigUrl, message: msg)
         }
     }
-    let configStr: String
-    do {
-        configStr = try String(contentsOf: configUrl, encoding: .utf8)
-    } catch {
-        let msg = "Can't read contents of \(configUrl.path.singleQuoted) as a utf8 string: \(error.localizedDescription)"
-        return .fatal(configUrl: configUrl, message: msg)
-    }
-    return ReadConfigResult(configUrl: configUrl, text: configStr, parseConfigResult: parseConfig(configStr))
+    let lua = LuaConfigLoader.load(file: configUrl)
+    // A file that can't be read has no files
+    return ReadConfigResult(configUrl: configUrl, text: lua.files.first?.text, files: lua.files, parseConfigResult: parseConfig(lua))
 }
 
 struct ConfigParseDiagnostic: Error, Equatable {
     let backtrace: ConfigBacktrace
     let message: String
-    let preventConfigReload: Bool // for severe config errors (like TOML parse error)
+    let preventConfigReload: Bool // for severe config errors (like a Lua syntax error)
 
     public init(_ backtrace: ConfigBacktrace, _ message: String, preventConfigReload: Bool = false) {
         check(!message.isEmpty)
@@ -119,58 +116,58 @@ struct Parser<S: ConvenienceMutable, T>: ParserProtocol {
     }
 }
 
-private let keyMappingConfigRootKey = "key-mapping"
-private let configVersionConfigRootKey = "config-version"
+private let keyMappingConfigRootKey = "keyMapping"
+private let configVersionConfigRootKey = "configVersion"
 private let modeConfigRootKey = "mode"
-let persistentWorkspacesKey = "persistent-workspaces"
+let persistentWorkspacesKey = "persistentWorkspaces"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
-// 2. Prefer commands and commands flags over toml options if possible
-// 3. Document it in docs/config-reference.toml. ConfigReferenceTest fails until every key of the parser tables is there
+// 2. Prefer commands and commands flags over config options if possible
+// 3. Document it in docs/config-reference.lua. ConfigReferenceTest fails until every key of the parser tables is there
 let configParser: [String: any ParserProtocol<Config>] = [
     configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
 
-    "after-login-command": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),
-    "after-startup-command": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
+    "afterLoginCommand": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),
+    "afterStartupCommand": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
 
-    "on-focus-changed": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
-    "on-mode-changed": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
-    "on-focused-monitor-changed": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
+    "onFocusChanged": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
+    "onModeChanged": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
+    "onFocusedMonitorChanged": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
     // "on-focused-workspace-changed": Parser(\.onFocusedWorkspaceChanged, { parseCommandOrCommands($0).toParsedConfig($1) }),
 
-    "enable-normalization-flatten-containers": Parser(\.enableNormalizationFlattenContainers, parseBool),
-    "enable-normalization-opposite-orientation-for-nested-containers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
+    "enableNormalizationFlattenContainers": Parser(\.enableNormalizationFlattenContainers, parseBool),
+    "enableNormalizationOppositeOrientationForNestedContainers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
 
-    "default-root-container-layout": Parser(\.defaultRootContainerLayout, parseLayout),
-    "default-root-container-orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
+    "defaultRootContainerLayout": Parser(\.defaultRootContainerLayout, parseLayout),
+    "defaultRootContainerOrientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
 
-    "start-at-login": Parser(\.startAtLogin, parseBool),
-    "auto-reload-config": Parser(\.autoReloadConfig, parseBool),
-    "automatically-unhide-macos-hidden-apps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
-    "accordion-padding": Parser(\._accordionPadding, parseAccordionPadding),
+    "startAtLogin": Parser(\.startAtLogin, parseBool),
+    "autoReloadConfig": Parser(\.autoReloadConfig, parseBool),
+    "automaticallyUnhideMacosHiddenApps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
+    "accordionPadding": Parser(\._accordionPadding, parseAccordionPadding),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
-    "exec-on-workspace-change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
+    "execOnWorkspaceChange": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),
 
     keyMappingConfigRootKey: Parser(\.keyMapping, skipParsing(Config().keyMapping)), // Parsed manually
     modeConfigRootKey: Parser(\.modes, skipParsing(Config().modes)), // Parsed manually
 
     "gaps": Parser(\.gaps, parseGaps),
-    "focus-follows-mouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
+    "focusFollowsMouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
     "tiling": Parser(\.tiling, parseTiling),
-    "menu-bar": Parser(\.menuBar, parseMenuBar),
+    "menuBar": Parser(\.menuBar, parseMenuBar),
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
-    "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menu-bar.colors] and [borders]")),
+    "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menuBar.colors] and [borders]")),
     "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone")),
     "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
-    "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
-    "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
+    "workspaceToMonitorForceAssignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
+    "onWindowDetected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 
     // Deprecated
-    "non-empty-workspaces-root-containers-layout-on-startup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
-    "indent-for-nested-containers-with-the-same-orientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
+    "nonEmptyWorkspacesRootContainersLayoutOnStartup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
+    "indentForNestedContainersWithTheSameOrientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
 ]
 
 extension ParsedCmd {
@@ -195,7 +192,7 @@ func parseDeprecatedAfterLoginCommand(_ raw: OrderedJson, _ backtrace: ConfigBac
     if let array = raw.asArrayOrNil, array.count == 0 {
         return .success([])
     }
-    let msg = "after-login-command is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"
+    let msg = "afterLoginCommand is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"
     return .failure(.init(backtrace, msg))
 }
 
@@ -215,40 +212,13 @@ func parseShellOfCommandsForConfig(_ raw: OrderedJson, _ backtrace: ConfigBacktr
             if let elem = elem.asStringOrNil {
                 result.append(parseCommandForConfig(elem, backtrace, &c, allowExecAndForget: true))
             } else {
-                c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: elem.tomlType)))
+                c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: elem.valueType)))
             }
         }
         return .newCompound(result, Shell<any Command>.seq)
     } else {
-        c.errors.append(.init(backtrace, expectedActualTypeError(expected: [.string, .array], actual: raw.tomlType)))
+        c.errors.append(.init(backtrace, expectedActualTypeError(expected: [.string, .array], actual: raw.valueType)))
         return .empty
-    }
-}
-
-func tomlAnyToOrderedJsonRecursive(
-    any: Any,
-    _ backtrace: ConfigBacktrace,
-    _ errors: inout [ConfigParseDiagnostic],
-) -> OrderedJson? {
-    switch any {
-        case let dict as [String: Any]:
-            var json = OrderedJson.JsonDict()
-            for (key, tomlValue) in dict.sortedEntries {
-                json[key] = tomlAnyToOrderedJsonRecursive(any: tomlValue, backtrace + .key(key), &errors)
-            }
-            return .dict(json)
-        case let array as [Any]:
-            var json = OrderedJson.JsonArray()
-            for (index, tomlValue) in array.enumerated() {
-                let element = tomlAnyToOrderedJsonRecursive(any: tomlValue, backtrace + .index(index), &errors)
-                guard let element else { continue }
-                json.append(element)
-            }
-            return .array(json)
-        default:
-            if let value = OrderedJson.newScalarOrNil(any) { return value }
-            errors.append(.init(backtrace, "Unsupported TOML type: \(type(of: any))"))
-            return nil
     }
 }
 
@@ -260,24 +230,19 @@ struct ParseConfigResult {
     var allowReloadConfig: Bool { errors.allSatisfy { !$0.preventConfigReload } }
 }
 
-@MainActor func parseConfig(_ rawToml: String) -> ParseConfigResult {
-    var errors = NonCopyable([ConfigParseDiagnostic]())
+@MainActor func parseConfig(_ lua: LuaConfig) -> ParseConfigResult {
+    parseConfig(json: lua.table, errors: lua.errors)
+}
 
-    let rawTable: OrderedJson.JsonDict
-    do {
-        let dict: [String: Any] = try .init(try TOMLTable(source: rawToml))
-        let json = tomlAnyToOrderedJsonRecursive(any: dict, .emptyRoot, &errors.value)
-        switch json {
-            case .dict(let dict): rawTable = dict
-            default: // dead code
-                let msg = "Config parsing error: the top level type must be a TOML Table. But got: \((json ?? .null).tomlType)"
-                errors.value.append(.init(.emptyRoot, msg, preventConfigReload: true))
-                rawTable = [:]
-        }
-    } catch {
-        errors.value.append(.init(.emptyRoot, error.description, preventConfigReload: true))
-        rawTable = [:]
-    }
+/// The config from the text of an inlay.lua that has no modules
+@MainActor func parseConfig(lua text: String) -> ParseConfigResult {
+    parseConfig(LuaConfigLoader.load(text))
+}
+
+/// The config from the table that inlay.lua returns.
+/// - Parameter errors: the ones of running the file
+@MainActor func parseConfig(json rawTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = []) -> ParseConfigResult {
+    var errors = NonCopyable(errors)
 
     let configVersion: ConfigVersion = rawTable[configVersionConfigRootKey]
         .flatMap { parseConfigVersion($0, .rootKey(configVersionConfigRootKey)).getOrNil(appendErrorTo: &errors.value) }
@@ -299,7 +264,7 @@ struct ParseConfigResult {
 
     if config.configVersion <= ._1 {
         if rawTable.keys.contains(persistentWorkspacesKey) {
-            c.errors += [.init(.rootKey(persistentWorkspacesKey), "This config option is only available since 'config-version = 2'")]
+            c.errors += [.init(.rootKey(persistentWorkspacesKey), "This config option is only available since 'configVersion = 2'")]
         }
         config.persistentWorkspaces = (config.modes.values.lazy
             .flatMap { (mode: Mode) -> [HotkeyBinding] in Array(mode.bindings.values) }
@@ -322,8 +287,8 @@ struct ParseConfigResult {
                 """
                 The config contains:
                 1. usage of 'split' command
-                2. enable-normalization-flatten-containers = true
-                These two settings don't play nicely together. 'split' command has no effect when enable-normalization-flatten-containers is disabled.
+                2. enableNormalizationFlattenContainers = true
+                These two settings don't play nicely together. 'split' command has no effect when enableNormalizationFlattenContainers is disabled.
 
                 My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'.
                 """,
@@ -331,8 +296,8 @@ struct ParseConfigResult {
         }
     }
     if config.configVersion < .max {
-        let msg = "The current 'config-version = \(config.configVersion)' is outdated. " +
-            "Please consider migrating to 'config-version = \(ConfigVersion.max)'. " +
+        let msg = "The current 'configVersion = \(config.configVersion)' is outdated. " +
+            "Please consider migrating to 'configVersion = \(ConfigVersion.max)'. " +
             "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide."
         c.warnings.append(.init(.emptyRoot, msg))
     }
@@ -346,15 +311,15 @@ func parseIndentForNestedContainersWithTheSameOrientation(_ _: OrderedJson, _ ba
 
 func parseConfigVersion(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<ConfigVersion> {
     parseInt(raw, backtrace)
-        .flatMap { ConfigVersion.init(rawValue: $0).toResult(.init(backtrace, "config-version must be in [\(ConfigVersion.min), \(ConfigVersion.max)] range")) }
+        .flatMap { ConfigVersion.init(rawValue: $0).toResult(.init(backtrace, "configVersion must be in [\(ConfigVersion.min), \(ConfigVersion.max)] range")) }
 }
 
 func parseInt(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {
-    raw.asIntOrNil.toResult(expectedActualTypeDiagnostic(expected: .int, actual: raw.tomlType, backtrace))
+    raw.asIntOrNil.toResult(expectedActualTypeDiagnostic(expected: .int, actual: raw.valueType, backtrace))
 }
 
 func parseString(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<String> {
-    raw.asStringOrNil.toResult(expectedActualTypeDiagnostic(expected: .string, actual: raw.tomlType, backtrace))
+    raw.asStringOrNil.toResult(expectedActualTypeDiagnostic(expected: .string, actual: raw.valueType, backtrace))
 }
 
 func parseSimpleType<T>(_ raw: OrderedJson, ofType: T.Type) -> T? {
@@ -364,7 +329,7 @@ func parseSimpleType<T>(_ raw: OrderedJson, ofType: T.Type) -> T? {
 extension OrderedJson {
     func unwrapTableWithSingleKey(expectedKey: String? = nil, _ backtrace: inout ConfigBacktrace) -> ResOrConfigParseDiagnostic<(key: String, value: OrderedJson)> {
         guard let asDictOrNil else {
-            return .failure(expectedActualTypeDiagnostic(expected: .table, actual: tomlType, backtrace))
+            return .failure(expectedActualTypeDiagnostic(expected: .table, actual: valueType, backtrace))
         }
         let singleKeyError: ConfigParseDiagnostic = .init(
             backtrace,
@@ -383,8 +348,8 @@ extension OrderedJson {
     }
 }
 
-func parseTomlArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<OrderedJson.JsonArray> {
-    raw.asArrayOrNil.toResult(expectedActualTypeDiagnostic(expected: .array, actual: raw.tomlType, backtrace))
+func parseConfigArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<OrderedJson.JsonArray> {
+    raw.asArrayOrNil.toResult(expectedActualTypeDiagnostic(expected: .array, actual: raw.valueType, backtrace))
 }
 
 func parseTable<T: ConvenienceMutable>(
@@ -398,14 +363,14 @@ func parseTable<T: ConvenienceMutable>(
         case .dict(let table):
             return table.parseTable(initial, fieldsParser, backtrace, &c)
         default:
-            c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+            c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace))
             return initial
     }
 }
 
 private func parseStartupRootContainerLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Void> {
     parseString(raw, backtrace)
-        .filter(.init(backtrace, "'non-empty-workspaces-root-containers-layout-on-startup' is deprecated. Please drop it from your config")) { raw in raw == "smart" }
+        .filter(.init(backtrace, "'nonEmptyWorkspacesRootContainersLayoutOnStartup' is deprecated. Please drop it from your config")) { raw in raw == "smart" }
         .map { _ in () }
 }
 
@@ -426,7 +391,7 @@ private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: 
 // Accepted to make it possible to use the config of AeroSpace as is
 private func parseAccordionPadding(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
     if parseInt(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
-        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config"))
+        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config"))
     }
 }
 
@@ -443,7 +408,7 @@ private func parsePersistentWorkspaces(_ raw: OrderedJson, _ backtrace: ConfigBa
 }
 
 func parseArrayOfStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<[String]> {
-    parseTomlArray(raw, backtrace)
+    parseConfigArray(raw, backtrace)
         .flatMap { arr in
             arr.enumerated().mapAllOrFailure { (index, elem) in
                 parseString(elem, backtrace + .index(index))
@@ -465,13 +430,13 @@ extension ResOrStr where Failure == String {
 }
 
 func parseBool(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Bool> {
-    raw.asBoolOrNil.toResult(expectedActualTypeDiagnostic(expected: .bool, actual: raw.tomlType, backtrace))
+    raw.asBoolOrNil.toResult(expectedActualTypeDiagnostic(expected: .bool, actual: raw.valueType, backtrace))
 }
 
 struct ConfigBacktrace: CustomStringConvertible, Equatable {
-    private var path: [TomlBacktraceItem] = []
-    private init(_ path: [TomlBacktraceItem]) {
-        check(path.first?.isKey != false, "Tried to construct invalid TOML path: \(path)")
+    private var path: [ConfigBacktraceItem] = []
+    private init(_ path: [ConfigBacktraceItem]) {
+        check(path.first?.isKey != false, "Tried to construct invalid config path: \(path)")
         self.path = path
     }
 
@@ -492,13 +457,13 @@ struct ConfigBacktrace: CustomStringConvertible, Equatable {
 
     var isRootKey: Bool { path.singleOrNil().map(\.isKey) == true }
 
-    static func + (lhs: consuming Self, rhs: TomlBacktraceItem) -> Self {
+    static func + (lhs: consuming Self, rhs: ConfigBacktraceItem) -> Self {
         lhs.path += [rhs]
         return lhs
     }
 }
 
-enum TomlBacktraceItem: Equatable {
+enum ConfigBacktraceItem: Equatable {
     case key(String)
     case index(Int)
 
@@ -523,7 +488,7 @@ extension OrderedJson.JsonDict {
             let backtrace: ConfigBacktrace = backtrace + .key(key)
             switch fieldsParser[key] {
                 case let parser?: raw = parser.transformRawConfig(raw, value, backtrace, &c)
-                case nil: c.errors.append(unknownKeyDiagnostic(backtrace))
+                case nil: c.errors.append(unknownKeyDiagnostic(backtrace, key: key))
             }
         }
 
@@ -531,14 +496,19 @@ extension OrderedJson.JsonDict {
     }
 }
 
-func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
-    .init(backtrace, backtrace.isRootKey ? "Unknown top-level key" : "Unknown key")
+func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace, key: String? = nil) -> ConfigParseDiagnostic {
+    let message = backtrace.isRootKey ? "Unknown top-level key" : "Unknown key"
+    // The keys of Inlay 0.2 and of AeroSpace: 'corner-radius'
+    guard let key, key.contains("-") else { return .init(backtrace, message) }
+    let words = key.split(separator: "-")
+    let camelCase = String(words.first ?? "") + words.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    return .init(backtrace, "\(message). The keys are camelCase since Inlay 0.3.0: '\(camelCase)'")
 }
 
-func expectedActualTypeDiagnostic(expected: TomlType, actual: TomlType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
+func expectedActualTypeDiagnostic(expected: ConfigValueType, actual: ConfigValueType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
     .init(backtrace, expectedActualTypeError(expected: expected, actual: actual))
 }
 
-func expectedActualTypeDiagnostic(expected: [TomlType], actual: TomlType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
+func expectedActualTypeDiagnostic(expected: [ConfigValueType], actual: ConfigValueType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
     .init(backtrace, expectedActualTypeError(expected: expected, actual: actual))
 }

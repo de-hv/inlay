@@ -33,7 +33,7 @@ struct LiveFocus: AeroAny, Equatable {
 private struct FrozenFocus: AeroAny, Equatable, Sendable {
     let windowId: UInt32?
     let workspaceName: String
-    // monitorId is not part of the focus. We keep it here only for 'on-focused-monitor-changed' to work
+    // monitorId is not part of the focus. We keep it here only for 'onFocusedMonitorChanged' to work
     let monitorId_oneBased: Int
 
     @MainActor var live: LiveFocus { // Important: don't access focus.monitorId here. monitorId is not part of the focus. Always prefer workspace

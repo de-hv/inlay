@@ -44,7 +44,7 @@ enum AtomicFileWriter {
     }
 }
 
-/// What `inlay config --use`, `--unlink` and `--export` do with the files of the config. Inlay has no window to
+/// What `inlay config --use` and `--unlink` do with the files of the config. Inlay has no window to
 /// edit the config: the file is the only place where it is kept
 enum ConfigFiles {
     enum UseError: Error, Equatable {
@@ -55,7 +55,7 @@ enum ConfigFiles {
         case unreadable(String)
         /// The file has errors: it isn't used
         case invalidConfig([String])
-        /// A config folder would be a second config next to ~/.inlay.toml
+        /// A config folder would be a second config next to ~/.inlay.lua
         case dotfileConfig(URL)
         case alreadyInUse(URL)
         case notLinked
@@ -64,7 +64,7 @@ enum ConfigFiles {
     }
 
     /// `--use <path>`. A folder: ~/.config/inlay becomes a link to it, with the rules of ConfigFolderLink (a folder
-    /// without inlay.toml gets a copy of the config in use). A file: its text replaces the config in use, which is
+    /// without inlay.lua gets a copy of the config in use). A file: its text replaces the config in use, which is
     /// kept next to it as <file>.backup-<date>. Returns what was done, for the user
     @MainActor
     static func use(_ path: URL, now: Date = .now) -> Result<String, UseError> {
@@ -73,7 +73,7 @@ enum ConfigFiles {
         switch findCustomConfigUrl() {
             case .ambiguousConfigError(let candidates): return .failure(.ambiguousConfig(candidates))
             case .file(let url): current = url
-            case .noCustomConfigExists: current = nil
+            case .noCustomConfigExists, .legacyConfig: current = nil
         }
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDirectory) else { return .failure(.notFound(path)) }
@@ -108,7 +108,8 @@ enum ConfigFiles {
     @MainActor
     private static func useFile(_ path: URL, current: URL?, now: Date) -> Result<String, UseError> {
         guard let text = path.readText() else { return .failure(.unreadable(path.path)) }
-        let errors = parseConfig(text).errors
+        // With the modules of its folder: the copy has none
+        let errors = parseConfig(LuaConfigLoader.load(file: path)).errors
         if !errors.isEmpty { return .failure(.invalidConfig(errors.map { $0.description(.error) })) }
         let target = current ?? newUserConfigUrl
         let resolved = (try? AtomicFileWriter.resolveSymlinks(target)) ?? target
@@ -127,7 +128,7 @@ enum ConfigFiles {
         return .success(lines.joined(separator: "\n"))
     }
 
-    /// `--unlink`: ~/.config/inlay becomes a folder of its own again, with a copy of the inlay.toml it was linked to
+    /// `--unlink`: ~/.config/inlay becomes a folder of its own again, with a copy of the config it was linked to
     @MainActor
     static func unlink() -> Result<String, UseError> {
         guard case .linked(let folder) = ConfigFolderLink.state() else { return .failure(.notLinked) }
@@ -136,38 +137,7 @@ enum ConfigFiles {
         } catch {
             return .failure(.link(error))
         }
-        return .success("\(ConfigFolderLink.configFolder.path.tildePath) is a folder again, with a copy of \(folder.appending(path: configFileName).path.tildePath)")
-    }
-
-    /// `--export`: the config in use, complete: its own text, with its comments, and every key of the shipped config
-    /// that it leaves out, with the value that applies, so that nothing is implicit. The key bindings and the window
-    /// rules are the user's own: none is added
-    @MainActor
-    static func exportText(_ text: String, shipped: String? = defaultConfigUrl.readText(), date: Date = .now) -> String {
-        var text = text
-        if let shipped, let root = try? TomlPatcher.decode(shipped) {
-            for (path, value) in scalars(root, table: []) {
-                guard case .absent = TomlPatcher.locate(text, path), TomlPatcher.decodedValue(text, path) == nil else { continue }
-                if let patched = try? TomlPatcher.set(text, path, value) { text = patched }
-            }
-        }
-        let header = "# Exported from \(inlayAppName) \(inlayAppVersion) on \(date.formatted(date: .abbreviated, time: .shortened)).\n" +
-            "# Your config with its comments, plus every key it left out, with the value that applies.\n\n"
-        return header + text
-    }
-
-    /// The keys of a decoded document that the patcher can write, in a stable order. Not the key bindings, the window
-    /// rules or the key mapping: they are the user's own
-    private static func scalars(_ table: [String: Any], table path: [String]) -> [(TomlKeyPath, TomlValue)] {
-        let skipped: Set = ["mode", "on-window-detected", "key-mapping", "workspace-to-monitor-force-assignment"]
-        return table.keys.sorted().flatMap { key -> [(TomlKeyPath, TomlValue)] in
-            if path.isEmpty && skipped.contains(key) { return [] }
-            let value = table[key]
-            if let sub = value as? [String: Any] { return scalars(sub, table: path + [key]) }
-            let candidates: [TomlValue] = [.string(""), .bool(false), .int(0), .float(0), .strings([])]
-            guard let scalar = candidates.lazy.compactMap({ TomlValue(value, like: $0) }).first else { return [] }
-            return [(TomlKeyPath(path, key), scalar)]
-        }
+        return .success("\(ConfigFolderLink.configFolder.path.tildePath) is a folder again, with a copy of the .lua files of \(folder.path.tildePath)")
     }
 }
 

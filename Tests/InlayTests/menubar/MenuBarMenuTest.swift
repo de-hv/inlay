@@ -48,7 +48,7 @@ extension InlayTests {
             assertEquals(content.windowLayout, .tiling)
             assertEquals(content.canSetLayout, true)
             assertEquals(content.canArrange, true)
-            assertEquals(footer(content), ["Reload Config", "Open inlay.toml…", "Pause Inlay-Debug", "Quit Inlay-Debug"])
+            assertEquals(footer(content), ["Reload Config", "Open inlay.lua…", "Pause Inlay-Debug", "Quit Inlay-Debug"])
             assertEquals(content.footer.allSatisfy(\.isEnabled), true)
             // The shortcuts of the menu itself, while it is open
             assertEquals(content.footer.compactMap { $0.action.shortcut }, ["r", "e", "q"])

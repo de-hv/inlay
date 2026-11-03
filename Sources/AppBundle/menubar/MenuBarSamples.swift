@@ -94,7 +94,7 @@ func renderMenuBarSamples(to directory: URL, scale: CGFloat = 2) throws {
     }
     append("chips-no-dim", MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false), MenuBarSamples.snapshot)
     append("chips-accent-focused", MenuBarConfig(theme: .chips, colors: MenuBarColors(focused: .systemAccent)), MenuBarSamples.snapshot)
-    // 'per-monitor': the workspaces of each monitor together, and 5 shown by the other monitor. And the same monitors
+    // 'perMonitor': the workspaces of each monitor together, and 5 shown by the other monitor. And the same monitors
     // without it, to compare
     for theme in MenuBarTheme.allCases {
         append("\(theme.rawValue)-per-monitor", MenuBarConfig(theme: theme, perMonitor: true), MenuBarSamples.twoMonitors)

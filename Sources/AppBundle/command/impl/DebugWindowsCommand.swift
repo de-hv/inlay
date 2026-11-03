@@ -107,7 +107,7 @@ private func dumpWindowDebugInfo(_ window: Window, _ cm: CancellationMode) async
     for callback in config.onWindowDetected where await callback.matches(window) {
         matchingCallbacks.append(callback.debugJson)
     }
-    result["Aero.on-window-detected"] = .array(matchingCallbacks)
+    result["Aero.onWindowDetected"] = .array(matchingCallbacks)
 
     return JSONEncoder.inlayDefault.encodeToString(result).prettyDescription
         .prefixLines(with: "\(window.app.rawAppBundleId ?? "nil-bundle-id").\(window.windowId) ||| ")

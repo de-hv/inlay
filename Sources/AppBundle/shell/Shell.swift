@@ -93,7 +93,7 @@ extension Shell where T == any Command {
 // There are 4 entry points for running commands:
 // 1. config keybindings
 // 2. CLI requests to server
-// 3. on-window-detected callback
+// 3. onWindowDetected callback
 // 4. Tray icon buttons
 extension Shell where T == any Command {
     @MainActor func run(_ env: CmdEnv, _ io: CmdIo) async -> Int32ExitCode {

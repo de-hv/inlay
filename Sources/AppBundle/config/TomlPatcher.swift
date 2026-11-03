@@ -21,7 +21,7 @@ enum TomlValue: Equatable, Sendable {
     case bool(Bool)
     case int(Int)
     case float(Double)
-    /// An array of strings in one line: `persistent-workspaces`
+    /// An array of strings in one line: `persistentWorkspaces`
     case strings([String])
 
     /// The value as it is written in a TOML document
@@ -102,12 +102,12 @@ enum TomlValue: Equatable, Sendable {
 /// Edits one key of a TOML document, leaving the rest of the text as it is: comments, order, spacing, line endings.
 ///
 /// - A key that is in the document: only its value is replaced. The comment after it stays. Also a key written with dots
-///   (`inner.horizontal = 8` in `[gaps]`, or `menu-bar.theme = 'chips'`)
+///   (`inner.horizontal = 8` in `[gaps]`, or `menuBar.theme = 'chips'`)
 /// - A key that isn't: it is added after the last key of the table
 /// - A key whose table is defined with dotted keys (`inner.vertical = 8` in `[gaps]`): it is added with dots too,
 ///   after the last of them (`inner.horizontal = 8`)
 /// - A table that isn't: it is added to the end of the document
-/// - A sub-table that isn't, of a table that is (`[borders.mode-colors]` when there is a `[borders]`): it is added
+/// - A sub-table that isn't, of a table that is (`[borders.modeColors]` when there is a `[borders]`): it is added
 ///   after its parent table and the sub-tables that the parent already has, indented like them
 /// - A top level key that isn't: it is added after the last top level key, before the first table
 /// - `remove` drops the line of the key
@@ -115,7 +115,7 @@ enum TomlValue: Equatable, Sendable {
 /// The result is parsed before it is returned, to check that it is valid TOML and that the key has the new value.
 ///
 /// A key written in a way that can't be edited safely is refused: inside of an inline table
-/// (`menu-bar = { theme = 'chips' }`), or with a value that spans several lines
+/// (`menuBar = { theme = 'chips' }`), or with a value that spans several lines
 enum TomlPatcher {
     enum Reason: Equatable, Sendable {
         /// `a = { b = 1 }`

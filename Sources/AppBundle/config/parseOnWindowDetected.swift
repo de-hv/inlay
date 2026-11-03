@@ -68,18 +68,18 @@ enum WindowDetectedCallbackMatcher: Equatable {
 }
 
 let windowDetectedParser: [String: any ParserProtocol<WindowDetectedCallback>] = [
-    "if": Parser(\.matcher, parseMatcher),
-    "check-further-callbacks": Parser(\.checkFurtherCallbacks, parseBool),
+    "match": Parser(\.matcher, parseMatcher),
+    "checkFurtherCallbacks": Parser(\.checkFurtherCallbacks, parseBool),
     "run": Parser(\.rawRun, parseShellOfCommandsForConfig),
 ]
 
 let windowDetectedMatcherParser: [String: any ParserProtocol<LegacyWindowDetectedCallbackMatcher>] = [
-    "app-id": Parser(\.appId, upcast(parseString)),
+    "appId": Parser(\.appId, upcast(parseString)),
     "workspace": Parser(\.workspace, upcast(parseString)),
-    "app-name-regex-substring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
-    "window-title-regex-substring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
-    "during-inlay-startup": Parser(\.duringInlayStartup, upcast(parseBool)),
-    "during-aerospace-startup": Parser(\.duringInlayStartup, upcast(parseBool)), // AeroSpace name, kept so that an aerospace.toml can be migrated as is
+    "appNameRegexSubstring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
+    "windowTitleRegexSubstring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
+    "duringInlayStartup": Parser(\.duringInlayStartup, upcast(parseBool)),
+    "duringAerospaceStartup": Parser(\.duringInlayStartup, upcast(parseBool)), // AeroSpace name, kept so that an aerospace.toml can be migrated as is
 ]
 
 private func upcast<T>(
@@ -119,8 +119,8 @@ private func parseWindowDetectedCallback(_ raw: OrderedJson, _ backtrace: Config
     let callback = parseTable(raw, WindowDetectedCallback(), windowDetectedParser, backtrace, &myContext)
 
     if callback.matcher == .command(.empty) && !callback.checkFurtherCallbacks {
-        let msg = "Omitting 'if' is error prone. You can use `if = 'true'` to preserve the previous behavior.\n" +
-            "But heads up! You may have missed 'check-further-callbacks = true'"
+        let msg = "Omitting 'match' is error prone. You can use `match = 'true'` to preserve the previous behavior.\n" +
+            "But heads up! You may have missed 'checkFurtherCallbacks = true'"
         myContext.errors.append(.init(backtrace, msg))
     }
 

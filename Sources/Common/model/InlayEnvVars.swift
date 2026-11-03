@@ -3,7 +3,7 @@ public let INLAY_WORKSPACE = "INLAY_WORKSPACE"
 public let INLAY_FOCUSED_WORKSPACE = "INLAY_FOCUSED_WORKSPACE"
 public let INLAY_PREV_WORKSPACE = "INLAY_PREV_WORKSPACE"
 
-/// Inlay is a fork of AeroSpace. Processes that Inlay starts (exec-on-workspace-change, exec-and-forget) also get
+/// Inlay is a fork of AeroSpace. Processes that Inlay starts (execOnWorkspaceChange, exec-and-forget) also get
 /// the variables under their AeroSpace names, so that scripts written for AeroSpace keep working after a migration.
 /// The 'inlay' CLI itself only reads INLAY_* variables.
 public let legacyEnvVarAliases: [String: String] = [

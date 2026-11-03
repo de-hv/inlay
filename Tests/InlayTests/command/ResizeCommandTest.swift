@@ -167,7 +167,7 @@ extension InlayTests {
             assertEquals(result.exitCode.rawValue, 2)
         }
 
-        // MARK: - tiling.min-window-size
+        // MARK: - tiling.minWindowSize
 
         /// Three windows of 640 points in a row. 2 is the focused one
         private func threeWindows() -> [TestWindow] {

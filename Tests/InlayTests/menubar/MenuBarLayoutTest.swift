@@ -289,13 +289,13 @@ extension InlayTests {
             assertEquals(layout(MenuBarConfig(theme: .hypr)).marker?.isOutlined, true)
         }
 
-        /// 'show-mode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
+        /// 'showMode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
         /// of Aeromenu did. Nothing is added next to the chips
         @Test func testModeInTheFocusedChip() {
             let main = layout(MenuBarConfig(theme: .chips, showMode: true))
             assertEquals(main.marker?.initial, nil)
             snapshot.mode = "resize"
-            // Off with show-mode = false
+            // Off with showMode = false
             assertEquals(layout(MenuBarConfig(theme: .chips, showMode: false)).marker?.initial, nil)
             assertEquals(layout(MenuBarConfig(theme: .chips, showMode: false)).needsColor, false)
             let layout = layout(MenuBarConfig(theme: .chips, showMode: true))
@@ -388,7 +388,7 @@ extension InlayTests {
 
         @Test func testHyprMode() {
             snapshot.mode = "resize"
-            // Without 'show-mode' the square is the one of the main mode
+            // Without 'showMode' the square is the one of the main mode
             let main = layout(MenuBarConfig(theme: .hypr, showMode: false))
             assertEquals(main.marker, .init(frame: CGRect(x: 22.75, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
@@ -640,7 +640,7 @@ extension InlayTests {
             assertEquals((44 ..< 68).allSatisfy { alpha(bitmap, $0, 22) == 255 }, true)
         }
 
-        /// 'system-colors': the colors of [menu-bar.colors] are kept, but the item is a template image, like the other
+        /// 'systemColors': the colors of [menuBar.colors] are kept, but the item is a template image, like the other
         /// icons of the menu bar, also while it shows a binding mode
         @Test func testSystemColors() throws {
             let colors = MenuBarColors(

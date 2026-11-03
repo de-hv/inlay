@@ -68,7 +68,7 @@ struct LayoutCommand: Command {
                     case .tilingContainer:
                         return .succ // Nothing to do
                     case .floatingWindowsContainer(let container):
-                        // A rule that tiles every window of an app ('layout tiling' in 'on-window-detected') would also
+                        // A rule that tiles every window of an app ('layout tiling' in 'onWindowDetected') would also
                         // tile its dialogs (Save, Open...). They can't be resized into a tile, so they stay floating
                         if env.isWindowDetectedCallback, await window.isDialogNow() {
                             return .succ

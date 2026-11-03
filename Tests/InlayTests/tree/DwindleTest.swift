@@ -3,7 +3,7 @@ import Common
 import Foundation
 import Testing
 
-/// Placement of new tiling windows with `tiling.new-window-placement = 'dwindle'`.
+/// Placement of new tiling windows with `tiling.newWindowPlacement = 'dwindle'`.
 /// The test monitor is 1920x1080. The layout takes 1920x1079 (see Workspace.layoutWorkspace)
 extension InlayTests {
     @Suite @MainActor struct DwindleTest {
@@ -112,7 +112,7 @@ extension InlayTests {
             assertRects([1: (0, 0, 960, 539.5), 3: (0, 539.5, 960, 539.5), 2: (960, 0, 960, 1079)])
         }
 
-        // MARK: - split-target = 'cursor'
+        // MARK: - splitTarget = 'cursor'
 
         /// h[1, v[2, 3]], with 3 focused. 1: (0, 0, 960, 1079), 2: (960, 0, 960, 539.5), 3: (960, 539.5, 960, 539.5)
         private func openThreeWindowsAndPutTheCursor(at point: CGPoint) async throws {
@@ -294,7 +294,7 @@ extension InlayTests {
             assertRects([1: (0, 0, 1920, 1079)])
         }
 
-        // MARK: - split-ratio
+        // MARK: - splitRatio
 
         @Test func testSplitRatio() async throws {
             config.tiling.splitRatio = 0.7

@@ -1,7 +1,7 @@
 import AppKit
 import Common
 
-// 'tiling.min-window-size' config option. It limits how far the resize command and the mouse shrink a tiling window.
+// 'tiling.minWindowSize' config option. It limits how far the resize command and the mouse shrink a tiling window.
 // It isn't a promise of the layout: when the windows of a workspace don't fit with that size (many windows, a small
 // monitor, a window that was split again and again), they get less, down to the floor of the layout. See: normalizedWeights
 
@@ -32,7 +32,7 @@ func shrinkWeights(_ weights: [CGFloat], by amount: CGFloat, minimums: [CGFloat]
 
 extension TreeNode {
     /// The smallest weight that resizing leaves to the node, along the orientation of its container:
-    /// 'tiling.min-window-size', plus the part of the inner gap that the layout takes from the weight of the node.
+    /// 'tiling.minWindowSize', plus the part of the inner gap that the layout takes from the weight of the node.
     /// 0 for a node that isn't a child of a tiling container.
     ///
     /// It only makes sense for weights in screen points. They are after a layout pass, and after `predictLayoutRect()`

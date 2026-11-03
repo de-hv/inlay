@@ -68,13 +68,13 @@ final class Workspace: TreeNode, NonLeafTreeNodeObject, Hashable, Comparable {
     }
 
     /// The area that the tiling windows share: the visible part of the monitor without the outer gaps.
-    /// A single tiling window takes the area of [borders.single-window] instead. See: MonitorInfo.singleWindowRect
+    /// A single tiling window takes the area of [borders.singleWindow] instead. See: MonitorInfo.singleWindowRect
     @MainActor
     var tilingArea: Rect {
         hasSingleTilingWindow ? workspaceMonitor.singleWindowRect : workspaceMonitor.visibleRectPaddedByOuterGaps
     }
 
-    /// The workspace has exactly one tiling window. See: [borders.single-window]
+    /// The workspace has exactly one tiling window. See: [borders.singleWindow]
     @MainActor
     var hasSingleTilingWindow: Bool {
         rootTilingContainer.allLeafWindowsRecursive.count == 1
@@ -218,7 +218,7 @@ private func isValidAssignment(workspace: Workspace, screen: CGPoint) -> Bool {
 
 extension MonitorInfo {
     /// Where the tiling window alone in its workspace, and the fullscreen window, go: the visible part of the monitor,
-    /// without the gap of [borders.single-window] around it while that border is on. See: SingleWindowBorder
+    /// without the gap of [borders.singleWindow] around it while that border is on. See: SingleWindowBorder
     @MainActor
     var singleWindowRect: Rect {
         let single = config.borders.singleWindow

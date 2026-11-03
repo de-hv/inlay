@@ -23,7 +23,7 @@ enum MenuBarMetrics {
     static let workspaceFontSize: CGFloat = 13.5
     /// The hypr theme: every workspace in a slot this wide
     static let hyprSlot: CGFloat = 18
-    /// The hypr theme: the frame around the name of a workspace that another monitor shows ('per-monitor')
+    /// The hypr theme: the frame around the name of a workspace that another monitor shows ('perMonitor')
     static let hyprFrame: CGFloat = 15
     static let hyprFrameCornerRadius: CGFloat = 3.5
     static let focusSquare: CGFloat = 8.5
@@ -68,10 +68,10 @@ enum MenuBarMetrics {
     static let dmsNamePadding: CGFloat = 6
     static let dmsSpacing: CGFloat = 4
     static let dmsFontSize: CGFloat = 9.5
-    /// 'per-monitor': the room between the tracks of two monitors, which is the divider: no line
+    /// 'perMonitor': the room between the tracks of two monitors, which is the divider: no line
     static let dmsTrackGap: CGFloat = 6
 
-    /// 'per-monitor': the room between the workspaces of two monitors, with a line in the middle
+    /// 'perMonitor': the room between the workspaces of two monitors, with a line in the middle
     static let monitorSeparatorSpace: CGFloat = 9
     static let monitorSeparatorWidth: CGFloat = 1
     static let monitorSeparatorHeight: CGFloat = 11
@@ -141,11 +141,11 @@ struct MenuBarLayout: Equatable, Sendable {
         var frame: CGRect
         var name: Text
         var isOccupied: Bool
-        /// The workspace is empty and 'dim-empty-workspaces' is on
+        /// The workspace is empty and 'dimEmptyWorkspaces' is on
         var isDimmed: Bool
         /// 1 under the focus marker, 0 away from it, in between while the marker slides
         var focus: Double
-        /// 'per-monitor': another monitor shows the workspace
+        /// 'perMonitor': another monitor shows the workspace
         var isVisibleElsewhere: Bool = false
 
         func offsetBy(dx: CGFloat) -> Cell {
@@ -162,7 +162,7 @@ struct MenuBarLayout: Equatable, Sendable {
         var cornerRadius: CGFloat
         /// Outlined instead of filled: one of the windows of the workspace is fullscreen
         var isOutlined: Bool
-        /// With 'show-mode', outside of the main mode: the initial of the binding mode inside of the marker.
+        /// With 'showMode', outside of the main mode: the initial of the binding mode inside of the marker.
         /// A chip shows it instead of the name of the workspace, and the square grows to make room for it.
         /// Either way the item is as wide as in the main mode, like in Aeromenu
         var initial: Text? = nil
@@ -187,12 +187,12 @@ struct MenuBarLayout: Equatable, Sendable {
     var size: CGSize
     var cells: [Cell] = []
     var marker: Marker? = nil
-    /// 'per-monitor': the lines between the workspaces of two monitors
+    /// 'perMonitor': the lines between the workspaces of two monitors
     var separators: [CGRect] = []
-    /// 'per-monitor': the hollow markers of the workspaces that another monitor shows
+    /// 'perMonitor': the hollow markers of the workspaces that another monitor shows
     var visibleElsewhere: [Marker] = []
     var placeholder: Placeholder? = nil
-    /// The dms theme: the capsules behind the workspaces, one per monitor with 'per-monitor'
+    /// The dms theme: the capsules behind the workspaces, one per monitor with 'perMonitor'
     var tracks: [CGRect] = []
 }
 
@@ -516,7 +516,7 @@ extension MenuBarLayout {
         }
     }
 
-    /// 'per-monitor': room and a line between the workspaces of two monitors (they are already in the order of the
+    /// 'perMonitor': room and a line between the workspaces of two monitors (they are already in the order of the
     /// monitors), and a hollow marker on the workspaces that another monitor shows. The divider of hypr is bolder, and
     /// dms has none: the gap between its tracks is the divider
     private mutating func separateMonitors(_ snapshot: MenuBarSnapshot) {
@@ -548,7 +548,7 @@ extension MenuBarLayout {
         visibleElsewhere = cells.filter(\.isVisibleElsewhere).map { restMarker($0.frame) }
     }
 
-    /// The dms theme: a track behind the workspaces of each monitor ('per-monitor'), or behind all of them. It follows
+    /// The dms theme: a track behind the workspaces of each monitor ('perMonitor'), or behind all of them. It follows
     /// the pills while they make room for the marker
     private mutating func placeTracks(_ snapshot: MenuBarSnapshot, perMonitor: Bool) {
         typealias M = MenuBarMetrics

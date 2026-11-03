@@ -5,7 +5,7 @@ import Testing
 
 extension InlayTests {
     /// The windows that are already open when Inlay starts to manage the windows go to the workspaces of their
-    /// 'on-window-detected' rules, and then every workspace is arranged. With the rules of inlay.toml, the config
+    /// 'onWindowDetected' rules, and then every workspace is arranged. With the rules of inlay.toml, the config
     /// that Inlay ships with.
     ///
     /// The windows are registered by the same code as the real ones (Window.afterRegistration), and the rest of the
@@ -169,8 +169,8 @@ extension InlayTests {
         @Test func testTheRulesOfTheUserRunNotTheOnesOfTheBuiltInConfig() async throws {
             let user = try temporaryConfig(
                 rules: """
-                [[on-window-detected]]
-                if.app-id = 'com.mitchellh.ghostty'
+                [[onWindowDetected]]
+                match.appId = 'com.mitchellh.ghostty'
                 run = 'move-node-to-workspace 4'
                 """,
             )
@@ -203,8 +203,8 @@ extension InlayTests {
 
             let edited = try temporaryConfig(
                 rules: """
-                [[on-window-detected]]
-                if = 'true'
+                [[onWindowDetected]]
+                match = 'true'
                 run = 'move-node-to-workspace 5'
                 """,
             )
@@ -220,12 +220,12 @@ extension InlayTests {
             try await open(4, Self.ghostty)
             assertEquals(tiling("5"), [4])
             // Running them again is something the user asks for
-            assertEquals(await parseCommand("run-callback on-window-detected --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
+            assertEquals(await parseCommand("run-callback onWindowDetected --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
             assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [2, 4], []])
             assertEquals(floating("1"), [3])
         }
 
-        // MARK: - (d) startup-layout comes after the rules
+        // MARK: - (d) startupLayout comes after the rules
 
         /// A second refresh session gets to its end while the first one is still waiting for an app to answer, in the
         /// middle of the rules of a window. The window is registered, so the second session has nothing to do with it:
@@ -319,9 +319,9 @@ extension InlayTests {
         /// A config file with six workspaces and these rules
         private func temporaryConfig(rules: String) throws -> URL {
             let text = """
-                config-version = 2
-                persistent-workspaces = ['1', '2', '3', '4', '5', '6']
-                automatically-unhide-macos-hidden-apps = true # See: init
+                configVersion = 2
+                persistentWorkspaces = ['1', '2', '3', '4', '5', '6']
+                automaticallyUnhideMacosHiddenApps = true # See: init
 
                 """ + rules
             let url = FileManager.default.temporaryDirectory.appending(path: "inlay-startup-rules-\(UUID().uuidString).toml")

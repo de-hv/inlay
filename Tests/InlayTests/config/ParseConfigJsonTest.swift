@@ -7,36 +7,36 @@ extension InlayTests {
     @Suite @MainActor struct ParseConfigJsonTest {
         @Test func testTomlAndLuaGiveTheSameTable() {
             let toml = """
-                config-version = 2
-                start-at-login = true
-                persistent-workspaces = ['1', '2']
-                after-startup-command = []
+                configVersion = 2
+                startAtLogin = true
+                persistentWorkspaces = ['1', '2']
+                afterStartupCommand = []
 
                 [gaps]
                     inner.horizontal = 8
                     outer.left       = 8
 
                 [tiling]
-                    split-ratio = 0.5
+                    splitRatio = 0.5
 
                 [mode.main.binding]
                     cmd-alt-h = ['workspace 1', 'mode main']
 
-                [[on-window-detected]]
-                    if.app-id = 'com.mitchellh.ghostty'
+                [[onWindowDetected]]
+                    match.appId = 'com.mitchellh.ghostty'
                     run = ['layout tiling', 'move-node-to-workspace 1']
                 """
             let lua = """
                 return {
-                  ['config-version'] = 2,
-                  ['start-at-login'] = true,
-                  ['persistent-workspaces'] = { '1', '2' },
-                  ['after-startup-command'] = {},
+                  configVersion = 2,
+                  startAtLogin = true,
+                  persistentWorkspaces = { '1', '2' },
+                  afterStartupCommand = {},
                   gaps = { inner = { horizontal = 8 }, outer = { left = 8 } },
-                  tiling = { ['split-ratio'] = 0.5 },
+                  tiling = { splitRatio = 0.5 },
                   mode = { main = { binding = { ['cmd-alt-h'] = { 'workspace 1', 'mode main' } } } },
-                  ['on-window-detected'] = {
-                    { ['if'] = { ['app-id'] = 'com.mitchellh.ghostty' }, run = { 'layout tiling', 'move-node-to-workspace 1' } },
+                  onWindowDetected = {
+                    { match = { appId = 'com.mitchellh.ghostty' }, run = { 'layout tiling', 'move-node-to-workspace 1' } },
                   },
                 }
                 """
@@ -48,8 +48,8 @@ extension InlayTests {
 
             // {} of Lua is an empty table of keys, [] of TOML an empty array: the rest is the same
             var luaTable = luaConfig.table
-            assertEquals(luaTable["after-startup-command"], .dict([:]))
-            luaTable["after-startup-command"] = .array([])
+            assertEquals(luaTable["afterStartupCommand"], .dict([:]))
+            luaTable["afterStartupCommand"] = .array([])
             assertEquals(luaTable, tomlTable)
 
             let result = parseConfig(luaConfig)
@@ -64,10 +64,10 @@ extension InlayTests {
         @Test func testEmptyTableIsAnEmptyArray() {
             let result = parseConfig(LuaConfigLoader.load("""
                 return {
-                  ['after-startup-command'] = {},
-                  ['on-window-detected'] = {},
-                  ['exec-on-workspace-change'] = {},
-                  ['key-mapping'] = { ['key-notation-to-key-code'] = {} },
+                  afterStartupCommand = {},
+                  onWindowDetected = {},
+                  execOnWorkspaceChange = {},
+                  keyMapping = { keyNotationToKeyCode = {} },
                 }
                 """))
             assertEquals(result.errors, [])

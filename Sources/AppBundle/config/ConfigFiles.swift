@@ -159,7 +159,7 @@ enum ConfigFiles {
     /// The keys of a decoded document that the patcher can write, in a stable order. Not the key bindings, the window
     /// rules or the key mapping: they are the user's own
     private static func scalars(_ table: [String: Any], table path: [String]) -> [(TomlKeyPath, TomlValue)] {
-        let skipped: Set = ["mode", "on-window-detected", "key-mapping", "workspace-to-monitor-force-assignment"]
+        let skipped: Set = ["mode", "onWindowDetected", "keyMapping", "workspaceToMonitorForceAssignment"]
         return table.keys.sorted().flatMap { key -> [(TomlKeyPath, TomlValue)] in
             if path.isEmpty && skipped.contains(key) { return [] }
             let value = table[key]

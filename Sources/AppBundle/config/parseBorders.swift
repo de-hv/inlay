@@ -16,15 +16,15 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var inactiveColor: ConfigColor = .rgba(Rgba(red: 0x8E / 255, green: 0x8E / 255, blue: 0x93 / 255, alpha: 0x73 / 255))
     /// The focused floating window
     var floatingColor: ConfigColor = .rgba(Rgba(red: 0xBF / 255, green: 0x5A / 255, blue: 0xF2 / 255))
-    /// [borders.mode-colors]. Binding mode -> the color of the focused window while the mode is active
+    /// [borders.modeColors]. Binding mode -> the color of the focused window while the mode is active
     var modeColors: [String: ConfigColor] = [:]
     /// A soft halo of the color of the border around the focused window, outside of the border
     var glow: Bool = false
     /// The blur radius of the glow, in points: about how far from the border the glow reaches
     var glowRadius: CGFloat = 12
-    /// [borders.single-window]. The tiling window alone in its workspace, and the fullscreen window
+    /// [borders.singleWindow]. The tiling window alone in its workspace, and the fullscreen window
     var singleWindow: SingleWindowBorder = SingleWindowBorder()
-    /// 'hide-when-single' is a key of the past: see [borders.single-window]
+    /// 'hideWhenSingle' is a key of the past: see [borders.singleWindow]
     var _hideWhenSingle: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 
     static let widthRange = 1 ... 20
@@ -35,19 +35,19 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
 let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "width": Parser(\.width, parsePoints("width", BordersConfig.widthRange)),
-    "corner-radius": Parser(\.cornerRadius, parsePoints("corner-radius", BordersConfig.cornerRadiusRange)),
-    "square-corners": Parser(\.squareCorners, parseBool),
-    "active-color": Parser(\.activeColor, parseConfigColor(allowAuto: false)),
-    "inactive-color": Parser(\.inactiveColor, parseConfigColor(allowAuto: false)),
-    "floating-color": Parser(\.floatingColor, parseConfigColor(allowAuto: false)),
-    "mode-colors": Parser(\.modeColors, parseModeColors),
+    "cornerRadius": Parser(\.cornerRadius, parsePoints("cornerRadius", BordersConfig.cornerRadiusRange)),
+    "squareCorners": Parser(\.squareCorners, parseBool),
+    "activeColor": Parser(\.activeColor, parseConfigColor(allowAuto: false)),
+    "inactiveColor": Parser(\.inactiveColor, parseConfigColor(allowAuto: false)),
+    "floatingColor": Parser(\.floatingColor, parseConfigColor(allowAuto: false)),
+    "modeColors": Parser(\.modeColors, parseModeColors),
     "glow": Parser(\.glow, parseBool),
-    "glow-radius": Parser(\.glowRadius, parsePoints("glow-radius", BordersConfig.glowRadiusRange)),
-    "single-window": Parser(\.singleWindow, parseSingleWindowBorder),
-    "hide-when-single": Parser(\._hideWhenSingle, parseObsolete("'hide-when-single' is gone: [borders.single-window] enabled = false leaves a window alone in its workspace without a border")),
+    "glowRadius": Parser(\.glowRadius, parsePoints("glowRadius", BordersConfig.glowRadiusRange)),
+    "singleWindow": Parser(\.singleWindow, parseSingleWindowBorder),
+    "hideWhenSingle": Parser(\._hideWhenSingle, parseObsolete("'hideWhenSingle' is gone: [borders.singleWindow] enabled = false leaves a window alone in its workspace without a border")),
 ]
 
-/// [borders.single-window] table of the config: the tiling window alone in its workspace, and the window in fullscreen
+/// [borders.singleWindow] table of the config: the tiling window alone in its workspace, and the window in fullscreen
 /// (the 'fullscreen' command), look the same. With a border, they keep a gap around them, from the edges of the screen;
 /// without it, they fill the screen
 struct SingleWindowBorder: ConvenienceMutable, Equatable, Sendable {

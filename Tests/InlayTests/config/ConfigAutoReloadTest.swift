@@ -5,7 +5,7 @@ import HotKey
 import Testing
 
 extension InlayTests {
-    /// Editing the config file by hand reloads the config ('auto-reload-config'), which is what brings the new values
+    /// Editing the config file by hand reloads the config ('autoReloadConfig'), which is what brings the new values
     /// to the menu bar item and the borders. See: ConfigAutoReload, FileWatcher
     @Suite @MainActor final class ConfigAutoReloadTest {
         private let directory: URL

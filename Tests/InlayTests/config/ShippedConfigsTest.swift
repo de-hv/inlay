@@ -93,7 +93,7 @@ extension InlayTests {
             assertTrue(runs("cmd-alt-shift-r", "mode resize"))
             assertTrue(runs("cmd-alt-shift-s", "mode main", mode: "service"))
             assertTrue(runs("cmd-alt-shift-r", "mode main", mode: "resize"))
-            assertTrue(runs("w", "run-callback on-window-detected --for-every-window; mode main", mode: "service"))
+            assertTrue(runs("w", "run-callback onWindowDetected --for-every-window; mode main", mode: "service"))
         }
 
         /// Nothing of the accordion layout, which Inlay doesn't have, and nothing that talks to AeroSpace

@@ -67,14 +67,14 @@ extension InlayTests {
             let dotfiles = directory.appending(path: "dotfiles/inlay")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
             let real = dotfiles.appending(path: "inlay.toml")
-            let before = "# Mine\n[menu-bar]\ntheme = 'chips'\n[mode.main.binding]\n"
+            let before = "# Mine\n[menuBar]\ntheme = 'chips'\n[mode.main.binding]\n"
             try before.write(to: real, atomically: true, encoding: .utf8)
             let folder = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
             let config = folder.appending(path: "inlay.toml")
 
-            try AtomicFileWriter.write("# Mine\n[menu-bar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
-            assertEquals(read(real), "# Mine\n[menu-bar]\ntheme = 'hypr'\n[mode.main.binding]\n")
+            try AtomicFileWriter.write("# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
+            assertEquals(read(real), "# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n")
             assertEquals(read(config), read(real))
             assertEquals(isSymlink(folder), true)
             assertEquals(isSymlink(config), false)
@@ -132,7 +132,7 @@ extension InlayTests {
             let missing = directory.appending(path: "missing.toml")
             assertEquals(ConfigFiles.use(missing).errorOrNil, .notFound(missing))
             let broken = directory.appending(path: "broken.toml")
-            try "[menu-bar]\ntheme = 'bubbles'\n".write(to: broken, atomically: true, encoding: .utf8)
+            try "[menuBar]\ntheme = 'bubbles'\n".write(to: broken, atomically: true, encoding: .utf8)
             assertEquals(ConfigFiles.use(broken).okOrNil, nil)
             if case .invalidConfig(let errors) = ConfigFiles.use(broken).errorOrNil {
                 assertEquals(errors.count, 1)
@@ -144,8 +144,8 @@ extension InlayTests {
         }
 
         @Test func testExportAddsTheMissingKeys() {
-            let shipped = "start-at-login = true\n[menu-bar]\n    theme = 'liquid'\n    show-mode = true\n[mode.main.binding]\n    alt-h = 'focus left'\n"
-            let text = "# Mine\n[menu-bar]\n    theme = 'hypr'\n"
+            let shipped = "startAtLogin = true\n[menuBar]\n    theme = 'liquid'\n    showMode = true\n[mode.main.binding]\n    alt-h = 'focus left'\n"
+            let text = "# Mine\n[menuBar]\n    theme = 'hypr'\n"
             let exported = ConfigFiles.exportText(text, shipped: shipped, date: Date(timeIntervalSince1970: 0))
             let config = parseConfig(exported)
             assertEquals(config.errors, [])

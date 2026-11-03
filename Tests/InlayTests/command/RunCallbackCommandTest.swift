@@ -9,27 +9,27 @@ extension InlayTests {
 
         @Test func testParse() {
             testParseSingleCommandSucc(
-                "run-callback on-window-detected",
+                "run-callback onWindowDetected",
                 RunCallbackCmdArgs(rawArgs: []).copy(\.callback, .initialized(.onWindowDetected)),
             )
             testParseSingleCommandSucc(
-                "run-callback --for-every-window on-window-detected",
+                "run-callback --for-every-window onWindowDetected",
                 RunCallbackCmdArgs(rawArgs: [])
                     .copy(\.callback, .initialized(.onWindowDetected))
                     .copy(\.forEveryWindow, true),
             )
             testParseSingleCommandSucc(
-                "run-callback --window-id 42 on-window-detected",
+                "run-callback --window-id 42 onWindowDetected",
                 RunCallbackCmdArgs(rawArgs: [])
                     .copy(\.callback, .initialized(.onWindowDetected))
                     .copy(\.windowId, 42),
             )
             testParseSingleCommandSucc(
-                "run-callback on-focus-changed",
+                "run-callback onFocusChanged",
                 RunCallbackCmdArgs(rawArgs: []).copy(\.callback, .initialized(.onFocusChanged)),
             )
             testParseSingleCommandSucc(
-                "run-callback on-focused-monitor-changed",
+                "run-callback onFocusedMonitorChanged",
                 RunCallbackCmdArgs(rawArgs: []).copy(\.callback, .initialized(.onFocusedMonitorChanged)),
             )
         }
@@ -38,22 +38,22 @@ extension InlayTests {
             testParseCommandFail("run-callback", msg: "ERROR: Argument '<callback>' is mandatory", exitCode: 2)
             testParseCommandFail(
                 "run-callback bogus",
-                msg: "ERROR: Can't parse 'bogus'.\n       Possible values: (on-window-detected|on-focus-changed|on-focused-monitor-changed)",
+                msg: "ERROR: Can't parse 'bogus'.\n       Possible values: (onWindowDetected|onFocusChanged|onFocusedMonitorChanged)",
                 exitCode: 2,
             )
             testParseCommandFail(
-                "run-callback --for-every-window --window-id 1 on-window-detected",
+                "run-callback --for-every-window --window-id 1 onWindowDetected",
                 msg: "ERROR: Conflicting options: --for-every-window, --window-id",
                 exitCode: 2,
             )
             testParseCommandFail(
-                "run-callback --for-every-window on-focus-changed",
-                msg: "--for-every-window is only allowed with 'on-window-detected'",
+                "run-callback --for-every-window onFocusChanged",
+                msg: "--for-every-window is only allowed with 'onWindowDetected'",
                 exitCode: 2,
             )
             testParseCommandFail(
-                "run-callback --window-id 1 on-focused-monitor-changed",
-                msg: "--window-id is only allowed with 'on-window-detected'",
+                "run-callback --window-id 1 onFocusedMonitorChanged",
+                msg: "--window-id is only allowed with 'onWindowDetected'",
                 exitCode: 2,
             )
         }

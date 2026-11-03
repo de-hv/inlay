@@ -16,7 +16,7 @@ open class TreeNode: Equatable, AeroAny {
     // - resize with mouse
     // - drag window with mouse
     // - move-mouse command
-    // - focus-follows-mouse
+    // - focusFollowsMouse
     var lastAppliedLayoutPhysicalRect: Rect? = nil // with real inner gaps
     final var unboundStacktrace: String? = nil
     var isBound: Bool { parent != nil } // todo drop, once https://github.com/nikitabobko/AeroSpace/issues/1215 is fixed

@@ -19,7 +19,7 @@ extension InlayTests {
             assertEquals(result.errors, [])
             assertTrue(result.allowReloadConfig)
             assertEquals(result.warnings.count, 1)
-            assertTrue(result.strWarnings.first?.starts(with: "[WARNING] The current 'config-version = 1' is outdated.") == true)
+            assertTrue(result.strWarnings.first?.starts(with: "[WARNING] The current 'configVersion = 1' is outdated.") == true)
         }
 
         @Test func testParseDefaultConfig() {
@@ -32,24 +32,24 @@ extension InlayTests {
         @Test func testConfigVersionOutOfBounds() {
             let result = parseConfig(
                 """
-                config-version = 0
+                configVersion = 0
                 """,
             )
             assertTrue(result.allowReloadConfig)
-            assertEquals(result.strErrors, ["[ERROR] config-version: config-version must be in [1, 2] range"])
+            assertEquals(result.strErrors, ["[ERROR] configVersion: configVersion must be in [1, 2] range"])
         }
 
         @Test func testConfigVersionOutdatedWarning() {
             let result = parseConfig(
                 """
-                config-version = 1
+                configVersion = 1
                 """,
             )
             assertTrue(result.allowReloadConfig)
             assertEquals(result.errors, [])
             assertEquals(result.strWarnings, [
-                "[WARNING] The current 'config-version = 1' is outdated. " +
-                    "Please consider migrating to 'config-version = \(ConfigVersion.max)'. " +
+                "[WARNING] The current 'configVersion = 1' is outdated. " +
+                    "Please consider migrating to 'configVersion = \(ConfigVersion.max)'. " +
                     "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide.",
             ])
         }
@@ -57,7 +57,7 @@ extension InlayTests {
         @Test func testLatestConfigVersionNoWarning() {
             let result = parseConfig(
                 """
-                config-version = \(ConfigVersion.max)
+                configVersion = \(ConfigVersion.max)
                 """,
             )
             assertEquals(result.errors, [])
@@ -67,29 +67,29 @@ extension InlayTests {
         @Test func testExecOnWorkspaceChangeDifferentTypesError() {
             let errors = parseConfig(
                 """
-                exec-on-workspace-change = ['', 1]
+                execOnWorkspaceChange = ['', 1]
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] exec-on-workspace-change[1]: Expected type is \'String\'. But actual type is \'Int\'"])
+            assertEquals(errors, ["[ERROR] execOnWorkspaceChange[1]: Expected type is \'String\'. But actual type is \'Int\'"])
         }
 
         @Test func testDuplicatedPersistentWorkspaces() {
             let errors = parseConfig(
                 """
-                config-version = 2
-                persistent-workspaces = ['a', 'a']
+                configVersion = 2
+                persistentWorkspaces = ['a', 'a']
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] persistent-workspaces: Contains duplicated workspace names"])
+            assertEquals(errors, ["[ERROR] persistentWorkspaces: Contains duplicated workspace names"])
         }
 
         @Test func testPersistentWorkspacesAreAvailableOnlySinceVersion2() {
             let errors = parseConfig(
                 """
-                persistent-workspaces = ['a']
+                persistentWorkspaces = ['a']
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] persistent-workspaces: This config option is only available since \'config-version = 2\'"])
+            assertEquals(errors, ["[ERROR] persistentWorkspaces: This config option is only available since \'configVersion = 2\'"])
         }
 
         @Test func testWrongTypeForCommand() {
@@ -183,7 +183,7 @@ extension InlayTests {
             let result = parseConfig(
                 """
                 unknownKey = true
-                enable-normalization-flatten-containers = false
+                enableNormalizationFlattenContainers = false
                 """,
             )
             assertEquals(
@@ -196,7 +196,7 @@ extension InlayTests {
         @Test func testUnknownKeyParseError() {
             let result = parseConfig(
                 """
-                enable-normalization-flatten-containers = false
+                enableNormalizationFlattenContainers = false
                 [gaps]
                     unknownKey = true
                 """,
@@ -211,12 +211,12 @@ extension InlayTests {
         @Test func testTypeMismatch() {
             let errors = parseConfig(
                 """
-                enable-normalization-flatten-containers = 'true'
+                enableNormalizationFlattenContainers = 'true'
                 """,
             ).strErrors
             assertEquals(
                 errors,
-                ["[ERROR] enable-normalization-flatten-containers: Expected type is \'Bool\'. But actual type is \'String\'"],
+                ["[ERROR] enableNormalizationFlattenContainers: Expected type is \'Bool\'. But actual type is \'String\'"],
             )
         }
 
@@ -267,7 +267,7 @@ extension InlayTests {
         @Test func testSplitCommandAndFlattenContainersNormalization() {
             let errors = parseConfig(
                 """
-                enable-normalization-flatten-containers = true
+                enableNormalizationFlattenContainers = true
                 [mode.main.binding]
                 [mode.foo.binding]
                     alt-s = 'split horizontal'
@@ -276,8 +276,8 @@ extension InlayTests {
             let expected = """
                 [ERROR] The config contains:
                 1. usage of 'split' command
-                2. enable-normalization-flatten-containers = true
-                These two settings don't play nicely together. 'split' command has no effect when enable-normalization-flatten-containers is disabled.
+                2. enableNormalizationFlattenContainers = true
+                These two settings don't play nicely together. 'split' command has no effect when enableNormalizationFlattenContainers is disabled.
 
                 My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'.
                 """
@@ -287,7 +287,7 @@ extension InlayTests {
         @Test func testParseWorkspaceToMonitorAssignment() {
             let result = parseConfig(
                 """
-                [workspace-to-monitor-force-assignment]
+                [workspaceToMonitorForceAssignment]
                     workspace_name_1 = 1                            # Sequence number of the monitor (from left to right, 1-based indexing)
                     workspace_name_2 = 'main'                       # main monitor
                     workspace_name_3 = 'secondary'                  # non-main monitor (in case when there are only two monitors)
@@ -316,8 +316,8 @@ extension InlayTests {
                 ],
             )
             assertEquals([
-                "[ERROR] workspace-to-monitor-force-assignment.w7[0]: Empty string is an illegal monitor description",
-                "[ERROR] workspace-to-monitor-force-assignment.w8: Monitor sequence numbers uses 1-based indexing. Values less than 1 are illegal",
+                "[ERROR] workspaceToMonitorForceAssignment.w7[0]: Empty string is an illegal monitor description",
+                "[ERROR] workspaceToMonitorForceAssignment.w8: Monitor sequence numbers uses 1-based indexing. Values less than 1 are illegal",
             ], result.strErrors)
             assertEquals([:], Config().workspaceToMonitorForceAssignment)
         }
@@ -325,31 +325,31 @@ extension InlayTests {
         @Test func testParseOnWindowDetected() {
             let result = parseConfig(
                 """
-                on-window-detected = [
+                onWindowDetected = [
                     { # 0
-                        if = 'true',
-                        check-further-callbacks = true,
+                        match = 'true',
+                        checkFurtherCallbacks = true,
                         run = ['layout floating', 'move-node-to-workspace W'],
                     },
                     { # 1
-                        if.app-id = 'com.apple.systempreferences',
+                        match.appId = 'com.apple.systempreferences',
                         run = [],
                     },
                     {}, # 2
                     { # 3
-                        if = 'true', run = ['move-node-to-workspace S', 'layout tiling'],
+                        match = 'true', run = ['move-node-to-workspace S', 'layout tiling'],
                     },
                     { # 4
-                        if = 'true', run = ['move-node-to-workspace S', 'move-node-to-workspace W'],
+                        match = 'true', run = ['move-node-to-workspace S', 'move-node-to-workspace W'],
                     },
                     { # 5
-                        if = 'true', run = ['move-node-to-workspace S', 'layout h_tiles'],
+                        match = 'true', run = ['move-node-to-workspace S', 'layout h_tiles'],
                     },
                     { # 6
-                        if = 'test %{app-bundle-id} = org.alacritty',
+                        match = 'test %{app-bundle-id} = org.alacritty',
                         run = ['move-node-to-workspace T'],
                     },
-                    { if = '', run = ''}, # 7
+                    { match = '', run = ''}, # 7
                 ]
                 """,
             )
@@ -400,17 +400,17 @@ extension InlayTests {
             ])
 
             assertEquals(result.strErrors, [
-                "[ERROR] on-window-detected[2]: Omitting \'if\' is error prone. You can use `if = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'check-further-callbacks = true\'",
-                "[ERROR] on-window-detected[2]: \'run\' is mandatory key",
-                "[ERROR] on-window-detected[7]: Omitting \'if\' is error prone. You can use `if = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'check-further-callbacks = true\'",
+                "[ERROR] onWindowDetected[2]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'checkFurtherCallbacks = true\'",
+                "[ERROR] onWindowDetected[2]: \'run\' is mandatory key",
+                "[ERROR] onWindowDetected[7]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'checkFurtherCallbacks = true\'",
             ])
         }
 
         @Test func testParseOnWindowDetected2() {
             let result = parseConfig(
                 """
-                on-window-detected = [
-                    { check-further-callbacks = true, run = '', },
+                onWindowDetected = [
+                    { checkFurtherCallbacks = true, run = '', },
                 ]
                 """,
             )
@@ -428,13 +428,13 @@ extension InlayTests {
         @Test func testParseInlineTables() {
             let errors = parseConfig(
                 """
-                on-window-detected = [
+                onWindowDetected = [
                     {
-                        check-further-callbacks = true,
+                        checkFurtherCallbacks = true,
                         run = ['layout floating', 'move-node-to-workspace W'],
                     },
                     {
-                        if.app-id = 'com.apple.systempreferences',
+                        match.appId = 'com.apple.systempreferences',
                         run = [],
                     }
                 ]
@@ -447,12 +447,12 @@ extension InlayTests {
             // https://github.com/nikitabobko/AeroSpace/issues/1064
             let errors = parseConfig(
                 """
-                [[[on-window-detected]]
-                if.app-id = 'com.apple.findmy'
+                [[[onWindowDetected]]
+                match.appId = 'com.apple.findmy'
                 run = 'layout floating'
 
-                [on-window-detected]]
-                if.app-id = 'com.openai.chat'
+                [onWindowDetected]]
+                match.appId = 'com.openai.chat'
                 run = 'layout floating'
                 """,
             ).strErrors
@@ -462,8 +462,8 @@ extension InlayTests {
         @Test func testParseOnWindowDetectedRegex() {
             let result = parseConfig(
                 """
-                [[on-window-detected]]
-                    if.app-name-regex-substring = '^system settings$'
+                [[onWindowDetected]]
+                    match.appNameRegexSubstring = '^system settings$'
                     run = []
                 """,
             )
@@ -533,18 +533,18 @@ extension InlayTests {
         @Test func testAfterLoginCommandDeprecation() {
             let result = parseConfig(
                 """
-                after-login-command = ['exec-and-forget echo hi']
+                afterLoginCommand = ['exec-and-forget echo hi']
                 """,
             )
             assertEquals(
                 result.strErrors,
-                ["[ERROR] after-login-command: after-login-command is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"],
+                ["[ERROR] afterLoginCommand: afterLoginCommand is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"],
             )
 
             // Empty array is still accepted
             let okResult = parseConfig(
                 """
-                after-login-command = []
+                afterLoginCommand = []
                 """,
             )
             assertEquals(okResult.errors, [])
@@ -553,9 +553,9 @@ extension InlayTests {
         @Test func testOnFocusChangedAsSingleStringAndAsList() {
             let result = parseConfig(
                 """
-                on-focus-changed = 'focus left'
-                on-mode-changed = ['focus right', 'focus up']
-                on-focused-monitor-changed = 'focus down'
+                onFocusChanged = 'focus left'
+                onModeChanged = ['focus right', 'focus up']
+                onFocusedMonitorChanged = 'focus down'
                 """,
             )
             assertEquals(result.errors, [])
@@ -568,19 +568,19 @@ extension InlayTests {
         @Test func testOnFocusChangedTypeError() {
             let result = parseConfig(
                 """
-                on-focus-changed = 1
+                onFocusChanged = 1
                 """,
             )
             assertEquals(
                 result.strErrors,
-                ["[ERROR] on-focus-changed: Expected types are \'string\' or \'array\'. But actual type is \'int\'"],
+                ["[ERROR] onFocusChanged: Expected types are \'string\' or \'array\'. But actual type is \'int\'"],
             )
         }
 
         @Test func testParseDefaultRootContainerLayout() {
             let result = parseConfig(
                 """
-                default-root-container-layout = 'tiles'
+                defaultRootContainerLayout = 'tiles'
                 """,
             )
             assertEquals(result.errors, [])
@@ -588,7 +588,7 @@ extension InlayTests {
 
             let listResult = parseConfig(
                 """
-                default-root-container-layout = 'list'
+                defaultRootContainerLayout = 'list'
                 """,
             )
             assertEquals(listResult.errors, [])
@@ -596,19 +596,19 @@ extension InlayTests {
 
             let bad = parseConfig(
                 """
-                default-root-container-layout = 'bogus'
+                defaultRootContainerLayout = 'bogus'
                 """,
             )
             assertEquals(
                 bad.strErrors,
-                ["[ERROR] default-root-container-layout: Can\'t parse layout \'bogus\'"],
+                ["[ERROR] defaultRootContainerLayout: Can\'t parse layout \'bogus\'"],
             )
         }
 
         @Test func testParseDefaultRootContainerOrientation() {
             let result = parseConfig(
                 """
-                default-root-container-orientation = 'vertical'
+                defaultRootContainerOrientation = 'vertical'
                 """,
             )
             assertEquals(result.errors, [])
@@ -616,24 +616,24 @@ extension InlayTests {
 
             let bad = parseConfig(
                 """
-                default-root-container-orientation = 'diagonal'
+                defaultRootContainerOrientation = 'diagonal'
                 """,
             )
             assertEquals(
                 bad.strErrors,
-                ["[ERROR] default-root-container-orientation: Can\'t parse default container orientation \'diagonal\'"],
+                ["[ERROR] defaultRootContainerOrientation: Can\'t parse default container orientation \'diagonal\'"],
             )
         }
 
         @Test func testDeprecatedIndentForNestedContainers() {
             let errors = parseConfig(
                 """
-                indent-for-nested-containers-with-the-same-orientation = 30
+                indentForNestedContainersWithTheSameOrientation = 30
                 """,
             ).strErrors
             assertEquals(
                 errors,
-                ["[ERROR] indent-for-nested-containers-with-the-same-orientation: Deprecated. Please drop it from the config. See https://github.com/nikitabobko/AeroSpace/issues/96"],
+                ["[ERROR] indentForNestedContainersWithTheSameOrientation: Deprecated. Please drop it from the config. See https://github.com/nikitabobko/AeroSpace/issues/96"],
             )
         }
 
@@ -641,36 +641,36 @@ extension InlayTests {
             // The 'smart' value used to be accepted and is silently dropped now
             let smart = parseConfig(
                 """
-                non-empty-workspaces-root-containers-layout-on-startup = 'smart'
+                nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart'
                 """,
             )
             assertEquals(smart.errors, [])
 
             let bad = parseConfig(
                 """
-                non-empty-workspaces-root-containers-layout-on-startup = 'tiles'
+                nonEmptyWorkspacesRootContainersLayoutOnStartup = 'tiles'
                 """,
             ).strErrors
             assertEquals(
                 bad,
-                ["[ERROR] non-empty-workspaces-root-containers-layout-on-startup: \'non-empty-workspaces-root-containers-layout-on-startup\' is deprecated. Please drop it from your config"],
+                ["[ERROR] nonEmptyWorkspacesRootContainersLayoutOnStartup: \'nonEmptyWorkspacesRootContainersLayoutOnStartup\' is deprecated. Please drop it from your config"],
             )
         }
 
         @Test func testOutdatedConfigVersionWarning() {
             let result = parseConfig(
                 """
-                config-version = 1
+                configVersion = 1
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.warnings.count, 1)
-            assertTrue(result.warnings[0].message.contains("'config-version = 1' is outdated"))
+            assertTrue(result.warnings[0].message.contains("'configVersion = 1' is outdated"))
 
-            // config-version = 2 (the current max) should not produce the outdated warning
+            // configVersion = 2 (the current max) should not produce the outdated warning
             let v2 = parseConfig(
                 """
-                config-version = 2
+                configVersion = 2
                 """,
             )
             assertEquals(v2.errors, [])
@@ -688,7 +688,7 @@ extension InlayTests {
         @Test func testParseKeyMapping() {
             let result = parseConfig(
                 """
-                [key-mapping.key-notation-to-key-code]
+                [keyMapping.keyNotationToKeyCode]
                     q = 'q'
                     unicorn = 'u'
 
@@ -706,19 +706,19 @@ extension InlayTests {
 
             let errors1 = parseConfig(
                 """
-                [key-mapping.key-notation-to-key-code]
+                [keyMapping.keyNotationToKeyCode]
                     q = 'qw'
                     ' f' = 'f'
                 """,
             ).strErrors
             assertEquals(errors1, [
-                "[ERROR] key-mapping.key-notation-to-key-code: ' f' is invalid key notation",
-                "[ERROR] key-mapping.key-notation-to-key-code.q: 'qw' is invalid key code",
+                "[ERROR] keyMapping.keyNotationToKeyCode: ' f' is invalid key notation",
+                "[ERROR] keyMapping.keyNotationToKeyCode.q: 'qw' is invalid key code",
             ])
 
             let dvorakResult = parseConfig(
                 """
-                key-mapping.preset = 'dvorak'
+                keyMapping.preset = 'dvorak'
                 """,
             )
             assertEquals(dvorakResult.errors, [])
@@ -726,7 +726,7 @@ extension InlayTests {
             assertEquals(dvorakResult.config.keyMapping.resolve()["quote"], .q)
             let colemakResult = parseConfig(
                 """
-                key-mapping.preset = 'colemak'
+                keyMapping.preset = 'colemak'
                 """,
             )
             assertEquals(colemakResult.errors, [])

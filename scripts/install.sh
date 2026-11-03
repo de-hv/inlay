@@ -424,7 +424,7 @@ replace_config() {
 
 # toml_settings <file>. The settings of a TOML config, one per line: "<id><TAB><[table]><TAB><key = value>". The
 # id of a key binding is its command, not its key: a binding that a config has under another key is not missing.
-# The rules ([[on-window-detected]]) are not settings, and they are left out
+# The rules ([[onWindowDetected]]) are not settings, and they are left out
 toml_settings() {
   awk '
     function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
@@ -448,7 +448,7 @@ toml_settings() {
       gsub(/["\047 \t]/, "", id)
       # A list of one command is that command: ['fullscreen'] = 'fullscreen'
       if (id ~ /^\[[^],[]*\]$/) id = substr(id, 2, length(id) - 2)
-      # A key written with dots at the top level is the same key as in its table: key-mapping.preset = [key-mapping] preset
+      # A key written with dots at the top level is the same key as in its table: keyMapping.preset = [keyMapping] preset
       id = (table ~ /\.binding$/) ? table "=" id : (table == "" ? key : table "." key)
       print id "\t" (table == "" ? "(top level)" : "[" table "]") "\t" key " = " value
     }' "$1"
@@ -493,8 +493,8 @@ review_imported_config() {
   local file="$1"
   note "Review it. Inlay reads it as it is ('accordion' is accepted with a warning and treated as 'tiles'):"
   note "'$CLI_NAME reload-config' and the menu bar item list the warnings and the errors."
-  if grep -Eq '^[[:space:]]*start-at-login[[:space:]]*=[[:space:]]*true' "$file"; then
-    note "- It has 'start-at-login = true': Inlay will add itself to the login items the first time it runs."
+  if grep -Eq '^[[:space:]]*startAtLogin[[:space:]]*=[[:space:]]*true' "$file"; then
+    note "- It has 'startAtLogin = true': Inlay will add itself to the login items the first time it runs."
     note "  If AeroSpace also starts at login, both will start. Set it to false until you pick one."
   fi
   if grep -Eq '^[^#]*(aerospace|AEROSPACE_)' "$file"; then
@@ -559,8 +559,8 @@ config_kept() {
     1) CONFIG_DETAIL="$label · yours, 1 setting missing" ;;
     *) CONFIG_DETAIL="$label · yours, $count settings missing" ;;
   esac
-  if ! grep -Eq '^[[:space:]]*\[\[on-window-detected\]\]' "$config"; then
-    warn "Your config has no [[on-window-detected]] rule: every window stays in the workspace where it opens."
+  if ! grep -Eq '^[[:space:]]*\[\[onWindowDetected\]\]' "$config"; then
+    warn "Your config has no [[onWindowDetected]] rule: every window stays in the workspace where it opens."
   fi
   if [ "$count" -gt 0 ] && [ "$CAN_ASK" != true ]; then
     hint "What the inlay.toml of the repo has and yours doesn't:  diff \"$config\" \"$PWD/inlay.toml\""

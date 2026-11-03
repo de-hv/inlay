@@ -147,7 +147,7 @@ final class MenuBarMenu: NSObject {
 
     /// From the layout of the focused window to another one, with the commands of the key bindings: 'fullscreen'
     /// toggles it, like cmd-alt-shift-enter. Fullscreen is for a tiling window: a floating one is tiled first, so that
-    /// it is laid out like with the key binding (like a window alone in its workspace: [borders.single-window])
+    /// it is laid out like with the key binding (like a window alone in its workspace: [borders.singleWindow])
     static func layoutCommands(from current: MenuBarCard.WindowLayout, to layout: MenuBarCard.WindowLayout) -> [String] {
         let leaveFullscreen = current == .fullscreen ? ["fullscreen"] : []
         return switch layout {

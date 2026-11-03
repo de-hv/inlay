@@ -115,7 +115,7 @@ extension InlayTests {
             assertEquals(shippedFile(inResources: "scripts/lib.sh", inRepo: "scripts/lib.sh", executable: cli.path)?.path, projectRoot.appending(path: "scripts/lib.sh").path)
             assertEquals(shippedFile(inResources: "nope", inRepo: "nope", executable: cli.path), nil)
             // What the app and the CLI ship with
-            for (inResources, inRepo) in [("config-reference.toml", "docs/config-reference.toml"), ("inlay.toml", "inlay.toml")] {
+            for (inResources, inRepo) in [("config-reference.lua", "docs/config-reference.lua"), ("inlay.lua", "inlay.lua")] {
                 assertEquals(shippedFile(inResources: inResources, inRepo: inRepo, executable: "/nowhere/inlay") != nil, true, additionalMsg: inRepo)
             }
         }

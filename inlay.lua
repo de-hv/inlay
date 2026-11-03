@@ -1,7 +1,7 @@
 -- Inlay config
 --
 -- Inlay reloads this file when you save it. Every key, its values and its default:
---     inlay config --explain [<key>]          (also in docs/config-reference.toml)
+--     inlay config --explain [<key>]          (also in docs/config-reference.lua)
 --
 -- The file returns the table of the config. Each section below is a table of its own, and
 -- inlay.merge puts them together at the end: the tables of the same key are merged, and the

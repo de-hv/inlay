@@ -1,4 +1,4 @@
-// Shared code of the README images: TOML highlighting, the tiling tree, the desktop mock and the animations.
+// Shared code of the README images: the highlighting of the config, the tiling tree, the desktop mock and the animations.
 //
 // An animation page calls Anim({...}). Opened in a browser it plays; scripts/make-docs-images.sh opens it with
 // ?meta (the size and the delays of the frames, as JSON) and with ?sprite=N (16 frames in a grid, starting at
@@ -8,28 +8,29 @@ const ACCENT = '#ff9f0a';
 const INACTIVE = 'rgba(142,142,147,.45)';
 const FLOATING = '#bf5af2';
 
-// ---------- TOML ----------
+// ---------- The config, in Lua ----------
 
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
-/** Highlights TOML. A line that starts with '>' is marked as the one that matters */
-function toml(text) {
+/** Highlights the config, in Lua. A line that starts with '>' is marked as the one that matters */
+function lua(text) {
+  const strings = html => html.replace(/('[^']*'|"[^"]*")/g, '<span class="s">$1</span>');
   return text.split('\n').map(line => {
     const hl = line.startsWith('>');
     if (hl) line = line.slice(1);
     let html;
-    const m = line.match(/^(\s*)([\w.\-"]+)(\s*=\s*)(.*?)(\s*#.*)?$/);
-    if (/^\s*#/.test(line)) html = `<span class="c">${esc(line)}</span>`;
-    else if (/^\s*\[/.test(line)) html = `<span class="t">${esc(line)}</span>`;
-    else if (m) {
-      const v = /^['"\[{]/.test(m[4]) ? `<span class="s">${esc(m[4])}</span>` : `<span class="n">${esc(m[4])}</span>`;
+    const m = line.match(/^(\s*)(\[['"][^'"]+['"]\]|[\w.]+)(\s*=\s*)(.*?)(\s*--.*)?$/);
+    if (/^\s*--/.test(line)) html = `<span class="c">${esc(line)}</span>`;
+    else if (m && m[4] !== '{') {
+      const v = /^['"{]/.test(m[4]) ? `<span class="s">${esc(m[4])}</span>` : `<span class="n">${esc(m[4])}</span>`;
       html = `${m[1]}<span class="k">${esc(m[2])}</span>${m[3]}${v}${m[5] ? `<span class="c">${esc(m[5])}</span>` : ''}`;
-    } else html = esc(line);
+    } else if (m) html = `${m[1]}<span class="t">${esc(m[2])}</span>${m[3]}{`;
+    else html = strings(esc(line));
     return hl ? `<span class="hl">${html}</span>` : html;
   }).join('\n');
 }
-function fillToml() {
-  document.querySelectorAll('.toml').forEach(el => { el.innerHTML = toml(el.textContent.replace(/^\n/, '').replace(/\n\s*$/, '')); });
+function fillLua() {
+  document.querySelectorAll('.lua').forEach(el => { el.innerHTML = lua(el.textContent.replace(/^\n/, '').replace(/\n\s*$/, '')); });
 }
 
 // ---------- The tiling tree ----------

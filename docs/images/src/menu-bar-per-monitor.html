@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>per-monitor in every theme</title>
+<html lang="en"><head><meta charset="utf-8"><title>perMonitor in every theme</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script>
 <style>
   body { width: 880px; height: 540px; }
@@ -9,10 +9,10 @@
 </style></head>
 <body class="png">
 <div class="sheet"><span class="tag real">Real render</span>
-  <h1>per-monitor, in every theme</h1>
+  <h1>perMonitor, in every theme</h1>
   <div class="sub">Workspaces 1 to 4 on the left monitor, 5 and 6 on the right one, which shows 5. Off by default; with it a line divides the monitors and 5 gets a hollow marker. <code>'hypr'</code> has a bolder line and a frame around the name; <code>'dms'</code> a track per monitor.</div>
   <div class="rows" id="rows">
-    <div></div><div class="head mono">per-monitor = false</div><div class="head mono">per-monitor = true</div>
+    <div></div><div class="head mono">perMonitor = false</div><div class="head mono">perMonitor = true</div>
   </div>
 </div>
 <script>
@@ -23,6 +23,6 @@
       `<div><div class="box"><img class="item" src="render/menu-bar-6x/${theme}-two-monitors-dark.png"></div></div>` +
       `<div><div class="box"><img class="item" src="render/menu-bar-6x/${theme}-per-monitor-dark.png"></div></div>`);
   }
-  fillToml();
+  fillLua();
 </script>
 </body></html>

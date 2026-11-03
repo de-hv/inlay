@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>startup-layout</title>
+<html lang="en"><head><meta charset="utf-8"><title>startupLayout</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
 <body><script>
 // Three screens of 800 x 500 points with the same 5 windows, one per value of the key.
@@ -21,13 +21,13 @@ const dwindle = T.box('h', [T.win('1')]);
 for (let i = 1; i < ids.length; i++) T.split(dwindle, ids[i - 1], ids[i], T.layout(dwindle, area, GAP));
 
 const panels = [
-  { x: 24, label: "<code>startup-layout = 'grid'</code><br>the default: a balanced grid,<br>5 windows are 3 on top of 2", tree: grid },
-  { x: 280, label: "<code>startup-layout = 'row'</code><br>one row, all the windows<br>with the same width", tree: row },
-  { x: 536, label: "<code>startup-layout = 'dwindle'</code><br>one after another, like new<br>windows: the last ones are small", tree: dwindle },
+  { x: 24, label: "<code>startupLayout = 'grid'</code><br>the default: a balanced grid,<br>5 windows are 3 on top of 2", tree: grid },
+  { x: 280, label: "<code>startupLayout = 'row'</code><br>one row, all the windows<br>with the same width", tree: row },
+  { x: 536, label: "<code>startupLayout = 'dwindle'</code><br>one after another, like new<br>windows: the last ones are small", tree: dwindle },
 ];
 const keys = [
   { cut: true, hold: 1600, wins: panels.map(() => before), caption: 'The windows that are already open when Inlay starts (or when <code>inlay enable on</code> resumes it)…' },
-  { hold: 3200, wins: panels.map(p => tiled(p.tree, area, GAP, props)), caption: '…are arranged at once, workspace by workspace. The windows opened later follow <code>new-window-placement</code>.' },
+  { hold: 3200, wins: panels.map(p => tiled(p.tree, area, GAP, props)), caption: '…are arranged at once, workspace by workspace. The windows opened later follow <code>newWindowPlacement</code>.' },
 ];
 Anim({
   W: 800, H: 356, keys, steps: 7,
@@ -37,7 +37,7 @@ Anim({
       drawScreen(el, p.x, 52, SCALE, W, H, s.wins[i], { bar: BAR, bw: 6, noLights: true });
       el.insertAdjacentHTML('beforeend', `<div class="plabel" style="left:${p.x}px;top:212px;width:240px">${p.label}</div>`);
     });
-    chrome(el, '<code>[tiling] startup-layout</code>', s.caption, 300);
+    chrome(el, '<code>tiling.startupLayout</code>', s.caption, 300);
   },
 });
 </script></body></html>

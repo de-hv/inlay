@@ -59,7 +59,7 @@ PAGES=(
   hero:1280:800
   menu-bar-states:880:330
   menu-bar-options:880:476
-  menu-bar-colors:880:500
+  menu-bar-colors:880:520
   menu-bar-per-monitor:880:540
   menu:880:470
   borders-states:880:586

@@ -12,13 +12,13 @@
   <div class="sub"><code class="key">inlay config --explain</code> prints the reference of a key, a table or the whole config, without Inlay running. The other commands talk to the running Inlay.</div>
   <div style="margin-top:16px"><div class="term"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><span>inlay — zsh</span></div>
 <pre class="mono"><span class="p">❯</span> <span class="cmd">inlay config --explain borders.width</span>
-<span class="t">[borders]</span>
+<span class="t">borders</span> = {
 
-    <span class="c"># The thickness of the border, in points. The border is drawn outside of the frame of the window:</span>
-    <span class="c"># it never covers the content of the window, it takes a part of the gap. See [gaps]</span>
-    <span class="c"># Possible values: 1 ... 20</span>
-    <span class="c"># Fallback value (if you omit the key): width = 4</span>
-    <span class="k">width</span> = <span class="n">4</span>
+  <span class="c">-- The thickness of the border, in points. The border is drawn outside of the frame of the window:</span>
+  <span class="c">-- it never covers the content of the window, it takes a part of the gap. See 'gaps'</span>
+  <span class="c">-- Possible values: 1 ... 20</span>
+  <span class="c">-- Fallback value (if you omit the key): width = 4</span>
+  <span class="k">width</span> = <span class="n">4</span>,
 
 <span class="p">❯</span> <span class="cmd">inlay list-workspaces --all</span>
 1
@@ -29,5 +29,5 @@
 6</pre></div></div>
   <div class="note">The second command, with the six persistent workspaces of the shipped config.</div>
 </div>
-<script>fillToml();</script>
+<script>fillLua();</script>
 </body></html>

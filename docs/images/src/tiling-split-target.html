@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>split-target</title>
+<html lang="en"><head><meta charset="utf-8"><title>splitTarget</title>
 <link rel="stylesheet" href="lib.css"><script src="lib.js"></script></head>
 <body><script>
 // Two screens of 800 x 500 points in the same state: the focus is on window 1, and the mouse cursor is over window 3.
@@ -9,8 +9,8 @@ const start = () => T.box('h', [T.win('1'), T.box('v', [T.win('2'), T.win('3')])
 const props = focus => Object.fromEntries(['1', '2', '3', '4'].map(id => [id, { num: id, focus: id === focus }]));
 const cursor = { x: 610, y: 400 };
 const panels = [
-  { x: 28, target: '1', label: "<code>split-target = 'focused'</code> (the default)<br>the new window splits the <b>focused</b> window" },
-  { x: 412, target: '3', label: "<code>split-target = 'cursor'</code><br>the new window splits the window <b>under the mouse cursor</b>" },
+  { x: 28, target: '1', label: "<code>splitTarget = 'focused'</code> (the default)<br>the new window splits the <b>focused</b> window" },
+  { x: 412, target: '3', label: "<code>splitTarget = 'cursor'</code><br>the new window splits the window <b>under the mouse cursor</b>" },
 ];
 const after = panels.map(p => {
   const tree = start();
@@ -29,7 +29,7 @@ Anim({
       drawScreen(el, p.x, 52, SCALE, W, H, s.wins[i], { bar: BAR, bw: 5, noLights: true, cursor });
       el.insertAdjacentHTML('beforeend', `<div class="plabel" style="left:${p.x}px;top:288px;width:360px">${p.label}</div>`);
     });
-    chrome(el, '<code>[tiling] split-target</code>', s.caption, 346);
+    chrome(el, '<code>tiling.splitTarget</code>', s.caption, 346);
   },
 });
 </script></body></html>

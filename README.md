@@ -388,7 +388,7 @@ inlay config --explain tiling          # one table (menuBar also prints menuBar.
 inlay config --explain gaps.inner      # a group of keys
 ```
 
-<p align="center"><img src="docs/images/terminal-cli.png" alt="Real output of two commands in a terminal: 'inlay config --explain borders.width' prints the [borders] table header, the comment that explains the key, its possible values (1 ... 20), its fallback value and 'width = 4'; 'inlay list-workspaces --all' prints the workspaces 1 to 6, one per line" width="880"></p>
+<p align="center"><img src="docs/images/terminal-cli.png" alt="Real output of two commands in a terminal: 'inlay config --explain borders.width' prints the line that opens the borders table, the comment that explains the key, its possible values (1 ... 20), its fallback value and 'width = 4'; 'inlay list-workspaces --all' prints the workspaces 1 to 6, one per line" width="880"></p>
 
 A test fails if the config parser accepts a key that the reference does not document, or the other way round.
 
@@ -831,11 +831,11 @@ menuBar = {
 },
 ```
 
-<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their TOML, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, the R of the resize mode cut out of the focused one. accent = 'system-accent': that chip in the accent color of the system, with a white R. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'hypr' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-colors.png" alt="Real render of the colors of the menu bar item, with three configs and their Lua, each on a dark and on a light bar. The defaults: white or black chips that follow the bar, the R of the resize mode cut out of the focused one. accent = 'system-accent': that chip in the accent color of the system, with a white R. Custom colors (accent '#E06C75', focused '#D19A66', occupied '#ABB2BF', empty '#6B7280'): the same colors on both bars, also shown in the 'hypr' theme. And focused = 'system-accent': the focused workspace in the accent color" width="880"></p>
 
 **The item and its menu**
 
-<p align="center"><img src="docs/images/menu.png" alt="Real render of the menu that a click on the item opens, from top to bottom: 'Workspace 2 · Zed' and 'Config reloaded 3 seconds ago'; Window, with Tiling (selected, in the accent color), Floating and Fullscreen; Arrange Workspace, with Dwindle, Grid and Row; and a row of buttons: Reload Config, Open inlay.toml, Pause and Quit" width="720"></p>
+<p align="center"><img src="docs/images/menu.png" alt="Real render of the menu that a click on the item opens, from top to bottom: 'Workspace 2 · Zed' and 'Config reloaded 3 seconds ago'; Window, with Tiling (selected, in the accent color), Floating and Fullscreen; Arrange Workspace, with Dwindle, Grid and Row; and a row of buttons: Reload Config, Open inlay.lua, Pause and Quit" width="720"></p>
 
 
 - A **click** on the item (the left button) opens the menu: the layout of the focused window and of its
@@ -873,7 +873,7 @@ Inlay draws a colored border around each managed window (tiled or floating) of t
 color comes from the state the manager already knows, with no focus heuristics. It is configured in the
 `borders` table (`inlay config --explain borders` documents it).
 
-<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (activeColor) and the others with a gray one (inactiveColor); a focused floating window with a purple border (floatingColor); the focused window with a green border in the resize mode, from [borders.modeColors]; only the focused window with a border, with inactiveColor = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
+<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (activeColor) and the others with a gray one (inactiveColor); a focused floating window with a purple border (floatingColor); the focused window with a green border in the resize mode, from borders.modeColors; only the focused window with a border, with inactiveColor = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|

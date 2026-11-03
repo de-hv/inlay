@@ -31,7 +31,7 @@ enum OrderedJson: Encodable, Equatable { // todo rename to Dto (data transfer ob
 
     static func newScalarOrNil(_ value: Any?) -> OrderedJson? {
         guard let dto = Json.newScalarOrNil(value) else {
-            // TOML floats. Json has no floats, because nothing but the config needs them
+            // Lua numbers that aren't whole. Json has no floats, because nothing but the config needs them
             return (value as? Double).map(OrderedJson.double)
         }
         return switch dto {
@@ -53,7 +53,7 @@ enum OrderedJson: Encodable, Equatable { // todo rename to Dto (data transfer ob
         asInt64OrNil.flatMap { Int.init(exactly: $0) }
     }
 
-    /// TOML floats and integers
+    /// Floats and integers
     var asDoubleOrNil: Double? {
         switch self {
             case .double(let value): value
@@ -83,7 +83,7 @@ enum OrderedJson: Encodable, Equatable { // todo rename to Dto (data transfer ob
         }
     }
 
-    var tomlType: TomlType {
+    var valueType: ConfigValueType {
         switch self {
             case .dict: return .table
             case .array: return .array
@@ -96,7 +96,7 @@ enum OrderedJson: Encodable, Equatable { // todo rename to Dto (data transfer ob
     }
 }
 
-enum TomlType: String {
+enum ConfigValueType: String {
     case table = "Table"
     case array = "Array"
 

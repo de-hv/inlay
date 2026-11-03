@@ -79,7 +79,7 @@ let windowDetectedMatcherParser: [String: any ParserProtocol<LegacyWindowDetecte
     "appNameRegexSubstring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
     "windowTitleRegexSubstring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
     "duringInlayStartup": Parser(\.duringInlayStartup, upcast(parseBool)),
-    "duringAerospaceStartup": Parser(\.duringInlayStartup, upcast(parseBool)), // AeroSpace name, kept so that an aerospace.toml can be migrated as is
+    "duringAerospaceStartup": Parser(\.duringInlayStartup, upcast(parseBool)), // The name of AeroSpace, kept
 ]
 
 private func upcast<T>(
@@ -92,7 +92,7 @@ func parseOnWindowDetectedArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace
     if let array = raw.asArrayOrNil {
         return array.enumerated().map { (index, raw) in parseWindowDetectedCallback(raw, backtrace + .index(index), &c) }.filterNotNil()
     } else {
-        c.errors += [expectedActualTypeDiagnostic(expected: .array, actual: raw.tomlType, backtrace)]
+        c.errors += [expectedActualTypeDiagnostic(expected: .array, actual: raw.valueType, backtrace)]
         return []
     }
 }
@@ -109,7 +109,7 @@ private func parseMatcher(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c:
             return .command(parseCommandForConfig(raw, backtrace, &c, allowExecAndForget: false))
         default:
             // Intentionally skip Table type from the list of expected types
-            c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: raw.tomlType)))
+            c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: raw.valueType)))
             return .command(.empty)
     }
 }

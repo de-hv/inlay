@@ -53,7 +53,7 @@ final class FileWatcher {
     }
 
     /// The directories that hold a symlink among the ancestors of the file: for
-    /// ~/.config/inlay/inlay.toml with ~/.config/inlay -> ~/.dotfiles/inlay, it is ~/.config
+    /// ~/.config/inlay/inlay.lua with ~/.config/inlay -> ~/.dotfiles/inlay, it is ~/.config
     static func directoriesOfLinkedAncestors(of file: URL) -> [String] {
         var result: [String] = []
         var ancestor = file.standardizedFileURL.deletingLastPathComponent()

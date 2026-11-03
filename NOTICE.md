@@ -24,7 +24,6 @@ Inlay is not affiliated with, nor endorsed by, the AeroSpace project. Please don
 |---|---|---|
 | [HotKey](https://github.com/soffes/HotKey) | Global keyboard shortcuts | [MIT](./legal/third-party-license/LICENSE-HotKey.txt) |
 | [Lua](https://www.lua.org) 5.4 | Runs the config | [MIT](./legal/third-party-license/LICENSE-Lua.txt) |
-| [TOMLDecoder](https://github.com/dduan/TOMLDecoder) | TOML parsing | [MIT](./legal/third-party-license/LICENSE-TOMLDecoder.txt) |
 | [swift-collections](https://github.com/apple/swift-collections) | Collections | [Apache 2.0](./legal/third-party-license/LICENSE-swift-collections.txt) |
 | [ISSoundAdditions](https://github.com/InerziaSoft/ISSoundAdditions) | System volume (`volume` command) | [MIT](./legal/third-party-license/LICENSE-ISSoundAdditions.txt) |
 

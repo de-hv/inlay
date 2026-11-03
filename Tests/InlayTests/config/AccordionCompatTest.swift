@@ -84,21 +84,6 @@ extension InlayTests {
             assertEquals(result.config.modes[mainModeId]?.bindings.count, 3)
         }
 
-        /// The default config of AeroSpace (which uses 'accordionPadding' and 'layout accordion horizontal vertical')
-        /// must load without errors
-        @Test func testConfig_aerospaceDefaultConfigLoads() throws {
-            let url = projectRoot.appending(path: "docs/upstream-aerospace/config-examples/default-config.toml")
-            let result = parseConfig(camelCaseKeys(try String(contentsOf: url, encoding: .utf8)))
-            assertEquals(result.errors, [])
-            assertEquals(
-                result.strWarnings.sorted(),
-                [
-                    "[WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config",
-                    "[WARNING] mode.main.binding.alt-comma: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
-                ],
-            )
-        }
-
         @Test func testParseCommand() {
             testParseSingleCommandSucc(
                 "layout accordion",
@@ -176,22 +161,6 @@ extension InlayTests {
             assertEquals(root.layoutDescription, .v_tiles([.window(1), .window(2)]))
             await parseCommand("layout accordion horizontal vertical").cmdOrDie.run(.defaultEnv, .emptyStdin)
             assertEquals(root.layoutDescription, .h_tiles([.window(1), .window(2)]))
-        }
-
-        /// The TOML of AeroSpace with the keys of Inlay: 'accordion-padding' is 'accordionPadding'. The key bindings keep
-        /// their names
-        private func camelCaseKeys(_ toml: String) -> String {
-            func camelCase(_ text: Substring) -> String { String(text).replacing(/-([a-z])/) { $0.1.uppercased() } }
-            var isBindingTable = false
-            return toml.split(separator: "\n", omittingEmptySubsequences: false).map { line -> String in
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("[") {
-                    isBindingTable = trimmed.hasSuffix(".binding]")
-                    return camelCase(line)
-                }
-                guard !isBindingTable, !trimmed.hasPrefix("#"), let equals = line.firstIndex(of: "=") else { return String(line) }
-                return camelCase(line[..<equals]) + line[equals...]
-            }.joined(separator: "\n")
         }
     }
 }

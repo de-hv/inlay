@@ -21,14 +21,15 @@
 # It works whether Inlay is running or not. A running Inlay is quit first, and on quit it brings the windows
 # of the hidden workspaces back to the screen.
 #
-# Your config is ~/.config/inlay and ~/.inlay.toml. When it is removed:
+# Your config is ~/.config/inlay and ~/.inlay.lua (or ~/.inlay.toml, of Inlay 0.2). When it is removed:
 #   - a real file or folder is saved first in ~/inlay-config-<date>.tar.gz, and then deleted;
 #   - ~/.config/inlay is a symbolic link to a folder of yours (a dotfiles repo): only the link is removed.
-#     The folder it points to, and its inlay.toml, are never touched;
-#   - a symbolic link inside of a real ~/.config/inlay (an inlay.toml linked by a previous version): the link
+#     The folder it points to, and its files, are never touched;
+#   - a symbolic link inside of a real ~/.config/inlay (a config file linked by a previous version): the link
 #     goes with the folder, and the file it points to is never touched.
 # The config backups are the ones that 'install.sh' made outside of that folder (~/.config/inlay.backup-<date>,
-# ~/.inlay.toml.backup-<date>). A backup that is a symbolic link is removed the same way: only the link.
+# ~/.inlay.lua.backup-<date>, ~/.inlay.toml.backup-<date>). A backup that is a symbolic link is removed the same
+# way: only the link.
 #
 # The Accessibility entry is only removed when it is checked: 'tccutil reset Accessibility com.dehv.inlay'.
 # Never removed: the signing identity that 'install.sh' created (delete "Inlay Local Code Signing" in Keychain
@@ -100,7 +101,7 @@ LIST
 # Prints the config paths that exist, one per line
 config_paths() {
   local path
-  for path in "$(config_home)/inlay" "$HOME/.inlay.toml"; do
+  for path in "$(config_home)/inlay" "$HOME/.inlay.lua" "$HOME/.inlay.toml"; do
     if [ -e "$path" ] || [ -L "$path" ]; then
       printf '%s\n' "$path"
     fi
@@ -110,7 +111,7 @@ config_paths() {
 # Prints the config backups that 'install.sh' left outside of the config folder, one per line
 config_backups() {
   local path
-  for path in "$(config_home)/inlay.backup-"* "$HOME/.inlay.toml.backup-"*; do
+  for path in "$(config_home)/inlay.backup-"* "$HOME/.inlay.lua.backup-"* "$HOME/.inlay.toml.backup-"*; do
     if [ -e "$path" ] || [ -L "$path" ]; then
       printf '%s\n' "$path"
     fi
@@ -206,13 +207,15 @@ LIST
 
 # What a removed link points to: kept. One row per link
 rows_for_link_targets() {
-  local path
+  local path file
   while IFS= read -r path; do
     [ -n "$path" ] || continue
     if [ -L "$path" ]; then
       preview_row kept "$(pretty_path "$(readlink "$path")")" "what $(pretty_path "$path") points to"
-    elif [ -d "$path" ] && [ -L "$path/inlay.toml" ]; then
-      preview_row kept "$(pretty_path "$(readlink "$path/inlay.toml")")" "what $(pretty_path "$path")/inlay.toml points to"
+    elif [ -d "$path" ]; then
+      for file in "$path/inlay.lua" "$path/inlay.toml"; do
+        if [ -L "$file" ]; then preview_row kept "$(pretty_path "$(readlink "$file")")" "what $(pretty_path "$file") points to"; fi
+      done
     fi
   done <<LIST
 $1

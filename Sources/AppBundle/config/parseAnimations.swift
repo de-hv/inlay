@@ -100,7 +100,7 @@ private func parseStep(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: in
 /// name = [x1, y1, x2, y2]. X1 and X2 must be in 0 ... 1, so that the time only goes forward. Y1 and Y2 can overshoot
 private func parseCurves(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: AnimationCurve] {
     guard case .dict(let table) = raw else {
-        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace))
         return [:]
     }
     var result: [String: AnimationCurve] = [:]

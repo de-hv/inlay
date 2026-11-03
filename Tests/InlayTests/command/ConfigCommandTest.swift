@@ -19,17 +19,17 @@ extension InlayTests {
 
             assertEquals(
                 parseCommand("config").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink|--export)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink)",
             )
             // --keys/--json alone still trigger the mandatory-flag check first because they don't
             // contribute to the mandatory-flag set.
             assertEquals(
                 parseCommand("config --keys").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink|--export)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink)",
             )
             assertEquals(
                 parseCommand("config --json").errorOrNil,
-                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink|--export)",
+                "Mandatory flag is not specified (--get|--major-keys|--all-keys|--config-path|--explain|--use|--unlink)",
             )
             assertEquals(parseCommand("config --major-keys --keys").errorOrNil, "--keys flag requires --get flag")
             assertEquals(parseCommand("config --major-keys --json").errorOrNil, "--json flag requires --get flag")
@@ -44,10 +44,9 @@ extension InlayTests {
             // Changing the config
             assertNil(parseCommand("config --use /tmp/dotfiles/inlay").errorOrNil)
             assertNil(parseCommand("config --unlink").errorOrNil)
-            assertNil(parseCommand("config --export").errorOrNil)
             assertTrue(parseCommand("config --use").errorOrNil != nil)
-            assertTrue(parseCommand("config --unlink --export").errorOrNil?.hasPrefix("Conflicting flags are specified:") == true)
-            assertTrue(parseCommand("config --use a.toml --json").errorOrNil == "--json flag requires --get flag")
+            assertTrue(parseCommand("config --unlink --use /tmp/inlay").errorOrNil?.hasPrefix("Conflicting flags are specified:") == true)
+            assertTrue(parseCommand("config --use a.lua --json").errorOrNil == "--json flag requires --get flag")
         }
 
         @Test func testConfigPath() async {

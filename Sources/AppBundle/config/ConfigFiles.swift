@@ -44,7 +44,7 @@ enum AtomicFileWriter {
     }
 }
 
-/// What `inlay config --use`, `--unlink` and `--export` do with the files of the config. Inlay has no window to
+/// What `inlay config --use` and `--unlink` do with the files of the config. Inlay has no window to
 /// edit the config: the file is the only place where it is kept
 enum ConfigFiles {
     enum UseError: Error, Equatable {
@@ -55,7 +55,7 @@ enum ConfigFiles {
         case unreadable(String)
         /// The file has errors: it isn't used
         case invalidConfig([String])
-        /// A config folder would be a second config next to ~/.inlay.toml
+        /// A config folder would be a second config next to ~/.inlay.lua
         case dotfileConfig(URL)
         case alreadyInUse(URL)
         case notLinked
@@ -138,37 +138,6 @@ enum ConfigFiles {
             return .failure(.link(error))
         }
         return .success("\(ConfigFolderLink.configFolder.path.tildePath) is a folder again, with a copy of the .lua files of \(folder.path.tildePath)")
-    }
-
-    /// `--export`: the config in use, complete: its own text, with its comments, and every key of the shipped config
-    /// that it leaves out, with the value that applies, so that nothing is implicit. The key bindings and the window
-    /// rules are the user's own: none is added
-    @MainActor
-    static func exportText(_ text: String, shipped: String? = defaultConfigUrl.readText(), date: Date = .now) -> String {
-        var text = text
-        if let shipped, let root = try? TomlPatcher.decode(shipped) {
-            for (path, value) in scalars(root, table: []) {
-                guard case .absent = TomlPatcher.locate(text, path), TomlPatcher.decodedValue(text, path) == nil else { continue }
-                if let patched = try? TomlPatcher.set(text, path, value) { text = patched }
-            }
-        }
-        let header = "# Exported from \(inlayAppName) \(inlayAppVersion) on \(date.formatted(date: .abbreviated, time: .shortened)).\n" +
-            "# Your config with its comments, plus every key it left out, with the value that applies.\n\n"
-        return header + text
-    }
-
-    /// The keys of a decoded document that the patcher can write, in a stable order. Not the key bindings, the window
-    /// rules or the key mapping: they are the user's own
-    private static func scalars(_ table: [String: Any], table path: [String]) -> [(TomlKeyPath, TomlValue)] {
-        let skipped: Set = ["mode", "onWindowDetected", "keyMapping", "workspaceToMonitorForceAssignment"]
-        return table.keys.sorted().flatMap { key -> [(TomlKeyPath, TomlValue)] in
-            if path.isEmpty && skipped.contains(key) { return [] }
-            let value = table[key]
-            if let sub = value as? [String: Any] { return scalars(sub, table: path + [key]) }
-            let candidates: [TomlValue] = [.string(""), .bool(false), .int(0), .float(0), .strings([])]
-            guard let scalar = candidates.lazy.compactMap({ TomlValue(value, like: $0) }).first else { return [] }
-            return [(TomlKeyPath(path, key), scalar)]
-        }
     }
 }
 

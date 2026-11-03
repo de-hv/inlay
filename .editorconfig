@@ -5,9 +5,13 @@ root = true
 rulers = 1000
 max_line_length = 1000
 
-[*.toml]
-rulers = 96
-max_line_length = 96
+[*.lua]
+rulers = 120
+indent_style = space
+indent_size = 2
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
 
 [*.{swift,sh}]
 rulers = 120

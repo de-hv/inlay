@@ -42,7 +42,7 @@ extension InlayTests {
                 "startAtLogin": .bool(true),
                 "theme": .string("hypr"),
             ])
-            // The keys are sorted, like the ones of the TOML config
+            // The keys are sorted: the order of a Lua table is no order
             assertEquals(Array(config.table.keys), ["duration", "gaps", "persistentWorkspaces", "splitRatio", "startAtLogin", "theme"])
         }
 

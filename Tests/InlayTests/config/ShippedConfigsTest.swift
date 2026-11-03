@@ -10,12 +10,9 @@ extension InlayTests {
     @Suite @MainActor struct ShippedConfigsTest {
         init() { setUpWorkspacesForTests() }
 
-        /// A .lua file runs with the modules of its folder; any other file is TOML
+        /// The file runs with the modules of its folder
         private func parse(_ relativePath: String) throws -> (config: Config, errors: [String], warnings: [String]) {
-            let url = projectRoot.appending(path: relativePath)
-            let result = url.pathExtension == "lua"
-                ? parseConfig(LuaConfigLoader.load(file: url))
-                : parseConfig(try String(contentsOf: url, encoding: .utf8))
+            let result = parseConfig(LuaConfigLoader.load(file: projectRoot.appending(path: relativePath)))
             return (result.config, result.strErrors, result.strWarnings)
         }
 
@@ -138,26 +135,6 @@ extension InlayTests {
             let targets = config.onWindowDetected.flatMap { $0.run.flatten().filterIsInstance(of: MoveNodeToWorkspaceCommand.self) }
             assertEquals(targets.compactMap { $0.args.target.val.workspaceNameOrNil()?.raw }.contains("7"), false)
             assertEquals(config.workspaceToMonitorForceAssignment["7"], config.workspaceToMonitorForceAssignment["1"])
-        }
-
-        /// inlay.lua is the inlay.toml of Inlay 0.2, written in Lua: the same table, key by key and rule by rule.
-        /// The same for the design example
-        @Test(arguments: [("inlay.toml", "inlay.lua"), ("Tests/InlayTests/fixtures/inlay-example.toml", "Tests/InlayTests/fixtures/inlay-example.lua")])
-        func testLuaIsTheToml(tomlPath: String, luaPath: String) throws {
-            var errors: [ConfigParseDiagnostic] = []
-            let toml = tomlToJson(try String(contentsOf: projectRoot.appending(path: tomlPath), encoding: .utf8), &errors)
-            let lua = LuaConfigLoader.load(file: projectRoot.appending(path: luaPath))
-            assertEquals(errors, [])
-            assertEquals(lua.errors, [])
-            // {} of Lua is an empty table of keys, [] of TOML an empty array
-            func emptyIsEmpty(_ json: OrderedJson) -> OrderedJson {
-                switch json {
-                    case .array(let array): array.isEmpty ? .dict([:]) : .array(array.map(emptyIsEmpty))
-                    case .dict(let dict): .dict(dict.mapValues(emptyIsEmpty))
-                    default: json
-                }
-            }
-            assertEquals(emptyIsEmpty(.dict(lua.table)), emptyIsEmpty(.dict(toml)))
         }
 
         @Test func testI3LikeExample() throws {

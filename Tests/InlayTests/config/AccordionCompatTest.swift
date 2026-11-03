@@ -12,10 +12,8 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testConfig_defaultRootContainerLayout() {
-            let result = parseConfig(
-                """
-                configVersion = 2
-                defaultRootContainerLayout = 'accordion'
+            let result = parseConfig(lua: """
+                return { configVersion = 2, defaultRootContainerLayout = 'accordion' }
                 """,
             )
             assertEquals(result.errors, [])
@@ -26,16 +24,14 @@ extension InlayTests {
             )
 
             assertEquals(
-                parseConfig("defaultRootContainerLayout = 'accordeon'").strErrors,
+                parseConfig(lua: "return { defaultRootContainerLayout = 'accordeon' }").strErrors,
                 ["[ERROR] defaultRootContainerLayout: Can't parse layout 'accordeon'"],
             )
         }
 
         @Test func testConfig_accordionPadding() {
-            let result = parseConfig(
-                """
-                configVersion = 2
-                accordionPadding = 30
+            let result = parseConfig(lua: """
+                return { configVersion = 2, accordionPadding = 30 }
                 """,
             )
             assertEquals(result.errors, [])
@@ -45,25 +41,32 @@ extension InlayTests {
             )
 
             assertEquals(
-                parseConfig("accordionPadding = 'wide'").strErrors,
+                parseConfig(lua: "return { accordionPadding = 'wide' }").strErrors,
                 ["[ERROR] accordionPadding: Expected type is 'Int'. But actual type is 'String'"],
             )
         }
 
         @Test func testConfig_layoutCommands() {
-            let result = parseConfig(
-                """
-                configVersion = 2
-                afterStartupCommand = ['layout tiles', 'layout accordion']
-
-                [mode.main.binding]
-                    alt-a = 'layout accordion horizontal vertical'
-                    alt-b = ['layout h_accordion', 'mode main']
-                    alt-c = 'layout tiles horizontal vertical'
-
-                [[onWindowDetected]]
-                    match.appId = 'com.apple.finder'
-                    run = 'layout v_accordion'
+            let result = parseConfig(lua: """
+                return {
+                  configVersion = 2,
+                  afterStartupCommand = { 'layout tiles', 'layout accordion' },
+                  mode = {
+                    main = {
+                      binding = {
+                        ['alt-a'] = 'layout accordion horizontal vertical',
+                        ['alt-b'] = { 'layout h_accordion', 'mode main' },
+                        ['alt-c'] = 'layout tiles horizontal vertical',
+                      },
+                    },
+                  },
+                  onWindowDetected = {
+                    {
+                      match = { appId = 'com.apple.finder' },
+                      run = 'layout v_accordion',
+                    },
+                  },
+                }
                 """,
             )
             assertEquals(result.errors, [])

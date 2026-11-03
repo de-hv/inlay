@@ -6,7 +6,7 @@ import Testing
 
 extension InlayTests {
     /// The configs that ship with Inlay, and the commented example of the design documentation
-    /// (Tests/InlayTests/fixtures/inlay-example.toml), must load with the real parser without errors or warnings
+    /// (Tests/InlayTests/fixtures/inlay-example.lua), must load with the real parser without errors or warnings
     @Suite @MainActor struct ShippedConfigsTest {
         init() { setUpWorkspacesForTests() }
 
@@ -140,11 +140,13 @@ extension InlayTests {
             assertEquals(config.workspaceToMonitorForceAssignment["7"], config.workspaceToMonitorForceAssignment["1"])
         }
 
-        /// inlay.lua is the inlay.toml of Inlay 0.2, written in Lua: the same table, key by key and rule by rule
-        @Test func testBuiltInLuaIsTheBuiltInToml() throws {
+        /// inlay.lua is the inlay.toml of Inlay 0.2, written in Lua: the same table, key by key and rule by rule.
+        /// The same for the design example
+        @Test(arguments: [("inlay.toml", "inlay.lua"), ("Tests/InlayTests/fixtures/inlay-example.toml", "Tests/InlayTests/fixtures/inlay-example.lua")])
+        func testLuaIsTheToml(tomlPath: String, luaPath: String) throws {
             var errors: [ConfigParseDiagnostic] = []
-            let toml = tomlToJson(try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8), &errors)
-            let lua = LuaConfigLoader.load(file: projectRoot.appending(path: "inlay.lua"))
+            let toml = tomlToJson(try String(contentsOf: projectRoot.appending(path: tomlPath), encoding: .utf8), &errors)
+            let lua = LuaConfigLoader.load(file: projectRoot.appending(path: luaPath))
             assertEquals(errors, [])
             assertEquals(lua.errors, [])
             // {} of Lua is an empty table of keys, [] of TOML an empty array
@@ -165,7 +167,7 @@ extension InlayTests {
         }
 
         @Test func testDesignExample() throws {
-            let result = try parse("Tests/InlayTests/fixtures/inlay-example.toml")
+            let result = try parse("Tests/InlayTests/fixtures/inlay-example.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
             // The example spells out the defaults of every new table. Only the colors per mode are its own

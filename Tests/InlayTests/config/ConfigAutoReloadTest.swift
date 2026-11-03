@@ -210,14 +210,21 @@ extension InlayTests {
         // MARK: - Key bindings that macOS refuses
 
         @Test func testHotkeyRegistrationWarnings() {
-            let modes = parseConfig(
-                """
-                [mode.main.binding]
-                    cmd-alt-ctrl-left = 'focus left'
-                    alt-b = 'focus right'
-                    alt-a = 'focus up'
-                [mode.resize.binding]
-                    esc = 'mode main'
+            let modes = parseConfig(lua: """
+                return {
+                  mode = {
+                    main = {
+                      binding = {
+                        ['cmd-alt-ctrl-left'] = 'focus left',
+                        ['alt-b'] = 'focus right',
+                        ['alt-a'] = 'focus up',
+                      },
+                    },
+                    resize = {
+                      binding = { esc = 'mode main' },
+                    },
+                  },
+                }
                 """,
             ).config.modes
             assertEquals(hotkeyRegistrationWarnings(modes) { _ in true }, [])

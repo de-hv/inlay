@@ -19,20 +19,22 @@ extension InlayTests {
         }
 
         @Test func testInherit() {
-            let result1 = parseConfig("exec.inheritEnvVars = false")
+            let result1 = parseConfig(lua: "return { exec = { inheritEnvVars = false } }")
             assertEquals(result1.errors, [])
             assertEquals(result1.config.execConfig.envVariables, [:])
 
-            let result2 = parseConfig("exec.inheritEnvVars = true")
+            let result2 = parseConfig(lua: "return { exec = { inheritEnvVars = true } }")
             assertEquals(result2.errors, [])
             assertEquals(result2.config.execConfig.envVariables, testEnv)
         }
 
         @Test func testAddVars() {
-            let result = parseConfig(
-                """
-                [exec.envVars]
-                FOO = 'BAR'
+            let result = parseConfig(lua: """
+                return {
+                  exec = {
+                    envVars = { FOO = 'BAR' },
+                  },
+                }
                 """,
             )
             assertEquals(result.errors, [])
@@ -40,11 +42,12 @@ extension InlayTests {
         }
 
         @Test func testCyclicDep() {
-            let errors = parseConfig(
-                """
-                [exec.envVars]
-                FOO = '${BAR}'
-                BAR = '${FOO}'
+            let errors = parseConfig(lua: """
+                return {
+                  exec = {
+                    envVars = { FOO = '${BAR}', BAR = '${FOO}' },
+                  },
+                }
                 """,
             ).strErrors
             assertEquals(errors, [
@@ -54,10 +57,12 @@ extension InlayTests {
         }
 
         @Test func testForbidPwd() {
-            let errors = parseConfig(
-                """
-                [exec.envVars]
-                PWD = ''
+            let errors = parseConfig(lua: """
+                return {
+                  exec = {
+                    envVars = { PWD = '' },
+                  },
+                }
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] exec.envVars.PWD: Changing 'PWD' is not allowed"])

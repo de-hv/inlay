@@ -49,6 +49,23 @@ extension InlayTests {
             assertEquals(ConfigAutoReload.needsReload(loadedText: nil, currentText: nil), false)
         }
 
+        /// The config is inlay.lua and its modules: saving any of them reloads it
+        @Test func testNeedsReloadWithModules() {
+            let main = URL(filePath: "/config/inlay.lua")
+            let binds = URL(filePath: "/config/binds.lua")
+            let rules = URL(filePath: "/config/rules.lua")
+            let loaded = [LuaConfigFile(url: main, text: "main"), LuaConfigFile(url: binds, text: "binds"), LuaConfigFile(url: rules, text: nil)]
+            func needsReload(_ files: [URL: String]) -> Bool { ConfigAutoReload.needsReload(loaded: loaded, read: { files[$0] }) }
+
+            assertEquals(needsReload([main: "main", binds: "binds"]), false)
+            // A module was saved
+            assertEquals(needsReload([main: "main", binds: "binds, edited"]), true)
+            // The module that require couldn't find was created
+            assertEquals(needsReload([main: "main", binds: "binds", rules: "rules"]), true)
+            // A module is being saved: the next event tells when it is back
+            assertEquals(needsReload([main: "main"]), false)
+        }
+
         // MARK: - The watcher, with real files
 
         @Test func testWriteInPlace() async throws {

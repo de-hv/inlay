@@ -115,6 +115,9 @@ extension InlayTests {
             let missing = LuaConfigLoader.load(file: dir.appending(path: "inlay.lua"))
             assertEquals(missing.errors.count, 1)
             #expect(messages(missing)[0].hasPrefix("[ERROR] inlay.lua:1: require: there is no bindz.lua in "))
+            // Creating it must reload the config
+            assertEquals(missing.files.map { $0.url?.lastPathComponent }, ["inlay.lua", "bindz.lua"])
+            assertNil(missing.files.last?.text)
 
             try write("return { binds = require('../secret') }", "inlay.lua")
             assertEquals(messages(LuaConfigLoader.load(file: dir.appending(path: "inlay.lua"))),

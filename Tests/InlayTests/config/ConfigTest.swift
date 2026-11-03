@@ -5,8 +5,7 @@ import Testing
 extension InlayTests {
     @Suite @MainActor struct ConfigTest {
         @Test func testParseI3Config() {
-            let toml = try! String(contentsOf: projectRoot.appending(component: "docs/config-examples/i3-like-config-example.toml"), encoding: .utf8)
-            let result = parseConfig(toml)
+            let result = parseConfig(LuaConfigLoader.load(file: projectRoot.appending(component: "docs/config-examples/i3-like-config-example.lua")))
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
             assertEquals(result.config.execConfig, defaultConfig.execConfig)

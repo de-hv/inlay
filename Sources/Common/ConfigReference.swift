@@ -1,11 +1,13 @@
 import Foundation
 
-/// The reference of the config (docs/config-reference.toml, a copy of which is in the app bundle), split into the
+/// The reference of the config (docs/config-reference.lua, a copy of which is in the app bundle), split into the
 /// parts that document a key or a table. See: 'inlay config --explain'
 ///
-/// The file is a TOML file where the comment lines right above a key or a table header document it.
+/// The file is a Lua config that returns one table, written one key per line: `name = {` opens a table, a line
+/// with `}` closes it, a line with `{` alone is an item of an array (a rule of onWindowDetected), and
+/// `name = value,` is a key. The comment lines right above a key or a table document it.
 /// A key that can't be written with a value (a deprecated one) is documented by a block of comment lines
-/// whose last line is the key, commented out: `# accordionPadding = 30`
+/// whose last line is the key, commented out: `-- accordionPadding = 30`
 public struct ConfigReference: Sendable {
     public let text: String
     private let lines: [String]
@@ -17,8 +19,8 @@ public struct ConfigReference: Sendable {
         var path: String
         /// The lines of the part, with its comment
         var range: Range<Int>
-        /// The line of the header of the table that the key belongs to. nil for a table, and for a key of the root table
-        var headerLine: Int? = nil
+        /// The lines that open the tables that the part is in, outermost first
+        var headerLines: [Int] = []
     }
 
     public init(_ text: String) {
@@ -27,43 +29,48 @@ public struct ConfigReference: Sendable {
         var tables: [Part] = []
         var keys: [Part] = []
         var commentStart: Int? = nil // The first line of the block of comment lines that ends at the previous line
-        var table: (path: String, headerLine: Int)? = nil
-        var openKey: Int? = nil // The index, in 'keys', of the key whose value may continue on the current line
+        // The open tables: the path, the line that opens it, the index of its part in 'tables'. The table that the
+        // file returns has no path and no part
+        var open: [(path: String?, line: Int, part: Int?)] = []
 
-        func closeTable(at end: Int) {
-            if let last = tables.indices.last { tables[last].range = tables[last].range.lowerBound ..< end }
+        func qualified(_ key: String) -> String {
+            guard let table = open.last?.path else { return key }
+            return table + "." + key
         }
-        func closeKey(at end: Int) {
-            if let openKey { keys[openKey].range = keys[openKey].range.lowerBound ..< end }
-            openKey = nil
-        }
-        func qualified(_ key: String) -> String { table.map { $0.path + "." + key } ?? key }
+        var headerLines: [Int] { open.filter { $0.path != nil }.map(\.line) }
 
         for (index, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty {
-                closeKey(at: index)
                 if let start = commentStart, let key = commentedOutKey(lines[index - 1]) {
-                    keys.append(Part(path: qualified(key), range: start ..< index, headerLine: table?.headerLine))
+                    keys.append(Part(path: qualified(key), range: start ..< index, headerLines: headerLines))
                 }
                 commentStart = nil
-            } else if trimmed.hasPrefix("#") {
-                closeKey(at: index)
+            } else if trimmed.hasPrefix("--") {
                 commentStart = commentStart ?? index
-            } else if let path = tableHeader(trimmed) {
-                closeKey(at: index)
-                let start = commentStart ?? index
-                closeTable(at: start)
-                tables.append(Part(path: path, range: start ..< lines.count))
-                table = (path, index)
+            } else if trimmed == "return {" {
+                open.append((nil, index, nil))
+                commentStart = nil
+            } else if trimmed == "{" { // An item of the array: a part of the array, like a table of it
+                let path = open.last?.path ?? ""
+                tables.append(Part(path: path, range: (commentStart ?? index) ..< lines.count, headerLines: headerLines))
+                open.append((path, index, tables.count - 1))
+                commentStart = nil
+            } else if trimmed.hasSuffix("{"), let key = assignedKey(trimmed) {
+                let path = qualified(key)
+                tables.append(Part(path: path, range: (commentStart ?? index) ..< lines.count, headerLines: headerLines))
+                open.append((path, index, tables.count - 1))
+                commentStart = nil
+            } else if trimmed.hasPrefix("}") {
+                // A key commented out at the end of the table
+                if let start = commentStart, let key = commentedOutKey(lines[index - 1]) {
+                    keys.append(Part(path: qualified(key), range: start ..< index, headerLines: headerLines))
+                }
+                if let part = open.popLast()?.part { tables[part].range = tables[part].range.lowerBound ..< index + 1 }
                 commentStart = nil
             } else if let key = assignedKey(trimmed) {
-                closeKey(at: index)
-                keys.append(Part(path: qualified(key), range: (commentStart ?? index) ..< index + 1, headerLine: table?.headerLine))
-                openKey = keys.count - 1
+                keys.append(Part(path: qualified(key), range: (commentStart ?? index) ..< index + 1, headerLines: headerLines))
                 commentStart = nil
-            } else if let openKey { // A value that takes several lines
-                keys[openKey].range = keys[openKey].range.lowerBound ..< index + 1
             }
         }
         self.lines = lines
@@ -83,21 +90,24 @@ public struct ConfigReference: Sendable {
         let path = key.split(separator: ".").joined(separator: ".") // '.borders.' is 'borders'
         func covers(_ part: Part) -> Bool { part.path == path || part.path.hasPrefix(path + ".") }
 
+        // A table that is in another one that matches is already in it
         let matchedTables = tables.filter(covers)
-        if !matchedTables.isEmpty {
-            return .success(matchedTables.map { render($0.range) }.joined(separator: "\n\n"))
+        let outermost = matchedTables.filter { table in
+            !matchedTables.contains { $0.range != table.range && $0.range.contains(table.range.lowerBound) && $0.range.contains(table.range.upperBound - 1) }
+        }
+        if !outermost.isEmpty {
+            return .success(outermost.map { render($0.headerLines, $0.range) }.joined(separator: "\n\n"))
         }
         let matchedKeys = keys.filter(covers)
         if !matchedKeys.isEmpty {
             var result: [String] = []
-            var lastHeader: Int? = nil
+            var lastHeaders: [Int]? = nil
             for part in matchedKeys {
-                // The header of the table, once, so that it is clear where the key goes
-                if let header = part.headerLine, header != lastHeader { result.append(lines[header]) }
-                lastHeader = part.headerLine
-                result.append(render(part.range))
+                // The tables that the key is in, once, so that it is clear where the key goes
+                result.append(render(part.headerLines == lastHeaders ? [] : part.headerLines, part.range))
+                lastHeaders = part.headerLines
             }
-            return .success(result.joined(separator: "\n\n"))
+            return .success(dedented(result.joined(separator: "\n\n")))
         }
         let similar = documentedKeys.filter { $0.contains(path) }
         let hint = similar.isEmpty
@@ -106,10 +116,23 @@ public struct ConfigReference: Sendable {
         return .failure("The config reference has no key or table '\(path)'. \(hint)")
     }
 
-    private func render(_ range: Range<Int>) -> String {
+    /// The lines of the part, after the lines that open the tables it is in, and a blank line
+    private func render(_ headerLines: [Int], _ range: Range<Int>) -> String {
         var slice = lines[range]
         while slice.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { slice.removeLast() }
-        return slice.joined(separator: "\n")
+        let headers = headerLines.map { lines[$0] }
+        return dedented((headers.isEmpty ? [] : headers + [""]) + slice)
+    }
+
+    /// The lines without the indentation that they all have
+    private func dedented(_ text: String) -> String {
+        dedented(text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init))
+    }
+
+    private func dedented(_ lines: [String]) -> String {
+        let indentation = lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { $0.prefix { $0 == " " }.count }.min() ?? 0
+        return lines.map { String($0.dropFirst(min(indentation, $0.prefix { $0 == " " }.count))) }.joined(separator: "\n")
     }
 
     /// The reference that ships with Inlay
@@ -120,7 +143,7 @@ public struct ConfigReference: Sendable {
         return .success(ConfigReference(text))
     }
 
-    private static let fileName = "config-reference.toml"
+    private static let fileName = "config-reference.lua"
 }
 
 /// A file that ships with Inlay, for the app and for the CLI.
@@ -159,30 +182,23 @@ public func appBundle(ofExecutable executable: String = CommandLine.arguments[0]
     return nil
 }
 
-/// 'borders' for '[borders]', 'onWindowDetected' for '[[onWindowDetected]]'
-private func tableHeader(_ trimmedLine: String) -> String? {
-    guard trimmedLine.hasPrefix("["), let end = trimmedLine.firstIndex(of: "]") else { return nil }
-    let name = trimmedLine[trimmedLine.startIndex ..< end].drop { $0 == "[" }
-    return name.isEmpty ? nil : normalizedKey(String(name))
-}
-
-/// 'inner.horizontal' for 'inner.horizontal = 0'
+/// 'inner' for 'inner = {', 'horizontal' for 'horizontal = 0,', 'alt-h' for "['alt-h'] = 'focus left',"
 private func assignedKey(_ trimmedLine: String) -> String? {
     guard let equals = trimmedLine.firstIndex(of: "="), let first = trimmedLine.first else { return nil }
     let key = trimmedLine[trimmedLine.startIndex ..< equals].trimmingCharacters(in: .whitespaces)
-    let isKeyCharacter: (Character) -> Bool = { $0.isLetter || $0.isNumber || "-_.'\"".contains($0) }
+    let isKeyCharacter: (Character) -> Bool = { $0.isLetter || $0.isNumber || "-_.'\"[]".contains($0) }
     return !key.isEmpty && isKeyCharacter(first) && key.allSatisfy(isKeyCharacter) ? normalizedKey(key) : nil
 }
 
-/// 'accordionPadding' for '# accordionPadding = 30'
+/// 'accordionPadding' for '-- accordionPadding = 30'
 private func commentedOutKey(_ line: String) -> String? {
     let trimmed = line.trimmingCharacters(in: .whitespaces)
-    guard trimmed.hasPrefix("# ") else { return nil }
-    let content = String(trimmed.dropFirst(2))
+    guard trimmed.hasPrefix("-- ") else { return nil }
+    let content = String(trimmed.dropFirst(3))
     guard content.first?.isLowercase == true, let key = assignedKey(content) else { return nil }
     return key.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "." } ? key : nil
 }
 
 private func normalizedKey(_ key: String) -> String {
-    key.filter { $0 != "'" && $0 != "\"" && $0 != " " }
+    key.filter { !"'\"[] ".contains($0) }
 }

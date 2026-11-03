@@ -161,7 +161,7 @@ extension InlayTests {
         }
 
         @Test func testI3LikeExample() throws {
-            let result = try parse("docs/config-examples/i3-like-config-example.toml")
+            let result = try parse("docs/config-examples/i3-like-config-example.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
         }

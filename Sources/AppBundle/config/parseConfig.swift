@@ -125,7 +125,7 @@ let persistentWorkspacesKey = "persistentWorkspaces"
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
 // 2. Prefer commands and commands flags over toml options if possible
-// 3. Document it in docs/config-reference.toml. ConfigReferenceTest fails until every key of the parser tables is there
+// 3. Document it in docs/config-reference.lua. ConfigReferenceTest fails until every key of the parser tables is there
 let configParser: [String: any ParserProtocol<Config>] = [
     configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
 

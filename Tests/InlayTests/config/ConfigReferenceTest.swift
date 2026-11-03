@@ -4,12 +4,12 @@ import Foundation
 import Testing
 
 extension InlayTests {
-    /// docs/config-reference.toml documents every key of the config, and 'inlay config --explain' prints its parts
+    /// docs/config-reference.lua documents every key of the config, and 'inlay config --explain' prints its parts
     @Suite @MainActor struct ConfigReferenceTest {
         init() { setUpWorkspacesForTests() }
 
         private var reference: ConfigReference {
-            get throws { ConfigReference(try String(contentsOf: projectRoot.appending(path: "docs/config-reference.toml"), encoding: .utf8)) }
+            get throws { ConfigReference(try String(contentsOf: projectRoot.appending(path: "docs/config-reference.lua"), encoding: .utf8)) }
         }
 
         /// The tables of the parser, by the path of the table in the config. "" is the root table
@@ -55,7 +55,7 @@ extension InlayTests {
         }
 
         @Test func testTheReferenceIsAValidConfig() throws {
-            let result = parseConfig(try reference.text)
+            let result = parseConfig(lua: try reference.text)
             assertEquals(result.strErrors, [])
             assertEquals(result.strWarnings, [])
             // The values that it spells out are the defaults of the code
@@ -90,10 +90,10 @@ extension InlayTests {
         /// The test above is only as good as the list of tables of this file
         @Test func testAnUndocumentedKeyIsFound() throws {
             let text = try reference.text
-            let withoutWidth = ConfigReference(text.replacing("\n    width = 4\n", with: "\n"))
+            let withoutWidth = ConfigReference(text.replacing("\n    width = 4,\n", with: "\n"))
             assertEquals(withoutWidth.documentedKeys.contains("borders.width"), false)
             assertEquals(try reference.documentedKeys.contains("borders.width"), true)
-            let withTypo = ConfigReference(text.replacing("\n    width = 4\n", with: "\n    widht = 4\n"))
+            let withTypo = ConfigReference(text.replacing("\n    width = 4,\n", with: "\n    widht = 4,\n"))
             assertEquals(withTypo.documentedKeys.contains("borders.widht"), true)
             assertEquals(acceptedKeys.contains("borders.widht"), false)
         }
@@ -120,58 +120,58 @@ extension InlayTests {
             assertEquals(
                 try reference.explain("borders.width").get(),
                 """
-                [borders]
+                borders = {
 
-                    # The thickness of the border, in points. The border is drawn outside of the frame of the window:
-                    # it never covers the content of the window, it takes a part of the gap. See [gaps]
-                    # Possible values: 1 ... 20
-                    # Fallback value (if you omit the key): width = 4
-                    width = 4
+                  -- The thickness of the border, in points. The border is drawn outside of the frame of the window:
+                  -- it never covers the content of the window, it takes a part of the gap. See 'gaps'
+                  -- Possible values: 1 ... 20
+                  -- Fallback value (if you omit the key): width = 4
+                  width = 4,
                 """,
             )
             // A key of the root table has no header
             assertEquals(
                 try reference.explain("startAtLogin").get(),
                 """
-                # Start Inlay at login. Inlay adds itself to the login items of macOS, or removes itself from them,
-                # every time the config is loaded
-                # Possible values: true|false
-                # Fallback value (if you omit the key): startAtLogin = false
-                startAtLogin = false
+                -- Start Inlay at login. Inlay adds itself to the login items of macOS, or removes itself from them,
+                -- every time the config is loaded
+                -- Possible values: true|false
+                -- Fallback value (if you omit the key): startAtLogin = false
+                startAtLogin = false,
                 """,
             )
             // A key that is only documented, commented out
             let accordion = try reference.explain("accordionPadding").get()
-            assertEquals(accordion.hasPrefix("# Not a key of Inlay: it has no accordion layout."), true)
-            assertEquals(accordion.hasSuffix("# accordionPadding = 30"), true)
+            assertEquals(accordion.hasPrefix("-- Not a key of Inlay: it has no accordion layout."), true)
+            assertEquals(accordion.hasSuffix("-- accordionPadding = 30"), true)
         }
 
         @Test func testExplainTable() throws {
             let tiling = try reference.explain("tiling").get()
-            assertEquals(tiling.hasPrefix("# Where the tiling windows are placed\n[tiling]\n"), true)
-            assertEquals(tiling.hasSuffix("    minWindowSize = 100"), true)
-            assertEquals(tiling.contains("[menuBar]"), false)
+            assertEquals(tiling.hasPrefix("-- Where the tiling windows are placed\ntiling = {\n"), true)
+            assertEquals(tiling.hasSuffix("  minWindowSize = 100,\n},"), true)
+            assertEquals(tiling.contains("menuBar"), false)
 
             // A table with its subtables
             let menuBar = try reference.explain("menuBar").get()
-            assertEquals(menuBar.contains("[menuBar]\n"), true)
-            assertEquals(menuBar.contains("[menuBar.colors]\n"), true)
-            assertEquals(menuBar.hasSuffix("        empty = 'auto'"), true)
+            assertEquals(menuBar.contains("menuBar = {\n"), true)
+            assertEquals(menuBar.contains("  colors = {\n"), true)
+            assertEquals(menuBar.contains("    empty = 'auto',"), true)
 
-            // Dotted keys inside a table, and a prefix of them
+            // A table inside a table, after the line that opens the outer one
             let gaps = try reference.explain("gaps").get()
-            assertEquals(gaps.contains("inner.horizontal = 0") && gaps.contains("outer.right = 0"), true)
+            assertEquals(gaps.contains("horizontal = 0,") && gaps.contains("right = 0,"), true)
             let inner = try reference.explain("gaps.inner").get()
-            assertEquals(inner.hasPrefix("[gaps]\n"), true)
-            assertEquals(inner.contains("inner.horizontal = 0") && inner.contains("inner.vertical = 0"), true)
+            assertEquals(inner.hasPrefix("gaps = {\n\n  inner = {\n"), true)
+            assertEquals(inner.contains("horizontal = 0,") && inner.contains("vertical = 0,"), true)
             assertEquals(inner.contains("outer"), false)
 
             // Every table of a group, and every rule
             let modes = try reference.explain("mode").get()
-            assertEquals(modes.contains("[mode.main.binding]") && modes.contains("[mode.service.binding]"), true)
+            assertEquals(modes.contains("  main = {") && modes.contains("  service = {"), true)
             let rules = try reference.explain("onWindowDetected").get()
-            assertEquals(rules.split(separator: "\n").filter { $0 == "[[onWindowDetected]]" }.count, 3)
-            assertEquals(try reference.explain("onWindowDetected.match.appId").get().hasPrefix("[[onWindowDetected]]\n"), true)
+            assertEquals(rules.split(separator: "\n").filter { $0 == "  {" }.count, 3)
+            assertEquals(try reference.explain("onWindowDetected.match.appId").get().hasPrefix("onWindowDetected = {\n  {\n    match = {\n"), true)
             assertEquals(try reference.explain(".borders.").get(), try reference.explain("borders").get())
         }
 

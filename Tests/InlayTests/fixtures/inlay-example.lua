@@ -5,8 +5,8 @@ return {
   -- Ubicación: ~/.config/inlay/inlay.lua   (o ~/.inlay.lua; si existen los dos,
   -- Inlay avisa de la ambigüedad y no carga ninguno).
   --
-  -- El esquema es el de AeroSpace más tres tablas nuevas: [tiling], [menuBar] y
-  -- [borders]. Un aerospace.toml existente se puede copiar aquí tal cual:
+  -- El esquema es el de AeroSpace, con las claves en camelCase, más tres tablas
+  -- nuevas: tiling, menuBar y borders:
   --   · todo lo de AeroSpace sigue significando lo mismo;
   --   · 'accordion' ya no existe: donde aparezca se acepta con un aviso y se
   --     trata como 'tiles' (ver el final de este fichero);

@@ -9,7 +9,7 @@ struct Mode: ConvenienceMutable, Equatable, Sendable {
 
 func parseModes(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext, _ mapping: [String: Key]) -> [String: Mode] {
     guard let rawTable = raw.asDictOrNil else {
-        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace)]
+        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace)]
         return [:]
     }
     var result: [String: Mode] = [:]
@@ -24,7 +24,7 @@ func parseModes(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout Con
 
 func parseMode(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext, _ mapping: [String: Key]) -> Mode {
     guard let rawTable: OrderedJson.JsonDict = raw.asDictOrNil else {
-        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace)]
+        c.errors += [expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace)]
         return .zero
     }
 

@@ -44,7 +44,7 @@ private func parseMinWindowSize(_ raw: OrderedJson, _ backtrace: ConfigBacktrace
 private func parseSplitRatio(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<CGFloat> {
     let range = TilingConfig.splitRatioRange
     return raw.asDoubleOrNil
-        .toResult(expectedActualTypeDiagnostic(expected: .float, actual: raw.tomlType, backtrace))
+        .toResult(expectedActualTypeDiagnostic(expected: .float, actual: raw.valueType, backtrace))
         .map { CGFloat($0) }
         .filter(.init(backtrace, "splitRatio must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
 }

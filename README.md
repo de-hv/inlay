@@ -83,7 +83,7 @@ the `inlay` CLI in the `bin` folder of Homebrew. Nothing is built, so the Comman
 - **The first time, macOS blocks it**: the app is not notarized by Apple. Click *Done* (not *Move to Trash*),
   then *System Settings → Privacy & Security → Open Anyway*. Or remove the quarantine:
   `xattr -dr com.apple.quarantine /Applications/Inlay.app`. Each upgrade brings a new download, blocked again.
-- **The config**: without one, Inlay creates `~/.config/inlay/inlay.toml` with the built-in config when it
+- **The config**: without one, Inlay creates `~/.config/inlay/inlay.lua` with the built-in config when it
   starts. To use a folder of your own instead: `inlay config --use ~/.dotfiles/inlay` (see
   [Changing the config from the CLI](#changing-the-config-from-the-cli)).
 - **Start at login**: open Inlay once (`open -a Inlay`). With `startAtLogin = true` in the config (the built-in
@@ -127,7 +127,7 @@ Nothing in the list wraps, also in a narrow terminal, and what you type while it
    that output, without the progress lines. `--verbose` shows everything as it comes, as does a pipe or a log;
 2. installs it in `/Applications` (or in `~/Applications` if there are no permissions);
 3. links the `inlay` CLI in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`;
-4. creates `~/.config/inlay/inlay.toml` as a copy of the [`inlay.toml`](./inlay.toml) of the repo, **if you
+4. creates `~/.config/inlay/inlay.lua` as a copy of the [`inlay.lua`](./inlay.lua) of the repo, **if you
    have no Inlay config yet**. A config that already exists is yours: see
    [A config that you already have](#a-config-that-you-already-have). Then it **asks, every time, where your
    config should live**: where it is (the first option, what Enter picks) or in a folder of your own through a
@@ -146,22 +146,17 @@ It can be run as many times as needed: it updates what is installed, quitting th
 
 | Option | Effect |
 |---|---|
-| `--reset-config` | Replaces your config by the `inlay.toml` of the repo, whatever is in it, and keeps yours next to it as `inlay.toml.backup-<date>`. See [A config that you already have](#a-config-that-you-already-have) |
+| `--reset-config` | Replaces your config by the `inlay.lua` of the repo, whatever is in it, and keeps yours next to it as `<file>.backup-<date>`. See [A config that you already have](#a-config-that-you-already-have) |
 | `--config-link FOLDER` | Links `~/.config/inlay` to `FOLDER` instead of asking, with the rules of [Your own config folder](#your-own-config-folder). Also on a reinstall |
 | `-y`, `--yes` | Does not ask before starting. The questions about the config are still asked |
 | `--no-prompt` | Asks nothing and keeps the config as it is |
-| `--import-aerospace` | If you have no Inlay config, start from your `~/.aerospace.toml` instead of `inlay.toml` |
 | `--no-open` | Does not open Inlay when done |
 | `--adhoc-signing` | Ad hoc signature instead of the local identity (see [Signing](#signing)) |
 | `--verbose` | Shows the output of the build as it comes, instead of the line that says how far it is |
 | `INSTALL_DIR=…` | Folder where the app is installed |
 | `INLAY_BIN_DIR=…` | Folder where the CLI is linked |
 
-With `--import-aerospace` your `aerospace.toml` is copied as is (if it is a symbolic link, the file it points to
-is copied and the original is not touched). Check three things in the copy: `startAtLogin = true` would make
-Inlay add itself to the login items the first time it starts; the key bindings or scripts that call the
-`aerospace` CLI keep talking to AeroSpace and must call `inlay`; and with `gaps` of 8 or less the borders of
-two neighboring windows touch.
+`--import-aerospace` is gone since Inlay 0.3: the config is Lua, and an `aerospace.toml` can't be read.
 
 ### Your own config folder
 
@@ -170,70 +165,76 @@ config:
 
 ```
   Configure  0/2
-    ? Config        ~/.config/inlay/inlay.toml · yours, 3 settings missing
-      › Keep it                    yours, 3 settings missing
-        Use the repo's inlay.toml  yours is kept as a backup
-        Use ~/.dotfiles/inlay      has inlay.toml
-        Another folder...          type its path
-      ↑↓ · Enter · d shows what's missing
+    ? Config        ~/.config/inlay/inlay.lua · yours
+      › Keep it                   yours
+        Use the repo's inlay.lua  yours is kept as a backup
+        Use ~/.dotfiles/inlay     has inlay.lua
+        Another folder...         type its path
+      ↑↓ · Enter · d shows the diff with the repo's
 ```
 
 Move with the arrows (or `j`/`k`, or the number of an option) and press Enter; Enter alone keeps what you have.
 The menu gives way to the answer: the line of the config says what was picked.
 The list has the folders of a dotfiles repo that it finds; "Another folder..." asks for a path (`~` is
 expanded, and Tab completes it). The folder you pick becomes the target of **a symbolic link,
-`~/.config/inlay`**. Inlay reads and writes the `inlay.toml` in it; nothing else in the folder is touched. A
+`~/.config/inlay`**. Inlay reads the `inlay.lua` in it, and the files of the folder that it requires; nothing in
+the folder is written. A
 typed path that doesn't work (a typo, a file, a folder you don't want to fill) is asked again, and Enter with
 nothing keeps your config as it is. In a terminal the output has colors and the list is a menu; with
 `NO_COLOR` set it is a numbered list, and in a pipe or a log it is plain text.
 
 | What it finds | What it does |
 |---|---|
-| A typed folder does not exist | Says so, suggests a folder of the list with the same name if there is one, and asks again. With `--config-link`, links nothing: your config stays as it is (on a new install, the copy of `inlay.toml` in `~/.config/inlay/`) |
-| A folder of the list has no `inlay.toml` | The list says so, and picking it copies the `inlay.toml` of the repo into it |
-| A typed folder has no `inlay.toml` | Warns and asks `Copy the inlay.toml of the repo into <folder>? [y/N]`. With no, nothing is copied and it asks for another folder (with `--config-link`, nothing is linked) |
+| A typed folder does not exist | Says so, suggests a folder of the list with the same name if there is one, and asks again. With `--config-link`, links nothing: your config stays as it is (on a new install, the copy of `inlay.lua` in `~/.config/inlay/`) |
+| A folder of the list has no `inlay.lua` | The list says so, and picking it copies the `inlay.lua` of the repo into it. Also when it has the `inlay.toml` of Inlay 0.2, which stays next to it |
+| A typed folder has no `inlay.lua` | Warns and asks `Copy the repo's into it? [Y/n]`. With no, nothing is copied and it asks for another folder (with `--config-link`, nothing is linked) |
 | You had a real `~/.config/inlay` | It is not deleted: it is renamed to `~/.config/inlay.backup-<date>`, and the script says so |
 | `~/.config/inlay` is already a link | The first option is `Keep the link`, and says where it points. Linking another folder replaces only the link: the folder it pointed to is not touched |
-| Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | It keeps working and Enter leaves it alone. The folder that holds your file is in the list, and picking it makes the old `~/.config/inlay` the backup |
-| Your config is `~/.inlay.toml` | The question is skipped: Inlay reads one file or the other, never both |
+| Only the file is linked (`~/.config/inlay/inlay.toml -> your file`, the way a previous version did it) | Enter leaves it alone. The folder that holds your file is in the list, and picking it makes the old `~/.config/inlay` the backup |
+| Your config is `~/.inlay.lua` | The question is skipped: Inlay reads one file or the other, never both |
 
-`--config-link FOLDER` does the same without asking (a folder without `inlay.toml` is only filled in when
+`--config-link FOLDER` does the same without asking (a folder without `inlay.lua` is only filled in when
 there is a terminal to ask on), and `--no-prompt` skips the question. To stop using your folder, remove the
 link (`rm ~/.config/inlay`) and run `./install.sh` again.
 
 ### A config that you already have
 
 `install.sh` never edits or deletes a config, and it replaces one only in two cases, always keeping the old
-one next to the new one as `inlay.toml.backup-<date>` (`inlay.toml.backup-20261012-153000`):
+one next to the new one as `<file>.backup-<date>` (`inlay.lua.backup-20261012-153000`):
 
 - **It is a default config of a previous version of Inlay, exactly as it was installed.** The script
   compares it, byte for byte (SHA-256), with every default config that Inlay has shipped
   ([`scripts/default-config-hashes.txt`](./scripts/default-config-hashes.txt)). If it is one of them, nobody
-  has edited it, so it is replaced by the current `inlay.toml` and the script says so. This is what updates a
+  has edited it, so it is replaced by the current `inlay.lua` and the script says so. This is what updates a
   Mac that was installed when the default config was still the one of AeroSpace: `alt-…` key bindings and
   no rule that sends a window to a workspace, so every window stayed in the workspace on the screen.
-- **You pass `--reset-config`**, or answer `Use the repo's inlay.toml` to the question about what your config
-  lacks. Whatever the config is, it is replaced by the `inlay.toml` of the repo.
+- **You pass `--reset-config`**, or answer `Use the repo's inlay.lua` to the question. Whatever the config
+  is, it is replaced by the `inlay.lua` of the repo.
 
-Any other config is **kept as it is**, and its line says **how many settings of the `inlay.toml` of the repo
-it doesn't have**. A key binding counts as present when your config has its command under another key. It also
-tells if the config has no `onWindowDetected` rule. When something is missing and there is a terminal, the
-menu of the question has `Use the repo's inlay.toml` (yours is kept as `inlay.toml.backup-<date>`), and `d`
-shows the missing settings with their table (`+ [borders]  glow = false`) and the whole diff, in `less`. A
-config in a linked folder can only be kept: edit it in your folder. Without a
-terminal it prints the two commands that matter: `./install.sh --reset-config` and a `diff`.
+Any other config is **kept as it is**, and its line says whether it is the one of the repo (`up to date`) or
+`yours`. It also tells if the config has no `onWindowDetected` rule (in `inlay.lua` or a file next to it).
+When there is a terminal, the menu of the question has `Use the repo's inlay.lua` (yours is kept as a
+backup), and `d` shows the diff with the one of the repo, in `less`. A config in a linked folder can only be
+kept: edit it in your folder. Without a terminal it prints the two commands that matter:
+`./install.sh --reset-config` and a `diff`.
+
+**The `inlay.toml` of Inlay 0.2** isn't read by Inlay 0.3. A default one that nobody edited is replaced by the
+`inlay.lua` of the repo, like any old default config (it is kept as `inlay.toml.backup-<date>`). Any other one
+stays where it is, its line says `Inlay 0.2, not read`, and Inlay uses its built-in config until there is an
+`inlay.lua`: write your config in Lua, starting from the one of the repo. The menu of the question can put the
+`inlay.lua` of the repo in its place (yours is kept as a backup); in a linked folder, copy it there yourself.
 
 A config that is reached through a **symbolic link** (a linked folder, or a linked file) is always taken for
 your own, whatever is in it: it is never replaced on its own. `--reset-config` never writes, moves or deletes
 what a link points to either:
 
 - with a **linked folder**, the link itself is renamed to `~/.config/inlay.backup-<date>` (it still points to
-  your folder) and `~/.config/inlay` becomes a real folder with the `inlay.toml` of the repo. The script prints
+  your folder) and `~/.config/inlay` becomes a real folder with the `inlay.lua` of the repo. The script prints
   the command that links your folder again;
-- with a **linked file**, the link is renamed to `inlay.toml.backup-<date>`, still pointing to your file.
+- with a **linked file**, the link is renamed to `inlay.lua.backup-<date>`, still pointing to your file.
 
-To go back to a backup: `mv ~/.config/inlay/inlay.toml.backup-<date> ~/.config/inlay/inlay.toml`.
-After changing `inlay.toml` in the repo, `scripts/update-default-config-hashes.sh` adds it to the list (a test
+To go back to a backup: `mv ~/.config/inlay/inlay.lua.backup-<date> ~/.config/inlay/inlay.lua`.
+After changing `inlay.lua` in the repo, `scripts/update-default-config-hashes.sh` adds it to the list (a test
 fails until it is there).
 
 ### Before opening Inlay
@@ -1093,16 +1094,17 @@ itself at the end.
 It removes the app that the `inlay` you ran belongs to, and the copies in `/Applications` and in
 `~/Applications`; with `INSTALL_DIR=…` it looks in that folder instead of those two.
 
-Your config is `~/.config/inlay` and `~/.inlay.toml`. When it is removed:
+Your config is `~/.config/inlay` and `~/.inlay.lua` (or the `~/.inlay.toml` of Inlay 0.2). When it is removed:
 
 - a real folder or file is **saved first in `~/inlay-config-<date>.tar.gz`**, and then deleted;
 - `~/.config/inlay` is a **symbolic link** to a folder of yours: **only the link is removed**. The folder it
-  points to and its `inlay.toml` are never touched, and the list names that folder as kept;
-- a link inside of a real `~/.config/inlay` (an `inlay.toml` linked by a previous version) goes with the
+  points to and its files are never touched, and the list names that folder as kept;
+- a link inside of a real `~/.config/inlay` (a config file linked by a previous version) goes with the
   folder; the file it points to is never touched.
 
 The config backups are the ones that `install.sh` made outside of the config folder
-(`~/.config/inlay.backup-<date>`, `~/.inlay.toml.backup-<date>`; a backup that is a link is removed as a link).
+(`~/.config/inlay.backup-<date>`, `~/.inlay.lua.backup-<date>`, `~/.inlay.toml.backup-<date>`; a backup that is
+a link is removed as a link).
 
 `./uninstall.sh` in the repo does the same (it is the same script, with the same options), for when the CLI
 is not at hand.

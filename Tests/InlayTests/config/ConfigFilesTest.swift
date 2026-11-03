@@ -26,17 +26,17 @@ extension InlayTests {
         // MARK: - AtomicFileWriter
 
         @Test func testWriteNewFileAndDirectories() throws {
-            let file = directory.appending(path: "a/b/inlay.toml")
+            let file = directory.appending(path: "a/b/inlay.lua")
             try AtomicFileWriter.write("x = 1\n", to: file)
             assertEquals(read(file), "x = 1\n")
             try AtomicFileWriter.write("x = 2\n", to: file)
             assertEquals(read(file), "x = 2\n")
             // No temporary files are left behind
-            assertEquals(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path), ["inlay.toml"])
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path), ["inlay.lua"])
         }
 
         @Test func testWriteKeepsPermissions() throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             try AtomicFileWriter.write("x = 1\n", to: file)
             try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
             try AtomicFileWriter.write("x = 2\n", to: file)
@@ -48,9 +48,9 @@ extension InlayTests {
             // The config is a link to a file of a dotfiles repo
             let dotfiles = directory.appending(path: "dotfiles")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
-            let real = dotfiles.appending(path: "inlay.toml")
+            let real = dotfiles.appending(path: "inlay.lua")
             try "x = 1\n".write(to: real, atomically: true, encoding: .utf8)
-            let link = directory.appending(path: "inlay.toml")
+            let link = directory.appending(path: "inlay.lua")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
 
             try AtomicFileWriter.write("x = 2\n", to: link)
@@ -58,7 +58,7 @@ extension InlayTests {
             assertEquals(isSymlink(link), true)
             assertEquals(isSymlink(real), false)
             assertEquals(read(link), "x = 2\n")
-            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.lua"])
         }
 
         /// ~/.config/inlay -> ~/.dotfiles/inlay, the way install.sh links a config folder: `config --use <file>`
@@ -66,12 +66,12 @@ extension InlayTests {
         @Test func testWriteInALinkedFolder() throws {
             let dotfiles = directory.appending(path: "dotfiles/inlay")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
-            let real = dotfiles.appending(path: "inlay.toml")
+            let real = dotfiles.appending(path: "inlay.lua")
             let before = "# Mine\n[menuBar]\ntheme = 'chips'\n[mode.main.binding]\n"
             try before.write(to: real, atomically: true, encoding: .utf8)
             let folder = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
-            let config = folder.appending(path: "inlay.toml")
+            let config = folder.appending(path: "inlay.lua")
 
             try AtomicFileWriter.write("# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
             assertEquals(read(real), "# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n")
@@ -80,21 +80,21 @@ extension InlayTests {
             assertEquals(isSymlink(config), false)
             assertEquals(isSymlink(real), false)
             // No temporary file is left in the folder of the user
-            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.lua"])
         }
 
         @Test func testWriteThroughRelativeSymlinkChain() throws {
             let dotfiles = directory.appending(path: "dotfiles/config")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
-            let real = dotfiles.appending(path: "real.toml")
+            let real = dotfiles.appending(path: "real.lua")
             try "x = 1\n".write(to: real, atomically: true, encoding: .utf8)
-            // config/inlay.toml -> ../middle.toml -> dotfiles/config/real.toml
+            // config/inlay.lua -> ../middle.lua -> dotfiles/config/real.lua
             let config = directory.appending(path: "config")
             try FileManager.default.createDirectory(at: config, withIntermediateDirectories: true)
-            let middle = directory.appending(path: "middle.toml")
-            try FileManager.default.createSymbolicLink(atPath: middle.path, withDestinationPath: "dotfiles/config/real.toml")
-            let link = config.appending(path: "inlay.toml")
-            try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "../middle.toml")
+            let middle = directory.appending(path: "middle.lua")
+            try FileManager.default.createSymbolicLink(atPath: middle.path, withDestinationPath: "dotfiles/config/real.lua")
+            let link = config.appending(path: "inlay.lua")
+            try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "../middle.lua")
 
             assertEquals(try AtomicFileWriter.resolveSymlinks(link).path, real.standardizedFileURL.path)
             try AtomicFileWriter.write("x = 2\n", to: link)
@@ -105,18 +105,18 @@ extension InlayTests {
         }
 
         @Test func testWriteThroughDanglingSymlink() throws {
-            let link = directory.appending(path: "inlay.toml")
-            try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "missing/real.toml")
+            let link = directory.appending(path: "inlay.lua")
+            try FileManager.default.createSymbolicLink(atPath: link.path, withDestinationPath: "missing/real.lua")
             try AtomicFileWriter.write("x = 1\n", to: link)
             assertEquals(isSymlink(link), true)
-            assertEquals(read(directory.appending(path: "missing/real.toml")), "x = 1\n")
+            assertEquals(read(directory.appending(path: "missing/real.lua")), "x = 1\n")
         }
 
         @Test func testSymlinkLoop() throws {
-            let a = directory.appending(path: "a.toml")
-            let b = directory.appending(path: "b.toml")
-            try FileManager.default.createSymbolicLink(atPath: a.path, withDestinationPath: "b.toml")
-            try FileManager.default.createSymbolicLink(atPath: b.path, withDestinationPath: "a.toml")
+            let a = directory.appending(path: "a.lua")
+            let b = directory.appending(path: "b.lua")
+            try FileManager.default.createSymbolicLink(atPath: a.path, withDestinationPath: "b.lua")
+            try FileManager.default.createSymbolicLink(atPath: b.path, withDestinationPath: "a.lua")
             do {
                 try AtomicFileWriter.write("x = 1\n", to: a)
                 Issue.record("Must fail")
@@ -129,10 +129,10 @@ extension InlayTests {
 
         /// Nothing is changed: these fail before anything is written
         @Test func testUseFailsWithoutWriting() throws {
-            let missing = directory.appending(path: "missing.toml")
+            let missing = directory.appending(path: "missing.lua")
             assertEquals(ConfigFiles.use(missing).errorOrNil, .notFound(missing))
-            let broken = directory.appending(path: "broken.toml")
-            try "[menuBar]\ntheme = 'bubbles'\n".write(to: broken, atomically: true, encoding: .utf8)
+            let broken = directory.appending(path: "broken.lua")
+            try "return { menuBar = { theme = 'bubbles' } }".write(to: broken, atomically: true, encoding: .utf8)
             assertEquals(ConfigFiles.use(broken).okOrNil, nil)
             if case .invalidConfig(let errors) = ConfigFiles.use(broken).errorOrNil {
                 assertEquals(errors.count, 1)
@@ -141,21 +141,6 @@ extension InlayTests {
             } else {
                 Issue.record("A config with errors must not be used")
             }
-        }
-
-        @Test func testExportAddsTheMissingKeys() {
-            let shipped = "startAtLogin = true\n[menuBar]\n    theme = 'liquid'\n    showMode = true\n[mode.main.binding]\n    alt-h = 'focus left'\n"
-            let text = "# Mine\n[menuBar]\n    theme = 'hypr'\n"
-            let exported = ConfigFiles.exportText(text, shipped: shipped, date: Date(timeIntervalSince1970: 0))
-            let config = parseConfig(exported)
-            assertEquals(config.errors, [])
-            // The value of the user stays, the missing keys are added, and the key bindings are the user's own
-            assertEquals(config.config.menuBar.theme, .hypr)
-            assertEquals(config.config.menuBar.showMode, true)
-            assertEquals(config.config.startAtLogin, true)
-            assertEquals(exported.contains("# Mine\n"), true)
-            assertEquals(exported.contains("alt-h"), false)
-            assertEquals(exported.hasPrefix("# Exported from"), true)
         }
 
         @Test func testTildePath() {

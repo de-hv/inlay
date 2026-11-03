@@ -1,7 +1,6 @@
 import AppKit
 import Common
 import HotKey
-import TOMLDecoder
 import OrderedCollections
 
 struct ReadConfigResult {
@@ -50,7 +49,7 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
 struct ConfigParseDiagnostic: Error, Equatable {
     let backtrace: ConfigBacktrace
     let message: String
-    let preventConfigReload: Bool // for severe config errors (like TOML parse error)
+    let preventConfigReload: Bool // for severe config errors (like a Lua syntax error)
 
     public init(_ backtrace: ConfigBacktrace, _ message: String, preventConfigReload: Bool = false) {
         check(!message.isEmpty)
@@ -124,7 +123,7 @@ let persistentWorkspacesKey = "persistentWorkspaces"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
-// 2. Prefer commands and commands flags over toml options if possible
+// 2. Prefer commands and commands flags over config options if possible
 // 3. Document it in docs/config-reference.lua. ConfigReferenceTest fails until every key of the parser tables is there
 let configParser: [String: any ParserProtocol<Config>] = [
     configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
@@ -213,40 +212,13 @@ func parseShellOfCommandsForConfig(_ raw: OrderedJson, _ backtrace: ConfigBacktr
             if let elem = elem.asStringOrNil {
                 result.append(parseCommandForConfig(elem, backtrace, &c, allowExecAndForget: true))
             } else {
-                c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: elem.tomlType)))
+                c.errors.append(.init(backtrace, expectedActualTypeError(expected: .string, actual: elem.valueType)))
             }
         }
         return .newCompound(result, Shell<any Command>.seq)
     } else {
-        c.errors.append(.init(backtrace, expectedActualTypeError(expected: [.string, .array], actual: raw.tomlType)))
+        c.errors.append(.init(backtrace, expectedActualTypeError(expected: [.string, .array], actual: raw.valueType)))
         return .empty
-    }
-}
-
-func tomlAnyToOrderedJsonRecursive(
-    any: Any,
-    _ backtrace: ConfigBacktrace,
-    _ errors: inout [ConfigParseDiagnostic],
-) -> OrderedJson? {
-    switch any {
-        case let dict as [String: Any]:
-            var json = OrderedJson.JsonDict()
-            for (key, tomlValue) in dict.sortedEntries {
-                json[key] = tomlAnyToOrderedJsonRecursive(any: tomlValue, backtrace + .key(key), &errors)
-            }
-            return .dict(json)
-        case let array as [Any]:
-            var json = OrderedJson.JsonArray()
-            for (index, tomlValue) in array.enumerated() {
-                let element = tomlAnyToOrderedJsonRecursive(any: tomlValue, backtrace + .index(index), &errors)
-                guard let element else { continue }
-                json.append(element)
-            }
-            return .array(json)
-        default:
-            if let value = OrderedJson.newScalarOrNil(any) { return value }
-            errors.append(.init(backtrace, "Unsupported TOML type: \(type(of: any))"))
-            return nil
     }
 }
 
@@ -258,12 +230,6 @@ struct ParseConfigResult {
     var allowReloadConfig: Bool { errors.allSatisfy { !$0.preventConfigReload } }
 }
 
-@MainActor func parseConfig(_ rawToml: String) -> ParseConfigResult {
-    var errors: [ConfigParseDiagnostic] = []
-    let rawTable = tomlToJson(rawToml, &errors)
-    return parseConfig(json: rawTable, errors: errors)
-}
-
 @MainActor func parseConfig(_ lua: LuaConfig) -> ParseConfigResult {
     parseConfig(json: lua.table, errors: lua.errors)
 }
@@ -273,26 +239,8 @@ struct ParseConfigResult {
     parseConfig(LuaConfigLoader.load(text))
 }
 
-/// The table of a TOML document. Empty if it isn't valid TOML
-func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> OrderedJson.JsonDict {
-    do {
-        let dict: [String: Any] = try .init(try TOMLTable(source: rawToml))
-        let json = tomlAnyToOrderedJsonRecursive(any: dict, .emptyRoot, &errors)
-        switch json {
-            case .dict(let dict): return dict
-            default: // dead code
-                let msg = "Config parsing error: the top level type must be a TOML Table. But got: \((json ?? .null).tomlType)"
-                errors.append(.init(.emptyRoot, msg, preventConfigReload: true))
-                return [:]
-        }
-    } catch {
-        errors.append(.init(.emptyRoot, error.description, preventConfigReload: true))
-        return [:]
-    }
-}
-
-/// The config from its table, whatever the format of the file it comes from.
-/// - Parameter errors: the ones of reading the file
+/// The config from the table that inlay.lua returns.
+/// - Parameter errors: the ones of running the file
 @MainActor func parseConfig(json rawTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = []) -> ParseConfigResult {
     var errors = NonCopyable(errors)
 
@@ -367,11 +315,11 @@ func parseConfigVersion(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> Res
 }
 
 func parseInt(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {
-    raw.asIntOrNil.toResult(expectedActualTypeDiagnostic(expected: .int, actual: raw.tomlType, backtrace))
+    raw.asIntOrNil.toResult(expectedActualTypeDiagnostic(expected: .int, actual: raw.valueType, backtrace))
 }
 
 func parseString(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<String> {
-    raw.asStringOrNil.toResult(expectedActualTypeDiagnostic(expected: .string, actual: raw.tomlType, backtrace))
+    raw.asStringOrNil.toResult(expectedActualTypeDiagnostic(expected: .string, actual: raw.valueType, backtrace))
 }
 
 func parseSimpleType<T>(_ raw: OrderedJson, ofType: T.Type) -> T? {
@@ -381,7 +329,7 @@ func parseSimpleType<T>(_ raw: OrderedJson, ofType: T.Type) -> T? {
 extension OrderedJson {
     func unwrapTableWithSingleKey(expectedKey: String? = nil, _ backtrace: inout ConfigBacktrace) -> ResOrConfigParseDiagnostic<(key: String, value: OrderedJson)> {
         guard let asDictOrNil else {
-            return .failure(expectedActualTypeDiagnostic(expected: .table, actual: tomlType, backtrace))
+            return .failure(expectedActualTypeDiagnostic(expected: .table, actual: valueType, backtrace))
         }
         let singleKeyError: ConfigParseDiagnostic = .init(
             backtrace,
@@ -400,8 +348,8 @@ extension OrderedJson {
     }
 }
 
-func parseTomlArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<OrderedJson.JsonArray> {
-    raw.asArrayOrNil.toResult(expectedActualTypeDiagnostic(expected: .array, actual: raw.tomlType, backtrace))
+func parseConfigArray(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<OrderedJson.JsonArray> {
+    raw.asArrayOrNil.toResult(expectedActualTypeDiagnostic(expected: .array, actual: raw.valueType, backtrace))
 }
 
 func parseTable<T: ConvenienceMutable>(
@@ -415,7 +363,7 @@ func parseTable<T: ConvenienceMutable>(
         case .dict(let table):
             return table.parseTable(initial, fieldsParser, backtrace, &c)
         default:
-            c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+            c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace))
             return initial
     }
 }
@@ -460,7 +408,7 @@ private func parsePersistentWorkspaces(_ raw: OrderedJson, _ backtrace: ConfigBa
 }
 
 func parseArrayOfStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<[String]> {
-    parseTomlArray(raw, backtrace)
+    parseConfigArray(raw, backtrace)
         .flatMap { arr in
             arr.enumerated().mapAllOrFailure { (index, elem) in
                 parseString(elem, backtrace + .index(index))
@@ -482,13 +430,13 @@ extension ResOrStr where Failure == String {
 }
 
 func parseBool(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Bool> {
-    raw.asBoolOrNil.toResult(expectedActualTypeDiagnostic(expected: .bool, actual: raw.tomlType, backtrace))
+    raw.asBoolOrNil.toResult(expectedActualTypeDiagnostic(expected: .bool, actual: raw.valueType, backtrace))
 }
 
 struct ConfigBacktrace: CustomStringConvertible, Equatable {
-    private var path: [TomlBacktraceItem] = []
-    private init(_ path: [TomlBacktraceItem]) {
-        check(path.first?.isKey != false, "Tried to construct invalid TOML path: \(path)")
+    private var path: [ConfigBacktraceItem] = []
+    private init(_ path: [ConfigBacktraceItem]) {
+        check(path.first?.isKey != false, "Tried to construct invalid config path: \(path)")
         self.path = path
     }
 
@@ -509,13 +457,13 @@ struct ConfigBacktrace: CustomStringConvertible, Equatable {
 
     var isRootKey: Bool { path.singleOrNil().map(\.isKey) == true }
 
-    static func + (lhs: consuming Self, rhs: TomlBacktraceItem) -> Self {
+    static func + (lhs: consuming Self, rhs: ConfigBacktraceItem) -> Self {
         lhs.path += [rhs]
         return lhs
     }
 }
 
-enum TomlBacktraceItem: Equatable {
+enum ConfigBacktraceItem: Equatable {
     case key(String)
     case index(Int)
 
@@ -557,10 +505,10 @@ func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace, key: String? = nil) -> C
     return .init(backtrace, "\(message). The keys are camelCase since Inlay 0.3.0: '\(camelCase)'")
 }
 
-func expectedActualTypeDiagnostic(expected: TomlType, actual: TomlType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
+func expectedActualTypeDiagnostic(expected: ConfigValueType, actual: ConfigValueType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
     .init(backtrace, expectedActualTypeError(expected: expected, actual: actual))
 }
 
-func expectedActualTypeDiagnostic(expected: [TomlType], actual: TomlType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
+func expectedActualTypeDiagnostic(expected: [ConfigValueType], actual: ConfigValueType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
     .init(backtrace, expectedActualTypeError(expected: expected, actual: actual))
 }

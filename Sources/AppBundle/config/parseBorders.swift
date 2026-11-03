@@ -88,7 +88,7 @@ private func parsePoints(_ key: String, _ range: ClosedRange<Int>) -> @Sendable 
 /// The keys are the names of the binding modes. A mode that doesn't exist is harmless: its color is never used
 private func parseModeColors(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> [String: ConfigColor] {
     guard case .dict(let table) = raw else {
-        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.tomlType, backtrace))
+        c.errors.append(expectedActualTypeDiagnostic(expected: .table, actual: raw.valueType, backtrace))
         return [:]
     }
     var result: [String: ConfigColor] = [:]

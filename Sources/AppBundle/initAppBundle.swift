@@ -68,8 +68,8 @@ private let serverHelp = """
     OPTIONS:
       -h, --help              Print help
       -v, --version           Print Inlay.app version
-      --config-path <path>    Config path. It will take priority over ~/.inlay.toml
-                              and ${XDG_CONFIG_HOME}/inlay/inlay.toml
+      --config-path <path>    Config path. It will take priority over ~/.inlay.lua
+                              and ${XDG_CONFIG_HOME}/inlay/inlay.lua
       --read-only             Disable window management.
                               Useful if you want to use only debug-windows or other query commands.
       --unregister-login-item Remove Inlay from the login items and exit. Used by 'inlay uninstall'

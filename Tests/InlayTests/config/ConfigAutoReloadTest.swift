@@ -69,7 +69,7 @@ extension InlayTests {
         // MARK: - The watcher, with real files
 
         @Test func testWriteInPlace() async throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             try "a = 1\n".write(to: file, atomically: false, encoding: .utf8)
             let watcher = watch(file)
             try "a = 2\n".write(to: file, atomically: false, encoding: .utf8)
@@ -80,7 +80,7 @@ extension InlayTests {
 
         /// The save of most editors: a new file is written and renamed over the old one
         @Test func testAtomicSave_severalTimes() async throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             try "a = 1\n".write(to: file, atomically: true, encoding: .utf8)
             let watcher = watch(file)
             for value in 2 ... 4 {
@@ -91,7 +91,7 @@ extension InlayTests {
 
         /// The watcher isn't armed again between two saves: a config with errors isn't applied, but the next save is seen
         @Test func testAtomicSave_seenWithoutArmingAgain() async throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             try "a = 1\n".write(to: file, atomically: true, encoding: .utf8)
             let watcher = watch(file)
             try "a = [\n".write(to: file, atomically: true, encoding: .utf8)
@@ -103,14 +103,14 @@ extension InlayTests {
             try await expectEvent(watcher, "the save after the broken one")
         }
 
-        /// ~/.config/inlay/inlay.toml -> ~/.dotfiles/inlay/inlay.toml, edited in the dotfiles directory
+        /// ~/.config/inlay/inlay.lua -> ~/.dotfiles/inlay/inlay.lua, edited in the dotfiles directory
         @Test func testSymlinkToAnotherDirectory() async throws {
             let dotfiles = directory.appending(path: "dotfiles")
             let configDirectory = directory.appending(path: "config")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: configDirectory, withIntermediateDirectories: true)
-            let real = dotfiles.appending(path: "mine.toml")
-            let link = configDirectory.appending(path: "inlay.toml")
+            let real = dotfiles.appending(path: "mine.lua")
+            let link = configDirectory.appending(path: "inlay.lua")
             try "a = 1\n".write(to: real, atomically: true, encoding: .utf8)
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
             let watcher = watch(link)
@@ -124,7 +124,7 @@ extension InlayTests {
             assertEquals(try String(contentsOf: link, encoding: .utf8), "a = 4\n")
 
             // The link is pointed to another file
-            let other = dotfiles.appending(path: "other.toml")
+            let other = dotfiles.appending(path: "other.lua")
             try "a = 5\n".write(to: other, atomically: true, encoding: .utf8)
             try await expectEvent(watcher, "a new file next to the config") // Reported, and needsReload says no
             try FileManager.default.removeItem(at: link)
@@ -141,11 +141,11 @@ extension InlayTests {
             let config = directory.appending(path: "config")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: config, withIntermediateDirectories: true)
-            let real = dotfiles.appending(path: "inlay.toml")
+            let real = dotfiles.appending(path: "inlay.lua")
             let linkedDirectory = config.appending(path: "inlay")
             try "a = 1\n".write(to: real, atomically: true, encoding: .utf8)
             try FileManager.default.createSymbolicLink(at: linkedDirectory, withDestinationURL: dotfiles)
-            let file = linkedDirectory.appending(path: "inlay.toml")
+            let file = linkedDirectory.appending(path: "inlay.lua")
             assertEquals(FileWatcher.directoriesOfLinkedAncestors(of: file), [config.path])
             assertEquals(FileWatcher.directoriesOfLinkedAncestors(of: real), [])
             let watcher = watch(file)
@@ -171,23 +171,23 @@ extension InlayTests {
             try await expectEvent(watcher, "written through the link")
             assertEquals(try String(contentsOf: real, encoding: .utf8), "a = 6\n")
             assertEquals(try FileManager.default.destinationOfSymbolicLink(atPath: linkedDirectory.path), dotfiles.path)
-            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.toml"])
+            assertEquals(try FileManager.default.contentsOfDirectory(atPath: dotfiles.path), ["inlay.lua"])
 
             // The link is pointed to another directory
             let other = directory.appending(path: "dotfiles/other")
             try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
-            try "a = 7\n".write(to: other.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try "a = 7\n".write(to: other.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
             try FileManager.default.removeItem(at: linkedDirectory)
             try FileManager.default.createSymbolicLink(at: linkedDirectory, withDestinationURL: other)
             try await expectEvent(watcher, "the link of the directory changed")
             assertEquals(try String(contentsOf: file, encoding: .utf8), "a = 7\n")
-            try "a = 8\n".write(to: other.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try "a = 8\n".write(to: other.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
             try await expectEvent(watcher, "a save in the new directory")
         }
 
         /// The file is deleted and created again, and a file that doesn't exist yet is created
         @Test func testFileThatAppears() async throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             let watcher = watch(file)
             try "a = 1\n".write(to: file, atomically: false, encoding: .utf8)
             try await expectEvent(watcher, "created")
@@ -198,7 +198,7 @@ extension InlayTests {
         }
 
         @Test func testCancel() async throws {
-            let file = directory.appending(path: "inlay.toml")
+            let file = directory.appending(path: "inlay.lua")
             try "a = 1\n".write(to: file, atomically: false, encoding: .utf8)
             let watcher = watch(file)
             watcher.cancel()

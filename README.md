@@ -15,7 +15,7 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.1.0, in its first round of real use.** Inlay is a fork of
+**Version 0.3.0, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing
 new windows (*dwindle*), without the *accordion* layout, with its own menu bar item and with window borders.
 
@@ -67,7 +67,7 @@ There is a copy of that documentation in [`docs/upstream-aerospace`](./docs/upst
 
 - macOS 14 or later on Apple Silicon (tested on macOS 27).
 - To build it from source: Xcode Command Line Tools with Swift 6.2 or later (`xcode-select --install`), and an
-  Internet connection the first time it is built (SwiftPM downloads four dependencies from GitHub).
+  Internet connection the first time it is built (SwiftPM downloads three dependencies from GitHub).
 
 ## Installation
 
@@ -98,7 +98,9 @@ brew upgrade --cask inlay
 ```
 
 Homebrew quits Inlay before replacing it; open it again afterwards. Your config is outside of the app: an upgrade
-never touches it.
+never touches it. **From 0.2 to 0.3**: the config is Lua now, `inlay.lua`. An `inlay.toml` that you never edited
+is replaced on its own; one of your own isn't read anymore, and Inlay says so and uses its built-in config until
+you write your `inlay.lua` (see [Configuration](#configuration)).
 
 ### From source
 
@@ -137,7 +139,7 @@ Nothing in the list wraps, also in a narrow terminal, and what you type while it
    warnings go below the list (they never stop the installation);
 5. **opens Inlay**.
 
-It ends with one line, `✓ Inlay 0.1.0 is installed  2m 31s · inlay uninstall removes it`, and what to do the
+It ends with one line, `✓ Inlay 0.3.0 is installed  2m 31s · inlay uninstall removes it`, and what to do the
 first time: allow Inlay in the Accessibility permission (see [Before opening Inlay](#before-opening-inlay)).
 
 <p align="center"><img src="docs/images/terminal-install.png" alt="Real output of ./install.sh in a terminal: the header, and the six steps in three groups (Prepare, Install and Configure, each one 2/2), each step marked done with its detail: the requirements, the build (signed, 2m 14s), the app in /Applications, the CLI in ~/.local/bin, the config linked from ~/.config/inlay to ~/.dotfiles/inlay, and Inlay running in the menu bar; then the line that says it is installed and the Accessibility permission to allow the first time" width="880"></p>

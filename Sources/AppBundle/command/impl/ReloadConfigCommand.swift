@@ -74,9 +74,11 @@ struct ReloadConfigResult {
             isApplied: parseResult.allowReloadConfig,
             problems: errors + warnings,
         )
-        // Also when the config wasn't applied: the file is watched, so that fixing it loads it.
+        // Also when the config wasn't applied: the files are watched, so that fixing them loads them.
         // Without a config of the user, the place where it would be created is watched
-        ConfigAutoReload.sync(url: result.configUrl == defaultConfigUrl ? newUserConfigUrl : result.configUrl, text: result.text)
+        ConfigAutoReload.sync(files: result.configUrl == defaultConfigUrl || result.files.isEmpty
+            ? [LuaConfigFile(url: result.configUrl == defaultConfigUrl ? newUserConfigUrl : result.configUrl, text: result.text)]
+            : result.files)
         publishUiState()
     }
 

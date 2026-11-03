@@ -78,51 +78,57 @@ final class FileWatcher {
     }
 }
 
-/// Reloads the config when its file is saved. See: 'autoReloadConfig' config option
+/// Reloads the config when one of its files is saved: inlay.lua or a module that it requires. See: 'autoReloadConfig'
+/// config option
 @MainActor
 enum ConfigAutoReload {
-    private static var watcher: FileWatcher? = nil
+    private static var watchers: [FileWatcher] = []
     private static var debounceTask: Task<Void, any Error>? = nil
-    /// The text of the config file when it was last loaded. nil if it couldn't be read
-    private static var loadedText: String? = nil
+    /// The files of the config when it was last loaded, with their text. nil text: it couldn't be read
+    private static var loadedFiles: [LuaConfigFile] = []
 
     private static let debounceDelay: Duration = .milliseconds(200)
 
-    /// The config was loaded, or at least tried, from the file. Called after every (re)load: the file to watch may be
-    /// another one, and so may the 'autoReloadConfig' option. A file that failed to load is still watched,
-    /// so that fixing it loads it
-    static func sync(url: URL, text: String?) {
-        loadedText = text
-        watcher?.cancel()
-        watcher = nil
+    /// The config was loaded, or at least tried, from these files. Called after every (re)load: the files to watch may
+    /// be other ones, and so may the 'autoReloadConfig' option. A file that failed to load is still watched, so that
+    /// fixing it loads it, and a module that doesn't exist yet too, so that creating it loads it
+    static func sync(files: [LuaConfigFile]) {
+        loadedFiles = files
+        for watcher in watchers { watcher.cancel() }
+        watchers = []
         debounceTask?.cancel()
         if !config.autoReloadConfig { return }
-        watcher = FileWatcher(url: url) {
-            DebugStats.count("config.watcher.event")
-            debounceTask?.cancel()
-            debounceTask = Task.startUnstructured {
-                try await Task.sleep(for: debounceDelay)
-                watcher?.arm() // The file may have been replaced by a new one
-                DebugStats.count("config.watcher.check")
-                guard needsReload(currentText: try? String(contentsOf: url, encoding: .utf8)) else { return }
-                DebugStats.count("config.watcher.reload")
-                if let token: RunSessionGuard = .isServerEnabled {
-                    try await runLightSession(.configAutoReload, token) {
-                        _ = await reloadConfig_nonCancellable()
+        // Each file on its own: a module may be a link to a file of another folder
+        let urls = files.compactMap(\.url).reduce(into: [URL]()) { urls, url in if !urls.contains(url) { urls.append(url) } }
+        watchers = urls.map { url in
+            FileWatcher(url: url) {
+                DebugStats.count("config.watcher.event")
+                debounceTask?.cancel()
+                debounceTask = Task.startUnstructured {
+                    try await Task.sleep(for: debounceDelay)
+                    for watcher in watchers { watcher.arm() } // A file may have been replaced by a new one
+                    DebugStats.count("config.watcher.check")
+                    guard needsReload(loaded: loadedFiles, read: { try? String(contentsOf: $0, encoding: .utf8) }) else { return }
+                    DebugStats.count("config.watcher.reload")
+                    if let token: RunSessionGuard = .isServerEnabled {
+                        try await runLightSession(.configAutoReload, token) {
+                            _ = await reloadConfig_nonCancellable()
+                        }
                     }
                 }
             }
         }
     }
 
+    /// One of the files is different from the one that was loaded
+    nonisolated static func needsReload(loaded: [LuaConfigFile], read: (URL) -> String?) -> Bool {
+        loaded.contains { file in file.url.map { needsReload(loadedText: file.text, currentText: read($0)) } ?? false }
+    }
+
     /// An event of the watcher doesn't mean that the config is different: the watcher also reports the other files
     /// of the directory, the saves that change nothing, and the file that Inlay itself has just written and loaded.
     /// - Parameter currentText: nil if the file can't be read right now: it is in the middle of being saved, or it is
     ///   gone. The next event tells when it is back
-    static func needsReload(currentText: String?) -> Bool {
-        needsReload(loadedText: loadedText, currentText: currentText)
-    }
-
     nonisolated static func needsReload(loadedText: String?, currentText: String?) -> Bool {
         guard let currentText else { return false }
         return currentText != loadedText

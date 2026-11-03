@@ -5,7 +5,8 @@ import Foundation
 /// A file that a Lua config is made of, with the text that was run
 struct LuaConfigFile: Equatable, Sendable {
     let url: URL?
-    let text: String
+    /// nil: a module that `require` couldn't read. Creating it must reload the config
+    let text: String?
 }
 
 /// What running a Lua config gives
@@ -13,7 +14,7 @@ struct LuaConfig {
     /// The table that the main file returns. Empty if it couldn't be run
     var table: OrderedJson.JsonDict
     /// The main file first, then every module, in the order of the first `require`. Also the ones read before an
-    /// error: fixing them must reload the config
+    /// error, and the one that couldn't be read: fixing them must reload the config
     var files: [LuaConfigFile]
     var errors: [ConfigParseDiagnostic]
 }
@@ -128,8 +129,8 @@ enum LuaConfigLoader {
             unsafe lua_getfield(state, -1, "name")
             unsafe lua_getfield(state, -2, "text")
             defer { unsafe lua_settop(state, -3) }
-            guard let name = unsafe string(state, -2), let text = unsafe string(state, -1) else { return nil }
-            return LuaConfigFile(url: moduleUrl(folder, name), text: text)
+            guard let name = unsafe string(state, -2) else { return nil }
+            return LuaConfigFile(url: moduleUrl(folder, name), text: unsafe string(state, -1))
         }
     }
 
@@ -266,8 +267,8 @@ enum LuaConfigLoader {
           if loading[name] then error(where(2) .. 'require: ' .. name .. '.lua requires itself', 0) end
           if not folder then error(where(2) .. 'require: this config has no folder', 0) end
           local text, problem = readModule(folder .. '/' .. name .. '.lua')
-          if not text then error(where(2) .. 'require: ' .. problem, 0) end
           modules[#modules + 1] = { name = name, text = text }
+          if not text then error(where(2) .. 'require: ' .. problem, 0) end
           local chunk, syntaxError = rawLoad(text, '@' .. name .. '.lua', 't')
           if not chunk then error(syntaxError, 0) end
           local previousFile = currentFile

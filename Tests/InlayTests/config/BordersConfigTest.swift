@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig("config-version = 2")
+            let result = parseConfig("configVersion = 2")
             assertEquals(result.errors, [])
             let borders = result.config.borders
             assertEquals(borders.enabled, true)
@@ -29,14 +29,14 @@ extension InlayTests {
                 [borders]
                     enabled = false
                     width = 6
-                    corner-radius = 10
-                    square-corners = false
-                    active-color = '#D19A66'
-                    inactive-color = '#00000000'
-                    floating-color = 'system-accent'
+                    cornerRadius = 10
+                    squareCorners = false
+                    activeColor = '#D19A66'
+                    inactiveColor = '#00000000'
+                    floatingColor = 'system-accent'
                     glow = true
-                    glow-radius = 20
-                [borders.mode-colors]
+                    glowRadius = 20
+                [borders.modeColors]
                     resize = '#30D158'
                     service = '#FF453A80'
                 """,
@@ -60,7 +60,7 @@ extension InlayTests {
         }
 
         @Test func testRanges() {
-            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("corner-radius", [0, 40], [-1, 41]), ("glow-radius", [1, 12, 40], [0, 41, -1])] {
+            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("cornerRadius", [0, 40], [-1, 41]), ("glowRadius", [1, 12, 40], [0, 41, -1])] {
                 for value in good {
                     assertEquals(parseConfig("borders.\(key) = \(value)").errors, [])
                 }
@@ -73,15 +73,15 @@ extension InlayTests {
                 ["[ERROR] borders.width: width must be in [1, 20] range"],
             )
             assertEquals(
-                parseConfig("borders.corner-radius = 41").strErrors,
-                ["[ERROR] borders.corner-radius: corner-radius must be in [0, 40] range"],
+                parseConfig("borders.cornerRadius = 41").strErrors,
+                ["[ERROR] borders.cornerRadius: cornerRadius must be in [0, 40] range"],
             )
             assertEquals(
-                parseConfig("borders.glow-radius = 0").strErrors,
-                ["[ERROR] borders.glow-radius: glow-radius must be in [1, 40] range"],
+                parseConfig("borders.glowRadius = 0").strErrors,
+                ["[ERROR] borders.glowRadius: glowRadius must be in [1, 40] range"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig("borders.glow-radius = 0").config.borders.glowRadius, 12)
+            assertEquals(parseConfig("borders.glowRadius = 0").config.borders.glowRadius, 12)
         }
 
         @Test func testErrors() {
@@ -90,32 +90,32 @@ extension InlayTests {
                     """
                     [borders]
                         glow = 'soft'
-                        glow-radius = 1.5
+                        glowRadius = 1.5
                         shadow = true
                         width = '4'
                         enabled = 1
-                        active-color = 'auto'
-                        inactive-color = 'red'
-                    [borders.mode-colors]
+                        activeColor = 'auto'
+                        inactiveColor = 'red'
+                    [borders.modeColors]
                         resize = 'auto'
                         service = 5
                     """,
                 ).strErrors,
                 [
                     // 'auto' has no meaning for a border
-                    "[ERROR] borders.active-color: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.activeColor: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
                     "[ERROR] borders.enabled: Expected type is 'Bool'. But actual type is 'Int'",
                     "[ERROR] borders.glow: Expected type is 'Bool'. But actual type is 'String'",
-                    "[ERROR] borders.glow-radius: Expected type is 'Int'. But actual type is 'Float'",
-                    "[ERROR] borders.inactive-color: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
-                    "[ERROR] borders.mode-colors.resize: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
-                    "[ERROR] borders.mode-colors.service: Expected type is 'String'. But actual type is 'Int'",
+                    "[ERROR] borders.glowRadius: Expected type is 'Int'. But actual type is 'Float'",
+                    "[ERROR] borders.inactiveColor: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.modeColors.resize: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.modeColors.service: Expected type is 'String'. But actual type is 'Int'",
                     "[ERROR] borders.shadow: Unknown key",
                     "[ERROR] borders.width: Expected type is 'Int'. But actual type is 'String'",
                 ],
             )
             assertEquals(parseConfig("borders = 1").strErrors, ["[ERROR] borders: Expected type is 'Table'. But actual type is 'Int'"])
-            assertEquals(parseConfig("borders.mode-colors = 1").strErrors, ["[ERROR] borders.mode-colors: Expected type is 'Table'. But actual type is 'Int'"])
+            assertEquals(parseConfig("borders.modeColors = 1").strErrors, ["[ERROR] borders.modeColors: Expected type is 'Table'. But actual type is 'Int'"])
         }
     }
 }

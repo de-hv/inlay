@@ -12,133 +12,133 @@
 # Inlay reads ~/.config/inlay/inlay.toml (or $XDG_CONFIG_HOME/inlay/inlay.toml), or else ~/.inlay.toml.
 # With both files it reports an ambiguity and keeps the config it had.
 #
-# Inlay is a fork of AeroSpace and uses the config format of AeroSpace, plus the [tiling], [menu-bar] and
+# Inlay is a fork of AeroSpace and uses the config format of AeroSpace, plus the [tiling], [menuBar] and
 # [borders] tables. The links below point to the documentation of AeroSpace, which applies to the keys
 # that come from it. All the commands: https://nikitabobko.github.io/AeroSpace/commands
 
 # Config version for compatibility and deprecations. Version 1 still loads, with a warning.
-# 'persistent-workspaces' needs version 2
+# 'persistentWorkspaces' needs version 2
 # See: https://nikitabobko.github.io/AeroSpace/guide#config-version
 # Possible values: 1|2
-# Fallback value (if you omit the key): config-version = 1
-config-version = 2
+# Fallback value (if you omit the key): configVersion = 1
+configVersion = 2
 
 # Commands that run after Inlay starts, once the windows that were already open are in their places.
 # A command, or a list of commands
-# Fallback value (if you omit the key): after-startup-command = []
-after-startup-command = []
+# Fallback value (if you omit the key): afterStartupCommand = []
+afterStartupCommand = []
 
 # Start Inlay at login. Inlay adds itself to the login items of macOS, or removes itself from them,
 # every time the config is loaded
 # Possible values: true|false
-# Fallback value (if you omit the key): start-at-login = false
-start-at-login = false
+# Fallback value (if you omit the key): startAtLogin = false
+startAtLogin = false
 
 # Reload the config when the config file is saved. With it, the menu bar item and the borders follow what you
 # write in the file. It works when the config is a symbolic link, and with the editors that save by replacing
 # the file. Without it, use 'inlay reload-config' or the menu
 # Possible values: true|false
-# Fallback value (if you omit the key): auto-reload-config = true
-auto-reload-config = true
+# Fallback value (if you omit the key): autoReloadConfig = true
+autoReloadConfig = true
 
 # Normalization: containers with a single child are flattened
 # See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 # Possible values: true|false
-# Fallback value (if you omit the key): enable-normalization-flatten-containers = true
-enable-normalization-flatten-containers = true
+# Fallback value (if you omit the key): enableNormalizationFlattenContainers = true
+enableNormalizationFlattenContainers = true
 
 # Normalization: a container nested in another one gets the opposite orientation
 # See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 # Possible values: true|false
-# Fallback value (if you omit the key): enable-normalization-opposite-orientation-for-nested-containers = true
-enable-normalization-opposite-orientation-for-nested-containers = true
+# Fallback value (if you omit the key): enableNormalizationOppositeOrientationForNestedContainers = true
+enableNormalizationOppositeOrientationForNestedContainers = true
 
 # The layout of the root container of a new workspace.
 # Inlay has no accordion layout: 'accordion' is accepted with a warning and treated as 'tiles'
 # See: https://nikitabobko.github.io/AeroSpace/guide#layouts
 # Possible values: tiles
-# Fallback value (if you omit the key): default-root-container-layout = 'tiles'
-default-root-container-layout = 'tiles'
+# Fallback value (if you omit the key): defaultRootContainerLayout = 'tiles'
+defaultRootContainerLayout = 'tiles'
 
 # The orientation of the root container of a new workspace
 # Possible values: horizontal|vertical|auto
 # 'auto' means: wide monitor (anything wider than high) gets horizontal orientation,
 #               tall monitor (anything higher than wide) gets vertical orientation
-# Fallback value (if you omit the key): default-root-container-orientation = 'auto'
-default-root-container-orientation = 'auto'
+# Fallback value (if you omit the key): defaultRootContainerOrientation = 'auto'
+defaultRootContainerOrientation = 'auto'
 
 # Commands that run when the focused monitor changes. A command, or a list of commands.
 # The example makes the mouse follow the focus
 # See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
 # See https://nikitabobko.github.io/AeroSpace/commands#move-mouse
-# Fallback value (if you omit the key): on-focused-monitor-changed = []
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+# Fallback value (if you omit the key): onFocusedMonitorChanged = []
+onFocusedMonitorChanged = ['move-mouse monitor-lazy-center']
 
 # Commands that run when the focused window changes. A command, or a list of commands.
-# For example: on-focus-changed = ['move-mouse window-lazy-center']
+# For example: onFocusChanged = ['move-mouse window-lazy-center']
 # See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
-# Fallback value (if you omit the key): on-focus-changed = []
-on-focus-changed = []
+# Fallback value (if you omit the key): onFocusChanged = []
+onFocusChanged = []
 
 # Commands that run every time the binding mode changes. A command, or a list of commands
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
-# Fallback value (if you omit the key): on-mode-changed = []
-on-mode-changed = []
+# Fallback value (if you omit the key): onModeChanged = []
+onModeChanged = []
 
 # A program that Inlay runs every time the focused workspace changes: the program and its arguments.
 # It gets the INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE variables (and the AEROSPACE_* ones).
-# For example: exec-on-workspace-change = ['/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces']
+# For example: execOnWorkspaceChange = ['/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces']
 # See: https://nikitabobko.github.io/AeroSpace/guide#exec-on-workspace-change-callback
-# Fallback value (if you omit the key): exec-on-workspace-change = []
-exec-on-workspace-change = []
+# Fallback value (if you omit the key): execOnWorkspaceChange = []
+execOnWorkspaceChange = []
 
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
 # Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
 # Also see: https://nikitabobko.github.io/AeroSpace/goodies#disable-hide-app
 # Possible values: true|false
-# Fallback value (if you omit the key): automatically-unhide-macos-hidden-apps = false
-automatically-unhide-macos-hidden-apps = false
+# Fallback value (if you omit the key): automaticallyUnhideMacosHiddenApps = false
+automaticallyUnhideMacosHiddenApps = false
 
 # List of workspaces that should stay alive even when they contain no windows,
 # even when they are invisible. They are the workspaces that the menu bar item always shows.
 # The other workspaces exist while they have windows or they are the visible one.
-# This config option is only available since 'config-version = 2'
-# Fallback value (if you omit the key): persistent-workspaces = []
-persistent-workspaces = ["1", "2", "3", "4", "5", "6"]
+# This config option is only available since 'configVersion = 2'
+# Fallback value (if you omit the key): persistentWorkspaces = []
+persistentWorkspaces = ["1", "2", "3", "4", "5", "6"]
 
 # The window under the mouse cursor gets the focus
 # Possible values: true|false
-# Fallback value (if you omit the key): focus-follows-mouse.enabled = false
-focus-follows-mouse.enabled = false
+# Fallback value (if you omit the key): focusFollowsMouse.enabled = false
+focusFollowsMouse.enabled = false
 
 # The keyboard layout that the names of the keys in the bindings refer to
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
 # Possible values: qwerty|dvorak|colemak
-# Fallback value (if you omit the key): key-mapping.preset = 'qwerty'
-key-mapping.preset = 'qwerty'
+# Fallback value (if you omit the key): keyMapping.preset = 'qwerty'
+keyMapping.preset = 'qwerty'
 
 # Names of keys of your own, on top of the preset: the name to use in the bindings = the key it stands for.
 # A name can't contain spaces or dashes. The example calls the 'q' key 'unicorn'
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
-# Fallback value (if you omit the key): key-mapping.key-notation-to-key-code = {}
-key-mapping.key-notation-to-key-code = { unicorn = 'q' }
+# Fallback value (if you omit the key): keyMapping.keyNotationToKeyCode = {}
+keyMapping.keyNotationToKeyCode = { unicorn = 'q' }
 
-# Not a key of Inlay: 'after-login-command' is deprecated since AeroSpace 0.19.0. Only an empty list is
-# accepted; anything else is an error. Use 'after-startup-command' and 'start-at-login'
-# after-login-command = []
+# Not a key of Inlay: 'afterLoginCommand' is deprecated since AeroSpace 0.19.0. Only an empty list is
+# accepted; anything else is an error. Use 'afterStartupCommand' and 'startAtLogin'
+# afterLoginCommand = []
 
 # Not a key of Inlay: it has no accordion layout. The key of AeroSpace is accepted with a warning and
 # ignored, so that an aerospace.toml can be used as it is. Drop it from your config
-# accordion-padding = 30
+# accordionPadding = 30
 
 # Deprecated key of AeroSpace. Only 'smart' is accepted; anything else is an error. Drop it from your config
-# non-empty-workspaces-root-containers-layout-on-startup = 'smart'
+# nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart'
 
 # Deprecated key of AeroSpace: it is always an error. Drop it from your config
-# indent-for-nested-containers-with-the-same-orientation = 30
+# indentForNestedContainersWithTheSameOrientation = 30
 
-# Not a table of Inlay anymore: the palettes are gone, and every color is set on its own in [menu-bar.colors] and
+# Not a table of Inlay anymore: the palettes are gone, and every color is set on its own in [menuBar.colors] and
 # [borders]. The table is accepted with a warning and ignored, so that a config of a previous version still loads.
 # Drop it from your config
 # theme = {}
@@ -156,7 +156,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 # - Constant:     outer.top = 8
 # - Per monitor:  outer.top = [{ monitor.main = 16 }, { monitor."some-pattern" = 32 }, 24]
 #                 In this example, 24 is a default value when there is no match.
-#                 Monitor pattern is the same as for 'workspace-to-monitor-force-assignment'.
+#                 Monitor pattern is the same as for 'workspaceToMonitorForceAssignment'.
 # The window borders (see [borders]) are drawn outside of the windows, in the gaps.
 # Keep the gaps at least twice as big as borders.width, or the borders of neighbor windows touch.
 # The outer gaps must be at least as big as borders.width, or the border is cut by the edge of the screen.
@@ -186,23 +186,23 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # Fallback value (if you omit the key): outer.right = 0
     outer.right = 0
 
-    # Not a key of Inlay anymore: [borders.single-window] decides the gap and the border of a window alone in its
+    # Not a key of Inlay anymore: [borders.singleWindow] decides the gap and the border of a window alone in its
     # workspace. The key is accepted with a warning and ignored. Drop it from your config
     # smart = true
 
-# The environment of the programs that Inlay starts (exec-and-forget, exec-on-workspace-change).
+# The environment of the programs that Inlay starts (exec-and-forget, execOnWorkspaceChange).
 # They also get INLAY_WINDOW_ID, INLAY_WORKSPACE, INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE
 # (and the same variables under their AEROSPACE_* names)
 # See: https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
 [exec]
     # The programs inherit the environment of Inlay
     # Possible values: true|false
-    # Fallback value (if you omit the key): inherit-env-vars = true
-    inherit-env-vars = true
+    # Fallback value (if you omit the key): inheritEnvVars = true
+    inheritEnvVars = true
 
     # Variables that are set or replaced. ${NAME} is replaced by the value of the variable. 'PWD' can't be set
     # Fallback value (if you omit the table): PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
-    [exec.env-vars]
+    [exec.envVars]
         PATH = '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}'
 
 # Where the tiling windows are placed
@@ -214,14 +214,14 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #                  When a window is closed, its neighbor gets the space back.
     # - after-focused. AeroSpace behavior. The new window is placed after the focused window in the same container,
     #                  and all the windows of the container share the space.
-    # Fallback value (if you omit the key): new-window-placement = 'dwindle'
-    new-window-placement = 'dwindle'
+    # Fallback value (if you omit the key): newWindowPlacement = 'dwindle'
+    newWindowPlacement = 'dwindle'
 
     # Only for 'dwindle'. The fraction of its space that the split window keeps.
     # 0.5 = two halves. 0.6 = the split window keeps 60%, the new window gets 40%
     # Possible values: 0.1 ... 0.9
-    # Fallback value (if you omit the key): split-ratio = 0.5
-    split-ratio = 0.5
+    # Fallback value (if you omit the key): splitRatio = 0.5
+    splitRatio = 0.5
 
     # Only for 'dwindle'. Which window the new window splits.
     # Possible values: focused|cursor
@@ -229,21 +229,21 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #            goes to another workspace), the most recently used tiling window of the workspace.
     # - cursor.  The tiling window under the mouse cursor, like Hyprland. If there is none (the cursor is in a gap,
     #            on another monitor, over a fullscreen window, or the workspace isn't visible), the same as 'focused'.
-    # Fallback value (if you omit the key): split-target = 'focused'
-    split-target = 'focused'
+    # Fallback value (if you omit the key): splitTarget = 'focused'
+    splitTarget = 'focused'
 
     # How the windows that are already open when Inlay starts (or when 'enable on' resumes it) are arranged,
-    # in every workspace. The 'on-window-detected' rules run for those windows first, so every window is
+    # in every workspace. The 'onWindowDetected' rules run for those windows first, so every window is
     # arranged in the workspace that its rule sends it to. The windows that are opened later follow
-    # 'new-window-placement'
+    # 'newWindowPlacement'
     # Possible values: grid|row|dwindle
     # - grid.    A balanced grid: ceil(sqrt(n)) columns for n windows, and as many rows as needed.
     #            The windows of the last row share its width: 5 windows are 3 on top of 2.
     # - row.     One row. All the windows get the same width.
     # - dwindle. No arrangement: the windows are placed one after another, like new windows. With
-    #            new-window-placement = 'dwindle' that is a spiral, and the last windows are small.
-    # Fallback value (if you omit the key): startup-layout = 'grid'
-    startup-layout = 'grid'
+    #            newWindowPlacement = 'dwindle' that is a spiral, and the last windows are small.
+    # Fallback value (if you omit the key): startupLayout = 'grid'
+    startupLayout = 'grid'
 
     # The smallest width and height, in points, that resizing leaves to a tiling window. The 'resize' command and
     # dragging an edge with the mouse stop there: the window isn't shrunk further, and its neighbors aren't either
@@ -251,11 +251,11 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # It only limits resizing. When the windows of a workspace don't fit with this size (many windows on a small
     # monitor), the layout still gives every window its part, however small
     # Possible values: 20 ... 500
-    # Fallback value (if you omit the key): min-window-size = 100
-    min-window-size = 100
+    # Fallback value (if you omit the key): minWindowSize = 100
+    minWindowSize = 100
 
 # The menu bar item
-[menu-bar]
+[menuBar]
     # Show the menu bar item. With 'false' Inlay keeps working: use the key bindings and the CLI. Opening Inlay
     # again from Applications opens this file in an editor
     # Possible values: true|false
@@ -269,7 +269,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - chips.   The workspaces alone. The ones with windows have a faint background,
     #            the focused one has a solid background, and the empty ones are dimmed.
     # - hypr.    The names of the workspaces in slots of the same width, and a square in place of the focused
-    #            workspace, like the Monitor Workspaces plugin of the Omarchy bar (Hyprland). With 'per-monitor'
+    #            workspace, like the Monitor Workspaces plugin of the Omarchy bar (Hyprland). With 'perMonitor'
     #            a frame goes around the workspace that another monitor shows, and a bolder line divides the
     #            monitors. In a binding mode other than 'main' the square shows the initial of the mode.
     # - minimal. Only the focused workspace.
@@ -282,7 +282,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - liquid.  A dot per workspace, and a drop with the name of the focused one, which flows to the next
     #            workspace leaving a trail behind. In a binding mode the drop shows the initial of the mode.
     # - dms.     Small round workspaces on a faint track, and the focused one a wider pill with its name,
-    #            like the workspace switcher of Dank Material Shell. With 'per-monitor' each monitor gets its
+    #            like the workspace switcher of Dank Material Shell. With 'perMonitor' each monitor gets its
     #            own track. Material 3 colors suit it:
     #            focused = '#D0BCFF', occupied = '#CCC2DC', empty = '#938F99', accent = '#EFB8C8'
     # ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')
@@ -291,33 +291,33 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # Not a key of Inlay anymore: the menu bar item doesn't show the icons of the apps. The key is accepted
     # with a warning and ignored, so that a config written for a previous version still loads. Drop it from your config
-    # show-app-icons = false
+    # showAppIcons = false
 
     # Draw the workspaces without windows fainter
     # Possible values: true|false
-    # Fallback value (if you omit the key): dim-empty-workspaces = true
-    dim-empty-workspaces = true
+    # Fallback value (if you omit the key): dimEmptyWorkspaces = true
+    dimEmptyWorkspaces = true
 
     # Show the binding mode when it isn't 'main': its initial ('R' for 'resize') on the marker of the focused
     # workspace. In 'chips', 'pills', 'minimal', 'underline', 'liquid' and 'dms' the initial takes the place of the name; in
     # 'hypr' and 'dots' the marker grows to hold it. The item keeps its width: nothing moves when the mode changes
     # Possible values: true|false
-    # Fallback value (if you omit the key): show-mode = true
-    show-mode = true
+    # Fallback value (if you omit the key): showMode = true
+    showMode = true
 
     # Group the workspaces by monitor, from left to right, with a line between the monitors, and draw a hollow
     # marker on the workspace that another monitor shows ('hypr': a frame around its name; 'dms': a track per monitor
     # instead of the line). With one monitor it changes nothing
     # Possible values: true|false
-    # Fallback value (if you omit the key): per-monitor = false
-    per-monitor = false
+    # Fallback value (if you omit the key): perMonitor = false
+    perMonitor = false
 
     # Draw the item like the other icons of the menu bar: in the color of the menu bar text, as a template image that
-    # macOS colors (and dims on a display that isn't the active one), whatever [menu-bar.colors] says. The colors of
+    # macOS colors (and dims on a display that isn't the active one), whatever [menuBar.colors] says. The colors of
     # that table stay in the config and apply again when this is 'false'
     # Possible values: true|false
-    # Fallback value (if you omit the key): system-colors = false
-    system-colors = false
+    # Fallback value (if you omit the key): systemColors = false
+    systemColors = false
 
     # Colors of the item.
     # Possible values:
@@ -327,9 +327,9 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     #                    For 'accent': the same as 'focused'
     # With a fixed color in 'focused', the name of the workspace is drawn in black or white,
     # whichever has more contrast. A fixed color doesn't adapt to the menu bar: it is the same in the light and
-    # in the dark appearance. 'system-colors = true' overrides them all
-    [menu-bar.colors]
-        # The marker of the focused workspace while it shows the binding mode (see 'show-mode').
+    # in the dark appearance. 'systemColors = true' overrides them all
+    [menuBar.colors]
+        # The marker of the focused workspace while it shows the binding mode (see 'showMode').
         # With a fixed color, the initial is drawn in white, or in black over a light color
         # Fallback value (if you omit the key): accent = 'auto'
         accent = 'auto'
@@ -350,7 +350,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 # - a window opens (it grows from the center of its tile, from 87% of its size, while its neighbor makes room) or closes,
 # - a window is moved with 'swap' or 'move' (the key bindings, the CLI),
 # - the 'fullscreen' command makes a window grow from its tile to the screen, or shrink back to its tile,
-# - the screen switches workspaces (see workspace-switch).
+# - the screen switches workspaces (see workspaceSwitch).
 # Nothing else is animated: resizing, balance-sizes, the startup, the mouse.
 # With "Reduce motion" (System Settings -> Accessibility -> Display) nothing is animated.
 # Inlay moves and resizes the windows of other apps through the Accessibility API: a window that is slow to
@@ -378,8 +378,8 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # - 'off': no slide. The other animations stay.
     # true and false, what an earlier version wrote, mean 'horizontal' and 'off'
     # Possible values: 'horizontal' | 'vertical' | 'auto' | 'off'
-    # Fallback value (if you omit the key): workspace-switch = 'horizontal'
-    workspace-switch = 'horizontal'
+    # Fallback value (if you omit the key): workspaceSwitch = 'horizontal'
+    workspaceSwitch = 'horizontal'
 
     # How the movement is spread over the duration: a cubic Bézier curve, like the 'bezier' of Hyprland and the
     # cubic-bezier() of CSS. The presets:
@@ -409,7 +409,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     fullscreen = { curve = 'expo', duration = 220 }
 
     # The same for switching workspaces: the windows that slide out and in. They all move at once: 'off' in
-    # workspace-switch if it stutters. Fallback value (if you omit the key): workspace = { curve = 'expo', duration = 140 }
+    # workspaceSwitch if it stutters. Fallback value (if you omit the key): workspace = { curve = 'expo', duration = 140 }
     workspace = { curve = 'expo', duration = 140 }
 
     # Curves of your own: the name = [x1, y1, x2, y2], the control points of the curve. x1 and x2 must be in
@@ -425,7 +425,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # No border for: the windows in the native fullscreen of macOS, the tiling windows that a fullscreen window
     # covers, minimized windows, windows of hidden apps, popups, and the dialogs and sheets that float on their own
     # (what Inlay detects as a dialog: see 'inlay debug-windows'). A normal window that you make floating,
-    # with 'layout floating' or with an 'on-window-detected' rule, keeps its border
+    # with 'layout floating' or with an 'onWindowDetected' rule, keeps its border
     # Possible values: true|false
     # Fallback value (if you omit the key): enabled = true
     enabled = true
@@ -438,39 +438,39 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 
     # The radius of the corners, in points. Inlay can't read the real radius of the windows of other apps,
     # so tune it by eye. 16 is close to the windows of macOS 26 and later, 10 to the ones of macOS 14 and 15.
-    # It is the radius of the inner edge of the border. Its outer edge is square with square-corners, and
-    # rounded (corner-radius + width) without it. 0 = a square border that doesn't cover the corners of the windows
+    # It is the radius of the inner edge of the border. Its outer edge is square with squareCorners, and
+    # rounded (cornerRadius + width) without it. 0 = a square border that doesn't cover the corners of the windows
     # Possible values: 0 ... 40
-    # Fallback value (if you omit the key): corner-radius = 16
-    corner-radius = 16
+    # Fallback value (if you omit the key): cornerRadius = 16
+    cornerRadius = 16
 
     # The border fills the rounded corners of the windows, so that they look square. The outer edge of the border
-    # is square, and its inner edge follows the corners of the window (corner-radius): the corners that the window
-    # leaves empty take the color of the border. Set corner-radius to the radius of the windows, or a bit more:
+    # is square, and its inner edge follows the corners of the window (cornerRadius): the corners that the window
+    # leaves empty take the color of the border. Set cornerRadius to the radius of the windows, or a bit more:
     # with less, a bit of what is behind the window shows in its corners. A border with a translucent color fills
     # the corners with that same color, and a window without a border (a transparent color) keeps its round corners.
     # The shadow of the window stays round: macOS draws it.
     # false: the border follows the rounded corners of the windows
     # Possible values: true|false
-    # Fallback value (if you omit the key): square-corners = true
-    square-corners = true
+    # Fallback value (if you omit the key): squareCorners = true
+    squareCorners = true
 
     # The color of the border of the focused window, if it is a tiling one.
     # A fully transparent color ('#00000000') means "no border"
     # Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent' (System Settings -> Appearance -> Accent color)
-    # Fallback value (if you omit the key): active-color = 'system-accent'
-    active-color = 'system-accent'
+    # Fallback value (if you omit the key): activeColor = 'system-accent'
+    activeColor = 'system-accent'
 
     # The color of the border of the windows that aren't focused.
-    # With inactive-color = '#00000000' only the focused window has a border
+    # With inactiveColor = '#00000000' only the focused window has a border
     # Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
-    # Fallback value (if you omit the key): inactive-color = '#8E8E9373'
-    inactive-color = '#8E8E9373'
+    # Fallback value (if you omit the key): inactiveColor = '#8E8E9373'
+    inactiveColor = '#8E8E9373'
 
     # The color of the border of the focused window, if it is a floating one
     # Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
-    # Fallback value (if you omit the key): floating-color = '#BF5AF2'
-    floating-color = '#BF5AF2'
+    # Fallback value (if you omit the key): floatingColor = '#BF5AF2'
+    floatingColor = '#BF5AF2'
 
     # A glow around the focused window: a halo of the color of its border (the active, the floating or the mode
     # color) that fades out outwards, outside of the border. The windows that aren't focused never glow
@@ -481,18 +481,18 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # The blur radius of the glow, in points: about how far from the border the glow reaches. It is drawn
     # over whatever is around the window: the gaps and, if it is wide enough, the edges of the neighbor windows
     # Possible values: 1 ... 40
-    # Fallback value (if you omit the key): glow-radius = 12
-    glow-radius = 12
+    # Fallback value (if you omit the key): glowRadius = 12
+    glowRadius = 12
 
-    # Not a key of Inlay anymore: [borders.single-window] enabled = false leaves a window alone in its workspace
+    # Not a key of Inlay anymore: [borders.singleWindow] enabled = false leaves a window alone in its workspace
     # without a border. The key is accepted with a warning and ignored. Drop it from your config
-    # hide-when-single = false
+    # hideWhenSingle = false
 
     # The color of the border of the focused window while a binding mode is active: the name of the mode =
-    # the color. It wins over active-color and floating-color. A mode without an entry keeps the normal color
+    # the color. It wins over activeColor and floatingColor. A mode without an entry keeps the normal color
     # Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
     # Fallback value (if you omit the table): empty
-    [borders.mode-colors]
+    [borders.modeColors]
         service = '#FF453A'
 
     # The tiling window alone in its workspace, and the window in fullscreen (the 'fullscreen' command, also when
@@ -502,7 +502,7 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     # gets the outer gaps and the border of [borders] again. Floating windows don't count, and keep their borders;
     # a floating window made fullscreen looks like the others. 'fullscreen --no-outer-gaps' fills the screen, without
     # a border, and so does the macOS native fullscreen
-    [borders.single-window]
+    [borders.singleWindow]
         # The border and the gap. With 'false' the window fills the screen, without a border
         # Possible values: true|false
         # Fallback value (if you omit the key): enabled = true
@@ -588,61 +588,61 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
     f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
     backspace = ['close-all-windows-but-current', 'mode main']
-    # Run the 'on-window-detected' rules again for every open window
-    w = ['run-callback on-window-detected --for-every-window', 'mode main']
+    # Run the 'onWindowDetected' rules again for every open window
+    w = ['run-callback onWindowDetected --for-every-window', 'mode main']
 
 # A rule that runs commands for every window that Inlay detects: the new windows and, when Inlay starts
-# (or 'enable on' resumes it), the windows that are already open. One [[on-window-detected]] table per rule.
+# (or 'enable on' resumes it), the windows that are already open. One [[onWindowDetected]] table per rule.
 # The rules are checked in the order of the file, and the first one that matches wins, unless it has
-# 'check-further-callbacks = true'. 'inlay run-callback on-window-detected --for-every-window' runs the
+# 'checkFurtherCallbacks = true'. 'inlay run-callback onWindowDetected --for-every-window' runs the
 # rules again for all the open windows
 # 'layout tiling' in a rule doesn't tile the windows that Inlay detects as dialogs (the Save and Open panels,
 # alerts): they stay floating, so a rule can tile every window of an app. A 'layout tiling' of your own,
 # like the 'f' key of the service mode, still tiles them
 # See: https://nikitabobko.github.io/AeroSpace/guide#on-window-detected-callback
 # Fallback value (if you omit the tables): no rules
-[[on-window-detected]]
+[[onWindowDetected]]
     # The rule matches the windows of the app with this bundle id. See: inlay list-apps
-    # All the conditions of 'if' that are present must hold. A condition that is omitted always holds
-    if.app-id = 'com.apple.systempreferences'
+    # All the conditions of 'match' that are present must hold. A condition that is omitted always holds
+    match.appId = 'com.apple.systempreferences'
 
     # The rule matches the windows whose app has a name that contains a match of the regex (case insensitive)
-    if.app-name-regex-substring = 'settings'
+    match.appNameRegexSubstring = 'settings'
 
     # The rule matches the windows whose title contains a match of the regex (case insensitive)
-    if.window-title-regex-substring = 'substring'
+    match.windowTitleRegexSubstring = 'substring'
 
     # The rule matches the windows that are detected in this workspace
-    if.workspace = '1'
+    match.workspace = '1'
 
     # true: only the windows that are already open when Inlay starts. false: only the windows detected later
-    if.during-inlay-startup = true
+    match.duringInlayStartup = true
 
-    # The name that AeroSpace gives to 'if.during-inlay-startup'. It is accepted, so that an aerospace.toml
+    # The name that AeroSpace gives to 'match.duringInlayStartup'. It is accepted, so that an aerospace.toml
     # can be used as it is
-    # if.during-aerospace-startup = true
+    # match.duringAerospaceStartup = true
 
     # Check the rules that follow this one too, instead of stopping here
     # Possible values: true|false
-    # Fallback value (if you omit the key): check-further-callbacks = false
-    check-further-callbacks = false
+    # Fallback value (if you omit the key): checkFurtherCallbacks = false
+    checkFurtherCallbacks = false
 
     # Mandatory. The commands to run for the window: a command, or a list of commands
     run = ['layout floating', 'move-node-to-workspace 1']
 
-# 'if' can also be a command instead of conditions: the rule matches when the command succeeds.
+# 'match' can also be a command instead of conditions: the rule matches when the command succeeds.
 # The command gets the window in the variables of 'test' and of the '--format' options. 'true' always matches
-[[on-window-detected]]
-    if = 'true'
-    check-further-callbacks = true
+[[onWindowDetected]]
+    match = 'true'
+    checkFurtherCallbacks = true
     run = []
 
 # A catch-all rule, as the last one: the tiling windows that no rule above matched go to a workspace, or float
 # ('layout floating', what inlay.toml, the config that Inlay ships with, ends with: its cmd-alt-shift keys tile
 # them again). '%{window-layout}' is 'h_tiles' or 'v_tiles' for a tiling window and 'floating' for a floating
 # one, so the dialogs, which Inlay makes floating before the rules run, stay where they open
-[[on-window-detected]]
-    if = 'test %{window-layout} ~= _tiles'
+[[onWindowDetected]]
+    match = 'test %{window-layout} ~= _tiles'
     run = 'move-node-to-workspace 6'
 
 # Force a workspace to a monitor: the name of the workspace = a monitor pattern, or a list of patterns
@@ -654,6 +654,6 @@ key-mapping.key-notation-to-key-code = { unicorn = 'q' }
 # - 'built-in' or any other regex. A case insensitive substring of the name of the monitor. See: inlay list-monitors
 # See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
 # Fallback value (if you omit the table): no workspace is forced to a monitor
-[workspace-to-monitor-force-assignment]
+[workspaceToMonitorForceAssignment]
     1 = 'main'
     6 = ['secondary', 'main']

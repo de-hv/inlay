@@ -3,7 +3,7 @@ import Common
 import Foundation
 import Testing
 
-/// The arrangement of the windows that already exist when Inlay starts. See: 'tiling.startup-layout' config option.
+/// The arrangement of the windows that already exist when Inlay starts. See: 'tiling.startupLayout' config option.
 /// The test monitor is 1920x1080. The layout takes 1920x1079 (see Workspace.layoutWorkspace)
 extension InlayTests {
     @Suite @MainActor struct StartupLayoutTest {
@@ -184,7 +184,7 @@ extension InlayTests {
             assertEquals(workspace.floatingWindows.map(\.windowId), [9])
         }
 
-        // MARK: - The 'on-window-detected' rules
+        // MARK: - The 'onWindowDetected' rules
 
         /// The windows that are already open go to the workspaces of their rules first, and then every workspace
         /// is arranged: not one grid with all of them in the visible workspace

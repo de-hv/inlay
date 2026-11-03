@@ -77,7 +77,7 @@ extension InlayTests {
         /// [theme] and [notifications] are gone: an old config still loads, with a warning for each
         @Test func testObsoleteTables() {
             let result = parseConfig("""
-                config-version = 2
+                configVersion = 2
                 [theme]
                 palette = 'gruvbox'
                 seed = 'wallpaper'

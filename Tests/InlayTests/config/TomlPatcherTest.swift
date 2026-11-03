@@ -5,9 +5,9 @@ import Testing
 
 extension InlayTests {
     @Suite struct TomlPatcherTest {
-        private let theme = TomlKeyPath(["menu-bar"], "theme")
-        private let focused = TomlKeyPath(["menu-bar", "colors"], "focused")
-        private let startAtLogin = TomlKeyPath([], "start-at-login")
+        private let theme = TomlKeyPath(["menuBar"], "theme")
+        private let focused = TomlKeyPath(["menuBar", "colors"], "focused")
+        private let startAtLogin = TomlKeyPath([], "startAtLogin")
 
         private func set(_ text: String, _ path: TomlKeyPath, _ value: TomlValue, sourceLocation: SourceLocation = #_sourceLocation) -> String {
             do {
@@ -44,17 +44,17 @@ extension InlayTests {
 
         @Test func testReplaceValue() {
             let text = """
-                [menu-bar]
+                [menuBar]
                 enabled = true
                 theme = 'chips'
-                show-mode = false
+                showMode = false
 
                 """
             assertEquals(set(text, theme, .string("square")), """
-                [menu-bar]
+                [menuBar]
                 enabled = true
                 theme = 'square'
-                show-mode = false
+                showMode = false
 
                 """)
         }
@@ -62,12 +62,12 @@ extension InlayTests {
         @Test func testReplaceKeepsCommentsAndSpacing() {
             let text = """
                 # The menu bar
-                [menu-bar]   # the item
+                [menuBar]   # the item
                     theme   =   "chips"    # default: 'chips'
-                    # show-mode = true
-                    show-mode = false# no space
+                    # showMode = true
+                    showMode = false# no space
 
-                [menu-bar.colors]
+                [menuBar.colors]
                 focused  = 'auto'            # background of the focused workspace
                 occupied = 'auto'            # workspaces with windows
 
@@ -75,18 +75,18 @@ extension InlayTests {
             let patched = set(set(text, theme, .string("minimal")), focused, .string("#D19A66"))
             assertEquals(patched, """
                 # The menu bar
-                [menu-bar]   # the item
+                [menuBar]   # the item
                     theme   =   'minimal'  # default: 'chips'
-                    # show-mode = true
-                    show-mode = false# no space
+                    # showMode = true
+                    showMode = false# no space
 
-                [menu-bar.colors]
+                [menuBar.colors]
                 focused  = '#D19A66'         # background of the focused workspace
                 occupied = 'auto'            # workspaces with windows
 
                 """)
             // A value right before its comment
-            assertEquals(set(patched, TomlKeyPath(["menu-bar"], "show-mode"), .bool(true)).contains("    show-mode = true# no space\n"), true)
+            assertEquals(set(patched, TomlKeyPath(["menuBar"], "showMode"), .bool(true)).contains("    showMode = true# no space\n"), true)
             // A longer value never eats the last space before the comment
             assertEquals(
                 set("a = 1 # one\n", TomlKeyPath([], "a"), .int(1000)),
@@ -99,9 +99,9 @@ extension InlayTests {
                 theme = 'top'
                 [other]
                 theme = 'other'
-                [menu-bar.colors]
+                [menuBar.colors]
                 theme = 'colors'
-                [menu-bar]
+                [menuBar]
                 theme = 'chips'
                 [[menu-bar-list]]
                 theme = 'list'
@@ -125,19 +125,19 @@ extension InlayTests {
 
         @Test func testStringsWithHashAndQuotes() {
             let text = """
-                [menu-bar.colors]
+                [menuBar.colors]
                 focused = "#FF0000" # red, "really"
                 accent = '#00FF00'# green
 
                 """
             assertEquals(set(text, focused, .string("#0000FF")), """
-                [menu-bar.colors]
+                [menuBar.colors]
                 focused = '#0000FF' # red, "really"
                 accent = '#00FF00'# green
 
                 """)
-            assertEquals(set(text, TomlKeyPath(["menu-bar", "colors"], "accent"), .string("system-accent")), """
-                [menu-bar.colors]
+            assertEquals(set(text, TomlKeyPath(["menuBar", "colors"], "accent"), .string("system-accent")), """
+                [menuBar.colors]
                 focused = "#FF0000" # red, "really"
                 accent = 'system-accent'# green
 
@@ -145,7 +145,7 @@ extension InlayTests {
         }
 
         @Test func testIdempotent() {
-            let text = "[menu-bar]\ntheme = \"chips\"   # comment\n"
+            let text = "[menuBar]\ntheme = \"chips\"   # comment\n"
             // The value is already right, however it is spelled: nothing changes
             assertEquals(set(text, theme, .string("chips")), text)
             let once = set(text, theme, .string("square"))
@@ -160,46 +160,46 @@ extension InlayTests {
 
         @Test func testAddKeyToTheEndOfItsTable() {
             let text = """
-                [menu-bar]
+                [menuBar]
                     enabled = true
                     # About the theme
                     theme = 'chips'
 
                 # The colors
-                [menu-bar.colors]
+                [menuBar.colors]
                     focused = 'auto'
 
                 [gaps]
                 inner.horizontal = 0
 
                 """
-            assertEquals(set(text, TomlKeyPath(["menu-bar"], "show-mode"), .bool(true)), """
-                [menu-bar]
+            assertEquals(set(text, TomlKeyPath(["menuBar"], "showMode"), .bool(true)), """
+                [menuBar]
                     enabled = true
                     # About the theme
                     theme = 'chips'
-                    show-mode = true
+                    showMode = true
 
                 # The colors
-                [menu-bar.colors]
+                [menuBar.colors]
                     focused = 'auto'
 
                 [gaps]
                 inner.horizontal = 0
 
                 """)
-            assertEquals(set(text, TomlKeyPath(["menu-bar", "colors"], "empty"), .string("#6B7280")).contains("    focused = 'auto'\n    empty = '#6B7280'\n\n[gaps]"), true)
+            assertEquals(set(text, TomlKeyPath(["menuBar", "colors"], "empty"), .string("#6B7280")).contains("    focused = 'auto'\n    empty = '#6B7280'\n\n[gaps]"), true)
             assertEquals(set(text, TomlKeyPath(["gaps"], "x"), .int(1)).hasSuffix("inner.horizontal = 0\nx = 1\n"), true)
         }
 
         @Test func testAddKeyToAnEmptyTable() {
-            assertEquals(set("[menu-bar]\n[other]\na = 1\n", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n[other]\na = 1\n")
-            assertEquals(set("a = 1\n  [menu-bar] # empty", theme, .string("square")), "a = 1\n  [menu-bar] # empty\n  theme = 'square'\n")
+            assertEquals(set("[menuBar]\n[other]\na = 1\n", theme, .string("square")), "[menuBar]\ntheme = 'square'\n[other]\na = 1\n")
+            assertEquals(set("a = 1\n  [menuBar] # empty", theme, .string("square")), "a = 1\n  [menuBar] # empty\n  theme = 'square'\n")
         }
 
         @Test func testAddKeyAfterAMultilineValue() {
             let text = """
-                [menu-bar]
+                [menuBar]
                 theme = 'chips'
                 list = [
                     1, # one
@@ -208,8 +208,8 @@ extension InlayTests {
                 [other]
 
                 """
-            assertEquals(set(text, TomlKeyPath(["menu-bar"], "enabled"), .bool(false)), """
-                [menu-bar]
+            assertEquals(set(text, TomlKeyPath(["menuBar"], "enabled"), .bool(false)), """
+                [menuBar]
                 theme = 'chips'
                 list = [
                     1, # one
@@ -222,79 +222,79 @@ extension InlayTests {
         }
 
         @Test func testAddTable() {
-            assertEquals(set("", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n")
-            assertEquals(set("a = 1\n", theme, .string("square")), "a = 1\n\n[menu-bar]\ntheme = 'square'\n")
+            assertEquals(set("", theme, .string("square")), "[menuBar]\ntheme = 'square'\n")
+            assertEquals(set("a = 1\n", theme, .string("square")), "a = 1\n\n[menuBar]\ntheme = 'square'\n")
             // The last line break is missing
-            assertEquals(set("[x]\na = 1", theme, .string("square")), "[x]\na = 1\n\n[menu-bar]\ntheme = 'square'\n")
+            assertEquals(set("[x]\na = 1", theme, .string("square")), "[x]\na = 1\n\n[menuBar]\ntheme = 'square'\n")
             // The document already ends with an empty line
-            assertEquals(set("[x]\na = 1\n\n", theme, .string("square")), "[x]\na = 1\n\n[menu-bar]\ntheme = 'square'\n")
+            assertEquals(set("[x]\na = 1\n\n", theme, .string("square")), "[x]\na = 1\n\n[menuBar]\ntheme = 'square'\n")
             // The parent table is added after its child. That's valid TOML
-            assertEquals(set("[menu-bar.colors]\nfocused = 'auto'\n", theme, .string("square")), "[menu-bar.colors]\nfocused = 'auto'\n\n[menu-bar]\ntheme = 'square'\n")
+            assertEquals(set("[menuBar.colors]\nfocused = 'auto'\n", theme, .string("square")), "[menuBar.colors]\nfocused = 'auto'\n\n[menuBar]\ntheme = 'square'\n")
             // A key that needs quotes
             assertEquals(set("", TomlKeyPath(["a b", "c"], "d.e"), .int(1)), "['a b'.c]\n'd.e' = 1\n")
         }
 
         /// A sub-table that isn't in the document goes after its parent table, not to the end of the document
         @Test func testAddSubtable() {
-            let resize = TomlKeyPath(["borders", "mode-colors"], "resize")
+            let resize = TomlKeyPath(["borders", "modeColors"], "resize")
             let green = TomlValue.string("#30D158")
             // Right after the parent, with an empty line on both sides
-            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[z]\n", focused, .string("auto")), "[menu-bar]\ntheme = 'chips'\n\n[menu-bar.colors]\nfocused = 'auto'\n\n[z]\n")
+            assertEquals(set("[menuBar]\ntheme = 'chips'\n[z]\n", focused, .string("auto")), "[menuBar]\ntheme = 'chips'\n\n[menuBar.colors]\nfocused = 'auto'\n\n[z]\n")
             // The empty lines and the comment above the next table belong to that table
             assertEquals(
                 set("[borders]\nwidth = 4 # Thick\n\n\n# The main mode\n# It must exist\n[mode.main.binding]\nalt-h = 'focus left'\n", resize, green),
-                "[borders]\nwidth = 4 # Thick\n\n[borders.mode-colors]\nresize = '#30D158'\n\n\n# The main mode\n# It must exist\n[mode.main.binding]\nalt-h = 'focus left'\n",
+                "[borders]\nwidth = 4 # Thick\n\n[borders.modeColors]\nresize = '#30D158'\n\n\n# The main mode\n# It must exist\n[mode.main.binding]\nalt-h = 'focus left'\n",
             )
             // A comment at the end of the parent table, separated from the next table, stays in the parent table
             assertEquals(
                 set("[borders]\nwidth = 4\n# glow = true\n\n[z]\n", resize, green),
-                "[borders]\nwidth = 4\n# glow = true\n\n[borders.mode-colors]\nresize = '#30D158'\n\n[z]\n",
+                "[borders]\nwidth = 4\n# glow = true\n\n[borders.modeColors]\nresize = '#30D158'\n\n[z]\n",
             )
             // The parent is the last table of the document, with and without the last line break
-            assertEquals(set("[a]\n[borders]\nwidth = 4\n", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n")
-            assertEquals(set("[a]\n[borders]\nwidth = 4", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n")
-            assertEquals(set("[borders]", resize, green), "[borders]\n\n[borders.mode-colors]\nresize = '#30D158'\n")
-            assertEquals(set("[borders]\r\nwidth = 4\r\n[z]\r\n", resize, green), "[borders]\r\nwidth = 4\r\n\r\n[borders.mode-colors]\r\nresize = '#30D158'\r\n\r\n[z]\r\n")
+            assertEquals(set("[a]\n[borders]\nwidth = 4\n", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.modeColors]\nresize = '#30D158'\n")
+            assertEquals(set("[a]\n[borders]\nwidth = 4", resize, green), "[a]\n[borders]\nwidth = 4\n\n[borders.modeColors]\nresize = '#30D158'\n")
+            assertEquals(set("[borders]", resize, green), "[borders]\n\n[borders.modeColors]\nresize = '#30D158'\n")
+            assertEquals(set("[borders]\r\nwidth = 4\r\n[z]\r\n", resize, green), "[borders]\r\nwidth = 4\r\n\r\n[borders.modeColors]\r\nresize = '#30D158'\r\n\r\n[z]\r\n")
 
             // One level deeper than the keys of the parent
             assertEquals(
                 set("[borders]\n    width = 4\n\n[z]\n", resize, green),
-                "[borders]\n    width = 4\n\n    [borders.mode-colors]\n        resize = '#30D158'\n\n[z]\n",
+                "[borders]\n    width = 4\n\n    [borders.modeColors]\n        resize = '#30D158'\n\n[z]\n",
             )
             assertEquals(
                 set("\t[borders]\n\t\twidth = 4\n", resize, green),
-                "\t[borders]\n\t\twidth = 4\n\n\t\t[borders.mode-colors]\n\t\t\tresize = '#30D158'\n",
+                "\t[borders]\n\t\twidth = 4\n\n\t\t[borders.modeColors]\n\t\t\tresize = '#30D158'\n",
             )
             // After the sub-tables that the parent already has, and indented like the last one of them
             assertEquals(
-                set("[menu-bar]\n  theme = 'chips'\n  [menu-bar.colors]\n      focused = 'auto'\n[z]\n", TomlKeyPath(["menu-bar", "extra"], "a"), .int(1)),
-                "[menu-bar]\n  theme = 'chips'\n  [menu-bar.colors]\n      focused = 'auto'\n\n  [menu-bar.extra]\n      a = 1\n\n[z]\n",
+                set("[menuBar]\n  theme = 'chips'\n  [menuBar.colors]\n      focused = 'auto'\n[z]\n", TomlKeyPath(["menuBar", "extra"], "a"), .int(1)),
+                "[menuBar]\n  theme = 'chips'\n  [menuBar.colors]\n      focused = 'auto'\n\n  [menuBar.extra]\n      a = 1\n\n[z]\n",
             )
             // Only a sibling, without the parent
             assertEquals(
-                set("[menu-bar.colors]\nfocused = 'auto'\n[z]\n", TomlKeyPath(["menu-bar", "extra"], "a"), .int(1)),
-                "[menu-bar.colors]\nfocused = 'auto'\n\n[menu-bar.extra]\na = 1\n\n[z]\n",
+                set("[menuBar.colors]\nfocused = 'auto'\n[z]\n", TomlKeyPath(["menuBar", "extra"], "a"), .int(1)),
+                "[menuBar.colors]\nfocused = 'auto'\n\n[menuBar.extra]\na = 1\n\n[z]\n",
             )
             // The parent ends with a value of several lines, whose last lines look like comments and empty lines
             assertEquals(
                 set("[borders]\nnote = \"\"\"\n# not a comment\n\n\"\"\"\n[z]\n", resize, green),
-                "[borders]\nnote = \"\"\"\n# not a comment\n\n\"\"\"\n\n[borders.mode-colors]\nresize = '#30D158'\n\n[z]\n",
+                "[borders]\nnote = \"\"\"\n# not a comment\n\n\"\"\"\n\n[borders.modeColors]\nresize = '#30D158'\n\n[z]\n",
             )
             assertEquals(
                 set("[borders]\nlist = [\n  1,\n  # one\n\n]\n# next\n[z]\n", resize, green),
-                "[borders]\nlist = [\n  1,\n  # one\n\n]\n\n[borders.mode-colors]\nresize = '#30D158'\n\n# next\n[z]\n",
+                "[borders]\nlist = [\n  1,\n  # one\n\n]\n\n[borders.modeColors]\nresize = '#30D158'\n\n# next\n[z]\n",
             )
 
             // The table is there: the usual rules. A second key, a quoted one, and the keys removed again
             let one = set("[borders]\nwidth = 4\n\n[z]\n", resize, green)
-            let two = set(one, TomlKeyPath(["borders", "mode-colors"], "my mode"), .string("#FF453A"))
-            assertEquals(two, "[borders]\nwidth = 4\n\n[borders.mode-colors]\nresize = '#30D158'\n'my mode' = '#FF453A'\n\n[z]\n")
-            assertEquals(TomlPatcher.locate(two, TomlKeyPath(["borders", "mode-colors"], "my mode")), .line(5))
+            let two = set(one, TomlKeyPath(["borders", "modeColors"], "my mode"), .string("#FF453A"))
+            assertEquals(two, "[borders]\nwidth = 4\n\n[borders.modeColors]\nresize = '#30D158'\n'my mode' = '#FF453A'\n\n[z]\n")
+            assertEquals(TomlPatcher.locate(two, TomlKeyPath(["borders", "modeColors"], "my mode")), .line(5))
             assertEquals(set(two, resize, green), two)
-            assertEquals(remove(remove(two, resize), TomlKeyPath(["borders", "mode-colors"], "my mode")), "[borders]\nwidth = 4\n\n[borders.mode-colors]\n\n[z]\n")
+            assertEquals(remove(remove(two, resize), TomlKeyPath(["borders", "modeColors"], "my mode")), "[borders]\nwidth = 4\n\n[borders.modeColors]\n\n[z]\n")
 
             // No parent and no sibling: the end of the document, as before
-            assertEquals(set("[z]\na = 1\n", resize, green), "[z]\na = 1\n\n[borders.mode-colors]\nresize = '#30D158'\n")
+            assertEquals(set("[z]\na = 1\n", resize, green), "[z]\na = 1\n\n[borders.modeColors]\nresize = '#30D158'\n")
             // An array of tables is nobody's family
             assertEquals(set("[[borders]]\nwidth = 4\n[z]\n", TomlKeyPath(["other", "sub"], "a"), .int(1)), "[[borders]]\nwidth = 4\n[z]\n\n[other.sub]\na = 1\n")
         }
@@ -303,39 +303,39 @@ extension InlayTests {
             // After the last top level key
             assertEquals(
                 set("a = 1\nb = [\n  1,\n]\n\n# The table\n[x]\nc = 1\n", startAtLogin, .bool(true)),
-                "a = 1\nb = [\n  1,\n]\nstart-at-login = true\n\n# The table\n[x]\nc = 1\n",
+                "a = 1\nb = [\n  1,\n]\nstartAtLogin = true\n\n# The table\n[x]\nc = 1\n",
             )
             // No top level keys: before the first table and its comments
             assertEquals(
                 set("# The config\n\n# The table\n# of x\n[x]\nc = 1\n", startAtLogin, .bool(true)),
-                "# The config\n\nstart-at-login = true\n\n# The table\n# of x\n[x]\nc = 1\n",
+                "# The config\n\nstartAtLogin = true\n\n# The table\n# of x\n[x]\nc = 1\n",
             )
-            assertEquals(set("[x]\nc = 1\n", startAtLogin, .bool(true)), "start-at-login = true\n\n[x]\nc = 1\n")
+            assertEquals(set("[x]\nc = 1\n", startAtLogin, .bool(true)), "startAtLogin = true\n\n[x]\nc = 1\n")
             // No tables at all
-            assertEquals(set("# Only a comment", startAtLogin, .bool(true)), "# Only a comment\nstart-at-login = true\n")
-            assertEquals(set("", startAtLogin, .bool(true)), "start-at-login = true\n")
+            assertEquals(set("# Only a comment", startAtLogin, .bool(true)), "# Only a comment\nstartAtLogin = true\n")
+            assertEquals(set("", startAtLogin, .bool(true)), "startAtLogin = true\n")
         }
 
         @Test func testLineEndings() {
-            let text = "[menu-bar]\r\ntheme = 'chips' # comment\r\n\r\n[x]\r\na = 1\r\n"
-            assertEquals(set(text, theme, .string("square")), "[menu-bar]\r\ntheme = 'square' # comment\r\n\r\n[x]\r\na = 1\r\n")
-            assertEquals(set(text, TomlKeyPath(["menu-bar"], "enabled"), .bool(true)), "[menu-bar]\r\ntheme = 'chips' # comment\r\nenabled = true\r\n\r\n[x]\r\na = 1\r\n")
-            assertEquals(set(text, focused, .string("auto")), "[menu-bar]\r\ntheme = 'chips' # comment\r\n\r\n[menu-bar.colors]\r\nfocused = 'auto'\r\n\r\n[x]\r\na = 1\r\n")
-            assertEquals(remove(text, theme), "[menu-bar]\r\n\r\n[x]\r\na = 1\r\n")
+            let text = "[menuBar]\r\ntheme = 'chips' # comment\r\n\r\n[x]\r\na = 1\r\n"
+            assertEquals(set(text, theme, .string("square")), "[menuBar]\r\ntheme = 'square' # comment\r\n\r\n[x]\r\na = 1\r\n")
+            assertEquals(set(text, TomlKeyPath(["menuBar"], "enabled"), .bool(true)), "[menuBar]\r\ntheme = 'chips' # comment\r\nenabled = true\r\n\r\n[x]\r\na = 1\r\n")
+            assertEquals(set(text, focused, .string("auto")), "[menuBar]\r\ntheme = 'chips' # comment\r\n\r\n[menuBar.colors]\r\nfocused = 'auto'\r\n\r\n[x]\r\na = 1\r\n")
+            assertEquals(remove(text, theme), "[menuBar]\r\n\r\n[x]\r\na = 1\r\n")
         }
 
         @Test func testMissingLastLineBreak() {
             // A value is replaced: the end of the document stays as it is
-            assertEquals(set("[menu-bar]\ntheme = 'chips'", theme, .string("square")), "[menu-bar]\ntheme = 'square'")
-            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[x]\na = 1", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n[x]\na = 1")
+            assertEquals(set("[menuBar]\ntheme = 'chips'", theme, .string("square")), "[menuBar]\ntheme = 'square'")
+            assertEquals(set("[menuBar]\ntheme = 'chips'\n[x]\na = 1", theme, .string("square")), "[menuBar]\ntheme = 'square'\n[x]\na = 1")
             // A key is added in the middle: the same
-            assertEquals(set("[menu-bar]\ntheme = 'chips'\n[x]\na = 1", TomlKeyPath(["menu-bar"], "enabled"), .bool(false)), "[menu-bar]\ntheme = 'chips'\nenabled = false\n[x]\na = 1")
-            assertEquals(set("[menu-bar]\n[x]\na = 1", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n[x]\na = 1")
-            assertEquals(set("[x]\na = 1", startAtLogin, .bool(true)), "start-at-login = true\n\n[x]\na = 1")
+            assertEquals(set("[menuBar]\ntheme = 'chips'\n[x]\na = 1", TomlKeyPath(["menuBar"], "enabled"), .bool(false)), "[menuBar]\ntheme = 'chips'\nenabled = false\n[x]\na = 1")
+            assertEquals(set("[menuBar]\n[x]\na = 1", theme, .string("square")), "[menuBar]\ntheme = 'square'\n[x]\na = 1")
+            assertEquals(set("[x]\na = 1", startAtLogin, .bool(true)), "startAtLogin = true\n\n[x]\na = 1")
             // A key is added after the last line: the line gets its line break
-            assertEquals(set("[menu-bar]\ntheme = 'chips'", TomlKeyPath(["menu-bar"], "enabled"), .bool(false)), "[menu-bar]\ntheme = 'chips'\nenabled = false\n")
-            assertEquals(set("[menu-bar]", theme, .string("square")), "[menu-bar]\ntheme = 'square'\n")
-            assertEquals(set("[x]\r\na = 1", theme, .string("square")), "[x]\r\na = 1\r\n\r\n[menu-bar]\r\ntheme = 'square'\r\n")
+            assertEquals(set("[menuBar]\ntheme = 'chips'", TomlKeyPath(["menuBar"], "enabled"), .bool(false)), "[menuBar]\ntheme = 'chips'\nenabled = false\n")
+            assertEquals(set("[menuBar]", theme, .string("square")), "[menuBar]\ntheme = 'square'\n")
+            assertEquals(set("[x]\r\na = 1", theme, .string("square")), "[x]\r\na = 1\r\n\r\n[menuBar]\r\ntheme = 'square'\r\n")
         }
 
         /// The config file belongs to the user. Whatever the document looks like, an edit touches one line of it
@@ -346,21 +346,21 @@ extension InlayTests {
                 "\n\n\n",
                 "# only a comment",
                 "a = 1 # no line break at the end",
-                "[menu-bar]",
-                "[menu-bar] # comment\n\n\n[borders]# comment\n",
-                "\t[menu-bar]\n\t\ttheme\t=\t'chips'\t# tabs\n\t[borders]\n\t\twidth=4# no spaces\n",
-                "[menu-bar.colors]\nfocused = 'auto'\n[menu-bar]\ntheme = \"chips\"\n[borders]\nwidth = 0x04\n",
-                "start-at-login = false\r\n[menu-bar]\r\ntheme = 'chips'\r\n\r\n[borders]\r\nwidth = 4",
+                "[menuBar]",
+                "[menuBar] # comment\n\n\n[borders]# comment\n",
+                "\t[menuBar]\n\t\ttheme\t=\t'chips'\t# tabs\n\t[borders]\n\t\twidth=4# no spaces\n",
+                "[menuBar.colors]\nfocused = 'auto'\n[menuBar]\ntheme = \"chips\"\n[borders]\nwidth = 0x04\n",
+                "startAtLogin = false\r\n[menuBar]\r\ntheme = 'chips'\r\n\r\n[borders]\r\nwidth = 4",
                 // Mixed line endings
-                "start-at-login = false\n[menu-bar]\r\ntheme = 'chips'\n[borders]\r\nwidth = 4\n",
-                "after-startup-command = [\n  'exec-and-forget echo [menu-bar]',\n  \"\"\"exec-and-forget echo '\ntheme = 1\n[borders]\n'\"\"\",\n]\n[menu-bar]\n  enabled = true\n",
-                "[mode.main.binding]\nalt-h = 'focus left' # theme = 'x'\n'theme' = 'mode main'\n[[on-window-detected]]\nif.app-id = 'a'\nrun = 'layout floating'\n[menu-bar]\n[[on-window-detected]]\nrun = ['layout tiling']\n",
-                "# ñandú 日本語 🪟\n[menu-bar]\ntheme = 'chips' # tema «fichas» 🪟\n[gaps]\ninner.horizontal = 8\nouter.top = [{ monitor.'built-in' = 4 }, 8]\n",
-                "[tiling]\nsplit-ratio = 0.5\n\n\n\n[borders.mode-colors]\nresize = '#30D158'\n\n# trailing comment\n",
+                "startAtLogin = false\n[menuBar]\r\ntheme = 'chips'\n[borders]\r\nwidth = 4\n",
+                "afterStartupCommand = [\n  'exec-and-forget echo [menuBar]',\n  \"\"\"exec-and-forget echo '\ntheme = 1\n[borders]\n'\"\"\",\n]\n[menuBar]\n  enabled = true\n",
+                "[mode.main.binding]\nalt-h = 'focus left' # theme = 'x'\n'theme' = 'mode main'\n[[onWindowDetected]]\nmatch.appId = 'a'\nrun = 'layout floating'\n[menuBar]\n[[onWindowDetected]]\nrun = ['layout tiling']\n",
+                "# ñandú 日本語 🪟\n[menuBar]\ntheme = 'chips' # tema «fichas» 🪟\n[gaps]\ninner.horizontal = 8\nouter.top = [{ monitor.'built-in' = 4 }, 8]\n",
+                "[tiling]\nsplitRatio = 0.5\n\n\n\n[borders.modeColors]\nresize = '#30D158'\n\n# trailing comment\n",
             ]
             let edits: [(TomlKeyPath, TomlValue)] = [
                 (startAtLogin, .bool(true)), (theme, .string("square")), (focused, .string("#D19A66")),
-                (TomlKeyPath(["borders"], "width"), .int(7)), (TomlKeyPath(["tiling"], "new-window-placement"), .string("after-focused")),
+                (TomlKeyPath(["borders"], "width"), .int(7)), (TomlKeyPath(["tiling"], "newWindowPlacement"), .string("after-focused")),
             ]
             func lines(_ text: String) -> [String] { TomlPatcher.Document(text).lines.map { $0.content + $0.terminator } }
             for document in documents {
@@ -405,10 +405,10 @@ extension InlayTests {
         @Test func testByteOrderMarkAndOldMacLineEndings() {
             // A byte order mark hides the first line from the patcher: the key is added again, and the check of
             // the result refuses the duplicate. Nothing is written
-            let withMark = "\u{FEFF}start-at-login = false\n[menu-bar]\ntheme = 'chips'\n"
+            let withMark = "\u{FEFF}startAtLogin = false\n[menuBar]\ntheme = 'chips'\n"
             assertNotNil(setError(withMark, startAtLogin, .bool(true)))
             // Lone carriage returns aren't line breaks for the patcher. Either the edit is right, or it is refused
-            let oldMac = "[menu-bar]\rtheme = 'chips'\r"
+            let oldMac = "[menuBar]\rtheme = 'chips'\r"
             if let patched = try? TomlPatcher.set(oldMac, theme, .string("square")) {
                 assertTrue(TomlValue.string("square").matches(TomlPatcher.decodedValue(patched, theme)))
             }
@@ -418,36 +418,36 @@ extension InlayTests {
 
         @Test func testRemove() {
             let text = """
-                [menu-bar]
+                [menuBar]
                 enabled = true
                 theme = 'chips' # the theme
                 # A comment
-                show-mode = false
+                showMode = false
 
                 """
             assertEquals(remove(text, theme), """
-                [menu-bar]
+                [menuBar]
                 enabled = true
                 # A comment
-                show-mode = false
+                showMode = false
 
                 """)
             // Nothing to remove
             assertEquals(remove(text, focused), text)
             assertEquals(remove("", theme), "")
             // The last line, without a line break
-            assertEquals(remove("[menu-bar]\ntheme = 'chips'", theme), "[menu-bar]\n")
+            assertEquals(remove("[menuBar]\ntheme = 'chips'", theme), "[menuBar]\n")
             // The table stays, even if it is left empty
-            assertEquals(remove("[menu-bar]\ntheme = 'chips'\n[x]\n", theme), "[menu-bar]\n[x]\n")
+            assertEquals(remove("[menuBar]\ntheme = 'chips'\n[x]\n", theme), "[menuBar]\n[x]\n")
         }
 
         // MARK: - Dotted keys
 
         @Test func testDottedKeysAreReplaced() {
-            assertEquals(TomlPatcher.locate("menu-bar.theme = 'chips'\n", theme), .line(0))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.focused = 'auto'\n", focused), .line(1))
-            assertEquals(TomlPatcher.locate("menu-bar.colors.focused = 'auto'\n", focused), .line(0))
-            assertEquals(set("menu-bar.theme = 'chips'\n", theme, .string("square")), "menu-bar.theme = 'square'\n")
+            assertEquals(TomlPatcher.locate("menuBar.theme = 'chips'\n", theme), .line(0))
+            assertEquals(TomlPatcher.locate("[menuBar]\ncolors.focused = 'auto'\n", focused), .line(1))
+            assertEquals(TomlPatcher.locate("menuBar.colors.focused = 'auto'\n", focused), .line(0))
+            assertEquals(set("menuBar.theme = 'chips'\n", theme, .string("square")), "menuBar.theme = 'square'\n")
             // The gaps of the shipped config, aligned, with a comment after the value
             let gaps = """
                 [gaps]
@@ -469,16 +469,16 @@ extension InlayTests {
         }
 
         @Test func testDottedKeysAreAddedWithDots() {
-            // The table of the key is defined with dotted keys: a [menu-bar] header can't be added, the key gets dots too
-            assertEquals(TomlPatcher.locate("menu-bar.enabled = true\n", theme), .absent)
-            assertEquals(set("menu-bar.enabled = true\n", theme, .string("square")), "menu-bar.enabled = true\nmenu-bar.theme = 'square'\n")
+            // The table of the key is defined with dotted keys: a [menuBar] header can't be added, the key gets dots too
+            assertEquals(TomlPatcher.locate("menuBar.enabled = true\n", theme), .absent)
+            assertEquals(set("menuBar.enabled = true\n", theme, .string("square")), "menuBar.enabled = true\nmenuBar.theme = 'square'\n")
             assertEquals(
-                set("[menu-bar]\ncolors.accent = '#FFFFFF'\nenabled = true\n", focused, .string("auto")),
-                "[menu-bar]\ncolors.accent = '#FFFFFF'\ncolors.focused = 'auto'\nenabled = true\n",
+                set("[menuBar]\ncolors.accent = '#FFFFFF'\nenabled = true\n", focused, .string("auto")),
+                "[menuBar]\ncolors.accent = '#FFFFFF'\ncolors.focused = 'auto'\nenabled = true\n",
             )
             assertEquals(
-                set("menu-bar . \"colors\".accent = '#FFFFFF'\n", focused, .string("auto")),
-                "menu-bar . \"colors\".accent = '#FFFFFF'\nmenu-bar.colors.focused = 'auto'\n",
+                set("menuBar . \"colors\".accent = '#FFFFFF'\n", focused, .string("auto")),
+                "menuBar . \"colors\".accent = '#FFFFFF'\nmenuBar.colors.focused = 'auto'\n",
             )
             // After the last of them, with its indentation
             let outer = TomlKeyPath(["gaps", "outer"], "top")
@@ -489,20 +489,20 @@ extension InlayTests {
             // Without dotted siblings, the table gets a header of its own
             assertEquals(set("[gaps]\n    inner.horizontal = 8\n", outer, .int(4)), "[gaps]\n    inner.horizontal = 8\n\n    [gaps.outer]\n        top = 4\n")
             // Dotted keys of other tables don't matter
-            assertEquals(TomlPatcher.locate("gaps.inner.horizontal = 0\nmenu-bars.theme = 1\n[menu-bar]\ncolor.focused = 1\n", theme), .absent)
-            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors.accent = '#FFFFFF'\n", theme), .absent)
+            assertEquals(TomlPatcher.locate("gaps.inner.horizontal = 0\nmenu-bars.theme = 1\n[menuBar]\ncolor.focused = 1\n", theme), .absent)
+            assertEquals(TomlPatcher.locate("[menuBar]\ncolors.accent = '#FFFFFF'\n", theme), .absent)
         }
 
         // MARK: - Refused
 
         @Test func testInlineTables() {
-            assertEquals(TomlPatcher.locate("menu-bar = { theme = 'chips' }\n", theme), .unsupported(.inlineTable))
-            assertEquals(TomlPatcher.locate("menu-bar = { enabled = true }\n", theme), .unsupported(.inlineTable))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ncolors = { focused = 'auto' }\n", focused), .unsupported(.inlineTable))
-            assertEquals(TomlPatcher.locate("menu-bar.colors = { }\n", focused), .unsupported(.inlineTable))
-            assertEquals(setError("menu-bar = { theme = 'chips' }\n", theme), .unsupported(.inlineTable))
+            assertEquals(TomlPatcher.locate("menuBar = { theme = 'chips' }\n", theme), .unsupported(.inlineTable))
+            assertEquals(TomlPatcher.locate("menuBar = { enabled = true }\n", theme), .unsupported(.inlineTable))
+            assertEquals(TomlPatcher.locate("[menuBar]\ncolors = { focused = 'auto' }\n", focused), .unsupported(.inlineTable))
+            assertEquals(TomlPatcher.locate("menuBar.colors = { }\n", focused), .unsupported(.inlineTable))
+            assertEquals(setError("menuBar = { theme = 'chips' }\n", theme), .unsupported(.inlineTable))
             do {
-                _ = try TomlPatcher.remove("menu-bar = { theme = 'chips' }\n", theme)
+                _ = try TomlPatcher.remove("menuBar = { theme = 'chips' }\n", theme)
                 Issue.record("Must be refused")
             } catch {
                 assertEquals(error, .unsupported(.inlineTable))
@@ -511,30 +511,30 @@ extension InlayTests {
 
         @Test func testOtherUnsupportedShapes() {
             // A value in several lines
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = '''\nchips'''\n", theme), .unsupported(.multilineValue))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = [\n'chips']\n", theme), .unsupported(.multilineValue))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = '''\nchips'''\n", theme), .unsupported(.multilineValue))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = [\n'chips']\n", theme), .unsupported(.multilineValue))
             // Arrays of tables
-            assertEquals(TomlPatcher.locate("[[menu-bar]]\ntheme = 'chips'\n", theme), .unsupported(.arrayOfTables))
-            assertEquals(TomlPatcher.locate("[[menu-bar]]\n", focused), .unsupported(.arrayOfTables))
+            assertEquals(TomlPatcher.locate("[[menuBar]]\ntheme = 'chips'\n", theme), .unsupported(.arrayOfTables))
+            assertEquals(TomlPatcher.locate("[[menuBar]]\n", focused), .unsupported(.arrayOfTables))
             // The key is a table, the table is a value, or something is there twice
-            assertEquals(TomlPatcher.locate("[menu-bar.theme]\n", theme), .unsupported(.conflict))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme.name = 'chips'\n", theme), .unsupported(.conflict))
-            assertEquals(TomlPatcher.locate("menu-bar = 'chips'\n", theme), .unsupported(.conflict))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = { name = 'chips' }\n", theme), .unsupported(.conflict))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = 'a'\ntheme = 'b'\n", theme), .unsupported(.conflict))
-            assertEquals(TomlPatcher.locate("[menu-bar]\n[x]\n[menu-bar]\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("[menuBar.theme]\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme.name = 'chips'\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("menuBar = 'chips'\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = { name = 'chips' }\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = 'a'\ntheme = 'b'\n", theme), .unsupported(.conflict))
+            assertEquals(TomlPatcher.locate("[menuBar]\n[x]\n[menuBar]\n", theme), .unsupported(.conflict))
         }
 
         @Test func testInvalidDocuments() {
             // Nothing is returned if the result isn't valid TOML
-            assertEquals(isInvalidToml(setError("[menu-bar\ntheme = 'chips'\n", theme)), true)
-            assertEquals(isInvalidToml(setError("a = \n[menu-bar]\ntheme = 'chips'\n", theme, .string("square"))), true)
+            assertEquals(isInvalidToml(setError("[menuBar\ntheme = 'chips'\n", theme)), true)
+            assertEquals(isInvalidToml(setError("a = \n[menuBar]\ntheme = 'chips'\n", theme, .string("square"))), true)
             // A broken value isn't repaired
-            assertEquals(setError("[menu-bar]\ntheme = 'chips' oops\n", theme, .string("square")), .unsupported(.multilineValue))
-            assertEquals(setError("[menu-bar]\ntheme = \"chips\" \"oops\"\n", theme, .string("square")), .unsupported(.multilineValue))
-            assertEquals(setError("[menu-bar]\ntheme = chips oops # comment\n", theme, .string("square")), .unsupported(.multilineValue))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = \"a \\\" b\" # comment\n", theme), .line(1))
-            assertEquals(TomlPatcher.locate("[menu-bar]\ntheme = 'a \\' # comment\n", theme), .line(1))
+            assertEquals(setError("[menuBar]\ntheme = 'chips' oops\n", theme, .string("square")), .unsupported(.multilineValue))
+            assertEquals(setError("[menuBar]\ntheme = \"chips\" \"oops\"\n", theme, .string("square")), .unsupported(.multilineValue))
+            assertEquals(setError("[menuBar]\ntheme = chips oops # comment\n", theme, .string("square")), .unsupported(.multilineValue))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = \"a \\\" b\" # comment\n", theme), .line(1))
+            assertEquals(TomlPatcher.locate("[menuBar]\ntheme = 'a \\' # comment\n", theme), .line(1))
             assertEquals(isInvalidToml(setError("[x]\na = \"not closed\n", theme)), true)
         }
 
@@ -543,35 +543,35 @@ extension InlayTests {
         @Test func testKeysInsideOfStringsAndArrays() {
             let text = """
                 description = \"\"\"
-                [menu-bar]
+                [menuBar]
                 theme = 'inside of a string'
                 \"\"\"
                 list = [
                   "theme = 'inside of an array'", # ]
                   '''
-                [menu-bar]
+                [menuBar]
                 theme = 'literal'
                 ''',
                 ]
-                # [menu-bar]
+                # [menuBar]
                 # theme = 'comment'
-                [other] # [menu-bar]
+                [other] # [menuBar]
                 theme = 'other'
 
                 """
             assertEquals(TomlPatcher.locate(text, theme), .absent)
-            assertEquals(set(text, theme, .string("chips")), text + "\n[menu-bar]\ntheme = 'chips'\n")
+            assertEquals(set(text, theme, .string("chips")), text + "\n[menuBar]\ntheme = 'chips'\n")
         }
 
         @Test func testQuotedKeysAndHeaders() {
-            let text = "[ 'menu-bar' . \"colors\" ]\n\"focused\" = 'auto'\n'accent' = 'system-accent'\n"
+            let text = "[ 'menuBar' . \"colors\" ]\n\"focused\" = 'auto'\n'accent' = 'system-accent'\n"
             assertEquals(TomlPatcher.locate(text, focused), .line(1))
-            assertEquals(set(text, focused, .string("#FFFFFF")), "[ 'menu-bar' . \"colors\" ]\n\"focused\" = '#FFFFFF'\n'accent' = 'system-accent'\n")
-            assertEquals(set(text, TomlKeyPath(["menu-bar", "colors"], "accent"), .string("#000000")).contains("'accent' = '#000000'\n"), true)
+            assertEquals(set(text, focused, .string("#FFFFFF")), "[ 'menuBar' . \"colors\" ]\n\"focused\" = '#FFFFFF'\n'accent' = 'system-accent'\n")
+            assertEquals(set(text, TomlKeyPath(["menuBar", "colors"], "accent"), .string("#000000")).contains("'accent' = '#000000'\n"), true)
         }
 
         @Test func testKeyLiteral() {
-            assertEquals(TomlPatcher.keyLiteral("menu-bar"), "menu-bar")
+            assertEquals(TomlPatcher.keyLiteral("menuBar"), "menuBar")
             assertEquals(TomlPatcher.keyLiteral("a_B-9"), "a_B-9")
             assertEquals(TomlPatcher.keyLiteral("a b"), "'a b'")
             assertEquals(TomlPatcher.keyLiteral("a.b"), "'a.b'")
@@ -600,18 +600,18 @@ extension InlayTests {
         @Test func testRealConfigs() throws {
             let defaultConfig = try String(contentsOf: projectRoot.appending(path: "inlay.toml"), encoding: .utf8)
             let keys: [(TomlKeyPath, TomlValue)] = [
-                (TomlKeyPath([], "start-at-login"), .bool(false)),
-                (TomlKeyPath([], "auto-reload-config"), .bool(false)),
-                (TomlKeyPath([], "persistent-workspaces"), .strings(["1", "two words", "3"])),
-                (TomlKeyPath(["tiling"], "new-window-placement"), .string("after-focused")),
-                (TomlKeyPath(["tiling"], "split-ratio"), .float(0.75)),
-                (TomlKeyPath(["tiling"], "min-window-size"), .int(103)),
-                (TomlKeyPath(["menu-bar"], "theme"), .string("chips")),
-                (TomlKeyPath(["menu-bar"], "per-monitor"), .bool(true)),
-                (TomlKeyPath(["menu-bar", "colors"], "focused"), .string("#123456")),
+                (TomlKeyPath([], "startAtLogin"), .bool(false)),
+                (TomlKeyPath([], "autoReloadConfig"), .bool(false)),
+                (TomlKeyPath([], "persistentWorkspaces"), .strings(["1", "two words", "3"])),
+                (TomlKeyPath(["tiling"], "newWindowPlacement"), .string("after-focused")),
+                (TomlKeyPath(["tiling"], "splitRatio"), .float(0.75)),
+                (TomlKeyPath(["tiling"], "minWindowSize"), .int(103)),
+                (TomlKeyPath(["menuBar"], "theme"), .string("chips")),
+                (TomlKeyPath(["menuBar"], "perMonitor"), .bool(true)),
+                (TomlKeyPath(["menuBar", "colors"], "focused"), .string("#123456")),
                 (TomlKeyPath(["borders"], "width"), .int(7)),
-                (TomlKeyPath(["borders"], "inactive-color"), .string("#123456")),
-                (TomlKeyPath(["borders", "single-window"], "gap"), .int(5)),
+                (TomlKeyPath(["borders"], "inactiveColor"), .string("#123456")),
+                (TomlKeyPath(["borders", "singleWindow"], "gap"), .int(5)),
                 (TomlKeyPath(["gaps", "inner"], "horizontal"), .int(11)),
                 (TomlKeyPath(["animations"], "duration"), .int(123)),
             ]

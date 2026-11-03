@@ -1,7 +1,7 @@
 import AppKit
 import Common
 
-/// Rebuilds the tiling tree of the workspace, like 'tiling.startup-layout' does when Inlay starts.
+/// Rebuilds the tiling tree of the workspace, like 'tiling.startupLayout' does when Inlay starts.
 /// Example: a workspace left with a row of windows gets the dwindle tree back
 struct ArrangeWorkspaceCommand: Command {
     let args: ArrangeWorkspaceCmdArgs

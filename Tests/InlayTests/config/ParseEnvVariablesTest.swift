@@ -19,11 +19,11 @@ extension InlayTests {
         }
 
         @Test func testInherit() {
-            let result1 = parseConfig("exec.inherit-env-vars = false")
+            let result1 = parseConfig("exec.inheritEnvVars = false")
             assertEquals(result1.errors, [])
             assertEquals(result1.config.execConfig.envVariables, [:])
 
-            let result2 = parseConfig("exec.inherit-env-vars = true")
+            let result2 = parseConfig("exec.inheritEnvVars = true")
             assertEquals(result2.errors, [])
             assertEquals(result2.config.execConfig.envVariables, testEnv)
         }
@@ -31,7 +31,7 @@ extension InlayTests {
         @Test func testAddVars() {
             let result = parseConfig(
                 """
-                [exec.env-vars]
+                [exec.envVars]
                 FOO = 'BAR'
                 """,
             )
@@ -42,25 +42,25 @@ extension InlayTests {
         @Test func testCyclicDep() {
             let errors = parseConfig(
                 """
-                [exec.env-vars]
+                [exec.envVars]
                 FOO = '${BAR}'
                 BAR = '${FOO}'
                 """,
             ).strErrors
             assertEquals(errors, [
-                "[ERROR] exec.env-vars.BAR: Env variable 'FOO' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
-                "[ERROR] exec.env-vars.FOO: Env variable 'BAR' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
+                "[ERROR] exec.envVars.BAR: Env variable 'FOO' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
+                "[ERROR] exec.envVars.FOO: Env variable 'BAR' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
             ])
         }
 
         @Test func testForbidPwd() {
             let errors = parseConfig(
                 """
-                [exec.env-vars]
+                [exec.envVars]
                 PWD = ''
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] exec.env-vars.PWD: Changing 'PWD' is not allowed"])
+            assertEquals(errors, ["[ERROR] exec.envVars.PWD: Changing 'PWD' is not allowed"])
         }
     }
 }

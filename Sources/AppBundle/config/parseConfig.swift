@@ -119,10 +119,10 @@ struct Parser<S: ConvenienceMutable, T>: ParserProtocol {
     }
 }
 
-private let keyMappingConfigRootKey = "key-mapping"
-private let configVersionConfigRootKey = "config-version"
+private let keyMappingConfigRootKey = "keyMapping"
+private let configVersionConfigRootKey = "configVersion"
 private let modeConfigRootKey = "mode"
-let persistentWorkspacesKey = "persistent-workspaces"
+let persistentWorkspacesKey = "persistentWorkspaces"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
@@ -131,46 +131,46 @@ let persistentWorkspacesKey = "persistent-workspaces"
 let configParser: [String: any ParserProtocol<Config>] = [
     configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
 
-    "after-login-command": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),
-    "after-startup-command": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
+    "afterLoginCommand": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),
+    "afterStartupCommand": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
 
-    "on-focus-changed": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
-    "on-mode-changed": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
-    "on-focused-monitor-changed": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
+    "onFocusChanged": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
+    "onModeChanged": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
+    "onFocusedMonitorChanged": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
     // "on-focused-workspace-changed": Parser(\.onFocusedWorkspaceChanged, { parseCommandOrCommands($0).toParsedConfig($1) }),
 
-    "enable-normalization-flatten-containers": Parser(\.enableNormalizationFlattenContainers, parseBool),
-    "enable-normalization-opposite-orientation-for-nested-containers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
+    "enableNormalizationFlattenContainers": Parser(\.enableNormalizationFlattenContainers, parseBool),
+    "enableNormalizationOppositeOrientationForNestedContainers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
 
-    "default-root-container-layout": Parser(\.defaultRootContainerLayout, parseLayout),
-    "default-root-container-orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
+    "defaultRootContainerLayout": Parser(\.defaultRootContainerLayout, parseLayout),
+    "defaultRootContainerOrientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
 
-    "start-at-login": Parser(\.startAtLogin, parseBool),
-    "auto-reload-config": Parser(\.autoReloadConfig, parseBool),
-    "automatically-unhide-macos-hidden-apps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
-    "accordion-padding": Parser(\._accordionPadding, parseAccordionPadding),
+    "startAtLogin": Parser(\.startAtLogin, parseBool),
+    "autoReloadConfig": Parser(\.autoReloadConfig, parseBool),
+    "automaticallyUnhideMacosHiddenApps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
+    "accordionPadding": Parser(\._accordionPadding, parseAccordionPadding),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
-    "exec-on-workspace-change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
+    "execOnWorkspaceChange": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),
 
     keyMappingConfigRootKey: Parser(\.keyMapping, skipParsing(Config().keyMapping)), // Parsed manually
     modeConfigRootKey: Parser(\.modes, skipParsing(Config().modes)), // Parsed manually
 
     "gaps": Parser(\.gaps, parseGaps),
-    "focus-follows-mouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
+    "focusFollowsMouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
     "tiling": Parser(\.tiling, parseTiling),
-    "menu-bar": Parser(\.menuBar, parseMenuBar),
+    "menuBar": Parser(\.menuBar, parseMenuBar),
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
-    "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menu-bar.colors] and [borders]")),
+    "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menuBar.colors] and [borders]")),
     "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone")),
     "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
-    "workspace-to-monitor-force-assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
-    "on-window-detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
+    "workspaceToMonitorForceAssignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
+    "onWindowDetected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 
     // Deprecated
-    "non-empty-workspaces-root-containers-layout-on-startup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
-    "indent-for-nested-containers-with-the-same-orientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
+    "nonEmptyWorkspacesRootContainersLayoutOnStartup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
+    "indentForNestedContainersWithTheSameOrientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
 ]
 
 extension ParsedCmd {
@@ -195,7 +195,7 @@ func parseDeprecatedAfterLoginCommand(_ raw: OrderedJson, _ backtrace: ConfigBac
     if let array = raw.asArrayOrNil, array.count == 0 {
         return .success([])
     }
-    let msg = "after-login-command is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"
+    let msg = "afterLoginCommand is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"
     return .failure(.init(backtrace, msg))
 }
 
@@ -313,7 +313,7 @@ func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> O
 
     if config.configVersion <= ._1 {
         if rawTable.keys.contains(persistentWorkspacesKey) {
-            c.errors += [.init(.rootKey(persistentWorkspacesKey), "This config option is only available since 'config-version = 2'")]
+            c.errors += [.init(.rootKey(persistentWorkspacesKey), "This config option is only available since 'configVersion = 2'")]
         }
         config.persistentWorkspaces = (config.modes.values.lazy
             .flatMap { (mode: Mode) -> [HotkeyBinding] in Array(mode.bindings.values) }
@@ -336,8 +336,8 @@ func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> O
                 """
                 The config contains:
                 1. usage of 'split' command
-                2. enable-normalization-flatten-containers = true
-                These two settings don't play nicely together. 'split' command has no effect when enable-normalization-flatten-containers is disabled.
+                2. enableNormalizationFlattenContainers = true
+                These two settings don't play nicely together. 'split' command has no effect when enableNormalizationFlattenContainers is disabled.
 
                 My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'.
                 """,
@@ -345,8 +345,8 @@ func tomlToJson(_ rawToml: String, _ errors: inout [ConfigParseDiagnostic]) -> O
         }
     }
     if config.configVersion < .max {
-        let msg = "The current 'config-version = \(config.configVersion)' is outdated. " +
-            "Please consider migrating to 'config-version = \(ConfigVersion.max)'. " +
+        let msg = "The current 'configVersion = \(config.configVersion)' is outdated. " +
+            "Please consider migrating to 'configVersion = \(ConfigVersion.max)'. " +
             "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide."
         c.warnings.append(.init(.emptyRoot, msg))
     }
@@ -360,7 +360,7 @@ func parseIndentForNestedContainersWithTheSameOrientation(_ _: OrderedJson, _ ba
 
 func parseConfigVersion(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<ConfigVersion> {
     parseInt(raw, backtrace)
-        .flatMap { ConfigVersion.init(rawValue: $0).toResult(.init(backtrace, "config-version must be in [\(ConfigVersion.min), \(ConfigVersion.max)] range")) }
+        .flatMap { ConfigVersion.init(rawValue: $0).toResult(.init(backtrace, "configVersion must be in [\(ConfigVersion.min), \(ConfigVersion.max)] range")) }
 }
 
 func parseInt(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {
@@ -419,7 +419,7 @@ func parseTable<T: ConvenienceMutable>(
 
 private func parseStartupRootContainerLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Void> {
     parseString(raw, backtrace)
-        .filter(.init(backtrace, "'non-empty-workspaces-root-containers-layout-on-startup' is deprecated. Please drop it from your config")) { raw in raw == "smart" }
+        .filter(.init(backtrace, "'nonEmptyWorkspacesRootContainersLayoutOnStartup' is deprecated. Please drop it from your config")) { raw in raw == "smart" }
         .map { _ in () }
 }
 
@@ -440,7 +440,7 @@ private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: 
 // Accepted to make it possible to use the config of AeroSpace as is
 private func parseAccordionPadding(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
     if parseInt(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
-        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config"))
+        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config"))
     }
 }
 
@@ -537,7 +537,7 @@ extension OrderedJson.JsonDict {
             let backtrace: ConfigBacktrace = backtrace + .key(key)
             switch fieldsParser[key] {
                 case let parser?: raw = parser.transformRawConfig(raw, value, backtrace, &c)
-                case nil: c.errors.append(unknownKeyDiagnostic(backtrace))
+                case nil: c.errors.append(unknownKeyDiagnostic(backtrace, key: key))
             }
         }
 
@@ -545,8 +545,13 @@ extension OrderedJson.JsonDict {
     }
 }
 
-func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {
-    .init(backtrace, backtrace.isRootKey ? "Unknown top-level key" : "Unknown key")
+func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace, key: String? = nil) -> ConfigParseDiagnostic {
+    let message = backtrace.isRootKey ? "Unknown top-level key" : "Unknown key"
+    // The keys of Inlay 0.2 and of AeroSpace: 'corner-radius'
+    guard let key, key.contains("-") else { return .init(backtrace, message) }
+    let words = key.split(separator: "-")
+    let camelCase = String(words.first ?? "") + words.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+    return .init(backtrace, "\(message). The keys are camelCase since Inlay 0.3.0: '\(camelCase)'")
 }
 
 func expectedActualTypeDiagnostic(expected: TomlType, actual: TomlType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {

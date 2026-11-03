@@ -3,7 +3,7 @@ import Common
 
 /// A color of the config file: '#RRGGBB', '#RRGGBBAA', 'system-accent' and, in the keys that allow it, 'auto'.
 ///
-/// Used by [menu-bar.colors]. Meant to be reused by every other table that has colors
+/// Used by [menuBar.colors]. Meant to be reused by every other table that has colors
 enum ConfigColor: Equatable, Sendable, CustomStringConvertible {
     /// The color is picked by the place it is used in. In the menu bar: the color of the menu bar text
     case auto

@@ -1,19 +1,19 @@
 import Common
 
-/// [menu-bar] table of the config
+/// [menuBar] table of the config
 struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
     var theme: MenuBarTheme = .liquid
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
-    /// The item takes the colors of the other icons of the menu bar, whatever [menu-bar.colors] says: the colors stay
+    /// The item takes the colors of the other icons of the menu bar, whatever [menuBar.colors] says: the colors stay
     /// in the config, and they apply again when this is off
     var systemColors: Bool = false
     /// The workspaces grouped by the monitor they are on, and a hollow marker on the one that another monitor shows
     var perMonitor: Bool = false
 
-    /// 'show-app-icons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
+    /// 'showAppIcons' is a key of the past: it is accepted and ignored. See: parseObsoleteShowAppIcons
     var _showAppIcons: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 }
 
@@ -43,7 +43,7 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
 }
 
 extension MenuBarConfig {
-    /// The colors the item is drawn with: all 'auto' with 'system-colors', so that macOS colors it like the other
+    /// The colors the item is drawn with: all 'auto' with 'systemColors', so that macOS colors it like the other
     /// icons of the menu bar. See: MenuBarPalette.isTemplate
     var effectiveColors: MenuBarColors { systemColors ? MenuBarColors() : colors }
 }
@@ -51,9 +51,9 @@ extension MenuBarConfig {
 /// The theme that showed the icons of the apps in the item. Inlay doesn't have it anymore
 private let obsoleteChipsIconsTheme = "chips-icons"
 
-/// [menu-bar.colors] table of the config
+/// [menuBar.colors] table of the config
 struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
-    /// The focus marker while it shows the initial of the binding mode ('show-mode'). 'auto': the same as 'focused'
+    /// The focus marker while it shows the initial of the binding mode ('showMode'). 'auto': the same as 'focused'
     var accent: ConfigColor = .auto
     /// The background of the focused workspace
     var focused: ConfigColor = .auto
@@ -66,12 +66,12 @@ struct MenuBarColors: ConvenienceMutable, Equatable, Sendable {
 let menuBarParserTable: [String: any ParserProtocol<MenuBarConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "theme": Parser(\.theme, parseMenuBarTheme),
-    "show-app-icons": Parser(\._showAppIcons, parseObsoleteShowAppIcons),
-    "dim-empty-workspaces": Parser(\.dimEmptyWorkspaces, parseBool),
-    "show-mode": Parser(\.showMode, parseBool),
+    "showAppIcons": Parser(\._showAppIcons, parseObsoleteShowAppIcons),
+    "dimEmptyWorkspaces": Parser(\.dimEmptyWorkspaces, parseBool),
+    "showMode": Parser(\.showMode, parseBool),
     "colors": Parser(\.colors, parseMenuBarColors),
-    "system-colors": Parser(\.systemColors, parseBool),
-    "per-monitor": Parser(\.perMonitor, parseBool),
+    "systemColors": Parser(\.systemColors, parseBool),
+    "perMonitor": Parser(\.perMonitor, parseBool),
 ]
 
 let menuBarColorsParserTable: [String: any ParserProtocol<MenuBarColors>] = [
@@ -107,6 +107,6 @@ private func parseMenuBarTheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace,
 // Accepted so that a config written for a previous version of Inlay still loads
 private func parseObsoleteShowAppIcons(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
     if parseBool(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
-        c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: 'show-app-icons' is ignored. Please drop it from the config"))
+        c.warnings.append(.init(backtrace, "The menu bar item doesn't show app icons anymore: 'showAppIcons' is ignored. Please drop it from the config"))
     }
 }

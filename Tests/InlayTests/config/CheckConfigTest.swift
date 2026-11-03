@@ -35,7 +35,7 @@ extension InlayTests {
         @Test func testConfigInALinkedFolder() throws {
             let folder = directory.appending(path: "dotfiles")
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try "config-version = 2\n[mode.main.binding]\n".write(to: folder.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
+            try "configVersion = 2\n[mode.main.binding]\n".write(to: folder.appending(path: "inlay.toml"), atomically: true, encoding: .utf8)
             let link = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: folder)
             let url = link.appending(path: "inlay.toml")
@@ -45,20 +45,20 @@ extension InlayTests {
         }
 
         @Test func testWarningsAreNotErrors() throws {
-            let url = try file("warnings.toml", "config-version = 2\naccordion-padding = 30\n[mode.main.binding]\n")
+            let url = try file("warnings.toml", "configVersion = 2\naccordionPadding = 30\n[mode.main.binding]\n")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(
                 report.text,
                 """
                 '\(url.path)': 0 error(s), 1 warning(s)
-                [WARNING] accordion-padding: Inlay has no accordion layout: 'accordion-padding' is ignored. Please drop it from the config
+                [WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config
                 """,
             )
         }
 
         @Test func testErrors() throws {
-            let url = try file("errors.toml", "config-version = 2\nnope = 1\n[borders]\nwidth = 99\n[mode.main.binding]\n")
+            let url = try file("errors.toml", "configVersion = 2\nnope = 1\n[borders]\nwidth = 99\n[mode.main.binding]\n")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, false)
             assertEquals(
@@ -73,7 +73,7 @@ extension InlayTests {
 
         /// The config is a symbolic link to a file of the user, like the one that install.sh offers to create
         @Test func testSymlinkAndMissingFile() throws {
-            let real = try file("mine.toml", "config-version = 2\n[mode.main.binding]\n")
+            let real = try file("mine.toml", "configVersion = 2\n[mode.main.binding]\n")
             let link = directory.appending(path: "inlay.toml")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
             assertEquals(checkConfigFile(link).isOk, true)

@@ -259,7 +259,7 @@ private func unbindAndGetBindingDataForNewTilingWindow(_ workspace: Workspace, w
     return getBindingDataForNewTilingWindow(workspace, focused: focused)
 }
 
-/// Where to bind a tiling window that appears in the workspace. See: 'tiling.new-window-placement' config option
+/// Where to bind a tiling window that appears in the workspace. See: 'tiling.newWindowPlacement' config option
 ///
 /// The window must not be bound to the workspace.
 /// The window must be bound with the returned data right away, without suspension points in between,
@@ -289,7 +289,7 @@ func getBindingDataForNewTilingWindow(_ workspace: Workspace, focused: Window?) 
 
 extension Window {
     /// The window has just been registered: Inlay knows about it from now on, and no refresh session will find it
-    /// again. This is the only time its 'on-window-detected' rules run on their own, whatever found the window:
+    /// again. This is the only time its 'onWindowDetected' rules run on their own, whatever found the window:
     /// the session of the startup, the one that follows `enable on`, or any later one.
     ///
     /// The session can be cancelled at any moment, and the window stays registered. So nothing here may be skipped

@@ -37,7 +37,7 @@ extension InlayTests {
         }
 
         @Test func testParse() {
-            let result = parseConfig("config-version = 2\n[menu-bar]\nper-monitor = true\n")
+            let result = parseConfig("configVersion = 2\n[menuBar]\nperMonitor = true\n")
             assertEquals(result.errors, [])
             assertEquals(result.config.menuBar.perMonitor, true)
             assertEquals(MenuBarConfig().perMonitor, false)

@@ -20,24 +20,24 @@ extension InlayTests {
                 ("gaps.inner", Array(gapsInnerParser.keys)),
                 ("gaps.outer", Array(gapsOuterParser.keys)),
                 ("exec", Array(rawExecConfigParser.keys)),
-                ("focus-follows-mouse", Array(focusFollowsMouseParserTable.keys)),
-                ("key-mapping", Array(keyMappingParser.keys)),
+                ("focusFollowsMouse", Array(focusFollowsMouseParserTable.keys)),
+                ("keyMapping", Array(keyMappingParser.keys)),
                 ("tiling", Array(tilingParserTable.keys)),
-                ("menu-bar", Array(menuBarParserTable.keys)),
-                ("menu-bar.colors", Array(menuBarColorsParserTable.keys)),
+                ("menuBar", Array(menuBarParserTable.keys)),
+                ("menuBar.colors", Array(menuBarColorsParserTable.keys)),
                 ("borders", Array(bordersParserTable.keys)),
-                ("borders.single-window", Array(singleWindowBorderParserTable.keys)),
+                ("borders.singleWindow", Array(singleWindowBorderParserTable.keys)),
                 ("animations", Array(animationsParserTable.keys)),
-                ("on-window-detected", Array(windowDetectedParser.keys)),
-                ("on-window-detected.if", Array(windowDetectedMatcherParser.keys)),
+                ("onWindowDetected", Array(windowDetectedParser.keys)),
+                ("onWindowDetected.match", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode
             ]
         }
 
         /// The tables whose keys are names that the user chooses: binding modes, key bindings, variables, workspaces
         private let freeFormTables = [
-            "mode", "mode.*.binding", "borders.mode-colors", "exec.env-vars",
-            "key-mapping.key-notation-to-key-code", "workspace-to-monitor-force-assignment",
+            "mode", "mode.*.binding", "borders.modeColors", "exec.envVars",
+            "keyMapping.keyNotationToKeyCode", "workspaceToMonitorForceAssignment",
             "animations.curves",
         ]
 
@@ -101,11 +101,11 @@ extension InlayTests {
         @Test func testDocumentedKeys() throws {
             let keys = try reference.documentedKeys
             for key in [
-                "config-version", "focus-follows-mouse.enabled", "key-mapping.key-notation-to-key-code", "accordion-padding",
-                "after-login-command", "gaps", "gaps.inner.horizontal", "exec.env-vars", "tiling.split-target", "menu-bar.colors",
-                "menu-bar.colors.accent", "borders.mode-colors", "mode.main.binding", "mode.main.binding.alt-h",
-                "on-window-detected", "on-window-detected.if.app-id", "on-window-detected.run",
-                "workspace-to-monitor-force-assignment",
+                "configVersion", "focusFollowsMouse.enabled", "keyMapping.keyNotationToKeyCode", "accordionPadding",
+                "afterLoginCommand", "gaps", "gaps.inner.horizontal", "exec.envVars", "tiling.splitTarget", "menuBar.colors",
+                "menuBar.colors.accent", "borders.modeColors", "mode.main.binding", "mode.main.binding.alt-h",
+                "onWindowDetected", "onWindowDetected.match.appId", "onWindowDetected.run",
+                "workspaceToMonitorForceAssignment",
             ] {
                 assertEquals(keys.contains(key), true, additionalMsg: key)
             }
@@ -131,31 +131,31 @@ extension InlayTests {
             )
             // A key of the root table has no header
             assertEquals(
-                try reference.explain("start-at-login").get(),
+                try reference.explain("startAtLogin").get(),
                 """
                 # Start Inlay at login. Inlay adds itself to the login items of macOS, or removes itself from them,
                 # every time the config is loaded
                 # Possible values: true|false
-                # Fallback value (if you omit the key): start-at-login = false
-                start-at-login = false
+                # Fallback value (if you omit the key): startAtLogin = false
+                startAtLogin = false
                 """,
             )
             // A key that is only documented, commented out
-            let accordion = try reference.explain("accordion-padding").get()
+            let accordion = try reference.explain("accordionPadding").get()
             assertEquals(accordion.hasPrefix("# Not a key of Inlay: it has no accordion layout."), true)
-            assertEquals(accordion.hasSuffix("# accordion-padding = 30"), true)
+            assertEquals(accordion.hasSuffix("# accordionPadding = 30"), true)
         }
 
         @Test func testExplainTable() throws {
             let tiling = try reference.explain("tiling").get()
             assertEquals(tiling.hasPrefix("# Where the tiling windows are placed\n[tiling]\n"), true)
-            assertEquals(tiling.hasSuffix("    min-window-size = 100"), true)
-            assertEquals(tiling.contains("[menu-bar]"), false)
+            assertEquals(tiling.hasSuffix("    minWindowSize = 100"), true)
+            assertEquals(tiling.contains("[menuBar]"), false)
 
             // A table with its subtables
-            let menuBar = try reference.explain("menu-bar").get()
-            assertEquals(menuBar.contains("[menu-bar]\n"), true)
-            assertEquals(menuBar.contains("[menu-bar.colors]\n"), true)
+            let menuBar = try reference.explain("menuBar").get()
+            assertEquals(menuBar.contains("[menuBar]\n"), true)
+            assertEquals(menuBar.contains("[menuBar.colors]\n"), true)
             assertEquals(menuBar.hasSuffix("        empty = 'auto'"), true)
 
             // Dotted keys inside a table, and a prefix of them
@@ -169,16 +169,16 @@ extension InlayTests {
             // Every table of a group, and every rule
             let modes = try reference.explain("mode").get()
             assertEquals(modes.contains("[mode.main.binding]") && modes.contains("[mode.service.binding]"), true)
-            let rules = try reference.explain("on-window-detected").get()
-            assertEquals(rules.split(separator: "\n").filter { $0 == "[[on-window-detected]]" }.count, 3)
-            assertEquals(try reference.explain("on-window-detected.if.app-id").get().hasPrefix("[[on-window-detected]]\n"), true)
+            let rules = try reference.explain("onWindowDetected").get()
+            assertEquals(rules.split(separator: "\n").filter { $0 == "[[onWindowDetected]]" }.count, 3)
+            assertEquals(try reference.explain("onWindowDetected.match.appId").get().hasPrefix("[[onWindowDetected]]\n"), true)
             assertEquals(try reference.explain(".borders.").get(), try reference.explain("borders").get())
         }
 
         @Test func testExplainUnknownKey() throws {
             assertEquals(
                 try reference.explain("glow").errorOrNil,
-                "The config reference has no key or table 'glow'. Did you mean: borders.glow, borders.glow-radius",
+                "The config reference has no key or table 'glow'. Did you mean: borders.glow, borders.glowRadius",
             )
             assertEquals(
                 try reference.explain("nope").errorOrNil,
@@ -195,9 +195,9 @@ extension InlayTests {
 
         /// The server answers it too (a binding may run it), from the same file
         @Test func testCommand() async throws {
-            let result = await parseCommand("config --explain tiling.split-ratio").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            let result = await parseCommand("config --explain tiling.splitRatio").cmdOrDie.run(.defaultEnv, .emptyStdin)
             assertEquals(result.exitCode.rawValue, 0)
-            assertEquals(result.stdout.joined(separator: "\n"), try reference.explain("tiling.split-ratio").get())
+            assertEquals(result.stdout.joined(separator: "\n"), try reference.explain("tiling.splitRatio").get())
             let unknown = await parseCommand("config --explain nope").cmdOrDie.run(.defaultEnv, .emptyStdin)
             assertEquals(unknown.exitCode.rawValue != 0, true)
             assertEquals(unknown.stderr.joined(separator: "\n").contains("no key or table 'nope'"), true)

@@ -78,7 +78,7 @@ final class FileWatcher {
     }
 }
 
-/// Reloads the config when its file is saved. See: 'auto-reload-config' config option
+/// Reloads the config when its file is saved. See: 'autoReloadConfig' config option
 @MainActor
 enum ConfigAutoReload {
     private static var watcher: FileWatcher? = nil
@@ -89,7 +89,7 @@ enum ConfigAutoReload {
     private static let debounceDelay: Duration = .milliseconds(200)
 
     /// The config was loaded, or at least tried, from the file. Called after every (re)load: the file to watch may be
-    /// another one, and so may the 'auto-reload-config' option. A file that failed to load is still watched,
+    /// another one, and so may the 'autoReloadConfig' option. A file that failed to load is still watched,
     /// so that fixing it loads it
     static func sync(url: URL, text: String?) {
         loadedText = text

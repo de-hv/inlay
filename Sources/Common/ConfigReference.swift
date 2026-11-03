@@ -5,7 +5,7 @@ import Foundation
 ///
 /// The file is a TOML file where the comment lines right above a key or a table header document it.
 /// A key that can't be written with a value (a deprecated one) is documented by a block of comment lines
-/// whose last line is the key, commented out: `# accordion-padding = 30`
+/// whose last line is the key, commented out: `# accordionPadding = 30`
 public struct ConfigReference: Sendable {
     public let text: String
     private let lines: [String]
@@ -13,7 +13,7 @@ public struct ConfigReference: Sendable {
     private let keys: [Part]
 
     private struct Part {
-        /// The dotted path: 'borders', 'borders.width', 'on-window-detected.if.app-id'
+        /// The dotted path: 'borders', 'borders.width', 'onWindowDetected.match.appId'
         var path: String
         /// The lines of the part, with its comment
         var range: Range<Int>
@@ -159,7 +159,7 @@ public func appBundle(ofExecutable executable: String = CommandLine.arguments[0]
     return nil
 }
 
-/// 'borders' for '[borders]', 'on-window-detected' for '[[on-window-detected]]'
+/// 'borders' for '[borders]', 'onWindowDetected' for '[[onWindowDetected]]'
 private func tableHeader(_ trimmedLine: String) -> String? {
     guard trimmedLine.hasPrefix("["), let end = trimmedLine.firstIndex(of: "]") else { return nil }
     let name = trimmedLine[trimmedLine.startIndex ..< end].drop { $0 == "[" }
@@ -174,13 +174,13 @@ private func assignedKey(_ trimmedLine: String) -> String? {
     return !key.isEmpty && isKeyCharacter(first) && key.allSatisfy(isKeyCharacter) ? normalizedKey(key) : nil
 }
 
-/// 'accordion-padding' for '# accordion-padding = 30'
+/// 'accordionPadding' for '# accordionPadding = 30'
 private func commentedOutKey(_ line: String) -> String? {
     let trimmed = line.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("# ") else { return nil }
     let content = String(trimmed.dropFirst(2))
     guard content.first?.isLowercase == true, let key = assignedKey(content) else { return nil }
-    return key.allSatisfy { $0.isLowercase || $0.isNumber || $0 == "-" || $0 == "." } ? key : nil
+    return key.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "." } ? key : nil
 }
 
 private func normalizedKey(_ key: String) -> String {

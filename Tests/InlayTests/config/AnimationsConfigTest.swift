@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig("config-version = 2")
+            let result = parseConfig("configVersion = 2")
             assertEquals(result.errors, [])
             assertEquals(result.config.animations, AnimationsConfig(enabled: true, duration: 160))
             assertEquals(result.config.animations.effectiveDuration, .milliseconds(160))
@@ -44,13 +44,13 @@ extension InlayTests {
             for (value, expected) in [("'vertical'", WorkspaceSwitch.vertical), ("'auto'", .auto), ("'off'", .off), ("'horizontal'", .horizontal),
                                       ("false", .off), ("true", .horizontal)]
             {
-                let parsed = parseConfig("animations.workspace-switch = \(value)")
+                let parsed = parseConfig("animations.workspaceSwitch = \(value)")
                 assertEquals(parsed.errors, [])
                 assertEquals(parsed.config.animations.workspaceSwitch, expected, additionalMsg: value)
             }
             assertEquals(
-                parseConfig("animations.workspace-switch = 'diagonal'").strErrors,
-                ["[ERROR] animations.workspace-switch: Can't parse workspace-switch 'diagonal'. Possible values: (horizontal|vertical|auto|off)"],
+                parseConfig("animations.workspaceSwitch = 'diagonal'").strErrors,
+                ["[ERROR] animations.workspaceSwitch: Can't parse workspaceSwitch 'diagonal'. Possible values: (horizontal|vertical|auto|off)"],
             )
             // Off: no animation, whatever the duration
             assertEquals(result.config.animations.effectiveDuration, .zero)

@@ -15,7 +15,7 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.3.0, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)). Inlay is a fork of
+**Version 0.4.0, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing
 new windows (*dwindle*), without the *accordion* layout, with its own menu bar item and with window borders.
 
@@ -102,7 +102,9 @@ brew upgrade --cask inlay
 Homebrew quits Inlay before replacing it; open it again afterwards. Your config is outside of the app: an upgrade
 never touches it. **From 0.2 to 0.3**: the config is Lua now, `inlay.lua`. An `inlay.toml` that you never edited
 is replaced on its own; one of your own isn't read anymore, and Inlay says so and uses its built-in config until
-you write your `inlay.lua` (see [Configuration](#configuration)).
+you write your `inlay.lua` (see [Configuration](#configuration)). **From 0.3 to 0.4**: the colors come from a theme, `material`
+without the key `theme`. An `inlay.lua` that you never edited is replaced on its own; in one of your own, the
+colors you set in `borders` and `menuBar` still win over the theme: drop them to use one (see [Themes](#themes)).
 
 ### From source
 

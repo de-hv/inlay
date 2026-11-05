@@ -4,8 +4,9 @@ import Common
 /// The interface is in English for now, like the CLI
 enum Strings {
     enum Menu {
-        static func workspaceAndApp(_ workspace: String, _ app: String?) -> String {
-            "Workspace \(workspace)" + (app.map { " · \($0)" } ?? "")
+        /// 'Workspace 2 · Code · Zed': the workspace, its name in 'workspaces' and the app of the focused window
+        static func workspaceAndApp(_ workspace: String, name: String? = nil, _ app: String?) -> String {
+            (["Workspace \(workspace)"] + [name, app].compactMap { $0 }).joined(separator: " · ")
         }
         static func reloaded(_ ago: String) -> String { "Config reloaded \(ago)" }
         static let window = "Window"

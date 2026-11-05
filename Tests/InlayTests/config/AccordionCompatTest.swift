@@ -13,7 +13,7 @@ extension InlayTests {
 
         @Test func testConfig_defaultRootContainerLayout() {
             let result = parseConfig(lua: """
-                return { configVersion = 2, defaultRootContainerLayout = 'accordion' }
+                return { defaultRootContainerLayout = 'accordion' }
                 """,
             )
             assertEquals(result.errors, [])
@@ -29,27 +29,9 @@ extension InlayTests {
             )
         }
 
-        @Test func testConfig_accordionPadding() {
-            let result = parseConfig(lua: """
-                return { configVersion = 2, accordionPadding = 30 }
-                """,
-            )
-            assertEquals(result.errors, [])
-            assertEquals(
-                result.strWarnings,
-                ["[WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config"],
-            )
-
-            assertEquals(
-                parseConfig(lua: "return { accordionPadding = 'wide' }").strErrors,
-                ["[ERROR] accordionPadding: Expected type is 'Int'. But actual type is 'String'"],
-            )
-        }
-
         @Test func testConfig_layoutCommands() {
             let result = parseConfig(lua: """
                 return {
-                  configVersion = 2,
                   afterStartupCommand = { 'layout tiles', 'layout accordion' },
                   mode = {
                     main = {

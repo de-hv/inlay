@@ -1,7 +1,7 @@
 -- Reference: https://github.com/i3/i3/blob/next/etc/config
 
 local main = {
-  -- See: https://nikitabobko.github.io/AeroSpace/goodies#open-a-new-window-with-applescript
+  -- A new Terminal window, through AppleScript
   ['alt-enter'] = [[exec-and-forget osascript -e \
     'tell application "Terminal" to tell (do script) to activate' ]],
 
@@ -30,12 +30,10 @@ local main = {
 
   ['alt-shift-space'] = 'layout floating tiling', -- 'floating toggle' in i3
 
-  -- Not supported, because this command is redundant in the AeroSpace/Inlay mental model.
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#floating-windows
+  -- Not supported: the floating windows of a workspace are focused like the tiling ones
   -- ['alt-space'] = 'focus toggle_tiling_floating',
 
-  -- `focus parent`/`focus child` are not yet supported, and it's not clear whether they
-  -- should be supported at all https://github.com/nikitabobko/AeroSpace/issues/5
+  -- `focus parent`/`focus child` are not supported
   -- ['alt-a'] = 'focus parent',
 
   ['alt-shift-c'] = 'reload-config',
@@ -51,7 +49,8 @@ for i = 1, 10 do
 end
 
 return {
-  configVersion = 2,
+  -- A whole config of its own, like i3: not over the built-in config of Inlay
+  builtInConfig = false,
 
   -- In i3, all workspaces are phantom
   persistentWorkspaces = {},

@@ -13,6 +13,8 @@ func getDefaultConfigUrlFromProject() -> URL {
     return projectRoot.appending(component: configFileName)
 }
 
+/// The config that a new install gets: a short inlay.lua, with what is the user's own. The rest of the config is the
+/// built-in one (builtInConfigUrl), under it
 var defaultConfigUrl: URL {
     if isUnitTest {
         return getDefaultConfigUrlFromProject()
@@ -22,31 +24,47 @@ var defaultConfigUrl: URL {
             ?? getDefaultConfigUrlFromProject()
     }
 }
+
+let builtInConfigFileName = "builtin-config.lua"
+
+/// The config of Inlay: the base that the config of the user goes over (see: mergedConfig), and the config in use
+/// when the user has none
+var builtInConfigUrl: URL {
+    // Only when it is needed: getDefaultConfigUrlFromProject() stops the app on a Mac without the sources of Inlay
+    func fromProject() -> URL { getDefaultConfigUrlFromProject().deletingLastPathComponent().appending(component: builtInConfigFileName) }
+    if isUnitTest { return fromProject() }
+    return Bundle.main.url(forResource: "builtin-config", withExtension: "lua") ?? fromProject()
+}
+
+/// The table of the built-in config, to put the config of the user over it
+@MainActor var builtInConfigTable: OrderedJson.JsonDict { LuaConfigLoader.load(file: builtInConfigUrl).table }
+
 @MainActor let defaultConfig: Config = {
-    let parsedConfig = parseConfig(LuaConfigLoader.load(file: defaultConfigUrl))
+    let parsedConfig = parseConfig(LuaConfigLoader.load(file: builtInConfigUrl))
     if !parsedConfig.errors.isEmpty {
         die("Can't parse default config: \(parsedConfig.errors)")
     }
     return parsedConfig.config
 }()
 @MainActor var config: Config = defaultConfig // todo move to Ctx?
-@MainActor var configUrl: URL = defaultConfigUrl
+@MainActor var configUrl: URL = builtInConfigUrl
 
 struct Config: ConvenienceMutable {
-    var configVersion: ConfigVersion = ._1
-    var _afterLoginCommand: [any Command] = []
     var afterStartupCommand: Shell<any Command> = .empty
-    var _indentForNestedContainersWithTheSameOrientation: Void = ()
     var enableNormalizationFlattenContainers: Bool = true
-    var _nonEmptyWorkspacesRootContainersLayoutOnStartup: Void = ()
     var defaultRootContainerLayout: Layout = .tiles
     var defaultRootContainerOrientation: DefaultContainerOrientation = .auto
     var startAtLogin: Bool = false
     var autoReloadConfig: Bool = true
     var automaticallyUnhideMacosHiddenApps: Bool = false
-    var _accordionPadding: Void = ()
     var enableNormalizationOppositeOrientationForNestedContainers: Bool = true
     var persistentWorkspaces: OrderedSet<String> = []
+    /// 'workspaces' and 'workspaceKeys' become the keys that they make before the config is parsed. See: expandWorkspaces
+    var _workspaces: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
+    /// The names of 'workspaces': the menu of the menu bar item shows them
+    var workspaceNames: [String: String] = [:]
+    /// 'builtInConfig = false': the config of the user doesn't go over the built-in one. See: mergedConfig
+    var _builtInConfig: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     var execOnWorkspaceChange: [String] = [] // todo deprecate
     var keyMapping = KeyMapping()
     var execConfig: ExecConfig = ExecConfig()
@@ -120,17 +138,6 @@ enum StartupLayout: String, CaseIterable {
     case row
     /// No arrangement of their own: the windows are placed one after another, like new windows (newWindowPlacement)
     case dwindle
-}
-
-enum ConfigVersion: Int, Comparable, CaseIterable, Sendable, CustomStringConvertible {
-    case _1 = 1
-    case _2 = 2
-
-    static let max = allCases.max().orDie()
-    static let min = allCases.min().orDie()
-    static func < (lhs: ConfigVersion, rhs: ConfigVersion) -> Bool { lhs.rawValue < rhs.rawValue }
-
-    var description: String { rawValue.description }
 }
 
 enum DefaultContainerOrientation: String {

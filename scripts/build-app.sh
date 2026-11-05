@@ -10,7 +10,9 @@
 # Result:
 #   build/Inlay.app/Contents/MacOS/Inlay                         the app
 #   build/Inlay.app/Contents/Resources/bin/inlay                 the CLI
-#   build/Inlay.app/Contents/Resources/inlay.lua                 the built-in config (the inlay.lua of the repo)
+#   build/Inlay.app/Contents/Resources/inlay.lua                 the config of a new install (the inlay.lua of the repo)
+#   build/Inlay.app/Contents/Resources/builtin-config.lua        the built-in config: the base of the config of the user
+#   build/Inlay.app/Contents/Resources/types/inlay.d.lua         the types of the config for editors ('inlay config --types')
 #   build/Inlay.app/Contents/Resources/config-reference.lua      what 'inlay config --explain' prints
 #   build/Inlay.app/Contents/Resources/themes/                   the themes of the key 'theme'
 #   build/Inlay.app/Contents/Resources/default-config-hashes.txt the default configs of every version, never edited
@@ -96,8 +98,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin" "$APP/Contents/Reso
 cp "$BIN_DIR/InlayApp" "$APP/Contents/MacOS/$APP_NAME"
 cp "$BIN_DIR/$CLI_NAME" "$CLI"
 cp Support/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-cp inlay.lua docs/config-reference.lua scripts/default-config-hashes.txt "$APP/Contents/Resources/"
+cp inlay.lua builtin-config.lua docs/config-reference.lua scripts/default-config-hashes.txt "$APP/Contents/Resources/"
 cp -R themes "$APP/Contents/Resources/themes"
+# The types of the config for the editors, made from the reference that the app carries. See: EditorTypes
+mkdir -p "$APP/Contents/Resources/types"
+# Through a pipe: the first run of the CLI just copied into the bundle, with its output in a file, may write nothing
+types="$("$CLI" --print-config-types)" || fail "the types of the config could not be made"
+[ -n "$types" ] || fail "the types of the config are empty"
+printf '%s\n' "$types" > "$APP/Contents/Resources/types/inlay.d.lua"
 mkdir -p "$APP/Contents/Resources/scripts"
 cp scripts/uninstall.sh scripts/lib.sh "$APP/Contents/Resources/scripts/"
 cp LICENSE NOTICE.md "$APP/Contents/Resources/legal/"

@@ -260,21 +260,6 @@ func mergedTheme(_ base: OrderedJson.JsonDict, _ over: OrderedJson.JsonDict) -> 
     return result
 }
 
-/// The config with the colors of the theme under its tables 'borders' and 'menuBar': what the config says wins.
-/// A table of the config that isn't a table is left as it is: its parser reports it
-func applyTheme(_ theme: OrderedJson.JsonDict, to config: OrderedJson.JsonDict) -> OrderedJson.JsonDict {
-    var result = config
-    for key in ["borders", "menuBar"] {
-        guard case .dict(let themeTable)? = theme[key] else { continue }
-        switch config[key] {
-            case nil: result[key] = .dict(themeTable)
-            case .dict(let configTable)?: result[key] = .dict(mergedTheme(themeTable, configTable))
-            default: break
-        }
-    }
-    return result
-}
-
 extension Config {
     /// The borders for the appearance of macOS right now: the light theme of 'theme' when there is one and macOS is light
     @MainActor var bordersForAppearance: BordersConfig {

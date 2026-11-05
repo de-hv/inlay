@@ -35,7 +35,7 @@ extension InlayTests {
         @Test func testConfigInALinkedFolder() throws {
             let folder = directory.appending(path: "dotfiles")
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try "return { configVersion = 2, mode = { main = { binding = {} } } }".write(to: folder.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
+            try "return { mode = { main = { binding = {} } } }".write(to: folder.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
             let link = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: folder)
             let url = link.appending(path: "inlay.lua")
@@ -45,20 +45,20 @@ extension InlayTests {
         }
 
         @Test func testWarningsAreNotErrors() throws {
-            let url = try file("warnings.lua", "return { configVersion = 2, accordionPadding = 30, mode = { main = { binding = {} } } }")
+            let url = try file("warnings.lua", "return { defaultRootContainerLayout = 'accordion', mode = { main = { binding = {} } } }")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(
                 report.text,
                 """
                 '\(url.path)': 0 error(s), 1 warning(s)
-                [WARNING] accordionPadding: Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config
+                [WARNING] defaultRootContainerLayout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'
                 """,
             )
         }
 
         @Test func testErrors() throws {
-            let url = try file("errors.lua", "return { configVersion = 2, nope = 1, borders = { width = 99 }, mode = { main = { binding = {} } } }")
+            let url = try file("errors.lua", "return { nope = 1, borders = { width = 99 }, mode = { main = { binding = {} } } }")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, false)
             assertEquals(
@@ -73,7 +73,7 @@ extension InlayTests {
 
         /// The config is a symbolic link to a file of the user, like the one that install.sh offers to create
         @Test func testSymlinkAndMissingFile() throws {
-            let real = try file("mine.lua", "return { configVersion = 2, mode = { main = { binding = {} } } }")
+            let real = try file("mine.lua", "return { mode = { main = { binding = {} } } }")
             let link = directory.appending(path: "inlay.lua")
             try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
             assertEquals(checkConfigFile(link).isOk, true)

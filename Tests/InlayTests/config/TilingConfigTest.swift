@@ -8,7 +8,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig(lua: "return { configVersion = 2 }")
+            let result = parseConfig(lua: "return {}")
             assertEquals(result.errors, [])
             assertEquals(
                 result.config.tiling,
@@ -19,7 +19,6 @@ extension InlayTests {
         @Test func testParse() {
             let result = parseConfig(lua: """
                 return {
-                  configVersion = 2,
                   tiling = {
                     newWindowPlacement = 'after-focused',
                     splitRatio = 0.6,

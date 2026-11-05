@@ -17,46 +17,26 @@ extension InlayTests {
             let result = parseConfig(lua: "return {}")
             assertEquals(result.errors, [])
             assertTrue(result.allowReloadConfig)
-            assertEquals(result.warnings.count, 1)
-            assertTrue(result.strWarnings.first?.starts(with: "[WARNING] The current 'configVersion = 1' is outdated.") == true)
+            assertEquals(result.warnings, [])
         }
 
+        /// inlay.lua, the config of a new install, over the built-in config
         @Test func testParseDefaultConfig() {
-            let result = parseConfig(LuaConfigLoader.load(file: projectRoot.appending(component: "inlay.lua")))
+            let result = parseConfigOverBuiltIn(LuaConfigLoader.load(file: projectRoot.appending(component: "inlay.lua")))
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
         }
 
-        @Test func testConfigVersionOutOfBounds() {
-            let result = parseConfig(lua: """
-                return { configVersion = 0 }
-                """,
+        /// The keys that came from AeroSpace and that Inlay doesn't have anymore: unknown keys
+        @Test func testKeysOfAeroSpaceAreUnknown() {
+            for key in ["configVersion = 2", "afterLoginCommand = {}", "accordionPadding = 30", "nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart'", "indentForNestedContainersWithTheSameOrientation = 30"] {
+                let name = String(key.prefix { $0 != " " })
+                assertEquals(parseConfig(lua: "return { \(key) }").strErrors, ["[ERROR] \(name): Unknown top-level key"])
+            }
+            assertEquals(
+                parseConfig(lua: "return { onWindowDetected = { { match = { duringAerospaceStartup = true }, run = 'layout floating' } } }").strErrors,
+                ["[ERROR] onWindowDetected[0].match.duringAerospaceStartup: Unknown key"],
             )
-            assertTrue(result.allowReloadConfig)
-            assertEquals(result.strErrors, ["[ERROR] configVersion: configVersion must be in [1, 2] range"])
-        }
-
-        @Test func testConfigVersionOutdatedWarning() {
-            let result = parseConfig(lua: """
-                return { configVersion = 1 }
-                """,
-            )
-            assertTrue(result.allowReloadConfig)
-            assertEquals(result.errors, [])
-            assertEquals(result.strWarnings, [
-                "[WARNING] The current 'configVersion = 1' is outdated. " +
-                    "Please consider migrating to 'configVersion = \(ConfigVersion.max)'. " +
-                    "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide.",
-            ])
-        }
-
-        @Test func testLatestConfigVersionNoWarning() {
-            let result = parseConfig(lua: """
-                return { configVersion = \(ConfigVersion.max) }
-                """,
-            )
-            assertEquals(result.errors, [])
-            assertEquals(result.warnings, [])
         }
 
         @Test func testExecOnWorkspaceChangeDifferentTypesError() {
@@ -69,18 +49,17 @@ extension InlayTests {
 
         @Test func testDuplicatedPersistentWorkspaces() {
             let errors = parseConfig(lua: """
-                return { configVersion = 2, persistentWorkspaces = { 'a', 'a' } }
+                return { persistentWorkspaces = { 'a', 'a' } }
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] persistentWorkspaces: Contains duplicated workspace names"])
         }
 
-        @Test func testPersistentWorkspacesAreAvailableOnlySinceVersion2() {
-            let errors = parseConfig(lua: """
-                return { persistentWorkspaces = { 'a' } }
-                """,
-            ).strErrors
-            assertEquals(errors, ["[ERROR] persistentWorkspaces: This config option is only available since \'configVersion = 2\'"])
+        /// Always available: there is no configVersion anymore
+        @Test func testPersistentWorkspaces() {
+            let result = parseConfig(lua: "return { persistentWorkspaces = { 'a' } }")
+            assertEquals(result.strErrors, [])
+            assertEquals(Array(result.config.persistentWorkspaces), ["a"])
         }
 
         @Test func testWrongTypeForCommand() {
@@ -175,24 +154,28 @@ extension InlayTests {
             )
         }
 
+        /// The persistent workspaces come from 'persistentWorkspaces', or from the ids of 'workspaces'. The key
+        /// bindings don't make any
         @Test func testPermanentWorkspaceNames() {
-            let result = parseConfig(lua: """
+            let fromBindings = parseConfig(lua: """
                 return {
                   mode = {
                     main = {
                       binding = {
                         ['alt-1'] = 'workspace 1',
                         ['alt-2'] = 'workspace 2',
-                        ['alt-3'] = { 'workspace 3' },
-                        ['alt-4'] = { 'workspace 4', 'focus left' },
                       },
                     },
                   },
                 }
                 """,
             )
-            assertEquals(result.errors, [])
-            assertEquals(result.config.persistentWorkspaces.sorted(), ["1", "2", "3", "4"])
+            assertEquals(fromBindings.errors, [])
+            assertEquals(fromBindings.config.persistentWorkspaces, [])
+
+            let fromWorkspaces = parseConfig(lua: "return { workspaces = { { id = '1' }, { id = '2' }, { id = '3' }, { id = '4' } } }")
+            assertEquals(fromWorkspaces.errors, [])
+            assertEquals(Array(fromWorkspaces.config.persistentWorkspaces), ["1", "2", "3", "4"])
         }
 
         @Test func testUnknownTopLevelKeyParseError() {
@@ -590,24 +573,6 @@ extension InlayTests {
             ])
         }
 
-        @Test func testAfterLoginCommandDeprecation() {
-            let result = parseConfig(lua: """
-                return { afterLoginCommand = { 'exec-and-forget echo hi' } }
-                """,
-            )
-            assertEquals(
-                result.strErrors,
-                ["[ERROR] afterLoginCommand: afterLoginCommand is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"],
-            )
-
-            // Empty array is still accepted
-            let okResult = parseConfig(lua: """
-                return { afterLoginCommand = {} }
-                """,
-            )
-            assertEquals(okResult.errors, [])
-        }
-
         @Test func testOnFocusChangedAsSingleStringAndAsList() {
             let result = parseConfig(lua: """
                 return {
@@ -676,53 +641,6 @@ extension InlayTests {
                 bad.strErrors,
                 ["[ERROR] defaultRootContainerOrientation: Can\'t parse default container orientation \'diagonal\'"],
             )
-        }
-
-        @Test func testDeprecatedIndentForNestedContainers() {
-            let errors = parseConfig(lua: """
-                return { indentForNestedContainersWithTheSameOrientation = 30 }
-                """,
-            ).strErrors
-            assertEquals(
-                errors,
-                ["[ERROR] indentForNestedContainersWithTheSameOrientation: Deprecated. Please drop it from the config. See https://github.com/nikitabobko/AeroSpace/issues/96"],
-            )
-        }
-
-        @Test func testDeprecatedNonEmptyWorkspacesRootContainersLayoutOnStartup() {
-            // The 'smart' value used to be accepted and is silently dropped now
-            let smart = parseConfig(lua: """
-                return { nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart' }
-                """,
-            )
-            assertEquals(smart.errors, [])
-
-            let bad = parseConfig(lua: """
-                return { nonEmptyWorkspacesRootContainersLayoutOnStartup = 'tiles' }
-                """,
-            ).strErrors
-            assertEquals(
-                bad,
-                ["[ERROR] nonEmptyWorkspacesRootContainersLayoutOnStartup: \'nonEmptyWorkspacesRootContainersLayoutOnStartup\' is deprecated. Please drop it from your config"],
-            )
-        }
-
-        @Test func testOutdatedConfigVersionWarning() {
-            let result = parseConfig(lua: """
-                return { configVersion = 1 }
-                """,
-            )
-            assertEquals(result.errors, [])
-            assertEquals(result.warnings.count, 1)
-            assertTrue(result.warnings[0].message.contains("'configVersion = 1' is outdated"))
-
-            // configVersion = 2 (the current max) should not produce the outdated warning
-            let v2 = parseConfig(lua: """
-                return { configVersion = 2 }
-                """,
-            )
-            assertEquals(v2.errors, [])
-            assertEquals(v2.warnings, [])
         }
 
         @Test func testTopLevelTypeIsNotTable() {

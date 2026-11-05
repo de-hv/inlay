@@ -59,7 +59,7 @@ func checkConfigFile(_ url: URL) -> (isOk: Bool, text: String) {
     guard FileManager.default.isReadableFile(atPath: url.path) else {
         return (false, "Can't read \(path) as a UTF-8 text file")
     }
-    let result = parseConfig(LuaConfigLoader.load(file: url))
+    let result = parseConfigOverBuiltIn(LuaConfigLoader.load(file: url))
     if result.errors.isEmpty && result.warnings.isEmpty { return (true, "\(path) has no errors or warnings") }
     let lines = result.errors.map { $0.description(.error) } + result.warnings.map { $0.description(.warning) }
     let header = "\(path): \(result.errors.count) error(s), \(result.warnings.count) warning(s)"

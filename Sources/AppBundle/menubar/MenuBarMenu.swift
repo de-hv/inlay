@@ -213,6 +213,8 @@ struct MenuBarCard: Equatable {
     /// The errors and the warnings of the last load of the config. nil if it had none
     var configProblems: String? = nil
     var workspace: String
+    /// The name of the workspace in 'workspaces'. nil without one
+    var workspaceName: String? = nil
     /// The focused window: the name of its app, and how it is laid out. nil without one
     var focusedApp: String? = nil
     var windowLayout: WindowLayout? = nil
@@ -237,6 +239,7 @@ struct MenuBarCard: Equatable {
     static func fromModel(_ state: MenuBarState) -> MenuBarCard {
         let snapshot = state.snapshot
         var card = MenuBarCard(status: snapshot.status, workspace: snapshot.focusedWorkspace)
+        card.workspaceName = config.workspaceNames[snapshot.focusedWorkspace]
         let load = ServerState.shared.lastConfigLoad
         card.lastReload = load?.date
         guard snapshot.status == .running else { return card }
@@ -286,7 +289,7 @@ struct MenuBarPanelContent: Equatable {
         let ago = card.lastReload.map { Strings.Menu.reloaded(RelativeDateTimeFormatter().localizedString(for: $0, relativeTo: .now)) }
         switch card.status {
             case .running:
-                title = Strings.Menu.workspaceAndApp(card.workspace, card.focusedApp)
+                title = Strings.Menu.workspaceAndApp(card.workspace, name: card.workspaceName, card.focusedApp)
                 if let mode = card.mode { details.append(Strings.Menu.modeHelp(mode, card.modeExitKey)) }
             case .paused:
                 title = Strings.Menu.paused
@@ -454,7 +457,7 @@ func openConfigInEditor() {
         case .noCustomConfigExists:
             let url = newUserConfigUrl
             _ = try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            _ = try? FileManager.default.copyItem(atPath: defaultConfigUrl.path, toPath: url.path)
+            _ = try? FileManager.default.copyItem(atPath: defaultConfigUrl.path, toPath: url.path) // The short config of a new install
             url.open(with: editor)
         case .ambiguousConfigError(let candidates):
             candidates.first?.open(with: editor)

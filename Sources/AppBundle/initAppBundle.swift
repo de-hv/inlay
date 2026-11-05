@@ -45,10 +45,10 @@ import ServiceManagement
 /// The built-in config is loaded first, so that Inlay has key bindings and a config of its own to fall back to
 /// when the config of the user can't be loaded
 @MainActor private func bootstrapConfig_nonCancellable() async {
-    let result = await reloadConfig_nonCancellable(forceConfigUrl: defaultConfigUrl)
+    let result = await reloadConfig_nonCancellable(forceConfigUrl: builtInConfigUrl)
     let msg = """
         Can't load default config. Your installation is probably corrupted.
-        Please don't modify \(defaultConfigUrl.description.singleQuoted)
+        Please don't modify \(builtInConfigUrl.description.singleQuoted)
 
         \(result.stdout)
         """

@@ -29,24 +29,24 @@ extension InlayTests {
 
         /// Without the key, the theme is 'material'. `theme = {}`: no theme, the defaults of the code
         @Test func testDefaultTheme() {
-            let result = parseConfig(lua: "return { configVersion = 2 }")
+            let result = parseConfig(lua: "return {}")
             assertEquals(result.strErrors, [])
             assertEquals(result.strWarnings, [])
-            assertEquals(result.config.borders, parseConfig(lua: "return { configVersion = 2, theme = 'material' }").config.borders)
+            assertEquals(result.config.borders, parseConfig(lua: "return { theme = 'material' }").config.borders)
             assertEquals([result.config.borders.activeColor, result.config.borders.inactiveColor].map(hex), ["#B59DF7", "#999D9F"])
             assertEquals(result.config.menuBar.systemColors, true)
             assertEquals(hex(result.config.menuBar.colors.occupied), "#CAC4D0")
             assertEquals(result.config.lightAppearance, nil)
             assertEquals(result.themeFiles, [])
 
-            let none = parseConfig(lua: "return { configVersion = 2, theme = {} }")
+            let none = parseConfig(lua: "return { theme = {} }")
             assertEquals(none.config.borders, BordersConfig())
             assertEquals(none.config.menuBar, MenuBarConfig())
         }
 
         /// A theme sets the glow and systemColors too, and another theme doesn't take them from 'material'
         @Test func testGlowAndSystemColors() throws {
-            let result = try parse("return { configVersion = 2, theme = 'neon' }", themes: [
+            let result = try parse("return { theme = 'neon' }", themes: [
                 "neon": "return { borders = { activeColor = '#E070E0', glow = true, glowRadius = 14 }, menuBar = { systemColors = false } }",
             ])
             assertEquals(result.strErrors, [])
@@ -61,7 +61,7 @@ extension InlayTests {
         }
 
         @Test func testBuiltInTheme() {
-            let result = parseConfig(lua: "return { configVersion = 2, theme = 'nord' }")
+            let result = parseConfig(lua: "return { theme = 'nord' }")
             assertEquals(result.strErrors, [])
             assertEquals(result.strWarnings, [])
             let borders = result.config.borders
@@ -79,7 +79,7 @@ extension InlayTests {
         @Test func testEveryBuiltInTheme() throws {
             assertEquals(builtInThemeNames, ["catppuccin", "everforest", "gruvbox", "kanagawa", "material", "nord", "rose-pine", "tokyo-night"])
             for name in builtInThemeNames {
-                let result = parseConfig(lua: "return { configVersion = 2, theme = '\(name)' }")
+                let result = parseConfig(lua: "return { theme = '\(name)' }")
                 assertEquals(result.strErrors, [], additionalMsg: name)
                 assertEquals(result.strWarnings, [], additionalMsg: name)
                 assertEquals(result.config.borders.activeColor != BordersConfig().activeColor, true, additionalMsg: name)
@@ -142,7 +142,7 @@ extension InlayTests {
 
         /// A theme that doesn't exist: a warning with the themes, and the defaults. Creating it reloads the config
         @Test func testUnknownTheme() throws {
-            let result = try parse("return { configVersion = 2, theme = 'nordd' }")
+            let result = try parse("return { theme = 'nordd' }")
             assertEquals(result.strErrors, [])
             assertEquals(result.strWarnings.count, 1)
             assertEquals(result.strWarnings[0].contains("There is no theme 'nordd'"), true, additionalMsg: result.strWarnings[0])

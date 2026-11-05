@@ -15,7 +15,9 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.4.1, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Inlay is a fork of
+**Version 0.4.1, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Your
+config goes over the built-in config of Inlay, so it only says what is yours, and `inlay config --show` prints
+the config in use (see [Configuration](#configuration)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing
 new windows (*dwindle*), without the *accordion* layout, with its own menu bar item and with window borders.
 
@@ -26,8 +28,9 @@ new windows (*dwindle*), without the *accordion* layout, with its own menu bar i
 | *Dwindle*-style auto-tiling, no *accordion* layout | Done (see [Tiling](#tiling)) | Tests (simulated windows), including a pseudorandom session of 800 steps |
 | Menu bar item with eight themes, configured only in the file | Done (see [Menu bar](#menuBar)) | Tests and rendered images |
 | Themes: the colors of the borders and of the menu bar, from a file | Done (see [Themes](#themes)) | Tests |
+| The config of the user over the built-in one, `workspaces`, `config --show`, types for editors | Done (see [Configuration](#configuration)) | Tests |
 | Window borders | Done, with public API (see [Window borders](#window-borders)) | Tests, rendered images and `--debug-borders` on real windows |
-| Tests | 762 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
+| Tests | 730 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
 
 The "How it is verified" column says what has been verified automatically. In addition, Inlay has already been
 installed and used with the Accessibility permission in two rounds (2026-10-11). In the second one, with the
@@ -51,7 +54,8 @@ the layouts of the window and of its workspace. The newest: **there is no Settin
 that can be changed without touching the code is in the config file, like the tools of a Linux desktop that are
 configured from dotfiles, and `inlay config --use`, `--unlink` and `--export` do from the CLI what the window did
 with the file. Untried in real use too: the [themes](#themes), with a theme for each appearance of macOS and
-`borders.fullscreenColor`.
+`borders.fullscreenColor`; and the newest, the config of the user over the built-in one, `workspaces`,
+`inlay config --show` and `--types`.
 
 Known limitations of this version:
 
@@ -60,9 +64,10 @@ Known limitations of this version:
 - Apple Silicon only (the binary is `arm64`) and a single display tested.
 - The interface (menu, messages) is in English.
 
-The config format and the commands are the ones of AeroSpace with the differences described in
-[Tiling](#tiling): its [guide](https://nikitabobko.github.io/AeroSpace/guide) and its
-[list of commands](https://nikitabobko.github.io/AeroSpace/commands) apply, replacing `aerospace` with `inlay`.
+The commands are the ones of AeroSpace with the differences described in [Tiling](#tiling): its
+[list of commands](https://nikitabobko.github.io/AeroSpace/commands) applies, replacing `aerospace` with
+`inlay`. The config is Inlay's own: every key is in [`docs/config-reference.lua`](./docs/config-reference.lua)
+(`inlay config --explain`), and `inlay config --show` prints the one in use.
 There is a copy of that documentation in [`docs/upstream-aerospace`](./docs/upstream-aerospace).
 
 ## Requirements
@@ -85,8 +90,8 @@ the `inlay` CLI in the `bin` folder of Homebrew. Nothing is built, so the Comman
 - **The first time, macOS blocks it**: the app is not notarized by Apple. Click *Done* (not *Move to Trash*),
   then *System Settings → Privacy & Security → Open Anyway*. Or remove the quarantine:
   `xattr -dr com.apple.quarantine /Applications/Inlay.app`. Each upgrade brings a new download, blocked again.
-- **The config**: without one, Inlay creates `~/.config/inlay/inlay.lua` with the built-in config when it
-  starts. To use a folder of your own instead: `inlay config --use ~/.dotfiles/inlay` (see
+- **The config**: without one, Inlay creates a short `~/.config/inlay/inlay.lua` when it starts: your
+  config goes over the built-in one, so it only has what is yours (see [Configuration](#configuration)). To use a folder of your own instead: `inlay config --use ~/.dotfiles/inlay` (see
   [Changing the config from the CLI](#changing-the-config-from-the-cli)).
 - **Start at login**: open Inlay once (`open -a Inlay`). With `startAtLogin = true` in the config (the built-in
   one has it) it adds itself to the login items.
@@ -105,6 +110,12 @@ is replaced on its own; one of your own isn't read anymore, and Inlay says so an
 you write your `inlay.lua` (see [Configuration](#configuration)). **From 0.3 to 0.4**: the colors come from a theme, `material`
 without the key `theme`. An `inlay.lua` that you never edited is replaced on its own; in one of your own, the
 colors you set in `borders` and `menuBar` still win over the theme: drop them to use one (see [Themes](#themes)).
+**From 0.4 to 0.5**: your config goes over the built-in config of Inlay, which has the rest, so your
+`inlay.lua` only needs what is yours (see [Configuration](#configuration)). An `inlay.lua` that you never edited
+is replaced by the short one. A full config of yours keeps working: it repeats the values of Inlay (`inlay config
+--show --mine` lists them). Three things change: the built-in config sends no app to a workspace (put yours in
+`workspaces`), your window rules go before the ones of Inlay, and `configVersion` and the other keys of
+AeroSpace are unknown keys: drop them. `inlay config --get`/`--all-keys` are `inlay config --show` now.
 
 ### From source
 
@@ -133,8 +144,8 @@ Nothing in the list wraps, also in a narrow terminal, and what you type while it
    that output, without the progress lines. `--verbose` shows everything as it comes, as does a pipe or a log;
 2. installs it in `/Applications` (or in `~/Applications` if there are no permissions);
 3. links the `inlay` CLI in `~/.local/bin`, `/opt/homebrew/bin` or `/usr/local/bin`;
-4. creates `~/.config/inlay/inlay.lua` as a copy of the [`inlay.lua`](./inlay.lua) of the repo, **if you
-   have no Inlay config yet**. A config that already exists is yours: see
+4. creates `~/.config/inlay/inlay.lua` as a copy of the [`inlay.lua`](./inlay.lua) of the repo (a short
+   config: the rest is the built-in config of the app), **if you have no Inlay config yet**. A config that already exists is yours: see
    [A config that you already have](#a-config-that-you-already-have). Then it **asks, every time, where your
    config should live**: where it is (the first option, what Enter picks) or in a folder of your own through a
    symbolic link (one you keep in a dotfiles repo, for example). See
@@ -218,7 +229,7 @@ one next to the new one as `<file>.backup-<date>` (`inlay.lua.backup-20261012-15
   is, it is replaced by the `inlay.lua` of the repo.
 
 Any other config is **kept as it is**, and its line says whether it is the one of the repo (`up to date`) or
-`yours`. It also tells if the config has no `onWindowDetected` rule (in `inlay.lua` or a file next to it).
+`yours`. It also tells if the config leaves out the built-in config (`builtInConfig = false`) and has no `onWindowDetected` rule (in `inlay.lua` or a file next to it).
 When there is a terminal, the menu of the question has `Use the repo's inlay.lua` (yours is kept as a
 backup), and `d` shows the diff with the one of the repo, in `less`. A config in a linked folder can only be
 kept: edit it in your folder. Without a terminal it prints the two commands that matter:
@@ -317,46 +328,69 @@ Inlay 0.2 read a TOML config, `inlay.toml`, with kebab-case keys. Inlay 0.3 does
 so, and a key with dashes gets its camelCase name (`corner-radius` is `cornerRadius`, `[[on-window-detected]]`
 is `onWindowDetected`, and the `if` of a rule is `match`).
 
-**The shipped config is [`inlay.lua`](./inlay.lua), at the root of the repo.** It is the file that
-`install.sh` copies, and a copy of it travels inside the app as the fallback for when there is no config at
-all. An app installed without `install.sh` (Homebrew) does the same when it starts: without a config it creates
-`~/.config/inlay/inlay.lua` with it, and a default config of a previous version, never edited, is replaced (and
-kept as `inlay.lua.backup-<date>`, or `inlay.toml.backup-<date>` for the one of Inlay 0.2). A config reached
-through a symbolic link is never written. It is a real config rather than a neutral sample: 7 persistent workspaces, key bindings on
-`cmd-alt-ctrl-…` and `cmd-alt-shift-…`, the `service` and `resize` modes and `onWindowDetected` rules that
-send each app to its workspace. Make it yours by editing your copy, or keep your config in a folder of your
-own and link it (the question of `install.sh`, `--config-link`, or `inlay config --use <folder>`).
+**Your config only says what is yours.** It goes over the **built-in config** of Inlay,
+[`builtin-config.lua`](./builtin-config.lua), which travels inside the app (`Inlay.app/Contents/Resources`) and
+is the config in use when you have none: 7 workspaces without apps, the key bindings on `cmd-alt-ctrl-…` and
+`cmd-alt-shift-…`, the `service` and `resize` modes, the window rules, the gaps, the animations, the menu bar item
+and the borders. The layers, each one over the one before:
 
-It is laid out in ten numbered sections, each one a table of its own under a header that is easy to find in
-the file, put together by `inlay.merge` at the end (moving a section to a file of its own is moving the table):
+1. the defaults of the code (the "Fallback value" of each key in the reference);
+2. the built-in config;
+3. the theme (see [Themes](#themes));
+4. your config.
+
+How your config goes over the built-in one:
+
+| What you write | What happens | Example |
+|---|---|---|
+| A table | Merged key by key, also the tables in it: the keys you don't write keep the values of Inlay | `menuBar = { perMonitor = true }` |
+| A value | Replaces the one of Inlay | `gaps = { inner = { horizontal = 12 } }` |
+| A list (`workspaces`, `persistentWorkspaces`, `afterStartupCommand`…) | Replaces the one of Inlay, whole | `workspaces = { … }` |
+| `theme` | Replaces the one of Inlay, whatever it is | `theme = 'nord'` |
+| A key binding | Added, or replaces the one of Inlay with the same keys; `false` removes it | `['cmd-alt-shift-b'] = false` |
+| A window rule (`onWindowDetected`) | Goes **before** the rules of Inlay: the first rule that matches is the one that runs | `{ match = { appId = '…' }, run = 'layout floating' }` |
+| `builtInConfig = false` | Your config alone, over the defaults of the code: no workspaces, key bindings or rules of Inlay | |
+
+The errors still point at your keys (`borders.width: width must be in [1, 20] range`).
+
+**The config of a new install is short.** [`inlay.lua`](./inlay.lua), at the root of the repo, is what
+`install.sh` copies to `~/.config/inlay/inlay.lua`, and what the app creates there when it starts without a
+config (Homebrew): a header with the commands below, `theme = 'material'` and a commented example of
+`workspaces` with apps. A default config of a previous version, never edited, is replaced by it (and kept as
+`inlay.lua.backup-<date>`, or `inlay.toml.backup-<date>` for the one of Inlay 0.2). A config reached through a
+symbolic link is never written. Keep your config in a folder of your own and link it (the question of
+`install.sh`, `--config-link`, or `inlay config --use <folder>`).
+
+**Workspaces.** The built-in config has 7 workspaces, `1` to `7` on the keys `h j k l u i o` (6 on the
+secondary display when there are two), without apps: no app goes anywhere until you say so. Yours replace them:
 
 ```lua
--- ━━ 4 · Layout ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-local layout = {
-  gaps = {
-    inner = { horizontal = 8, vertical = 8 },
-    outer = { left = 8, right = 8, top = 8, bottom = 8 },
-  },
+workspaces = {
+  { id = '1', name = 'Terminals', key = 'h', apps = { 'com.mitchellh.ghostty' } },
+  { id = '2', name = 'Code',      key = 'j', apps = { 'dev.zed.Zed', 'com.microsoft.VSCode' } },
+  { id = '6', name = 'Other',     key = 'i', monitor = { 'secondary', 'main' } },
+  { id = '7', name = 'Free',      key = 'o' },
+},
 ```
 
-1 General · 2 Callbacks · 3 Workspaces & monitors · 4 Layout · 5 Animations · 6 Menu bar · 7 Borders ·
-8 Programs · 9 Key bindings · 10 Window rules. The possible values are written next to each key
-(`-- dwindle | after-focused`). Section 3 is the list of the workspaces, with the key, the monitor and the apps
-of each one: the key bindings of section 9 and the window rules of section 10 are made from it, so a new app
-is one line there.
+From the list, Inlay makes the persistent workspaces (the ones the menu bar item always shows), the monitor of
+each one (`'main'` without one), two key bindings for each workspace with a `key` (`cmd-alt-ctrl-<key>` goes to
+it, `cmd-alt-shift-<key>` moves the focused window there; `workspaceKeys = { focus = …, move = … }` changes the
+modifiers, `false` drops them) and a window rule for each app, which tiles its windows and sends them to the
+workspace. The `name` shows in the menu of the menu bar item (*Workspace 2 · Code · Zed*). A key binding of
+yours with the same keys wins. The bundle id of an app: `inlay list-apps`.
 
-The examples of this page are parts of that table: the keys of the table that `inlay.lua` returns.
+**The window rules** are checked from top to bottom, and **the first one that matches a window is the only one
+that runs for it** (a rule with `checkFurtherCallbacks = true` lets the next ones run too). In the config in use
+they come in this order:
 
-The rules are checked from top to bottom, and **the first one that matches a window is the only one that runs
-for it** (a rule with `checkFurtherCallbacks = true` lets the next ones run too; the shipped config has
-none). In `inlay.lua` they come in this order:
-
-1. the panels to open or save a file float where they open;
-2. the apps with a workspace go to it: terminals to 1, editors to 2, browsers to 3, chats to 4, AI to 5;
-3. the quick apps (Finder, System Settings, Calculator…) and the settings window of any app float where they
-   open;
-4. **every other window floats where it opens**, until you put it in a layout.
+1. your rules;
+2. the panels to open or save a file float where they open;
+3. the apps of the workspaces go to theirs (the item `'workspaces'` of the rules of the built-in config marks
+   the place);
+4. the quick apps of macOS (Finder, System Settings, Calculator, Preview…) and the settings window of any app
+   float where they open. The apps of others that you want floating go in your rules;
+5. **every other window floats where it opens**, until you put it in a layout.
 
 The last rule is a catch-all one:
 
@@ -374,16 +408,43 @@ window) is already floating when the rules run, so it does not match and stays w
 get to the rules. The window of an app without a rule floats in the workspace on the screen, where the app
 opens it, and the tiled windows don't move. **`cmd-alt-shift-f` puts it in the layout** (`fullscreen off`
 and `layout floating tiling`: the same key floats a tiling window again, in the middle of the screen, like the
-*Window* menu of the menu bar item). **`cmd-alt-shift` + a workspace key (`h j k l u i o`) moves a window to that workspace with its layout**:
+*Window* menu of the menu bar item). **`cmd-alt-shift` + a workspace key moves a window to that workspace with its layout**:
 a floating window floats there, a tiling one splits a window there like a new window, and a window in
-fullscreen leaves it and takes a place in the layout of that workspace. To give an app
-a place of its own, give it a rule above (a workspace of its own); to have every other window tiled in the
-workspace where it opens, as AeroSpace does, delete the rule. Like every rule it runs once per window: a
-window that you tile stays tiled, until you run the rules again by hand (`w` in the `service` mode).
+fullscreen leaves it and takes a place in the layout of that workspace. To give an app a place of its own, put
+it in the `apps` of a workspace, or write a rule for it (`run = 'layout tiling'` tiles it where it opens). Like
+every rule it runs once per window: a window that you tile stays tiled, until you run the rules again by hand
+(`w` in the `service` mode).
+
+**The config in use: `inlay config --show`.** It prints the whole config as Lua, every value with where it
+comes from (yours, with the file and the line; the theme; Inlay; or the default of the code) and its possible
+values. Copy a line to your config to change it:
+
+```sh
+inlay config --show                  # everything
+inlay config --show menuBar          # one table, or one key: --show borders.width
+inlay config --show --mine           # only what your files set, and what repeats Inlay without effect
+inlay config --show --keys           # every key, one per line: inlay config --show --keys | grep glow
+inlay config --show borders --json   # the values, for scripts
+```
+
+```lua
+menuBar = {
+  enabled = true,                -- Inlay · true|false
+  theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots|underline|liquid|dms
+  perMonitor = true,             -- yours (inlay.lua:3) · true|false
+  systemColors = true,           -- theme · true|false
+  colors = {
+    focused = '#D8A657',         -- theme
+    occupied = 'auto',           -- default
+  },
+},
+```
+
+`config --get`, `--keys`, `--major-keys` and `--all-keys`, which came from AeroSpace, only knew the key
+bindings: they are gone, and using them says what replaces them.
 
 **Every key is documented in [`docs/config-reference.lua`](./docs/config-reference.lua)**: what it does,
-its possible values and its default, for the keys inherited from AeroSpace and for the ones of Inlay. The
-`inlay` CLI prints it, without needing Inlay to be running:
+its possible values and its default. The `inlay` CLI prints it, without needing Inlay to be running:
 
 ```sh
 inlay config --explain                 # the whole reference
@@ -394,11 +455,32 @@ inlay config --explain gaps.inner      # a group of keys
 
 <p align="center"><img src="docs/images/terminal-cli.png" alt="Real output of two commands in a terminal: 'inlay config --explain borders.width' prints the line that opens the borders table, the comment that explains the key, its possible values (1 ... 20), its fallback value and 'width = 4'; 'inlay list-workspaces --all' prints the workspaces 1 to 6, one per line" width="880"></p>
 
+**Autocompletion in your editor.** Inlay carries the types of its config for
+[lua-language-server](https://luals.github.io) (the Lua extension of Zed, of VS Code, Neovim…): every key, its
+values and what it does, as you type and on hover. Once, in the config folder:
+
+```sh
+inlay config --types
+```
+
+It writes `.luarc.json` next to your `inlay.lua`, pointing at
+`/Applications/Inlay.app/Contents/Resources/types` (the folder of types of the app it runs from; a
+`.luarc.json` that exists is printed, never overwritten). Keep it in your dotfiles. The types are made from the
+reference when the app is built, so an update of Inlay updates them: nothing to run again. What goes through
+`inlay.merge` is typed; in a module that returns a part of the config, write `---@type InlayConfig` before a
+`local` and return it.
+
+Of the keys that came from AeroSpace, the ones that were only there to read its configs are gone and are
+unknown keys now: `configVersion`, `afterLoginCommand`, `accordionPadding`,
+`nonEmptyWorkspacesRootContainersLayoutOnStartup`, `indentForNestedContainersWithTheSameOrientation` and
+`match.duringAerospaceStartup` (`duringInlayStartup` stays). The variables `AEROSPACE_*` that your scripts get
+stay.
+
 A test fails if the config parser accepts a key that the reference does not document, or the other way round.
 
-**Inlay follows the files.** With `autoReloadConfig = true` (it is set in the shipped `inlay.lua`; the
-default of the key is `false`), Inlay reloads the config when `inlay.lua` or one of the files it requires is
-saved, and the menu bar item and the borders show the new values right away. Creating a file that `require`
+**Inlay follows the files.** With `autoReloadConfig = true` (it is set in the built-in config; the
+default of the key is `false`), Inlay reloads the config when `inlay.lua`, one of the files it requires or one
+of your themes is saved, and the menu bar item and the borders show the new values right away. Creating a file that `require`
 didn't find reloads it too. It works when `~/.config/inlay` is a symbolic link to a folder of yours, when a
 file is a link, with editors that save by writing a new file and renaming it over the old one, and when a link
 is pointed somewhere else. A save with an error (Lua that doesn't run, or that doesn't return a table) is not
@@ -545,13 +627,13 @@ tiling = {
 The windows that **are already open when Inlay starts** (or when it is resumed with `inlay enable on`) are not
 placed one by one. First the `onWindowDetected` rules of the config run for each of them, exactly as for a
 new window, so every window goes to the workspace of its rule (or becomes floating, or whatever the rule
-says). Then the windows are distributed, workspace by workspace, according to `startupLayout`. With the
-shipped config, the terminals end up in workspace 1, the editors in 2, the browsers in 3, and so on, the
-windows of the apps without a workspace in 6, each workspace with its own grid. The workspaces are arranged
+says). Then the windows are distributed, workspace by workspace, according to `startupLayout`. With apps in
+your `workspaces`, the terminals end up in workspace 1, the editors in 2, the browsers in 3, and so on, each
+workspace with its own grid. The workspaces are arranged
 once the rules of every window are over, also when macOS reports another event in the middle of the startup. The rules run once per window: later refreshes do not evaluate them again, so a
 window that you move somewhere else stays there. On resume, they only run for the windows that appeared
 while Inlay was paused. To run them again for all the open windows, use
-`inlay run-callback onWindowDetected --for-every-window` (`w` in the `service` mode of the shipped config).
+`inlay run-callback onWindowDetected --for-every-window` (`w` in the `service` mode of the built-in config).
 
 | `startupLayout` | Result |
 |---|---|
@@ -863,9 +945,9 @@ menuBar = {
   disabled; without the Accessibility permission the menu only has the button that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-shift-b`) and
   the binding modes are done with the key bindings. **The menu does not show the key bindings of your config**:
   its own shortcuts only exist while it is open.
-- The shipped config defines **7 persistent workspaces** (1–7), which are the ones the item always shows.
-  7 is the empty one: no rule sends an app to it, so there is (almost) always a free workspace, on the main
-  display (`cmd-alt-ctrl-o`, and `cmd-alt-shift-o` to move a window there). Any
+- The built-in config defines **7 persistent workspaces** (1–7, see `workspaces` in
+  [Configuration](#configuration)), which are the ones the item always shows. In yours, leaving one without
+  apps (like 7) keeps a free workspace, on the main display (`cmd-alt-ctrl-o`, and `cmd-alt-shift-o` to move a window there). Any
   other workspace exists (and appears in the item) while it has windows or is the visible one.
 - **There is no Settings window**: every key is in the file (*Open inlay.lua…* opens it), and Inlay reloads it
   when it is saved. Opening Inlay again from Applications opens it too, which is the way back to it when the
@@ -904,7 +986,7 @@ changes it, so changing it, a second display or a dynamic wallpaper have nothing
 
 **Keep the look in themes.** The values of the theme go under the tables `borders` and `menuBar` of the config:
 a value that the config sets replaces the one of the theme, and one that neither sets keeps its default. The
-shipped config sets none of them, so the theme is all there is; set one in the config only to override it.
+built-in config sets none of them, so the theme is all there is; set one in the config only to override it.
 `theme = {}` is no theme at all: the defaults of every key.
 
 ```lua
@@ -1260,9 +1342,11 @@ build/Inlay.app/Contents/MacOS/Inlay --check-config ~/.dotfiles/inlay/inlay.lua
 | `Sources/Common` | Code shared by the app and the CLI |
 | `Sources/BuildInfo` | Version and git hash, which `build-app.sh` passes through environment variables |
 | `Sources/PrivateApi` | Header of `_AXUIElementGetWindow` |
-| `inlay.lua` | The shipped config: what `install.sh` copies and what the app falls back to |
+| `builtin-config.lua` | The built-in config: the base of the config of the user, and the config in use without one |
+| `inlay.lua` | The short config of a new install: what `install.sh` copies, and what the app creates without a config |
+| `themes` | The themes of Inlay (`theme = '<name>'`) |
 | `Sources/CLua` | Lua 5.4, which runs the config (`LuaConfigLoader`) |
-| `docs` | `config-reference.lua` (every config key, printed by `inlay config --explain`), an i3-like example config, a copy of the AeroSpace documentation, and `images` (the images of this page, with their sources in `images/src`) |
+| `docs` | `config-reference.lua` (every config key, printed by `inlay config --explain`, and the source of the types for editors that `build-app.sh` writes into `Resources/types`), an i3-like example config, a copy of the AeroSpace documentation, and `images` (the images of this page, with their sources in `images/src`) |
 | `Tests/InlayTests` | Tests with Swift Testing. `support/` holds the fake windows and other utilities; `fixtures/`, example configs |
 | `Support` | `Info.plist` and the bundle icon |
 | `scripts` | Build, tests, install, uninstall, icon and the images of the README. `uninstall.sh` and `lib.sh` also travel inside the app, for `inlay uninstall` |

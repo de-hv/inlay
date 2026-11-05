@@ -84,6 +84,71 @@ public struct ConfigReference: Sendable {
         return (tables + keys).sorted { $0.range.lowerBound < $1.range.lowerBound }.map(\.path).filter { seen.insert($0).inserted }
     }
 
+    /// What the reference says about one key or table: see entries
+    public struct Entry: Sendable, Equatable {
+        /// 'borders.width'. In a table of names that the user chooses, the name of the example: 'mode.main.binding.alt-h'
+        public var path: String
+        public var isTable: Bool
+        /// The comment above it, without '-- ', and without the lines 'Possible values' and 'Fallback value'
+        public var comment: [String]
+        /// What follows 'Possible values: '
+        public var possibleValues: String?
+        /// The value of 'Fallback value (if you omit the key): name = <value>'. nil: the line says something else
+        /// ('empty', 'no theme'…) or there is none
+        public var fallback: String?
+        /// The text of 'Fallback value (if you omit the key): …', whatever it says
+        public var fallbackText: String?
+        /// Only documented, commented out: '-- notifications = {}'
+        public var isCommentedOut: Bool
+        /// The value that the reference writes for the key: its default, or an example
+        public var value: String? = nil
+    }
+
+    /// Every key and table of the reference, in the order of the file
+    public var entries: [Entry] {
+        (tables.map { ($0, true) } + keys.map { ($0, false) })
+            .sorted { $0.0.range.lowerBound < $1.0.range.lowerBound }
+            .map { part, isTable in
+                var comment: [String] = []
+                var possibleValues: String? = nil
+                var fallbackText: String? = nil
+                var isCommentedOut = false
+                for line in lines[part.range] {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    guard trimmed.hasPrefix("--") else { break }
+                    let text = trimmed.dropFirst(2).trimmingCharacters(in: .whitespaces)
+                    if let value = text.removingPrefix("Possible values:") {
+                        possibleValues = value
+                    } else if let value = text.removingPrefix("Fallback value (if you omit the key):") ?? text.removingPrefix("Fallback value (if you omit the table):") {
+                        fallbackText = value
+                    } else {
+                        comment.append(text)
+                    }
+                }
+                if !isTable, let last = lines[part.range].last, commentedOutKey(last) != nil {
+                    isCommentedOut = true
+                    comment.removeLast()
+                }
+                var fallback: String? = nil
+                let name = part.path.split(separator: ".").last.map(String.init)
+                if let fallbackText, let equals = fallbackText.firstIndex(of: "="),
+                   let key = assignedKey(fallbackText.trimmingCharacters(in: .whitespaces)),
+                   key == name || key.hasSuffix("." + (name ?? ""))
+                {
+                    fallback = fallbackText[fallbackText.index(after: equals)...].trimmingCharacters(in: .whitespaces)
+                }
+                var value: String? = nil
+                if !isTable, let last = lines[part.range].last, !isCommentedOut, let equals = last.firstIndex(of: "=") {
+                    var text = last[last.index(after: equals)...].trimmingCharacters(in: .whitespaces)
+                    if let comment = text.range(of: " --") { text = String(text[..<comment.lowerBound]).trimmingCharacters(in: .whitespaces) }
+                    if text.hasSuffix(",") { text.removeLast() }
+                    value = text
+                }
+                while comment.last?.isEmpty == true { comment.removeLast() }
+                return Entry(path: part.path, isTable: isTable, comment: comment, possibleValues: possibleValues, fallback: fallback, fallbackText: fallbackText, isCommentedOut: isCommentedOut, value: value)
+            }
+    }
+
     /// The part of the reference about a key or a table, and about everything under it. nil key: the whole reference
     public func explain(_ key: String?) -> Result<String, String> {
         guard let key else { return .success(text.trimmingCharacters(in: .newlines)) }
@@ -201,4 +266,10 @@ private func commentedOutKey(_ line: String) -> String? {
 
 private func normalizedKey(_ key: String) -> String {
     key.filter { !"'\"[] ".contains($0) }
+}
+
+extension String {
+    fileprivate func removingPrefix(_ prefix: String) -> String? {
+        hasPrefix(prefix) ? dropFirst(prefix.count).trimmingCharacters(in: .whitespaces) : nil
+    }
 }

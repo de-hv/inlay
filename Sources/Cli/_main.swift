@@ -54,6 +54,14 @@ struct Main {
             exit(EXIT_CODE_ZERO)
         }
 
+        // For scripts/build-app.sh: the file of types for the editors, made from the config reference. See: EditorTypes
+        if args.first == EditorTypes.printFlag {
+            switch ConfigReference.load() {
+                case .success(let reference): exit(EXIT_CODE_ZERO, out: EditorTypes.generate(reference))
+                case .failure(let message): exit(EXIT_CODE_TWO, err: message)
+            }
+        }
+
         // Not a command of the server: it removes the server
         if args.first == "uninstall" {
             runUninstall(args.slice(1...)?.toArray() ?? [])
@@ -75,6 +83,13 @@ struct Main {
         // Documentation: answered from the reference that ships with Inlay, so it works without the server
         if let configArgs = parsedArgs as? ConfigCmdArgs, case .explain(let key) = configArgs.mode {
             switch ConfigReference.load().flatMap({ $0.explain(key) }) {
+                case .success(let text): exit(EXIT_CODE_ZERO, out: text)
+                case .failure(let message): exit(failExitCode, err: message)
+            }
+        }
+        // The .luarc.json of the config folder: the CLI knows the app it is in
+        if let configArgs = parsedArgs as? ConfigCmdArgs, case .types = configArgs.mode {
+            switch EditorTypes.writeLuarc() {
                 case .success(let text): exit(EXIT_CODE_ZERO, out: text)
                 case .failure(let message): exit(failExitCode, err: message)
             }
@@ -115,10 +130,9 @@ struct Main {
                 exit(
                     failExitCode,
                     err: """
-                        ERROR: Implicit stdin is detected (stdin is not TTY). Implicit stdin was forbidden upstream in AeroSpace v0.20.0.
-                        1. Please supply '--stdin' flag to make stdin explicit and preserve the old behavior
+                        ERROR: Implicit stdin is detected (stdin is not TTY): a relative workspace ('next', 'prev') doesn't read stdin on its own.
+                        1. Please supply '--stdin' flag to read the workspaces from stdin
                         2. You can also use '--no-stdin' flag to behave as if no stdin was supplied
-                        Breaking change issue: https://github.com/nikitabobko/AeroSpace/issues/1683
                         """,
                 )
             }

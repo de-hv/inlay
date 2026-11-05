@@ -29,6 +29,8 @@ extension InlayTests {
                 ("borders.singleWindow", Array(singleWindowBorderParserTable.keys)),
                 ("animations", Array(animationsParserTable.keys)),
                 ("onWindowDetected", Array(windowDetectedParser.keys)),
+                ("workspaces", workspaceSpecKeys),
+                ("workspaceKeys", workspaceKeysKeys),
                 ("onWindowDetected.match", Array(windowDetectedMatcherParser.keys)),
                 ("mode.*", ["binding"]), // See: parseMode
             ]
@@ -101,8 +103,8 @@ extension InlayTests {
         @Test func testDocumentedKeys() throws {
             let keys = try reference.documentedKeys
             for key in [
-                "configVersion", "focusFollowsMouse.enabled", "keyMapping.keyNotationToKeyCode", "accordionPadding",
-                "afterLoginCommand", "gaps", "gaps.inner.horizontal", "exec.envVars", "tiling.splitTarget", "menuBar.colors",
+                "builtInConfig", "workspaces", "workspaces.apps", "workspaceKeys.focus", "focusFollowsMouse.enabled", "keyMapping.keyNotationToKeyCode",
+                "gaps", "gaps.inner.horizontal", "exec.envVars", "tiling.splitTarget", "menuBar.colors",
                 "menuBar.colors.accent", "borders.modeColors", "theme", "borders.fullscreenColor", "mode.main.binding", "mode.main.binding.alt-h",
                 "onWindowDetected", "onWindowDetected.match.appId", "onWindowDetected.run",
                 "workspaceToMonitorForceAssignment",
@@ -141,9 +143,9 @@ extension InlayTests {
                 """,
             )
             // A key that is only documented, commented out
-            let accordion = try reference.explain("accordionPadding").get()
-            assertEquals(accordion.hasPrefix("-- Not a key of Inlay: it has no accordion layout."), true)
-            assertEquals(accordion.hasSuffix("-- accordionPadding = 30"), true)
+            let notifications = try reference.explain("notifications").get()
+            assertEquals(notifications.hasPrefix("-- Not a table of Inlay anymore: the notice after a reload is gone."), true)
+            assertEquals(notifications.hasSuffix("-- notifications = {}"), true)
         }
 
         @Test func testExplainTable() throws {
@@ -189,8 +191,8 @@ extension InlayTests {
         @Test func testParseArgs() {
             assertEquals((parseCmdArgs(["config", "--explain"]).cmdOrNil as? ConfigCmdArgs)?.explain, .everything)
             assertEquals((parseCmdArgs(["config", "--explain", "borders.width"]).cmdOrNil as? ConfigCmdArgs)?.explain, .key("borders.width"))
-            assertEquals(parseCommand("config --explain --all-keys").errorOrNil?.hasPrefix("Conflicting flags are specified:"), true)
-            assertEquals(parseCommand("config --explain tiling --json").errorOrNil, "--json flag requires --get flag")
+            assertEquals(parseCommand("config --explain --show").errorOrNil?.hasPrefix("Conflicting flags are specified:"), true)
+            assertEquals(parseCommand("config --explain tiling --json").errorOrNil, "--json flag requires --show flag")
         }
 
         /// The server answers it too (a binding may run it), from the same file

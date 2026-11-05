@@ -79,7 +79,6 @@ let windowDetectedMatcherParser: [String: any ParserProtocol<LegacyWindowDetecte
     "appNameRegexSubstring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
     "windowTitleRegexSubstring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
     "duringInlayStartup": Parser(\.duringInlayStartup, upcast(parseBool)),
-    "duringAerospaceStartup": Parser(\.duringInlayStartup, upcast(parseBool)), // The name of AeroSpace, kept
 ]
 
 private func upcast<T>(
@@ -115,7 +114,7 @@ private func parseMatcher(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c:
 }
 
 private func parseWindowDetectedCallback(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> WindowDetectedCallback? {
-    var myContext = ConfigParserContext(configVersion: c.configVersion, errors: [], warnings: [])
+    var myContext = ConfigParserContext(errors: [], warnings: [])
     let callback = parseTable(raw, WindowDetectedCallback(), windowDetectedParser, backtrace, &myContext)
 
     if callback.matcher == .command(.empty) && !callback.checkFurtherCallbacks {

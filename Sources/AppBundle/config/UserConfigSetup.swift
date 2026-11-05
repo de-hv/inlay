@@ -3,9 +3,9 @@ import Foundation
 
 /// The config of the user, ready before Inlay reads it at startup. scripts/install.sh does the same, but an app
 /// installed in another way (Homebrew) never runs it:
-/// - without a config, ~/.config/inlay/inlay.lua is created with the built-in config, for the user to edit or to
-///   replace with `inlay config --use`;
-/// - a config that is a default config of a previous version, never edited, is replaced by the built-in one, and
+/// - without a config, ~/.config/inlay/inlay.lua is created with the short config of a new install (inlay.lua of the
+///   repo: the rest is the built-in config, under it), for the user to edit or to replace with `inlay config --use`;
+/// - a config that is a default config of a previous version, never edited, is replaced by that short one, and
 ///   kept next to it as inlay.lua.backup-<date>. Also the inlay.toml of Inlay 0.2: it is kept as
 ///   inlay.toml.backup-<date>, and inlay.lua takes its place. An inlay.toml that was edited stays, and isn't read
 ///   (see: legacyConfigMessage).

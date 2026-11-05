@@ -10,15 +10,32 @@ extension InlayTests {
     @Suite @MainActor struct ShippedConfigsTest {
         init() { setUpWorkspacesForTests() }
 
-        /// The file runs with the modules of its folder
-        private func parse(_ relativePath: String) throws -> (config: Config, errors: [String], warnings: [String]) {
-            let result = parseConfig(LuaConfigLoader.load(file: projectRoot.appending(path: relativePath)))
+        /// The file runs with the modules of its folder. overBuiltIn: as a config of the user, over the built-in one
+        private func parse(_ relativePath: String, overBuiltIn: Bool = false) throws -> (config: Config, errors: [String], warnings: [String]) {
+            let lua = LuaConfigLoader.load(file: projectRoot.appending(path: relativePath))
+            let result = overBuiltIn ? parseConfigOverBuiltIn(lua) : parseConfig(lua)
             return (result.config, result.strErrors, result.strWarnings)
         }
 
-        /// inlay.lua, at the root of the repo: the config that install.sh copies and that the app bundle carries
+        /// inlay.lua, at the root of the repo: the config of a new install, that install.sh copies. It is short: the
+        /// built-in config has the rest, and over it, it gives the same config
+        @Test func testConfigOfANewInstall() throws {
+            let result = try parse("inlay.lua", overBuiltIn: true)
+            assertEquals(result.errors, [])
+            assertEquals(result.warnings, [])
+            assertEquals(result.config.persistentWorkspaces, defaultConfig.persistentWorkspaces)
+            assertEquals(result.config.borders, defaultConfig.borders)
+            assertEquals(result.config.menuBar, defaultConfig.menuBar)
+            let text = try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8)
+            assertTrue(text.split(separator: "\n").count < 40)
+            assertTrue(text.contains("theme = 'material'"))
+            assertEquals(defaultConfigUrl.lastPathComponent, "inlay.lua")
+            assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), text)
+        }
+
+        /// builtin-config.lua, at the root of the repo: the base of every config, and the config without one
         @Test func testBuiltInConfig() throws {
-            let result = try parse("inlay.lua")
+            let result = try parse("builtin-config.lua")
             assertEquals(result.errors, [])
             assertEquals(result.warnings, [])
             // The tables of Inlay are spelled out: the defaults of the code, but for the look of the author's setup
@@ -38,8 +55,8 @@ extension InlayTests {
             // Saving the file by hand reloads it, which is what keeps the menu bar item and the borders in sync with it
             assertEquals(result.config.autoReloadConfig, true)
             // It is the config that the app falls back to
-            assertEquals(defaultConfigUrl.lastPathComponent, "inlay.lua")
-            assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8))
+            assertEquals(builtInConfigUrl.lastPathComponent, "builtin-config.lua")
+            assertEquals(try String(contentsOf: builtInConfigUrl, encoding: .utf8), try String(contentsOf: projectRoot.appending(path: "builtin-config.lua"), encoding: .utf8))
         }
 
         /// install.sh replaces a config that is identical to a default config that Inlay has shipped, and only such
@@ -70,7 +87,7 @@ extension InlayTests {
 
         /// What the built-in config gives to somebody who installs Inlay without a config of their own
         @Test func testBuiltInConfig_workspacesAndBindings() throws {
-            let config = try parse("inlay.lua").config
+            let config = try parse("builtin-config.lua").config
             assertEquals(Array(config.persistentWorkspaces), ["1", "2", "3", "4", "5", "6", "7"])
             assertEquals(config.modes.keys.sorted(), ["main", "resize", "service"])
             func runs(_ binding: String, _ command: String, mode: String = mainModeId) -> Bool {
@@ -101,8 +118,9 @@ extension InlayTests {
         }
 
         /// Nothing of the accordion layout, which Inlay doesn't have, and nothing that talks to AeroSpace
-        @Test func testBuiltInConfig_noAccordionAndNoAeroSpaceCli() throws {
-            let text = try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8)
+        @Test(arguments: ["builtin-config.lua", "inlay.lua"])
+        func testBuiltInConfig_noAccordionAndNoAeroSpaceCli(_ file: String) throws {
+            let text = try String(contentsOf: projectRoot.appending(path: file), encoding: .utf8)
             let code = text.split(separator: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("--") }.joined(separator: "\n")
             assertEquals(text.lowercased().contains("accordion"), false)
             assertEquals(code.lowercased().contains("aerospace"), false)
@@ -110,9 +128,17 @@ extension InlayTests {
             assertEquals(code.contains("$HOME") || code.contains("/Users/"), false)
         }
 
-        /// The rules that send the windows of an app to its workspace
+        /// The built-in config sends no app anywhere: the workspaces of the user do (here, a config with apps)
         @Test func testBuiltInConfig_windowRules() throws {
-            let config = try parse("inlay.lua").config
+            let builtIn = try parse("builtin-config.lua").config
+            let moves = builtIn.onWindowDetected.flatMap { $0.run.flatten().filterIsInstance(of: MoveNodeToWorkspaceCommand.self) }
+            assertEquals(moves.count, 0)
+            let text = try String(contentsOf: projectRoot.appending(path: "builtin-config.lua"), encoding: .utf8)
+            for app in ["1password", "raycast", "Amphetamine", "ghostty", "Chrome"] {
+                assertEquals(text.contains(app), false, additionalMsg: app)
+            }
+
+            let config = try parse("Tests/InlayTests/fixtures/workspaces-with-apps.lua", overBuiltIn: true).config
             func workspace(of appId: String) -> String? {
                 config.onWindowDetected.lazy.compactMap { rule -> String? in
                     guard case .legacy(let matcher) = rule.matcher, matcher.appId == appId else { return nil }
@@ -130,8 +156,11 @@ extension InlayTests {
             let last = try #require(config.onWindowDetected.last)
             assertEquals(last.matcher, .command(parseCommand("test %{window-layout} ~= _tiles").cmdOrDie))
             assertTrue(last.run.strictEquals(parseCommand("layout floating").cmdOrDie))
-            // The first rule that matches is the only one that runs: the order of the file is the order of the rules
+            // The first rule that matches is the only one that runs: the file dialogs first, then the apps
             assertEquals(config.onWindowDetected.filter(\.checkFurtherCallbacks).count, 0)
+            guard case .legacy(let first) = config.onWindowDetected[0].matcher, case .legacy(let second) = config.onWindowDetected[1].matcher else { Issue.record("legacy matchers"); return }
+            assertEquals(first.windowTitleRegexSubstring != nil, true)
+            assertEquals(second.appId, "com.mitchellh.ghostty")
             assertEquals(config.workspaceToMonitorForceAssignment.keys.sorted(), ["1", "2", "3", "4", "5", "6", "7"])
             // 7 is the empty workspace: no rule sends an app to it, and it stays on the main display with 1 to 5
             let targets = config.onWindowDetected.flatMap { $0.run.flatten().filterIsInstance(of: MoveNodeToWorkspaceCommand.self) }
@@ -155,7 +184,7 @@ extension InlayTests {
             assertEquals(result.config.borders.copy(\.modeColors, [:]), BordersConfig())
             assertEquals(result.config.borders.modeColors.keys.sorted(), ["resize", "service"])
             // The persistent workspaces are the ones of the built-in config
-            assertEquals(result.config.persistentWorkspaces, try parse("inlay.lua").config.persistentWorkspaces)
+            assertEquals(result.config.persistentWorkspaces, try parse("builtin-config.lua").config.persistentWorkspaces)
         }
     }
 }

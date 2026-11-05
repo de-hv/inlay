@@ -26,13 +26,16 @@ extension InlayTests {
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             defer { _ = try? FileManager.default.removeItem(at: dir) }
             try "return { mode = { main = { binding = { ['cmd-alt-h'] = 'focus left' } } } }".write(to: dir.appending(path: "binds.lua"), atomically: true, encoding: .utf8)
-            try "return inlay.merge({ configVersion = 2 }, require('binds'))".write(to: dir.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
+            try "return inlay.merge({}, require('binds'))".write(to: dir.appending(path: "inlay.lua"), atomically: true, encoding: .utf8)
 
             let result = readConfig(forceConfigUrl: dir.appending(path: "inlay.lua"))
             assertEquals(result.parseConfigResult.errors, [])
-            assertEquals(result.parseConfigResult.config.modes["main"]?.bindings.count, 1)
+            // The binding of the user, over the ones of the built-in config
+            let bindings = result.parseConfigResult.config.modes["main"]?.bindings.values.map(\.descriptionWithKeyNotation) ?? []
+            assertEquals(bindings.contains("cmd-alt-h"), true)
+            assertEquals(bindings.contains("cmd-alt-shift-b"), true)
             assertEquals(result.files.map { $0.url?.lastPathComponent }, ["inlay.lua", "binds.lua"])
-            assertEquals(result.text, "return inlay.merge({ configVersion = 2 }, require('binds'))")
+            assertEquals(result.text, "return inlay.merge({}, require('binds'))")
         }
 
         /// The errors of running the Lua config stop the reload: the config in use stays

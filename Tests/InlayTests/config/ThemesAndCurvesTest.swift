@@ -80,7 +80,6 @@ extension InlayTests {
         @Test func testObsoleteTables() {
             let result = parseConfig(lua: """
                 return {
-                  configVersion = 2,
                   notifications = { ['on-reload'] = 'diff' },
                 }
                 """)

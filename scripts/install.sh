@@ -491,8 +491,9 @@ config_kept() {
   fi
   CONFIG_DIFFERS=true
   CONFIG_DETAIL="$label · yours"
-  # The rules may be in a file that inlay.lua requires
-  if ! grep -qs onWindowDetected "$(dirname "$config")"/*.lua; then
+  # The rules of the built-in config apply under yours, unless it leaves the built-in config out ('builtInConfig =
+  # false'). The rules may be in a file that inlay.lua requires
+  if grep -qsE 'builtInConfig *= *false' "$(dirname "$config")"/*.lua && ! grep -qs onWindowDetected "$(dirname "$config")"/*.lua; then
     warn "Your config has no onWindowDetected rule: every window stays in the workspace where it opens."
   fi
   if [ "$CAN_ASK" != true ]; then

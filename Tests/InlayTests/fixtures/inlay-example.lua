@@ -21,7 +21,6 @@ return {
   -- además 'auto': blanco sobre barra oscura y negro sobre barra clara.
   -- ─────────────────────────────────────────────────────────────────────────────
 
-  configVersion = 2,
   -- Sin tema: los colores de abajo son los valores por defecto del código
   theme = {},
 
@@ -355,7 +354,6 @@ return {
   -- Estas formas siguen siendo válidas en Inlay, con un aviso al cargar:
   --
   --   defaultRootContainerLayout = 'accordion'   →  se trata como 'tiles'
-  --   accordionPadding = 30                        →  se ignora
   --   'layout accordion', 'layout h_accordion',
   --   'layout v_accordion' (en atajos y reglas)     →  se tratan como 'layout tiles'
   --   'layout tiles accordion' (alternar)           →  queda en 'layout tiles'

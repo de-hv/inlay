@@ -15,20 +15,26 @@
 -- The config is a Lua file that returns a table, like this one. It can be split into files of its folder:
 -- require('name') runs name.lua, once, and gives what it returns. inlay.merge(...) puts tables together: the
 -- tables of the same key are merged, the arrays are put one after the other, and for anything else the last
--- one wins. The inlay.lua that Inlay ships with is written that way. Inlay reloads the config when one of its
--- files is saved.
+-- one wins. Inlay reloads the config when one of its files is saved.
 --
--- Inlay is a fork of AeroSpace: the keys that come from it keep their meaning, with camelCase names
--- (default-root-container-layout is defaultRootContainerLayout). The links below point to the documentation
--- of AeroSpace, which applies to those keys. All the commands: https://nikitabobko.github.io/AeroSpace/commands
+-- Your config goes over the built-in config of Inlay (builtin-config.lua in the app), which has 7 workspaces,
+-- the key bindings, the window rules, the gaps… So your inlay.lua only says what is yours:
+-- - a table of yours is merged with the one of the built-in config key by key, also the tables in it;
+-- - a value or a list (workspaces, persistentWorkspaces…) of yours replaces the one of the built-in config,
+--   and so does 'theme', whatever it is;
+-- - your window rules (onWindowDetected) go before the ones of the built-in config;
+-- - ['<key>'] = false in the bindings of a mode removes a key binding of the built-in config.
+-- 'inlay config --show' prints the config in use, and where each value comes from. The "Fallback value" of a
+-- key below is the default of the code: the one in use when neither your config nor the built-in one sets it.
+-- 'inlay config --show <key>' tells which one is in use.
+-- The commands of the bindings and of the rules: inlay --help, and inlay <command> --help
 
 return {
-  -- Config version for compatibility and deprecations. Version 1 still loads, with a warning.
-  -- 'persistentWorkspaces' needs version 2
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#config-version
-  -- Possible values: 1|2
-  -- Fallback value (if you omit the key): configVersion = 1
-  configVersion = 2,
+  -- Your config goes over the built-in config of Inlay. With false, it doesn't: your config alone, over the
+  -- defaults of the code (no workspaces, no key bindings, no window rules of Inlay)
+  -- Possible values: true|false
+  -- Fallback value (if you omit the key): builtInConfig = true
+  builtInConfig = true,
 
   -- Commands that run after Inlay starts, once the windows that were already open are in their places.
   -- A command, or a list of commands
@@ -49,20 +55,17 @@ return {
   autoReloadConfig = true,
 
   -- Normalization: containers with a single child are flattened
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#normalization
   -- Possible values: true|false
   -- Fallback value (if you omit the key): enableNormalizationFlattenContainers = true
   enableNormalizationFlattenContainers = true,
 
   -- Normalization: a container nested in another one gets the opposite orientation
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#normalization
   -- Possible values: true|false
   -- Fallback value (if you omit the key): enableNormalizationOppositeOrientationForNestedContainers = true
   enableNormalizationOppositeOrientationForNestedContainers = true,
 
   -- The layout of the root container of a new workspace.
   -- Inlay has no accordion layout: 'accordion' is accepted with a warning and treated as 'tiles'
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#layouts
   -- Possible values: tiles
   -- Fallback value (if you omit the key): defaultRootContainerLayout = 'tiles'
   defaultRootContainerLayout = 'tiles',
@@ -76,33 +79,26 @@ return {
 
   -- Commands that run when the focused monitor changes. A command, or a list of commands.
   -- The example makes the mouse follow the focus
-  -- See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
-  -- See https://nikitabobko.github.io/AeroSpace/commands#move-mouse
   -- Fallback value (if you omit the key): onFocusedMonitorChanged = {}
   onFocusedMonitorChanged = { 'move-mouse monitor-lazy-center' },
 
   -- Commands that run when the focused window changes. A command, or a list of commands.
   -- For example: onFocusChanged = { 'move-mouse window-lazy-center' }
-  -- See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
   -- Fallback value (if you omit the key): onFocusChanged = {}
   onFocusChanged = {},
 
   -- Commands that run every time the binding mode changes. A command, or a list of commands
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
-  -- See: https://nikitabobko.github.io/AeroSpace/commands#mode
   -- Fallback value (if you omit the key): onModeChanged = {}
   onModeChanged = {},
 
   -- A program that Inlay runs every time the focused workspace changes: the program and its arguments.
   -- It gets the INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE variables (and the AEROSPACE_* ones).
   -- For example: execOnWorkspaceChange = { '/bin/bash', '-c', 'echo $INLAY_FOCUSED_WORKSPACE >> /tmp/workspaces' }
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#exec-on-workspace-change-callback
   -- Fallback value (if you omit the key): execOnWorkspaceChange = {}
   execOnWorkspaceChange = {},
 
   -- You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
   -- Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
-  -- Also see: https://nikitabobko.github.io/AeroSpace/goodies#disable-hide-app
   -- Possible values: true|false
   -- Fallback value (if you omit the key): automaticallyUnhideMacosHiddenApps = false
   automaticallyUnhideMacosHiddenApps = false,
@@ -110,7 +106,7 @@ return {
   -- List of workspaces that should stay alive even when they contain no windows,
   -- even when they are invisible. They are the workspaces that the menu bar item always shows.
   -- The other workspaces exist while they have windows or they are the visible one.
-  -- This config option is only available since 'configVersion = 2'
+  -- With 'workspaces', Inlay makes it from the list: set it only to have other ones
   -- Fallback value (if you omit the key): persistentWorkspaces = {}
   persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
 
@@ -123,31 +119,54 @@ return {
 
   keyMapping = {
     -- The keyboard layout that the names of the keys in the bindings refer to
-    -- See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
     -- Possible values: qwerty|dvorak|colemak
     -- Fallback value (if you omit the key): keyMapping.preset = 'qwerty'
     preset = 'qwerty',
 
     -- Names of keys of your own, on top of the preset: the name to use in the bindings = the key it stands for.
     -- A name can't contain spaces or dashes. The example calls the 'q' key 'unicorn'
-    -- See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
     -- Fallback value (if you omit the key): keyMapping.keyNotationToKeyCode = {}
     keyNotationToKeyCode = { unicorn = 'q' },
   },
 
-  -- Not a key of Inlay: 'afterLoginCommand' is deprecated since AeroSpace 0.19.0. Only an empty list is
-  -- accepted; anything else is an error. Use 'afterStartupCommand' and 'startAtLogin'
-  -- afterLoginCommand = {}
+  -- Your workspaces: they replace the ones of the built-in config (1 to 7, without apps, on the keys
+  -- h j k l u i o). Inlay makes from the list: the persistent workspaces (persistentWorkspaces, unless you set
+  -- it), the monitor of each one (workspaceToMonitorForceAssignment), two key bindings of the main mode for each
+  -- workspace with a key (see workspaceKeys) and a window rule for each app, which tiles its windows and sends
+  -- them to the workspace. A key binding of yours with the same key wins. The rules of the apps go where the
+  -- built-in rules have the item 'workspaces' (after the one of the file dialogs), or first without it
+  -- Fallback value (if you omit the tables): the 7 workspaces of the built-in config
+  workspaces = {
+    {
+      -- Mandatory. The name of the workspace in the commands ('workspace 1') and in the menu bar item
+      id = '1',
 
-  -- Not a key of Inlay: it has no accordion layout. The key of AeroSpace is accepted with a warning and
-  -- ignored. Drop it from your config
-  -- accordionPadding = 30
+      -- A name of your own: the menu of the menu bar item shows it ('Workspace 1 · Terminals')
+      name = 'Terminals',
 
-  -- Deprecated key of AeroSpace. Only 'smart' is accepted; anything else is an error. Drop it from your config
-  -- nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart'
+      -- The key of its two bindings: workspaceKeys.focus + key goes to it, workspaceKeys.move + key moves the
+      -- focused window there. Without it, no bindings
+      key = 'h',
 
-  -- Deprecated key of AeroSpace: it is always an error. Drop it from your config
-  -- indentForNestedContainersWithTheSameOrientation = 30
+      -- The monitor of the workspace: a pattern of workspaceToMonitorForceAssignment, or a list of them.
+      -- Without it: 'main'
+      monitor = { 'secondary', 'main' },
+
+      -- The apps whose windows go to this workspace, tiled: their bundle ids. See: inlay list-apps
+      apps = { 'com.mitchellh.ghostty' },
+    },
+  },
+
+  -- The modifiers of the key bindings that 'workspaces' makes. false: no bindings of that kind
+  workspaceKeys = {
+    -- Go to the workspace: focus + '-' + its key
+    -- Fallback value (if you omit the key): focus = 'cmd-alt-ctrl'
+    focus = 'cmd-alt-ctrl',
+
+    -- Move the focused window to the workspace: move + '-' + its key
+    -- Fallback value (if you omit the key): move = 'cmd-alt-shift'
+    move = 'cmd-alt-shift',
+  },
 
   -- The look of the borders and of the menu bar item, from a theme. A theme is a Lua file that returns a table
   -- with the shape of the config and the look only: 'borders' (activeColor, inactiveColor, floatingColor,
@@ -224,7 +243,6 @@ return {
   -- The environment of the programs that Inlay starts (exec-and-forget, execOnWorkspaceChange).
   -- They also get INLAY_WINDOW_ID, INLAY_WORKSPACE, INLAY_FOCUSED_WORKSPACE and INLAY_PREV_WORKSPACE
   -- (and the same variables under their AEROSPACE_* names)
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#exec-env-vars
   exec = {
     -- The programs inherit the environment of Inlay
     -- Possible values: true|false
@@ -245,7 +263,7 @@ return {
     --                  A window wider than tall is split side by side, otherwise the two windows are stacked.
     --                  The new window is the right/bottom one.
     --                  When a window is closed, its neighbor gets the space back.
-    -- - after-focused. AeroSpace behavior. The new window is placed after the focused window in the same container,
+    -- - after-focused. Like i3. The new window is placed after the focused window in the same container,
     --                  and all the windows of the container share the space.
     -- Fallback value (if you omit the key): newWindowPlacement = 'dwindle'
     newWindowPlacement = 'dwindle',
@@ -587,55 +605,43 @@ return {
   --
   -- All possible modifiers: cmd, alt, ctrl, shift
   --
-  -- All possible commands: https://nikitabobko.github.io/AeroSpace/commands
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
+  -- All possible commands: inlay --help. Each one: inlay <command> --help
   -- Fallback value (if you omit the table): no bindings
   mode = {
     main = {
       binding = {
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#layout
         ['alt-slash'] = 'layout tiles horizontal vertical',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#balance-sizes
         ['cmd-alt-comma'] = 'balance-sizes',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#focus
         ['alt-h'] = 'focus left',
         ['alt-j'] = 'focus down',
         ['alt-k'] = 'focus up',
         ['alt-l'] = 'focus right',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#move
         ['alt-shift-h'] = 'move left',
         ['alt-shift-j'] = 'move down',
         ['alt-shift-k'] = 'move up',
         ['alt-shift-l'] = 'move right',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#resize
         ['alt-minus'] = 'resize smart -50',
         ['alt-equal'] = 'resize smart +50',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#workspace
         ['alt-1'] = 'workspace 1',
         ['alt-2'] = 'workspace 2',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
         ['alt-shift-1'] = 'move-node-to-workspace 1',
         ['alt-shift-2'] = 'move-node-to-workspace 2',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
         ['alt-tab'] = 'workspace-back-and-forth',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#exec-and-forget
         ['alt-enter'] = 'exec-and-forget open -a Terminal',
 
-        -- See: https://nikitabobko.github.io/AeroSpace/commands#mode
         ['alt-shift-semicolon'] = 'mode service',
       },
     },
 
     -- A binding mode of your own. The name is free: 'service' is only an example
-    -- See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
     service = {
       binding = {
         esc = { 'reload-config', 'mode main' },
@@ -656,7 +662,8 @@ return {
   -- 'layout tiling' in a rule doesn't tile the windows that Inlay detects as dialogs (the Save and Open panels,
   -- alerts): they stay floating, so a rule can tile every window of an app. A 'layout tiling' of your own,
   -- like the 'f' key of the service mode, still tiles them
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#on-window-detected-callback
+  -- In your config, the rules go before the ones of the built-in config. The item 'workspaces' (a string, not a
+  -- table) marks the place of the rules that 'workspaces' makes for its apps
   -- Fallback value (if you omit the tables): no rules
   onWindowDetected = {
     {
@@ -678,9 +685,6 @@ return {
         duringInlayStartup = true,
       },
 
-      -- The name that AeroSpace gives to 'match.duringInlayStartup'. It is accepted too
-      -- match.duringAerospaceStartup = true
-
       -- Check the rules that follow this one too, instead of stopping here
       -- Possible values: true|false
       -- Fallback value (if you omit the key): checkFurtherCallbacks = false
@@ -699,7 +703,7 @@ return {
     },
 
     -- A catch-all rule, as the last one: the tiling windows that no rule above matched go to a workspace, or float
-    -- ('layout floating', what inlay.lua, the config that Inlay ships with, ends with: its cmd-alt-shift keys tile
+    -- ('layout floating', what the built-in config of Inlay ends with: its cmd-alt-shift-f key tiles
     -- them again). '%{window-layout}' is 'h_tiles' or 'v_tiles' for a tiling window and 'floating' for a floating
     -- one, so the dialogs, which Inlay makes floating before the rules run, stay where they open
     {
@@ -715,7 +719,6 @@ return {
   -- - 'secondary'. The monitor that isn't the main one. It only matches with exactly two monitors
   -- - 1, 2, ...    The number of the monitor, from left to right
   -- - 'built-in' or any other regex. A case insensitive substring of the name of the monitor. See: inlay list-monitors
-  -- See: https://nikitabobko.github.io/AeroSpace/guide#assign-workspaces-to-monitors
   -- Fallback value (if you omit the table): no workspace is forced to a monitor
   workspaceToMonitorForceAssignment = {
     ['1'] = 'main',

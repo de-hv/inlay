@@ -31,18 +31,19 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
     } else {
         switch findCustomConfigUrl() {
             case .file(let url): configUrl = url
-            case .noCustomConfigExists: configUrl = defaultConfigUrl
+            case .noCustomConfigExists: configUrl = builtInConfigUrl
             case .legacyConfig(let url): return .fatal(configUrl: url, message: legacyConfigMessage(url))
             case .ambiguousConfigError(let candidates):
                 let msg = """
                     Ambiguous config error. Several configs found:
                     \(candidates.map(\.path).joined(separator: "\n"))
                     """
-                return .fatal(configUrl: defaultConfigUrl, message: msg)
+                return .fatal(configUrl: builtInConfigUrl, message: msg)
         }
     }
     let lua = LuaConfigLoader.load(file: configUrl)
-    let result = parseConfig(lua)
+    // The built-in config is the base of any other: see mergedConfig
+    let result = parseConfig(lua, base: configUrl == builtInConfigUrl ? nil : builtInConfigTable)
     // A file that can't be read has no files
     return ReadConfigResult(configUrl: configUrl, text: lua.files.first?.text, files: lua.files + result.themeFiles, parseConfigResult: result)
 }
@@ -90,7 +91,6 @@ extension ParserProtocol {
 }
 
 struct ConfigParserContext {
-    var configVersion: ConfigVersion
     var errors: [ConfigParseDiagnostic]
     var warnings: [ConfigParseDiagnostic]
 }
@@ -118,8 +118,7 @@ struct Parser<S: ConvenienceMutable, T>: ParserProtocol {
 }
 
 private let keyMappingConfigRootKey = "keyMapping"
-private let configVersionConfigRootKey = "configVersion"
-private let modeConfigRootKey = "mode"
+let modeConfigRootKey = "mode"
 let persistentWorkspacesKey = "persistentWorkspaces"
 
 // For every new config option you add, think:
@@ -127,9 +126,6 @@ let persistentWorkspacesKey = "persistentWorkspaces"
 // 2. Prefer commands and commands flags over config options if possible
 // 3. Document it in docs/config-reference.lua. ConfigReferenceTest fails until every key of the parser tables is there
 let configParser: [String: any ParserProtocol<Config>] = [
-    configVersionConfigRootKey: Parser(\.configVersion, skipParsing(Config().configVersion)), // Parsed manually
-
-    "afterLoginCommand": Parser(\._afterLoginCommand, parseDeprecatedAfterLoginCommand),
     "afterStartupCommand": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
 
     "onFocusChanged": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
@@ -146,8 +142,10 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "startAtLogin": Parser(\.startAtLogin, parseBool),
     "autoReloadConfig": Parser(\.autoReloadConfig, parseBool),
     "automaticallyUnhideMacosHiddenApps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
-    "accordionPadding": Parser(\._accordionPadding, parseAccordionPadding),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
+    workspacesKey: Parser(\._workspaces, skipParsing(())), // Expanded before the config is parsed. See: expandWorkspaces
+    workspaceKeysKey: Parser(\._workspaces, skipParsing(())), // The same
+    builtInConfigKey: Parser(\._builtInConfig, skipParsing(())), // Read before the config is parsed. See: mergedConfig
     "execOnWorkspaceChange": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),
 
@@ -165,10 +163,6 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
     "workspaceToMonitorForceAssignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
     "onWindowDetected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
-
-    // Deprecated
-    "nonEmptyWorkspacesRootContainersLayoutOnStartup": Parser(\._nonEmptyWorkspacesRootContainersLayoutOnStartup, parseStartupRootContainerLayout),
-    "indentForNestedContainersWithTheSameOrientation": Parser(\._indentForNestedContainersWithTheSameOrientation, parseIndentForNestedContainersWithTheSameOrientation),
 ]
 
 extension ParsedCmd {
@@ -187,14 +181,6 @@ func parseObsolete(_ reason: String) -> @Sendable (OrderedJson, ConfigBacktrace,
     { _, backtrace, c in
         c.warnings.append(.init(backtrace, "\(reason). It is ignored: please drop it from the config"))
     }
-}
-
-func parseDeprecatedAfterLoginCommand(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<[any Command]> {
-    if let array = raw.asArrayOrNil, array.count == 0 {
-        return .success([])
-    }
-    let msg = "afterLoginCommand is deprecated since AeroSpace 0.19.0. https://github.com/nikitabobko/AeroSpace/issues/1482"
-    return .failure(.init(backtrace, msg))
 }
 
 func parseCommandForConfig(_ raw: String, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext, allowExecAndForget: Bool) -> Shell<any Command> {
@@ -233,43 +219,43 @@ struct ParseConfigResult {
     var allowReloadConfig: Bool { errors.allSatisfy { !$0.preventConfigReload } }
 }
 
-@MainActor func parseConfig(_ lua: LuaConfig) -> ParseConfigResult {
-    parseConfig(json: lua.table, errors: lua.errors, configFolder: lua.files.first?.url?.deletingLastPathComponent())
+@MainActor func parseConfig(_ lua: LuaConfig, base: OrderedJson.JsonDict? = nil) -> ParseConfigResult {
+    parseConfig(json: lua.table, errors: lua.errors, configFolder: lua.files.first?.url?.deletingLastPathComponent(), base: base)
 }
 
 /// The config from the text of an inlay.lua that has no modules
-@MainActor func parseConfig(lua text: String) -> ParseConfigResult {
-    parseConfig(LuaConfigLoader.load(text))
+@MainActor func parseConfig(lua text: String, base: OrderedJson.JsonDict? = nil) -> ParseConfigResult {
+    parseConfig(LuaConfigLoader.load(text), base: base)
+}
+
+/// The config of the user over the built-in one, the way readConfig loads it
+@MainActor func parseConfigOverBuiltIn(_ lua: LuaConfig) -> ParseConfigResult {
+    parseConfig(lua, base: builtInConfigTable)
 }
 
 /// The config from the table that inlay.lua returns.
 /// - Parameter errors: the ones of running the file
 /// - Parameter configFolder: the folder of inlay.lua, where the themes of the user are. See: ThemeResolver
-@MainActor func parseConfig(json configTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = [], configFolder: URL? = nil) -> ParseConfigResult {
-    var errors = NonCopyable(errors)
+/// - Parameter base: the table of the built-in config, under the one of the user. See: mergedConfig
+@MainActor func parseConfig(
+    json configTable: OrderedJson.JsonDict,
+    errors: [ConfigParseDiagnostic] = [],
+    configFolder: URL? = nil,
+    base: OrderedJson.JsonDict? = nil,
+) -> ParseConfigResult {
+    var c = ConfigParserContext(errors: errors, warnings: [ConfigParseDiagnostic]())
 
-    let configVersion: ConfigVersion = configTable[configVersionConfigRootKey]
-        .flatMap { parseConfigVersion($0, .rootKey(configVersionConfigRootKey)).getOrNil(appendErrorTo: &errors.value) }
-        ?? .min
-
-    var c = ConfigParserContext(configVersion: configVersion, errors: errors.consume(), warnings: [ConfigParseDiagnostic]())
-
-    // The colors of the theme go under the tables of the config
-    var rawTable = configTable
-    var lightTable: OrderedJson.JsonDict? = nil
-    var resolver = ThemeResolver(configFolder: configFolder)
-    do {
-        let theme = resolver.resolve(configTable[themeKey] ?? .string(defaultThemeName), &c)
-        if let dark = theme.dark { rawTable = applyTheme(dark, to: configTable) }
-        if let light = theme.light { lightTable = applyTheme(light, to: configTable) }
-    }
+    let layers = layeredConfig(user: configTable, base: base, configFolder: configFolder, &c)
+    var rawTable = layers.dark
+    let workspaceNames = expandWorkspaces(&rawTable, &c)
 
     var config = rawTable.parseTable(Config(), configParser, .emptyRoot, &c)
-    config.configVersion = configVersion
+    config.workspaceNames = workspaceNames
 
-    if let lightTable {
+    if var lightTable = layers.light {
         // The same tables of the config, with other colors: their problems are already reported
-        var quiet = ConfigParserContext(configVersion: configVersion, errors: [], warnings: [])
+        var quiet = ConfigParserContext(errors: [], warnings: [])
+        _ = expandWorkspaces(&lightTable, &quiet)
         config.lightAppearance = AppearanceColors(
             borders: lightTable["borders"].map { parseBorders($0, .rootKey("borders"), &quiet) } ?? BordersConfig(),
             menuBar: lightTable["menuBar"].map { parseMenuBar($0, .rootKey("menuBar"), &quiet) } ?? MenuBarConfig(),
@@ -283,21 +269,6 @@ struct ParseConfigResult {
     // Parse modeConfigRootKey after keyMappingConfigRootKey
     if let modes = rawTable[modeConfigRootKey].flatMap({ parseModes($0, .rootKey(modeConfigRootKey), &c, config.keyMapping.resolve()) }) {
         config.modes = modes
-    }
-
-    if config.configVersion <= ._1 {
-        if rawTable.keys.contains(persistentWorkspacesKey) {
-            c.errors += [.init(.rootKey(persistentWorkspacesKey), "This config option is only available since 'configVersion = 2'")]
-        }
-        config.persistentWorkspaces = (config.modes.values.lazy
-            .flatMap { (mode: Mode) -> [HotkeyBinding] in Array(mode.bindings.values) }
-            .flatMap { (binding: HotkeyBinding) -> [String] in
-                let commands = binding.commands.flatten()
-                return commands.filterIsInstance(of: WorkspaceCommand.self).compactMap { $0.args.target.val.workspaceNameOrNil()?.raw } +
-                    commands.filterIsInstance(of: MoveNodeToWorkspaceCommand.self).compactMap { $0.args.target.val.workspaceNameOrNil()?.raw }
-            }
-            + (config.workspaceToMonitorForceAssignment).keys)
-            .toOrderedSet()
     }
 
     if config.enableNormalizationFlattenContainers {
@@ -318,25 +289,7 @@ struct ParseConfigResult {
             )]
         }
     }
-    if config.configVersion < .max {
-        let msg = "The current 'configVersion = \(config.configVersion)' is outdated. " +
-            "Please consider migrating to 'configVersion = \(ConfigVersion.max)'. " +
-            "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide."
-        c.warnings.append(.init(.emptyRoot, msg))
-    }
-    // Without the key, a theme that doesn't exist in the config folder is no file of the config
-    let themeFiles = configTable[themeKey] == nil ? resolver.files.filter { $0.text != nil } : resolver.files
-    return ParseConfigResult(config: config, errors: c.errors, warnings: c.warnings, themeFiles: themeFiles)
-}
-
-func parseIndentForNestedContainersWithTheSameOrientation(_ _: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Void> {
-    let msg = "Deprecated. Please drop it from the config. See https://github.com/nikitabobko/AeroSpace/issues/96"
-    return .failure(.init(backtrace, msg))
-}
-
-func parseConfigVersion(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<ConfigVersion> {
-    parseInt(raw, backtrace)
-        .flatMap { ConfigVersion.init(rawValue: $0).toResult(.init(backtrace, "configVersion must be in [\(ConfigVersion.min), \(ConfigVersion.max)] range")) }
+    return ParseConfigResult(config: config, errors: c.errors, warnings: c.warnings, themeFiles: layers.themeFiles)
 }
 
 func parseInt(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Int> {
@@ -393,12 +346,6 @@ func parseTable<T: ConvenienceMutable>(
     }
 }
 
-private func parseStartupRootContainerLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Void> {
-    parseString(raw, backtrace)
-        .filter(.init(backtrace, "'nonEmptyWorkspacesRootContainersLayoutOnStartup' is deprecated. Please drop it from your config")) { raw in raw == "smart" }
-        .map { _ in () }
-}
-
 private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> Layout {
     let layout = parseString(raw, backtrace)
         .flatMap { (raw: String) -> ResOrConfigParseDiagnostic<Layout> in
@@ -411,13 +358,6 @@ private func parseLayout(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: 
         }
         .getOrNil(appendErrorTo: &c.errors)
     return layout ?? Config().defaultRootContainerLayout
-}
-
-// Accepted to make it possible to use the config of AeroSpace as is
-private func parseAccordionPadding(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) {
-    if parseInt(raw, backtrace).getOrNil(appendErrorTo: &c.errors) != nil {
-        c.warnings.append(.init(backtrace, "Inlay has no accordion layout: 'accordionPadding' is ignored. Please drop it from the config"))
-    }
 }
 
 private func skipParsing<T: Sendable>(_ value: T) -> @Sendable (_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<T> {

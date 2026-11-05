@@ -5,8 +5,8 @@ import Testing
 
 extension InlayTests {
     /// The windows that are already open when Inlay starts to manage the windows go to the workspaces of their
-    /// 'onWindowDetected' rules, and then every workspace is arranged. With the rules of inlay.lua, the config
-    /// that Inlay ships with.
+    /// 'onWindowDetected' rules, and then every workspace is arranged. With the rules of the built-in config, under a
+    /// config of the user with workspaces and their apps (fixtures/workspaces-with-apps.lua).
     ///
     /// The windows are registered by the same code as the real ones (Window.afterRegistration), and the rest of the
     /// refresh session is the real one too. Only the part that asks macOS for the windows is missing
@@ -17,24 +17,28 @@ extension InlayTests {
         private static let slack = FakeApp("com.tinyspeck.slackmacgap")
         private static let claude = FakeApp("com.anthropic.claudefordesktop")
         private static let finder = FakeApp("com.apple.finder")
-        /// Apps that inlay.lua knows nothing about
+        /// Apps that no rule knows about
         private static let notes = FakeApp("com.example.notes")
         private static let player = FakeApp("com.example.player")
 
         init() {
             setUpWorkspacesForTests()
-            // The workspaces and the rules of inlay.lua, which setUpWorkspacesForTests drops
-            config.persistentWorkspaces = defaultConfig.persistentWorkspaces
-            config.onWindowDetected = defaultConfig.onWindowDetected
+            // The workspaces and the rules of a user with apps in their workspaces, over the built-in config
+            let user = parseConfigOverBuiltIn(LuaConfigLoader.load(file: projectRoot.appending(path: "Tests/InlayTests/fixtures/workspaces-with-apps.lua")))
+            check(user.errors.isEmpty, "\(user.errors)")
+            config.persistentWorkspaces = user.config.persistentWorkspaces
+            config.onWindowDetected = user.config.onWindowDetected
             // Otherwise normalizeLayoutReason asks the real app of the window whether it is hidden
             config.automaticallyUnhideMacosHiddenApps = true
             check(Workspace.get(byName: "1").focusWorkspace())
             Workspace.garbageCollectUnusedWorkspaces()
             assertEquals(Workspace.all.map(\.name), ["1", "2", "3", "4", "5", "6", "7"])
-            assertEquals(config.onWindowDetected.count, 29)
+            // The file dialogs, the 10 apps of the workspaces, the 10 apps of macOS that float, the settings windows
+            // and the catch-all rule
+            assertEquals(config.onWindowDetected.count, 23)
         }
 
-        // MARK: - The rules of inlay.lua
+        // MARK: - The rules of the built-in config and of the workspaces
 
         /// An app with a workspace, an app without one, and a dialog
         @Test func testAssignedApp_unassignedApp_andDialog() async throws {
@@ -172,8 +176,8 @@ extension InlayTests {
             assertEquals(await reloadConfig_nonCancellable(forceConfigUrl: user).isOk, true)
             assertEquals(config.onWindowDetected.count, 1)
             StartupArrangement.begin()
-            try await open(1, Self.ghostty) // Workspace 1 in inlay.lua
-            try await open(2, Self.notes) // Workspace 6 in inlay.lua
+            try await open(1, Self.ghostty) // Workspace 1 in the config of the user
+            try await open(2, Self.notes) // No rule of the user
             try await restOfTheSession()
             assertEquals(tiling("4"), [1])
             assertEquals(tiling("1"), [2])
@@ -223,7 +227,7 @@ extension InlayTests {
             try await open(1, Self.chrome)
             try await open(2, Self.chrome)
             try await open(3, Self.ghostty)
-            // The first rule of inlay.lua asks for the title of the window, and the app takes its time
+            // The first rule of the built-in config asks for the title of the window, and the app takes its time
             let slow = AwaitableOneTimeBroadcastLatch()
             let fourth = Task.startUnstructured { @MainActor in try await open(4, Self.chrome, titleGate: slow) }
             while window(4, orNil: true) == nil { await Task.yield() }
@@ -308,7 +312,7 @@ extension InlayTests {
         private func temporaryConfig(rules: String) throws -> URL {
             let text = """
                 return {
-                  configVersion = 2,
+                  builtInConfig = false, -- Only these rules
                   persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
                   automaticallyUnhideMacosHiddenApps = true, -- See: init
                   onWindowDetected = { \(rules) },

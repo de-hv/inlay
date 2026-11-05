@@ -14,13 +14,12 @@ let close_help_generated = """
     USAGE: close [-h|--help] [--quit-if-last-window] [--window-id <window-id>]
     """
 let config_help_generated = """
-    USAGE: config [-h|--help] --get <name> [--json] [--keys]
-       OR: config [-h|--help] --major-keys
-       OR: config [-h|--help] --all-keys
+    USAGE: config [-h|--help] --show [<key>] [--mine] [--keys|--json]
        OR: config [-h|--help] --config-path
        OR: config [-h|--help] --explain [<key>]
        OR: config [-h|--help] --use <file|folder>
        OR: config [-h|--help] --unlink
+       OR: config [-h|--help] --types
     """
 let debug_stats_help_generated = """
     USAGE: debug-stats [-h|--help] [--watch <seconds>]

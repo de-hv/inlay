@@ -34,7 +34,7 @@ struct ResizeCommand: Command {
                 parent = node?.parent as? TilingContainer
         }
         guard let parent else {
-            return .fail(io.err("resize command doesn't support floating windows yet https://github.com/nikitabobko/AeroSpace/issues/9"))
+            return .fail(io.err("resize command doesn't support floating windows: drag the edge of the window with the mouse"))
         }
         guard let orientation else { return .fail }
         guard let node else { return .fail }

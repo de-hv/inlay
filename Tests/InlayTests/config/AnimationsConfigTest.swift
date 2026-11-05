@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig(lua: "return { configVersion = 2 }")
+            let result = parseConfig(lua: "return {}")
             assertEquals(result.errors, [])
             assertEquals(result.config.animations, AnimationsConfig(enabled: true, duration: 160))
             assertEquals(result.config.animations.effectiveDuration, .milliseconds(160))

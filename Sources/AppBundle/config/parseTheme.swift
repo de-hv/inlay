@@ -31,10 +31,11 @@ struct AppearanceColors: Equatable, Sendable {
 
 /// The folder of the themes that Inlay ships with
 var builtInThemesUrl: URL {
-    let fromProject = getDefaultConfigUrlFromProject().deletingLastPathComponent().appending(component: themesFolderName)
-    if isUnitTest { return fromProject }
+    // Only when it is needed: getDefaultConfigUrlFromProject() stops the app on a Mac without the sources of Inlay
+    func fromProject() -> URL { getDefaultConfigUrlFromProject().deletingLastPathComponent().appending(component: themesFolderName) }
+    if isUnitTest { return fromProject() }
     // Useful for debug builds that are not app bundles
-    return Bundle.main.url(forResource: themesFolderName, withExtension: nil) ?? fromProject
+    return Bundle.main.url(forResource: themesFolderName, withExtension: nil) ?? fromProject()
 }
 
 /// The names of the themes that Inlay ships with, sorted

@@ -149,10 +149,25 @@ return {
   -- Deprecated key of AeroSpace: it is always an error. Drop it from your config
   -- indentForNestedContainersWithTheSameOrientation = 30
 
-  -- Not a table of Inlay anymore: the palettes are gone, and every color is set on its own in 'menuBar.colors' and
-  -- 'borders'. The table is accepted with a warning and ignored, so that a config of a previous version still loads.
-  -- Drop it from your config
-  -- theme = {}
+  -- The look of the borders and of the menu bar item, from a theme. A theme is a Lua file that returns a table
+  -- with the shape of the config and the look only: 'borders' (activeColor, inactiveColor, floatingColor,
+  -- fullscreenColor, modeColors, glow, glowRadius) and 'menuBar' (systemColors, colors). It may start from
+  -- another theme with extends = '<name>'. 'material' is the look of Material You, with the menu bar item drawn
+  -- like the other icons; the other themes of Inlay set the borders and the focused workspace of the menu bar
+  -- (also in a binding mode), and leave the other colors of the menu bar 'auto', so that they follow the menu bar
+  -- over any wallpaper. What 'borders' and 'menuBar' set wins over the theme, and what neither sets keeps its
+  -- default. theme = {} is no theme at all: the defaults of every key. The wallpaper isn't part of a theme: Inlay
+  -- never reads it nor changes it.
+  -- The value is one of:
+  -- - the name of a theme: a file themes/<name>.lua next to the config, or else a theme of Inlay;
+  -- - a table like the one of a theme file: theme = { extends = 'nord', borders = { activeColor = '#ECEFF4' } };
+  -- - a theme for each appearance of macOS, which Inlay follows as it changes:
+  --   theme = { dark = 'tokyo-night', light = 'rose-pine' }.
+  -- A name that isn't a theme is a warning, and the colors are the defaults
+  -- Possible values: 'catppuccin'|'everforest'|'gruvbox'|'kanagawa'|'material'|'nord'|'rose-pine'|'tokyo-night',
+  -- the name of a theme of yours, or a table
+  -- Fallback value (if you omit the key): theme = 'material'
+  -- theme = 'material'
 
   -- Not a table of Inlay anymore: the notice after a reload is gone. The table is accepted with a warning and
   -- ignored. Drop it from your config
@@ -495,6 +510,13 @@ return {
     -- Fallback value (if you omit the key): floatingColor = '#BF5AF2'
     floatingColor = '#BF5AF2',
 
+    -- The color of the border of the focused window while it is in fullscreen (the 'fullscreen' command).
+    -- Without it, the window keeps the color it has without fullscreen (activeColor, or floatingColor).
+    -- The color of the binding mode wins over it
+    -- Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
+    -- Fallback value (if you omit the key): the color it would have without fullscreen
+    -- fullscreenColor = '#FF9E64'
+
     -- A glow around the focused window: a halo of the color of its border (the active, the floating or the mode
     -- color) that fades out outwards, outside of the border. The windows that aren't focused never glow
     -- Possible values: true|false
@@ -512,7 +534,8 @@ return {
     -- hideWhenSingle = false
 
     -- The color of the border of the focused window while a binding mode is active: the name of the mode =
-    -- the color. It wins over activeColor and floatingColor. A mode without an entry keeps the normal color
+    -- the color. It wins over activeColor, floatingColor and fullscreenColor. A mode without an entry keeps the
+    -- normal color
     -- Possible values: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
     -- Fallback value (if you omit the table): empty
     modeColors = {

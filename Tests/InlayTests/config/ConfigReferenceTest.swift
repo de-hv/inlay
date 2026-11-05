@@ -103,7 +103,7 @@ extension InlayTests {
             for key in [
                 "configVersion", "focusFollowsMouse.enabled", "keyMapping.keyNotationToKeyCode", "accordionPadding",
                 "afterLoginCommand", "gaps", "gaps.inner.horizontal", "exec.envVars", "tiling.splitTarget", "menuBar.colors",
-                "menuBar.colors.accent", "borders.modeColors", "mode.main.binding", "mode.main.binding.alt-h",
+                "menuBar.colors.accent", "borders.modeColors", "theme", "borders.fullscreenColor", "mode.main.binding", "mode.main.binding.alt-h",
                 "onWindowDetected", "onWindowDetected.match.appId", "onWindowDetected.run",
                 "workspaceToMonitorForceAssignment",
             ] {

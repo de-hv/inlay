@@ -28,6 +28,8 @@ extension InlayTests {
             let menuBar = result.config.menuBar
             assertEquals(menuBar.theme, .hypr)
             assertEquals([menuBar.colors.focused, menuBar.colors.occupied, menuBar.colors.empty, menuBar.colors.accent].map { "\($0)" }, ["#B59DF7", "#CAC4D0", "#938F99", "#EFB8C8"])
+            // The colors come from the theme 'material': the look of Material You that it always had
+            assertEquals(menuBar.systemColors, true)
             let borders = result.config.borders
             assertEquals(borders.width, 2)
             assertEquals(borders.squareCorners, false)

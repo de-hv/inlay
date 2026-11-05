@@ -25,6 +25,7 @@ new windows (*dwindle*), without the *accordion* layout, with its own menu bar i
 | Window manager (tree, workspaces, commands, CLI) | The one of AeroSpace `74a1bf1`, under another name | Tests (simulated windows) |
 | *Dwindle*-style auto-tiling, no *accordion* layout | Done (see [Tiling](#tiling)) | Tests (simulated windows), including a pseudorandom session of 800 steps |
 | Menu bar item with eight themes, configured only in the file | Done (see [Menu bar](#menuBar)) | Tests and rendered images |
+| Themes: the colors of the borders and of the menu bar, from a file | Done (see [Themes](#themes)) | Tests |
 | Window borders | Done, with public API (see [Window borders](#window-borders)) | Tests, rendered images and `--debug-borders` on real windows |
 | Tests | 762 Swift Testing tests (`scripts/test.sh`): the whole original AeroSpace suite migrated, plus the ones of Inlay | They pass with the Command Line Tools |
 
@@ -49,7 +50,8 @@ revision, which simplified the look: no palettes (every color is set on its own)
 the layouts of the window and of its workspace. The newest: **there is no Settings window anymore**. Everything
 that can be changed without touching the code is in the config file, like the tools of a Linux desktop that are
 configured from dotfiles, and `inlay config --use`, `--unlink` and `--export` do from the CLI what the window did
-with the file.
+with the file. Untried in real use too: the [themes](#themes), with a theme for each appearance of macOS and
+`borders.fullscreenColor`.
 
 Known limitations of this version:
 
@@ -406,7 +408,7 @@ Without that key, reload by hand: `inlay reload-config` or *Reload Config* in th
 autoReloadConfig = true, -- the default. With false: reload with 'inlay reload-config' or from the menu
 ```
 
-Nothing shows up on the screen after a reload: the menu says when the config was reloaded last. A `theme`,
+Nothing shows up on the screen after a reload: the menu says when the config was reloaded last. A
 `notifications` or `settings` table of a previous version is accepted with a warning and ignored.
 
 #### Changing the config from the CLI
@@ -788,8 +790,8 @@ menuBar = {
 },
 ```
 
-**Colors**: there are no palettes. Every color is set on its own: the ones of the item in `menuBar.colors`
-(below) and the ones of the borders in `borders` (active, inactive and floating).
+**Colors**: they come from a theme (see [Themes](#themes)), and each one can be set on its own: the ones of the
+item in `menuBar.colors` (below) and the ones of the borders in `borders`. What you set wins over the theme.
 
 **`dimEmptyWorkspaces`, `showMode`**: what the item shows besides the names. With
 `enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI; opening
@@ -867,6 +869,81 @@ menuBar = {
   when it is saved. Opening Inlay again from Applications opens it too, which is the way back to it when the
   item is hidden. To switch or export the config: [Changing the config from the CLI](#changing-the-config-from-the-cli).
 
+## Themes
+
+A theme is the look of the window borders and of the menu bar item: their colors, picked to go together, the glow
+of the borders and whether the item takes the colors of the system. One line of the config picks it:
+
+```lua
+theme = 'tokyo-night',
+```
+
+Inlay ships with eight. `material` is the theme of a config without the key: Material You, with the menu bar
+item drawn like the other icons of the menu bar (`systemColors`). The other seven are the most used themes of
+Omarchy and of Hyprland setups, from the palette of the Omarchy theme of the same name:
+
+| Theme | Active | Inactive | Floating | Fullscreen | `resize` · `service` modes |
+|---|---|---|---|---|---|
+| `'material'` (without the key) | `#B59DF7` | `#999D9F` | `#EFB8C8` | (active) | (active) |
+| `'tokyo-night'` | `#7AA2F7` | `#414868B3` | `#BB9AF7` | `#FF9E64` | `#9ECE6A` · `#F7768E` |
+| `'catppuccin'` (Mocha) | `#CBA6F7` | `#45475AB3` | `#89B4FA` | `#FAB387` | `#A6E3A1` · `#F38BA8` |
+| `'gruvbox'` | `#D8A657` | `#504945B3` | `#7DAEA3` | `#E78A4E` | `#A9B665` · `#EA6962` |
+| `'nord'` | `#88C0D0` | `#4C566AB3` | `#B48EAD` | `#EBCB8B` | `#A3BE8C` · `#BF616A` |
+| `'everforest'` | `#A7C080` | `#475258B3` | `#D699B6` | `#DBBC7F` | `#83C092` · `#E67E80` |
+| `'kanagawa'` | `#E6C384` | `#54546DB3` | `#957FB8` | `#FFA066` | `#98BB6C` · `#C34043` |
+| `'rose-pine'` (Dawn, light) | `#286983` | `#9893A580` | `#907AA9` | `#EA9D34` | `#56949F` · `#B4637A` |
+
+In the menu bar, the seven color the focused workspace (with the active color, and with the floating one while a
+binding mode is shown on it). The other workspaces stay `'auto'`: macOS turns the text of the menu bar light or
+dark to match the wallpaper, and `'auto'` follows it.
+
+**The wallpaper is not part of a theme.** Pick it in System Settings as always: Inlay never reads it nor
+changes it, so changing it, a second display or a dynamic wallpaper have nothing to do with the theme.
+
+**Keep the look in themes.** The values of the theme go under the tables `borders` and `menuBar` of the config:
+a value that the config sets replaces the one of the theme, and one that neither sets keeps its default. The
+shipped config sets none of them, so the theme is all there is; set one in the config only to override it.
+`theme = {}` is no theme at all: the defaults of every key.
+
+```lua
+theme = 'nord',
+borders = { activeColor = '#ECEFF4' }, -- the rest of the colors, from Nord
+```
+
+**A theme of your own** is a file `themes/<name>.lua` next to `inlay.lua`, with the shape of the config and
+the look only: `borders` (`activeColor`, `inactiveColor`, `floatingColor`, `fullscreenColor`, `modeColors`,
+`glow`, `glowRadius`) and `menuBar` (`systemColors`, `colors`). It can start from another theme with `extends`, and it takes the place of a theme of Inlay
+with the same name. Saving it reloads the config, like any file of the config.
+
+```lua
+-- ~/.config/inlay/themes/mio.lua
+return {
+  extends = 'nord', -- optional
+  borders = { activeColor = '#E06C75', floatingColor = '#C678DD', glow = true },
+  menuBar = { colors = { focused = '#E06C75' } },
+}
+```
+
+```lua
+theme = 'mio',
+-- or the same table, written in the config:
+theme = { extends = 'nord', borders = { activeColor = '#E06C75' } },
+```
+
+What a theme doesn't set keeps its default (not the one of `material`): a theme with only `activeColor` leaves
+the inactive borders gray. A key that isn't one of those is an error, and the rest of the theme still applies.
+
+**A theme for each appearance** of macOS: Inlay switches between them when macOS goes light or dark, without
+reloading the config.
+
+```lua
+theme = { dark = 'tokyo-night', light = 'rose-pine' },
+```
+
+A name that isn't a theme (`theme = 'nordd'`) is a warning in the menu, with the list of themes, and the colors
+are the defaults. The themes of Inlay are in [`themes/`](./themes), and `inlay config --explain theme` sums
+all of this up.
+
 ## Window borders
 
 Inlay draws a colored border around each managed window (tiled or floating) of the visible workspaces. The
@@ -884,6 +961,7 @@ color comes from the state the manager already knows, with no focus heuristics. 
 | `activeColor` | color | `'system-accent'` |
 | `inactiveColor` | color | `'#8E8E9373'` |
 | `floatingColor` | color | `'#BF5AF2'` |
+| `fullscreenColor` | color | the color without fullscreen |
 | `glow` | `true`, `false` | `false` |
 | `glowRadius` | 1 … 40 (points) | `12` |
 | `borders.singleWindow` `enabled` | `true`, `false` | `true` |
@@ -899,6 +977,7 @@ borders = {
   activeColor = 'system-accent', -- the focused window, if it is tiled
   inactiveColor = '#8E8E9373', -- the windows that are not focused. '#00000000': no border
   floatingColor = '#BF5AF2', -- the focused window, if it is floating
+  fullscreenColor = '#FF9E64', -- the focused window in fullscreen. Without it: the color it would have
 
   -- the focused window while a binding mode is active
   modeColors = {
@@ -993,8 +1072,8 @@ borders = {
 The details:
 
 - **Color of the focused window**: the one of the active binding mode if it has an entry in
-  `borders.modeColors`; otherwise, `floatingColor` if it is floating; otherwise, `activeColor`. The other
-  windows use `inactiveColor`.
+  `borders.modeColors`; otherwise, `fullscreenColor` if it is in fullscreen and the key is set; otherwise,
+  `floatingColor` if it is floating; otherwise, `activeColor`. The other windows use `inactiveColor`.
 - A **fully transparent** color (`'#00000000'`) means "no border": with
   `inactiveColor = '#00000000'` only the active window has a border.
 - A **fullscreen** window (the `fullscreen` command) keeps its border. Where the outer gaps leave no room for

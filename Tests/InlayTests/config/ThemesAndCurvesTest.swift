@@ -76,18 +76,16 @@ extension InlayTests {
 
         // MARK: - Tables of the past
 
-        /// [theme] and [notifications] are gone: an old config still loads, with a warning for each
+        /// [notifications] is gone: an old config still loads, with a warning. ('theme' is a key again: see ThemeConfigTest)
         @Test func testObsoleteTables() {
             let result = parseConfig(lua: """
                 return {
                   configVersion = 2,
-                  theme = { palette = 'gruvbox', seed = 'wallpaper' },
                   notifications = { ['on-reload'] = 'diff' },
                 }
                 """)
             assertEquals(result.errors, [])
-            assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
-            assertTrue(result.strWarnings.contains { $0.contains("theme: The palettes are gone") })
+            assertEquals(result.strWarnings.count, 1, additionalMsg: result.strWarnings.joined(separator: "\n"))
             assertTrue(result.strWarnings.contains { $0.contains("notifications: The notice of the reload is gone") })
             assertEquals(parseCommand("theme list").errorOrNil != nil, true)
         }

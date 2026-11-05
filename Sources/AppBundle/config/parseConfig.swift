@@ -42,8 +42,9 @@ func readConfig(forceConfigUrl: URL?) -> ReadConfigResult {
         }
     }
     let lua = LuaConfigLoader.load(file: configUrl)
+    let result = parseConfig(lua)
     // A file that can't be read has no files
-    return ReadConfigResult(configUrl: configUrl, text: lua.files.first?.text, files: lua.files, parseConfigResult: parseConfig(lua))
+    return ReadConfigResult(configUrl: configUrl, text: lua.files.first?.text, files: lua.files + result.themeFiles, parseConfigResult: result)
 }
 
 struct ConfigParseDiagnostic: Error, Equatable {
@@ -159,7 +160,7 @@ let configParser: [String: any ParserProtocol<Config>] = [
     "menuBar": Parser(\.menuBar, parseMenuBar),
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
-    "theme": Parser(\._theme, parseObsolete("The palettes are gone: every color is set on its own in [menuBar.colors] and [borders]")),
+    themeKey: Parser(\._theme, skipParsing(())), // Parsed manually, before 'borders' and 'menuBar'. See: ThemeResolver
     "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone")),
     "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
     "workspaceToMonitorForceAssignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
@@ -226,12 +227,14 @@ struct ParseConfigResult {
     let config: Config
     let errors: [ConfigParseDiagnostic]
     let warnings: [ConfigParseDiagnostic]
+    /// The themes of the config folder that were read or looked for. See: ThemeResolver
+    var themeFiles: [LuaConfigFile] = []
 
     var allowReloadConfig: Bool { errors.allSatisfy { !$0.preventConfigReload } }
 }
 
 @MainActor func parseConfig(_ lua: LuaConfig) -> ParseConfigResult {
-    parseConfig(json: lua.table, errors: lua.errors)
+    parseConfig(json: lua.table, errors: lua.errors, configFolder: lua.files.first?.url?.deletingLastPathComponent())
 }
 
 /// The config from the text of an inlay.lua that has no modules
@@ -241,17 +244,37 @@ struct ParseConfigResult {
 
 /// The config from the table that inlay.lua returns.
 /// - Parameter errors: the ones of running the file
-@MainActor func parseConfig(json rawTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = []) -> ParseConfigResult {
+/// - Parameter configFolder: the folder of inlay.lua, where the themes of the user are. See: ThemeResolver
+@MainActor func parseConfig(json configTable: OrderedJson.JsonDict, errors: [ConfigParseDiagnostic] = [], configFolder: URL? = nil) -> ParseConfigResult {
     var errors = NonCopyable(errors)
 
-    let configVersion: ConfigVersion = rawTable[configVersionConfigRootKey]
+    let configVersion: ConfigVersion = configTable[configVersionConfigRootKey]
         .flatMap { parseConfigVersion($0, .rootKey(configVersionConfigRootKey)).getOrNil(appendErrorTo: &errors.value) }
         ?? .min
 
     var c = ConfigParserContext(configVersion: configVersion, errors: errors.consume(), warnings: [ConfigParseDiagnostic]())
 
+    // The colors of the theme go under the tables of the config
+    var rawTable = configTable
+    var lightTable: OrderedJson.JsonDict? = nil
+    var resolver = ThemeResolver(configFolder: configFolder)
+    do {
+        let theme = resolver.resolve(configTable[themeKey] ?? .string(defaultThemeName), &c)
+        if let dark = theme.dark { rawTable = applyTheme(dark, to: configTable) }
+        if let light = theme.light { lightTable = applyTheme(light, to: configTable) }
+    }
+
     var config = rawTable.parseTable(Config(), configParser, .emptyRoot, &c)
     config.configVersion = configVersion
+
+    if let lightTable {
+        // The same tables of the config, with other colors: their problems are already reported
+        var quiet = ConfigParserContext(configVersion: configVersion, errors: [], warnings: [])
+        config.lightAppearance = AppearanceColors(
+            borders: lightTable["borders"].map { parseBorders($0, .rootKey("borders"), &quiet) } ?? BordersConfig(),
+            menuBar: lightTable["menuBar"].map { parseMenuBar($0, .rootKey("menuBar"), &quiet) } ?? MenuBarConfig(),
+        )
+    }
 
     if let mapping = rawTable[keyMappingConfigRootKey].flatMap({ parseKeyMapping($0, .rootKey(keyMappingConfigRootKey), &c) }) {
         config.keyMapping = mapping
@@ -301,7 +324,9 @@ struct ParseConfigResult {
             "See https://nikitabobko.github.io/AeroSpace/guide#config-version for the migration guide."
         c.warnings.append(.init(.emptyRoot, msg))
     }
-    return ParseConfigResult(config: config, errors: c.errors, warnings: c.warnings)
+    // Without the key, a theme that doesn't exist in the config folder is no file of the config
+    let themeFiles = configTable[themeKey] == nil ? resolver.files.filter { $0.text != nil } : resolver.files
+    return ParseConfigResult(config: config, errors: c.errors, warnings: c.warnings, themeFiles: themeFiles)
 }
 
 func parseIndentForNestedContainersWithTheSameOrientation(_ _: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<Void> {

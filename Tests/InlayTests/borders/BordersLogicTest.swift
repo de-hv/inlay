@@ -22,6 +22,29 @@ extension InlayTests {
 
         // MARK: - Colors
 
+        /// fullscreenColor: only for the focused window in fullscreen, under the color of the mode
+        @Test func testFullscreenColor() {
+            var config = BordersConfig()
+            config.modeColors = ["resize": .rgba(Rgba(hex: "#30D158").orDie())]
+            let candidates = [
+                BorderCandidate(windowId: 1, frame: frame, isFocused: true, isFullscreen: true),
+                BorderCandidate(windowId: 2, frame: frame, isFullscreen: true),
+            ]
+            func colors(_ candidates: [BorderCandidate], mode: String?) -> [String] {
+                BordersSnapshot.resolve(candidates, config, mode: mode, systemAccent: accent).items.map(\.color.hex)
+            }
+            // Without it, the active color as before
+            assertEquals(colors(candidates, mode: "main"), [accent.hex, "#8E8E9373"])
+            config.fullscreenColor = .rgba(Rgba(hex: "#FF9E64").orDie())
+            assertEquals(colors(candidates, mode: "main"), ["#FF9E64", "#8E8E9373"])
+            assertEquals(colors(candidates, mode: "resize"), ["#30D158", "#8E8E9373"])
+            // A floating window in fullscreen takes it too, and without it keeps the floating color
+            let floating = [BorderCandidate(windowId: 3, frame: frame, isFocused: true, isFloating: true, isFullscreen: true)]
+            assertEquals(colors(floating, mode: "main"), ["#FF9E64"])
+            config.fullscreenColor = nil
+            assertEquals(colors(floating, mode: "main"), ["#BF5AF2"])
+        }
+
         @Test func testColors() {
             var config = BordersConfig()
             config.modeColors = ["resize": .rgba(Rgba(hex: "#30D158").orDie())]

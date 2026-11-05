@@ -22,6 +22,8 @@ struct BorderCandidate: Equatable, Sendable {
     var frame: CGRect
     var isFocused: Bool = false
     var isFloating: Bool = false
+    /// In fullscreen: the 'fullscreen' command. See: BordersConfig.fullscreenColor
+    var isFullscreen: Bool = false
     /// The width of its border. nil: the one of [borders]. See: SingleWindowBorder
     var width: CGFloat? = nil
 }
@@ -34,8 +36,8 @@ struct BordersSnapshot: Equatable, Sendable {
 
     /// Decides the color of every candidate. Pure.
     ///
-    /// The focused window takes the color of the binding mode if the mode has one, otherwise
-    /// the floating color if it floats, otherwise the active color. The rest of the windows take the inactive color.
+    /// The focused window takes the color of the binding mode if the mode has one, otherwise the fullscreen color
+    /// if it is in fullscreen and there is one, otherwise the floating color if it floats, otherwise the active color. The rest of the windows take the inactive color.
     /// A fully transparent color means that the border isn't drawn at all.
     /// Only the focused window glows, in the color of its border
     static func resolve(_ candidates: [BorderCandidate], _ config: BordersConfig, mode: String?, systemAccent: Rgba) -> BordersSnapshot {
@@ -48,6 +50,7 @@ struct BordersSnapshot: Equatable, Sendable {
             let color: ConfigColor = switch true {
                 case !candidate.isFocused: config.inactiveColor
                 case mode.flatMap { config.modeColors[$0] } != nil: mode.flatMap { config.modeColors[$0] } ?? config.activeColor
+                case candidate.isFullscreen && config.fullscreenColor != nil: config.fullscreenColor ?? config.activeColor
                 case candidate.isFloating: config.floatingColor
                 default: config.activeColor
             }
@@ -84,13 +87,14 @@ extension BordersSnapshot {
     static func candidatesFromModel() -> [BorderCandidate] {
         let focused = focus.windowOrNil
         var result: [BorderCandidate] = []
-        func add(_ window: Window, _ rect: Rect, isFloating: Bool, width: CGFloat? = nil) {
+        func add(_ window: Window, _ rect: Rect, isFloating: Bool, isFullscreen: Bool = false, width: CGFloat? = nil) {
             if window.windowId == windowIdWithBorderHiddenByMouse || window.windowId == currentlyManipulatedWithMouseWindowId { return }
             result.append(BorderCandidate(
                 windowId: window.windowId,
                 frame: CGRect(x: rect.topLeftX, y: rect.topLeftY, width: rect.width, height: rect.height),
                 isFocused: window == focused,
                 isFloating: isFloating,
+                isFullscreen: isFullscreen,
                 width: width,
             ))
         }
@@ -107,7 +111,7 @@ extension BordersSnapshot {
             // [borders.singleWindow]. The other tiling windows are behind it, and their borders would stick out
             if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
                 if single.enabled && !fullscreen.noOuterGapsInFullscreen {
-                    add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.singleWindowRect, isFloating: false, width: single.width)
+                    add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.singleWindowRect, isFloating: false, isFullscreen: true, width: single.width)
                 }
             } else if tiling.count == 1, let window = tiling.first {
                 if single.enabled, let rect = currentRect(window) ?? window.lastAppliedLayoutPhysicalRect {
@@ -132,7 +136,7 @@ extension BordersSnapshot {
                     add(window, rect, isFloating: true)
                 } else if single.enabled {
                     // The border is drawn outside of the frame: around a window that fills the screen it is pulled in
-                    add(window, rect.intersection(monitor.visibleRect.insetBy(single.width)), isFloating: true, width: single.width)
+                    add(window, rect.intersection(monitor.visibleRect.insetBy(single.width)), isFloating: true, isFullscreen: window.isFullscreen, width: single.width)
                 }
             }
         }
@@ -142,7 +146,7 @@ extension BordersSnapshot {
     @MainActor
     static func fromModel() -> BordersSnapshot {
         let state = ServerState.shared
-        let borders = config.borders
+        let borders = config.bordersForAppearance
         // Paused ('enable off') or not started yet: Inlay doesn't manage the windows, so it doesn't decorate them
         guard borders.enabled, state.isEnabled, state.axPermissionStatus == .granted else { return .empty }
         return resolve(candidatesFromModel(), borders, mode: activeMode, systemAccent: .systemAccent)

@@ -55,8 +55,11 @@ struct Config: ConvenienceMutable {
     var menuBar: MenuBarConfig = MenuBarConfig()
     var borders: BordersConfig = BordersConfig()
     var animations: AnimationsConfig = AnimationsConfig()
-    /// [theme], [notifications] and [settings] are tables of the past: they are accepted and ignored. See: parseObsolete
+    /// 'theme' goes into 'borders' and 'menuBar' before they are parsed. See: ThemeResolver
     var _theme: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
+    /// The colors of the light theme of `theme = { dark = …, light = … }`. nil: the same in both appearances
+    var lightAppearance: AppearanceColors? = nil
+    /// [notifications] and [settings] are tables of the past: they are accepted and ignored. See: parseObsolete
     var _notifications: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     var _settings: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
 

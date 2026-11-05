@@ -22,6 +22,8 @@ return {
   -- ─────────────────────────────────────────────────────────────────────────────
 
   configVersion = 2,
+  -- Sin tema: los colores de abajo son los valores por defecto del código
+  theme = {},
 
   -- Abrir Inlay al iniciar sesión.                              (defecto: false)
   startAtLogin = true,

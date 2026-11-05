@@ -13,6 +13,8 @@ final class MenuBarController: NSObject {
     private let menu = MenuBarMenu()
     private var state: MenuBarState?
     private var appearanceObservation: NSKeyValueObservation?
+    /// Light or dark: the colors of 'theme' may change with it. See: Config.menuBarForAppearance
+    private var systemAppearanceObservation: NSKeyValueObservation?
     private var notificationTokens: [any NSObjectProtocol] = []
 
     /// The focus marker sliding from the workspace focused before
@@ -63,6 +65,9 @@ final class MenuBarController: NSObject {
             appearanceObservation = button.observe(\.effectiveAppearance) { [weak self] _, _ in
                 MainActor.assumeIsolated { self?.redraw.request("appearance") }
             }
+        }
+        systemAppearanceObservation = NSApp.observe(\.effectiveAppearance) { _, _ in
+            MainActor.assumeIsolated { MenuBarStore.shared.refresh() }
         }
         // The accent color, and the scale of the screens
         let reasons = [(NSColor.systemColorsDidChangeNotification, "system-colors"), (NSApplication.didChangeScreenParametersNotification, "screens")]

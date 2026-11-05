@@ -16,6 +16,8 @@ struct BordersConfig: ConvenienceMutable, Equatable, Sendable {
     var inactiveColor: ConfigColor = .rgba(Rgba(red: 0x8E / 255, green: 0x8E / 255, blue: 0x93 / 255, alpha: 0x73 / 255))
     /// The focused floating window
     var floatingColor: ConfigColor = .rgba(Rgba(red: 0xBF / 255, green: 0x5A / 255, blue: 0xF2 / 255))
+    /// The focused window in fullscreen (the 'fullscreen' command). nil: the color it would have without it
+    var fullscreenColor: ConfigColor? = nil
     /// [borders.modeColors]. Binding mode -> the color of the focused window while the mode is active
     var modeColors: [String: ConfigColor] = [:]
     /// A soft halo of the color of the border around the focused window, outside of the border
@@ -40,6 +42,7 @@ let bordersParserTable: [String: any ParserProtocol<BordersConfig>] = [
     "activeColor": Parser(\.activeColor, parseConfigColor(allowAuto: false)),
     "inactiveColor": Parser(\.inactiveColor, parseConfigColor(allowAuto: false)),
     "floatingColor": Parser(\.floatingColor, parseConfigColor(allowAuto: false)),
+    "fullscreenColor": Parser(\.fullscreenColor, { raw, backtrace in parseConfigColor(allowAuto: false)(raw, backtrace).map(Optional.some) }),
     "modeColors": Parser(\.modeColors, parseModeColors),
     "glow": Parser(\.glow, parseBool),
     "glowRadius": Parser(\.glowRadius, parsePoints("glowRadius", BordersConfig.glowRadiusRange)),

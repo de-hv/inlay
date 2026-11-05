@@ -12,6 +12,7 @@
 #   build/Inlay.app/Contents/Resources/bin/inlay                 the CLI
 #   build/Inlay.app/Contents/Resources/inlay.lua                 the built-in config (the inlay.lua of the repo)
 #   build/Inlay.app/Contents/Resources/config-reference.lua      what 'inlay config --explain' prints
+#   build/Inlay.app/Contents/Resources/themes/                   the themes of the key 'theme'
 #   build/Inlay.app/Contents/Resources/default-config-hashes.txt the default configs of every version, never edited
 #   build/Inlay.app/Contents/Resources/scripts/                  what 'inlay uninstall' runs
 #
@@ -96,6 +97,7 @@ cp "$BIN_DIR/InlayApp" "$APP/Contents/MacOS/$APP_NAME"
 cp "$BIN_DIR/$CLI_NAME" "$CLI"
 cp Support/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp inlay.lua docs/config-reference.lua scripts/default-config-hashes.txt "$APP/Contents/Resources/"
+cp -R themes "$APP/Contents/Resources/themes"
 mkdir -p "$APP/Contents/Resources/scripts"
 cp scripts/uninstall.sh scripts/lib.sh "$APP/Contents/Resources/scripts/"
 cp LICENSE NOTICE.md "$APP/Contents/Resources/legal/"

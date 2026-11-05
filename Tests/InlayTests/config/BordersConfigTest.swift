@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig(lua: "return { configVersion = 2 }")
+            let result = parseConfig(lua: "return { configVersion = 2, theme = {} }")
             assertEquals(result.errors, [])
             let borders = result.config.borders
             assertEquals(borders.enabled, true)

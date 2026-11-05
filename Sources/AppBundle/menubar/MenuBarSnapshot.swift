@@ -98,7 +98,7 @@ final class MenuBarStore {
     var onChange: (@MainActor (MenuBarState) -> Void)? = nil
 
     func refresh() {
-        let new = MenuBarState(snapshot: .fromModel(), config: config.menuBar)
+        let new = MenuBarState(snapshot: .fromModel(), config: config.menuBarForAppearance)
         if new == state {
             DebugStats.count("menu-bar.snapshot.same")
             return

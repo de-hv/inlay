@@ -26,6 +26,13 @@ local general = {
   startAtLogin     = true,
   autoReloadConfig = true,    -- reload when one of the files of the config is saved
 
+  -- The look of the borders and of the menu bar: their colors, the glow and systemColors.
+  -- A theme of Inlay: catppuccin | everforest | gruvbox | kanagawa | material | nord |
+  -- rose-pine | tokyo-night; one of yours (themes/<name>.lua of this folder); or one for each
+  -- appearance of macOS: { dark = 'tokyo-night', light = 'rose-pine' }. Without it: 'material'.
+  -- A color written in 6 or 7 wins over the theme. The wallpaper is yours: Inlay never changes it
+  theme = 'material',
+
   -- Commands that run after Inlay starts
   afterStartupCommand = {},
 
@@ -148,15 +155,6 @@ local animations = {
 
 -- ━━ 6 · Menu bar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- Material You from #6750A4, dark. The menu bar and the borders share it
-local colors = {
-  primary   = '#B59DF7',
-  tertiary  = '#EFB8C8',
-  onSurface = '#CAC4D0',
-  outline   = '#938F99',
-  inactive  = '#999D9F',
-}
-
 local menuBar = {
   menuBar = {
     enabled            = true,
@@ -165,39 +163,19 @@ local menuBar = {
     dimEmptyWorkspaces = true,
     showMode           = true,     -- the initial of the binding mode on the focused workspace
     perMonitor         = false,    -- group the workspaces by monitor
-    systemColors       = false,    -- draw it like the other menu bar icons, ignoring the colors
-
-    -- '#RRGGBB', '#RRGGBBAA', 'system-accent' or 'auto' (the color of the menu bar text).
-    -- 'auto' for all four: follow the menu bar
-    colors = {
-      focused  = colors.primary,
-      occupied = colors.onSurface,    -- workspaces with windows
-      empty    = colors.outline,      -- workspaces without windows
-      accent   = colors.tertiary,     -- the focused one in a binding mode. 'auto': as focused
-    },
+    -- The colors and systemColors come from the theme (section 1)
   },
 }
 
 -- ━━ 7 · Borders ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- Colors: '#RRGGBB', '#RRGGBBAA' or 'system-accent'
+-- The colors and the glow come from the theme (section 1)
 local borders = {
   borders = {
     enabled       = true,
     width         = 2,                -- points: 1 … 20
     cornerRadius  = 16,               -- points: 0 … 40
     squareCorners = false,            -- fill the rounded corners of the windows
-    activeColor   = colors.primary,   -- like the menu bar
-    inactiveColor = colors.inactive,
-    floatingColor = colors.tertiary,
-    glow          = false,
-    glowRadius    = 12,               -- points: 1 … 40
-
-    -- The focused window while a binding mode is active
-    modeColors = {
-      -- resize  = '#30D158',
-      -- service = '#FF453A',
-    },
 
     -- A window alone in its workspace, or in fullscreen: a thin border and a small gap.
     -- enabled = false: it fills the screen without a border

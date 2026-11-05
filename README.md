@@ -15,7 +15,7 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.4.0, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Inlay is a fork of
+**Version 0.4.1, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing
 new windows (*dwindle*), without the *accordion* layout, with its own menu bar item and with window borders.
 

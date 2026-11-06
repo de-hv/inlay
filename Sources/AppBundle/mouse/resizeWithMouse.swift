@@ -57,7 +57,7 @@ private func resizeWithMouse(_ window: Window) async throws {
 /// The user has dragged the edges of the tiling window with the mouse: its frame was `layoutRect`, and now it is `rect`.
 /// Changes the weights so that the next layout pass gives the window the new frame, and its neighbors the rest.
 ///
-/// Nobody is shrunk under 'tiling.minWindowSize': an edge that was dragged further goes back to the limit
+/// Nobody is shrunk under 'tiling.min_window_size': an edge that was dragged further goes back to the limit
 /// with the next layout pass, when the mouse button is released
 @MainActor
 func resizeTilingWindow(_ window: Window, from layoutRect: Rect, to rect: Rect) {

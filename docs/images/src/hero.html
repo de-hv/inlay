@@ -69,9 +69,9 @@ require('binds')
 require('rules')
 
 inlay.config({
-  startAtLogin = true,
-  autoReloadConfig = true,
-  persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
+  start_at_login = true,
+  auto_reload_config = true,
+  persistent_workspaces = { '1', '2', '3', '4', '5', '6' },
 
   gaps = {
     inner = { horizontal = 8, vertical = 8 },
@@ -79,27 +79,27 @@ inlay.config({
   },
 
   tiling = {
-    newWindowPlacement = 'dwindle',
-    splitRatio = 0.5,
-    splitTarget = 'focused',
-    startupLayout = 'grid',
-    minWindowSize = 100,
+    new_window_placement = 'dwindle',
+    split_ratio = 0.5,
+    split_target = 'focused',
+    startup_layout = 'grid',
+    min_window_size = 100,
   },
 
-  menuBar = {
+  menu_bar = {
     enabled = true,
     theme = 'chips',
-    dimEmptyWorkspaces = true,
-    showMode = false,
+    dim_empty_workspaces = true,
+    show_mode = false,
   },
 
   borders = {
     enabled = true,
     width = 4,
-    cornerRadius = 16,
-    activeColor = 'system-accent',
-    inactiveColor = '#8E8E9373',
-    floatingColor = '#BF5AF2',
+    corner_radius = 16,
+    active_color = 'system-accent',
+    inactive_color = '#8E8E9373',
+    floating_color = '#BF5AF2',
   },
 })
 </div></div>
@@ -109,7 +109,7 @@ inlay.config({
   <div class="tbar"><div class="lights"><i></i><i></i><i></i></div><div class="url">example.org/tiling/dwindle</div></div>
   <div class="page"><div><div class="crumb">Wiki › Layouts › Dwindle</div><h4>Dwindle</h4>
     <p>Every new window splits the focused window in two. A window that is wider than tall is split side by side; otherwise the two halves are stacked.</p>
-    <p>The result is a spiral that dwindles towards a corner. <code>splitRatio</code> decides how much the window that is split keeps.</p></div>
+    <p>The result is a spiral that dwindles towards a corner. <code>split_ratio</code> decides how much the window that is split keeps.</p></div>
     <div class="fig"><i></i><div class="r"><i></i><div class="rr"><i></i><i class="hot"></i></div></div></div></div>
 </div></div>
 
@@ -124,13 +124,13 @@ inlay.config({
 6
 
 <span class="p">❯</span> <span class="cmd">inlay config --explain \
-    tiling.splitRatio</span>
+    tiling.split_ratio</span>
 <span class="t">tiling</span> = {
 
   <span class="c">-- Only for 'dwindle'. The fraction
   -- of its space that the split
   -- window keeps. […]</span>
-  <span class="k">splitRatio</span> = <span class="n">0.5</span>,
+  <span class="k">split_ratio</span> = <span class="n">0.5</span>,
 
 <span class="p">❯</span> <span style="background:#d5d8e0"> </span></pre>
 </div></div>
@@ -141,7 +141,7 @@ inlay.config({
     <div><i class="on"></i><span>One config file for everything</span></div>
     <div><i class="on"></i><span>Borders that follow the focus</span></div>
     <div><i class="on"></i><span>Workspaces in the menu bar</span></div>
-    <div><i></i><span>Try <span class="mono" style="font-size:12px">splitTarget = 'cursor'</span></span></div>
+    <div><i></i><span>Try <span class="mono" style="font-size:12px">split_target = 'cursor'</span></span></div>
     <div><i></i><span>Pick a color for the resize mode</span></div>
   </div>
 </div></div>

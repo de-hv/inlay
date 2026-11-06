@@ -82,16 +82,16 @@ public enum EditorTypes {
     /// The tables whose keys are names that the user chooses, with the type of their values
     private static let freeFormTables: [String: String] = [
         "mode": "table<string, InlayConfig.mode.item>",
-        "borders.modeColors": "table<string, string>",
-        "exec.envVars": "table<string, string>",
-        "keyMapping.keyNotationToKeyCode": "table<string, string>",
-        "workspaceToMonitorForceAssignment": "table<string, string|string[]>",
+        "borders.mode_colors": "table<string, string>",
+        "exec.env_vars": "table<string, string>",
+        "key_mapping.key_notation_to_key_code": "table<string, string>",
+        "workspace_to_monitor_force_assignment": "table<string, string|string[]>",
         "animations.curves": "table<string, number[]>",
     ]
 
     /// The tables that are lists of tables: their items are a class
     private static let arrays: [String: String] = [
-        "onWindowDetected": "(InlayConfig.onWindowDetected|'workspaces')[]",
+        "on_window_detected": "(InlayConfig.on_window_detected|'workspaces')[]",
         "workspaces": "InlayConfig.workspaces[]",
     ]
 
@@ -187,7 +187,7 @@ public enum EditorTypes {
         function inlay.unbind(keys, options) end
 
         --- A window rule, or 'workspaces': the place of the rules of the apps of the workspaces
-        ---@param rule InlayConfig.onWindowDetected|'workspaces'
+        ---@param rule InlayConfig.on_window_detected|'workspaces'
         function inlay.window_rule(rule) end
 
         --- Commands that run on an event. workspace_changed: a program and its arguments

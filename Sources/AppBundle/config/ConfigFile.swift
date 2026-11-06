@@ -55,7 +55,7 @@ func legacyConfigMessage(_ url: URL) -> String {
     let lua = url.deletingLastPathComponent().appending(path: url.lastPathComponent.hasPrefix(".") ? configDotfileName : configFileName)
     return """
         \(url.path.tildePath) is a config of Inlay 0.2, which Inlay \(inlayAppVersion) doesn't read: the config is Lua now, \
-        in \(lua.path.tildePath), and its keys are camelCase (cornerRadius, onWindowDetected). Write it there. Or move \
+        in \(lua.path.tildePath), and its keys are snake_case (corner_radius, on_window_detected). Write it there. Or move \
         \(url.lastPathComponent) away and restart Inlay: it creates \(configFileName) with the built-in config, to start from
         """
 }

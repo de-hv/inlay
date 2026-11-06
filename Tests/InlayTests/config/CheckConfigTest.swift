@@ -45,14 +45,14 @@ extension InlayTests {
         }
 
         @Test func testWarningsAreNotErrors() throws {
-            let url = try file("warnings.lua", "inlay.config({ defaultRootContainerLayout = 'accordion', mode = { main = { binding = {} } } })")
+            let url = try file("warnings.lua", "inlay.config({ default_root_container_layout = 'accordion', mode = { main = { binding = {} } } })")
             let report = checkConfigFile(url)
             assertEquals(report.isOk, true)
             assertEquals(
                 report.text,
                 """
                 '\(url.path)': 0 error(s), 1 warning(s)
-                [WARNING] defaultRootContainerLayout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'
+                [WARNING] default_root_container_layout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'
                 """,
             )
         }

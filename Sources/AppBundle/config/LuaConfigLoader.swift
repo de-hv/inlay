@@ -21,7 +21,7 @@ struct LuaConfig {
     var files: [LuaConfigFile]
     var errors: [ConfigParseDiagnostic]
     /// Where each value was set: 'binds.lua:12'. The keys are the paths of the values in `table`; an item of a list
-    /// (a workspace, a window rule) is at its number, from 1: ["onWindowDetected", "2"]
+    /// (a workspace, a window rule) is at its number, from 1: ["on_window_detected", "2"]
     var origins: [[String]: String] = [:]
 }
 
@@ -504,17 +504,17 @@ enum LuaConfigLoader {
 
         function inlay.window_rule(rule)
           if rule ~= 'workspaces' and not isTableOfKeys(rule) then
-            fail('window_rule', "it takes a table, { match = { appId = '…' }, run = 'layout floating' }, or 'workspaces'")
+            fail('window_rule', "it takes a table, { match = { app_id = '…' }, run = 'layout floating' }, or 'workspaces'")
           end
-          appendItem('onWindowDetected', rule, place(2))
+          appendItem('on_window_detected', rule, place(2))
         end
 
         local events = {
-          start = 'afterStartupCommand',
-          focus_changed = 'onFocusChanged',
-          monitor_changed = 'onFocusedMonitorChanged',
-          mode_changed = 'onModeChanged',
-          workspace_changed = 'execOnWorkspaceChange',
+          start = 'after_startup_command',
+          focus_changed = 'on_focus_changed',
+          monitor_changed = 'on_focused_monitor_changed',
+          mode_changed = 'on_mode_changed',
+          workspace_changed = 'exec_on_workspace_change',
         }
 
         function inlay.on(event, commands)
@@ -522,7 +522,7 @@ enum LuaConfigLoader {
           if not key then fail('on', "'" .. tostring(event) .. "' isn't an event: start, focus_changed, monitor_changed, mode_changed or workspace_changed") end
           if not isCommand(commands) then fail('on', 'the commands are a string, or a list of them') end
           local at = place(2)
-          if key == 'execOnWorkspaceChange' then
+          if key == 'exec_on_workspace_change' then
             -- A program and its arguments: one, the last one
             config[key] = copy(type(commands) == 'string' and { commands } or commands)
           else
@@ -536,8 +536,8 @@ enum LuaConfigLoader {
 
         function inlay.env(name, value)
           if type(name) ~= 'string' or type(value) ~= 'string' then fail('env', "it takes a name and a value: inlay.env('PATH', '/opt/homebrew/bin:${PATH}')") end
-          tableAt('exec', 'envVars')[name] = value
-          record({ 'exec', 'envVars', name }, place(2))
+          tableAt('exec', 'env_vars')[name] = value
+          record({ 'exec', 'env_vars', name }, place(2))
         end
 
         function inlay.curve(name, points)

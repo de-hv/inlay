@@ -44,13 +44,13 @@ extension InlayTests {
             for (value, expected) in [("'vertical'", WorkspaceSwitch.vertical), ("'auto'", .auto), ("'off'", .off), ("'horizontal'", .horizontal),
                                       ("false", .off), ("true", .horizontal)]
             {
-                let parsed = parseConfig(lua: "inlay.config({ animations = { workspaceSwitch = \(value) } })")
+                let parsed = parseConfig(lua: "inlay.config({ animations = { workspace_switch = \(value) } })")
                 assertEquals(parsed.errors, [])
                 assertEquals(parsed.config.animations.workspaceSwitch, expected, additionalMsg: value)
             }
             assertEquals(
-                parseConfig(lua: "inlay.config({ animations = { workspaceSwitch = 'diagonal' } })").strErrors,
-                ["[ERROR] animations.workspaceSwitch: Can't parse workspaceSwitch 'diagonal'. Possible values: (horizontal|vertical|auto|off)"],
+                parseConfig(lua: "inlay.config({ animations = { workspace_switch = 'diagonal' } })").strErrors,
+                ["[ERROR] animations.workspace_switch: Can't parse workspace_switch 'diagonal'. Possible values: (horizontal|vertical|auto|off)"],
             )
             // Off: no animation, whatever the duration
             assertEquals(result.config.animations.effectiveDuration, .zero)

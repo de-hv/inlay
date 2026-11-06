@@ -164,7 +164,7 @@ extension InlayTests {
             try await workspace.layoutWorkspace()
             assertEquals(summary().count, 3)
 
-            // The fullscreen window has the border of [borders.singleWindow]; the tiling windows behind it have none.
+            // The fullscreen window has the border of [borders.single_window]; the tiling windows behind it have none.
             // The floating window is above it and keeps its border too
             window1.isFullscreen = true
             try await workspace.layoutWorkspace()
@@ -203,7 +203,7 @@ extension InlayTests {
             let item = try #require(BordersSnapshot.fromModel().items.first)
             assertEquals(item.frame.minX, workspace.workspaceMonitor.visibleRect.topLeftX + config.borders.singleWindow.gap)
             assertEquals(item.width, config.borders.singleWindow.width)
-            // Without [borders.singleWindow], it fills the screen without a border
+            // Without [borders.single_window], it fills the screen without a border
             config.borders.singleWindow.enabled = false
             try await workspace.layoutWorkspace()
             floating.isFullscreen = true

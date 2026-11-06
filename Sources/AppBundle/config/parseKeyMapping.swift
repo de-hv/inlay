@@ -3,7 +3,7 @@ import HotKey
 
 let keyMappingParser: [String: any ParserProtocol<KeyMapping>] = [
     "preset": Parser(\.preset, parsePreset),
-    "keyNotationToKeyCode": Parser(\.rawKeyNotationToKeyCode, parseKeyNotationToKeyCode),
+    "key_notation_to_key_code": Parser(\.rawKeyNotationToKeyCode, parseKeyNotationToKeyCode),
 ]
 
 struct KeyMapping: ConvenienceMutable, Equatable, Sendable {

@@ -5,19 +5,19 @@ inlay.config({
   -- Ubicación: ~/.config/inlay/inlay.lua   (o ~/.inlay.lua; si existen los dos,
   -- Inlay avisa de la ambigüedad y no carga ninguno).
   --
-  -- El esquema es el de AeroSpace, con las claves en camelCase, más tres tablas
-  -- nuevas: tiling, menuBar y borders:
+  -- El esquema es el de AeroSpace, con las claves en snake_case, más tres tablas
+  -- nuevas: tiling, menu_bar y borders:
   --   · todo lo de AeroSpace sigue significando lo mismo;
   --   · 'accordion' ya no existe: donde aparezca se acepta con un aviso y se
   --     trata como 'tiles' (ver el final de este fichero);
   --   · las tablas nuevas son opcionales: si faltan, valen sus valores por defecto.
   --
   -- Cualquier clave desconocida es un error (como en AeroSpace), así una errata
-  -- no pasa desapercibida. Con autoReloadConfig los cambios se aplican al
+  -- no pasa desapercibida. Con auto_reload_config los cambios se aplican al
   -- guardar; si el fichero tiene errores, sigue activa la configuración anterior.
   --
   -- Colores: '#RRGGBB', '#RRGGBBAA' (AA = opacidad) o 'system-accent' (el color
-  -- de acento de Ajustes del Sistema › Apariencia). En [menuBar.colors] existe
+  -- de acento de Ajustes del Sistema › Apariencia). En [menu_bar.colors] existe
   -- además 'auto': blanco sobre barra oscura y negro sobre barra clara.
   -- ─────────────────────────────────────────────────────────────────────────────
 
@@ -25,39 +25,39 @@ inlay.config({
   theme = {},
 
   -- Abrir Inlay al iniciar sesión.                              (defecto: false)
-  startAtLogin = true,
+  start_at_login = true,
 
   -- Recargar este fichero al guardarlo.                         (defecto: false)
   -- La ventana de Ajustes lo necesita para que sus cambios se vean al momento;
   -- si está en false, Ajustes recarga la config a mano después de escribir.
-  autoReloadConfig = true,
+  auto_reload_config = true,
 
   -- Comandos al arrancar, después de leer la config.
-  afterStartupCommand = {},
+  after_startup_command = {},
 
   -- Normalizaciones del árbol (heredadas de AeroSpace; conviene dejarlas en true:
   -- el auto-tiling dwindle se apoya en ellas).
-  enableNormalizationFlattenContainers = true,
-  enableNormalizationOppositeOrientationForNestedContainers = true,
+  enable_normalization_flatten_containers = true,
+  enable_normalization_opposite_orientation_for_nested_containers = true,
 
   -- Orientación del contenedor raíz de un workspace vacío:
   -- 'horizontal' | 'vertical' | 'auto' (horizontal en monitor apaisado).
   -- Con dwindle solo importa para la primera ventana; la segunda ya decide sola.
-  defaultRootContainerOrientation = 'auto',
+  default_root_container_orientation = 'auto',
 
   -- Layout del contenedor raíz. En Inlay solo existe 'tiles'.
-  defaultRootContainerLayout = 'tiles',
+  default_root_container_layout = 'tiles',
 
   -- Workspaces que existen siempre, aunque estén vacíos. Son los que la barra
   -- dibuja atenuados.
-  persistentWorkspaces = { '1', '2', '3', '4', '5', '6', '7' },
+  persistent_workspaces = { '1', '2', '3', '4', '5', '6', '7' },
 
   -- El cursor acompaña al foco.
-  onFocusedMonitorChanged = { 'move-mouse monitor-lazy-center' },
-  onFocusChanged = { 'move-mouse window-lazy-center' },
+  on_focused_monitor_changed = { 'move-mouse monitor-lazy-center' },
+  on_focus_changed = { 'move-mouse window-lazy-center' },
 
   -- cmd-h oculta apps como siempre en macOS.
-  automaticallyUnhideMacosHiddenApps = false,
+  automatically_unhide_macos_hidden_apps = false,
 
 
   -- ─── Mosaico ─────────────────────────────────────────────────────────────────
@@ -69,11 +69,11 @@ inlay.config({
     --   'after-focused'  El comportamiento de AeroSpace: la nueva entra como hermana
     --                    después de la enfocada y todas las hermanas se reparten
     --                    el espacio.
-    newWindowPlacement = 'dwindle', -- defecto: 'dwindle'
+    new_window_placement = 'dwindle', -- defecto: 'dwindle'
 
     -- Con dwindle: fracción del hueco que conserva la ventana que se divide.
     -- 0.5 = mitades iguales; 0.6 = la original se queda el 60 %. Rango 0.1 – 0.9.
-    splitRatio = 0.5, -- defecto: 0.5
+    split_ratio = 0.5, -- defecto: 0.5
 
     -- Con dwindle: qué ventana divide la ventana nueva.
     --   'focused'  La enfocada. Si no está en mosaico en ese workspace (es flotante,
@@ -82,30 +82,30 @@ inlay.config({
     --              Hyprland. Si no hay ninguna (el cursor está en un gap, en otro
     --              monitor o sobre una ventana a pantalla completa, o el workspace
     --              no está visible), igual que 'focused'.
-    splitTarget = 'focused', -- defecto: 'focused'
+    split_target = 'focused', -- defecto: 'focused'
 
     -- Cómo se reparten las ventanas que YA están abiertas cuando Inlay arranca (o
     -- cuando se reanuda con `inlay enable on`), workspace por workspace. Las que se
-    -- abren después siguen `newWindowPlacement`.
+    -- abren después siguen `new_window_placement`.
     --   'grid'     Rejilla equilibrada: ceil(√n) columnas y las filas que hagan
     --              falta. La última fila reparte su ancho entre las ventanas que
     --              tenga: 5 ventanas son 3 arriba y 2 abajo.
     --   'row'      Una sola fila, todas al mismo ancho.
     --   'dwindle'  Sin reparto: entran una detrás de otra, como ventanas nuevas
     --              (con dwindle, una espiral con las últimas muy pequeñas).
-    startupLayout = 'grid', -- defecto: 'grid'
+    startup_layout = 'grid', -- defecto: 'grid'
 
     -- Tamaño mínimo, en puntos, que `resize` y el arrastre de un borde con el ratón
     -- dejan a una ventana en mosaico: al llegar ahí dejan de encoger, sin error
     -- (`resize` sigue saliendo con 0). Solo limita el redimensionado: si las
     -- ventanas de un workspace no caben con este tamaño, el reparto les da menos.
     -- Rango 20 – 500.
-    minWindowSize = 100, -- defecto: 100
+    min_window_size = 100, -- defecto: 100
   },
 
 
   -- ─── Barra de menús ──────────────────────────────────────────────────────────
-  menuBar = {
+  menu_bar = {
     -- Mostrar el item de Inlay en la barra de menús. Con false, Inlay sigue
     -- funcionando y se maneja con atajos y con el CLI.            (defecto: true)
     enabled = true,
@@ -123,12 +123,12 @@ inlay.config({
     theme = 'liquid', -- defecto: 'liquid'
 
     -- Dibujar más tenues los workspaces sin ventanas.             (defecto: true)
-    dimEmptyWorkspaces = true,
+    dim_empty_workspaces = true,
 
     -- Mostrar el modo de atajos cuando no es 'main': su inicial en el marcador del
     -- workspace enfocado (el chip, o el cuadrado de 'hypr'), sin cambiar el ancho
     -- del item.                                                   (defecto: false)
-    showMode = true,
+    show_mode = true,
 
     colors = {
       -- Los cuatro son opcionales. Con los valores por defecto el item es monocromo
@@ -161,23 +161,23 @@ inlay.config({
     -- Radio de las esquinas, en puntos. Inlay no puede leer el radio real de las
     -- ventanas de otras apps: ajústalo a ojo. 16 es una aproximación para macOS 26
     -- y posteriores; en macOS 14 y 15 queda mejor 10.              (defecto: 16)
-    cornerRadius = 16,
+    corner_radius = 16,
 
-    activeColor = 'system-accent', -- ventana enfocada en mosaico   (defecto: 'system-accent')
-    inactiveColor = '#8E8E9373', -- el resto de ventanas          (defecto: '#8E8E9373')
-    floatingColor = '#BF5AF2', -- ventana enfocada flotante     (defecto: '#BF5AF2')
-    -- Para ver solo el borde de la ventana activa:  inactiveColor = '#00000000'
+    active_color = 'system-accent', -- ventana enfocada en mosaico   (defecto: 'system-accent')
+    inactive_color = '#8E8E9373', -- el resto de ventanas          (defecto: '#8E8E9373')
+    floating_color = '#BF5AF2', -- ventana enfocada flotante     (defecto: '#BF5AF2')
+    -- Para ver solo el borde de la ventana activa:  inactive_color = '#00000000'
 
     -- Resplandor del color del borde alrededor de la ventana enfocada (activa,
     -- flotante o con color de modo). Las no enfocadas nunca lo llevan. Es exterior:
     -- no tapa la ventana ni recibe clics.                          (defecto: false)
     glow = false,
     -- Radio de desenfoque en puntos: hasta dónde llega, más o menos. Rango 1 – 40.
-    glowRadius = 12, -- (defecto: 12)
+    glow_radius = 12, -- (defecto: 12)
 
-    modeColors = {
+    mode_colors = {
       -- Color del borde de la ventana enfocada mientras está activo un modo de
-      -- atajos. Tiene prioridad sobre activeColor y floatingColor. Un modo sin
+      -- atajos. Tiene prioridad sobre active_color y floating_color. Un modo sin
       -- entrada conserva el color normal. Vacío por defecto. También se edita en
       -- Ajustes › Borders (una fila por modo definido aquí abajo, menos `main`).
       resize = '#30D158',
@@ -282,69 +282,69 @@ inlay.config({
 
   -- ─── Reglas al detectar una ventana ──────────────────────────────────────────
   -- Se evalúan en orden; la primera que coincide se aplica y corta, salvo que
-  -- lleve checkFurtherCallbacks = true. Las ventanas que una regla deja en
+  -- lleve check_further_callbacks = true. Las ventanas que una regla deja en
   -- 'floating' no entran en el mosaico ni dividen a nadie.
 
   -- Cada app, a su workspace
-  onWindowDetected = {
+  on_window_detected = {
     {
-      match = { appId = 'com.mitchellh.ghostty' },
+      match = { app_id = 'com.mitchellh.ghostty' },
       run = { 'layout tiling', 'move-node-to-workspace 1' },
     },
 
     {
-      match = { appId = 'dev.zed.Zed' },
+      match = { app_id = 'dev.zed.Zed' },
       run = { 'layout tiling', 'move-node-to-workspace 2' },
     },
 
     {
-      match = { appId = 'com.microsoft.VSCode' },
+      match = { app_id = 'com.microsoft.VSCode' },
       run = { 'layout tiling', 'move-node-to-workspace 2' },
     },
 
     {
-      match = { appId = 'app.zen-browser.zen' },
+      match = { app_id = 'app.zen-browser.zen' },
       run = { 'layout tiling', 'move-node-to-workspace 3' },
     },
 
     {
-      match = { appId = 'com.google.Chrome' },
+      match = { app_id = 'com.google.Chrome' },
       run = { 'layout tiling', 'move-node-to-workspace 3' },
     },
 
     {
-      match = { appId = 'ru.keepcoder.Telegram' },
+      match = { app_id = 'ru.keepcoder.Telegram' },
       run = { 'layout tiling', 'move-node-to-workspace 4' },
     },
 
     {
-      match = { appId = 'net.whatsapp.WhatsApp' },
+      match = { app_id = 'net.whatsapp.WhatsApp' },
       run = { 'layout tiling', 'move-node-to-workspace 4' },
     },
 
     {
-      match = { appId = 'com.anthropic.claudefordesktop' },
+      match = { app_id = 'com.anthropic.claudefordesktop' },
       run = { 'layout tiling', 'move-node-to-workspace 5' },
     },
 
     -- Apps que flotan siempre
     {
-      match = { appId = 'com.apple.finder' },
+      match = { app_id = 'com.apple.finder' },
       run = { 'layout floating' },
     },
 
     {
-      match = { appId = 'com.apple.systempreferences' },
+      match = { app_id = 'com.apple.systempreferences' },
       run = { 'layout floating' },
     },
 
     {
-      match = { appId = 'com.apple.Music' },
+      match = { app_id = 'com.apple.Music' },
       run = { 'layout floating' },
     },
 
     {
-      match = { appId = 'com.apple.calculator' },
+      match = { app_id = 'com.apple.calculator' },
       run = { 'layout floating' },
     },
   },
@@ -353,7 +353,7 @@ inlay.config({
   -- ─── Si vienes de AeroSpace ──────────────────────────────────────────────────
   -- Estas formas siguen siendo válidas en Inlay, con un aviso al cargar:
   --
-  --   defaultRootContainerLayout = 'accordion'   →  se trata como 'tiles'
+  --   default_root_container_layout = 'accordion'   →  se trata como 'tiles'
   --   'layout accordion', 'layout h_accordion',
   --   'layout v_accordion' (en atajos y reglas)     →  se tratan como 'layout tiles'
   --   'layout tiles accordion' (alternar)           →  queda en 'layout tiles'

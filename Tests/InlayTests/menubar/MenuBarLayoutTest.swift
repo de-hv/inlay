@@ -303,7 +303,7 @@ extension InlayTests {
             assertEquals(halo.frame.height, 20)
         }
 
-        /// 'showMode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
+        /// 'show_mode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
         /// of Aeromenu did. Nothing is added next to the chips
         @Test func testModeInTheFocusedChip() {
             let main = layout(MenuBarConfig(theme: .chips, showMode: true))
@@ -404,7 +404,7 @@ extension InlayTests {
 
         @Test func testHyprMode() {
             snapshot.mode = "resize"
-            // Without 'showMode' the square is the one of the main mode
+            // Without 'show_mode' the square is the one of the main mode
             let main = layout(MenuBarConfig(theme: .hypr, showMode: false))
             assertEquals(main.marker, .init(frame: CGRect(x: 24.5, y: 5.5, width: 11, height: 11), cornerRadius: 1.5, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
@@ -656,7 +656,7 @@ extension InlayTests {
             assertEquals((44 ..< 68).allSatisfy { alpha(bitmap, $0, 22) == 255 }, true)
         }
 
-        /// 'systemColors': the colors of [menuBar.colors] are kept, but the item is a template image, like the other
+        /// 'system_colors': the colors of [menu_bar.colors] are kept, but the item is a template image, like the other
         /// icons of the menu bar, also while it shows a binding mode
         @Test func testSystemColors() throws {
             let colors = MenuBarColors(

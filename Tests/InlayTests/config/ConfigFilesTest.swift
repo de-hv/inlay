@@ -67,14 +67,14 @@ extension InlayTests {
             let dotfiles = directory.appending(path: "dotfiles/inlay")
             try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
             let real = dotfiles.appending(path: "inlay.lua")
-            let before = "# Mine\n[menuBar]\ntheme = 'chips'\n[mode.main.binding]\n"
+            let before = "# Mine\n[menu_bar]\ntheme = 'chips'\n[mode.main.binding]\n"
             try before.write(to: real, atomically: true, encoding: .utf8)
             let folder = directory.appending(path: "inlay")
             try FileManager.default.createSymbolicLink(at: folder, withDestinationURL: dotfiles)
             let config = folder.appending(path: "inlay.lua")
 
-            try AtomicFileWriter.write("# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
-            assertEquals(read(real), "# Mine\n[menuBar]\ntheme = 'hypr'\n[mode.main.binding]\n")
+            try AtomicFileWriter.write("# Mine\n[menu_bar]\ntheme = 'hypr'\n[mode.main.binding]\n", to: config)
+            assertEquals(read(real), "# Mine\n[menu_bar]\ntheme = 'hypr'\n[mode.main.binding]\n")
             assertEquals(read(config), read(real))
             assertEquals(isSymlink(folder), true)
             assertEquals(isSymlink(config), false)
@@ -132,7 +132,7 @@ extension InlayTests {
             let missing = directory.appending(path: "missing.lua")
             assertEquals(ConfigFiles.use(missing).errorOrNil, .notFound(missing))
             let broken = directory.appending(path: "broken.lua")
-            try "inlay.config({ menuBar = { theme = 'bubbles' } })".write(to: broken, atomically: true, encoding: .utf8)
+            try "inlay.config({ menu_bar = { theme = 'bubbles' } })".write(to: broken, atomically: true, encoding: .utf8)
             assertEquals(ConfigFiles.use(broken).okOrNil, nil)
             if case .invalidConfig(let errors) = ConfigFiles.use(broken).errorOrNil {
                 assertEquals(errors.count, 1)

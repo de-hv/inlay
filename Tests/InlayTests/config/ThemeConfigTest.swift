@@ -47,7 +47,7 @@ extension InlayTests {
         /// A theme sets the glow and systemColors too, and another theme doesn't take them from 'material'
         @Test func testGlowAndSystemColors() throws {
             let result = try parse("inlay.config({ theme = 'neon' })", themes: [
-                "neon": "return { borders = { activeColor = '#E070E0', glow = true, glowRadius = 14 }, menuBar = { systemColors = false } }",
+                "neon": "return { borders = { active_color = '#E070E0', glow = true, glow_radius = 14 }, menu_bar = { system_colors = false } }",
             ])
             assertEquals(result.strErrors, [])
             assertEquals(result.config.borders.glow, true)
@@ -55,7 +55,7 @@ extension InlayTests {
             assertEquals(result.config.menuBar.systemColors, false)
             assertEquals(parseConfig(lua: "inlay.config({ theme = 'nord' })").config.menuBar.systemColors, false)
 
-            let wrong = try parse("inlay.config({ theme = 'bad' })", themes: ["bad": "return { borders = { glow = 'yes', glowRadius = 99 }, menuBar = { systemColors = 1 } }"])
+            let wrong = try parse("inlay.config({ theme = 'bad' })", themes: ["bad": "return { borders = { glow = 'yes', glow_radius = 99 }, menu_bar = { system_colors = 1 } }"])
             assertEquals(wrong.strErrors.count, 3, additionalMsg: wrong.strErrors.joined(separator: "\n"))
             assertEquals(wrong.config.borders.glowRadius, BordersConfig().glowRadius)
         }
@@ -93,8 +93,8 @@ extension InlayTests {
             let result = parseConfig(lua: """
                 inlay.config({
                   theme = 'nord',
-                  borders = { width = 6, activeColor = '#FF0000', modeColors = { service = '#00FF00' } },
-                  menuBar = { colors = { empty = '#111111' } },
+                  borders = { width = 6, active_color = '#FF0000', mode_colors = { service = '#00FF00' } },
+                  menu_bar = { colors = { empty = '#111111' } },
                 })
                 """)
             assertEquals(result.strErrors, [])
@@ -109,7 +109,7 @@ extension InlayTests {
 
         /// A table: colors of its own, over another theme or over the defaults
         @Test func testThemeTable() {
-            let partial = parseConfig(lua: "inlay.config({ theme = { borders = { activeColor = '#E06C75' } } })")
+            let partial = parseConfig(lua: "inlay.config({ theme = { borders = { active_color = '#E06C75' } } })")
             assertEquals(partial.strErrors, [])
             assertEquals(hex(partial.config.borders.activeColor), "#E06C75")
             // What it doesn't set: the defaults
@@ -117,7 +117,7 @@ extension InlayTests {
             assertEquals(partial.config.borders.floatingColor, BordersConfig().floatingColor)
             assertEquals(partial.config.menuBar.colors, MenuBarColors())
 
-            let extended = parseConfig(lua: "inlay.config({ theme = { extends = 'nord', borders = { activeColor = '#ECEFF4' } } })")
+            let extended = parseConfig(lua: "inlay.config({ theme = { extends = 'nord', borders = { active_color = '#ECEFF4' } } })")
             assertEquals(extended.strErrors, [])
             assertEquals(hex(extended.config.borders.activeColor), "#ECEFF4")
             assertEquals(hex(extended.config.borders.floatingColor), "#B48EAD")
@@ -127,7 +127,7 @@ extension InlayTests {
         /// theme of Inlay with the same name
         @Test func testUserTheme() throws {
             let result = try parse("inlay.config({ theme = 'mio' })", themes: [
-                "mio": "return { extends = 'nord', borders = { activeColor = '#E06C75' } }",
+                "mio": "return { extends = 'nord', borders = { active_color = '#E06C75' } }",
             ])
             assertEquals(result.strErrors, [])
             assertEquals(hex(result.config.borders.activeColor), "#E06C75")
@@ -135,7 +135,7 @@ extension InlayTests {
             // Saving it reloads the config
             assertTrue(result.themeFiles.contains { $0.url?.lastPathComponent == "mio.lua" && $0.text != nil })
 
-            let shadowing = try parse("inlay.config({ theme = 'nord' })", themes: ["nord": "return { borders = { activeColor = '#123456' } }"])
+            let shadowing = try parse("inlay.config({ theme = 'nord' })", themes: ["nord": "return { borders = { active_color = '#123456' } }"])
             assertEquals(hex(shadowing.config.borders.activeColor), "#123456")
             assertEquals(shadowing.config.borders.floatingColor, BordersConfig().floatingColor)
         }
@@ -158,7 +158,7 @@ extension InlayTests {
         /// A theme only has colors: anything else is an error, and the rest of the theme still applies
         @Test func testThemeOnlyHasColors() throws {
             let result = try parse("inlay.config({ theme = 'mio' })", themes: [
-                "mio": "return { gaps = 4, borders = { width = 8, activeColor = 'blue', floatingColor = '#E06C75' } }",
+                "mio": "return { gaps = 4, borders = { width = 8, active_color = 'blue', floating_color = '#E06C75' } }",
             ])
             assertEquals(result.strErrors.count, 3, additionalMsg: result.strErrors.joined(separator: "\n"))
             assertTrue(result.strErrors.allSatisfy { $0.contains("themes/mio.lua") })
@@ -166,8 +166,8 @@ extension InlayTests {
             assertEquals(result.config.borders.width, BordersConfig().width)
             assertEquals(result.config.borders.activeColor, BordersConfig().activeColor)
 
-            let inline = parseConfig(lua: "inlay.config({ theme = { menuBar = { theme = 'hypr', colors = { focused = 'auto' } } } })")
-            assertEquals(inline.strErrors, ["[ERROR] theme.menuBar.theme: " + themeKeysMessage])
+            let inline = parseConfig(lua: "inlay.config({ theme = { menu_bar = { theme = 'hypr', colors = { focused = 'auto' } } } })")
+            assertEquals(inline.strErrors, ["[ERROR] theme.menu_bar.theme: " + themeKeysMessage])
         }
 
         /// Lua that doesn't run, in a theme of the user: an error that names the file
@@ -190,7 +190,7 @@ extension InlayTests {
             let result = parseConfig(lua: """
                 inlay.config({
                   theme = { dark = 'tokyo-night', light = 'rose-pine' },
-                  borders = { width = 6, floatingColor = '#FFFFFF' },
+                  borders = { width = 6, floating_color = '#FFFFFF' },
                 })
                 """)
             assertEquals(result.strErrors, [])

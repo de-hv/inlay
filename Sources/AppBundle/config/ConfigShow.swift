@@ -36,7 +36,7 @@ enum ConfigShow {
     }
 
     /// The tables whose keys are names that the user chooses: their keys in the reference are examples
-    static let freeFormTables = ["mode", "borders.modeColors", "exec.envVars", "keyMapping.keyNotationToKeyCode", "workspaceToMonitorForceAssignment", "animations.curves"]
+    static let freeFormTables = ["mode", "borders.mode_colors", "exec.env_vars", "key_mapping.key_notation_to_key_code", "workspace_to_monitor_force_assignment", "animations.curves"]
 
     /// The names of the functions that --show takes for the keys they set
     static let functionKeys = ["bind": "mode", "unbind": "mode", "window_rule": onWindowDetectedKey, "workspace": workspacesKey]
@@ -199,9 +199,9 @@ private struct Show {
             guard let fallback = entry.fallback else { continue }
             let path = entry.path.split(separator: ".").map(String.init)
             if ConfigShow.freeFormTables.contains(where: { entry.path.hasPrefix($0 + ".") }) { continue }
-            if entry.path.hasPrefix("onWindowDetected") || entry.path.hasPrefix("workspaces") { continue }
+            if entry.path.hasPrefix("on_window_detected") || entry.path.hasPrefix("workspaces") { continue }
             // Made from 'workspaces'
-            if merged[workspacesKey] != nil, [persistentWorkspacesKey, "workspaceToMonitorForceAssignment"].contains(entry.path) { continue }
+            if merged[workspacesKey] != nil, [persistentWorkspacesKey, "workspace_to_monitor_force_assignment"].contains(entry.path) { continue }
             tree.insertIfMissing(path, .literal(fallback, .default))
         }
         self.tree = tree.sorted(by: order)
@@ -320,7 +320,7 @@ private struct Show {
     private func renderBindings(_ path: [String], _ node: ConfigShow.Node) -> [String] {
         var lines: [String] = []
         if layers.dark[workspacesKey] != nil, path.count < 3 || path[1] == "main" {
-            lines.append("-- With the key bindings that the workspaces make (workspaceKeys + the key of each workspace)")
+            lines.append("-- With the key bindings that the workspaces make (workspace_keys + the key of each workspace)")
         }
         func visit(_ path: [String], _ node: ConfigShow.Node) {
             switch node {
@@ -567,7 +567,7 @@ func lua(_ value: OrderedJson, depth: Int) -> String {
             return items.isEmpty ? "{}" : "{ " + items.map { lua($0, depth: depth) }.joined(separator: ", ") + " }"
         case .dict(let dict):
             // The keys that people write first, first: the id of a workspace, the match of a rule
-            let first = ["id", "name", "key", "monitor", "apps", "match", "checkFurtherCallbacks", "run"]
+            let first = ["id", "name", "key", "monitor", "apps", "match", "check_further_callbacks", "run"]
             let keys = dict.keys.sorted { (first.firstIndex(of: $0) ?? Int.max, $0) < (first.firstIndex(of: $1) ?? Int.max, $1) }
             return dict.isEmpty ? "{}" : "{ " + keys.map { "\(luaKey($0)) = \(lua(dict[$0]!, depth: depth))" }.joined(separator: ", ") + " }"
     }

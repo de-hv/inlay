@@ -21,8 +21,8 @@ extension InlayTests {
         @Test func testSystemColors() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  menuBar = {
-                    systemColors = true,
+                  menu_bar = {
+                    system_colors = true,
                     colors = { focused = '#D19A66' },
                   },
                 })
@@ -39,11 +39,11 @@ extension InlayTests {
             let result = parseConfig(lua: """
                 inlay.config({
                   theme = {},
-                  menuBar = {
+                  menu_bar = {
                     enabled = false,
                     theme = 'hypr',
-                    dimEmptyWorkspaces = false,
-                    showMode = true,
+                    dim_empty_workspaces = false,
+                    show_mode = true,
                     colors = {
                       accent = '#E06C75',
                       focused = 'system-accent',
@@ -74,33 +74,33 @@ extension InlayTests {
         @Test func testThemes() {
             assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid", "dms"])
             for theme in MenuBarTheme.allCases {
-                let result = parseConfig(lua: "inlay.config({ theme = {}, menuBar = { theme = '\(theme.rawValue)' } })")
+                let result = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { theme = '\(theme.rawValue)' } })")
                 assertEquals(result.errors, [])
                 assertEquals(result.warnings, [])
                 assertEquals(result.config.menuBar.theme, theme)
             }
         }
 
-        /// The item showed the icons of the apps once: the 'chips-icons' theme and the 'showAppIcons' key, which the
+        /// The item showed the icons of the apps once: the 'chips-icons' theme and the 'show_app_icons' key, which the
         /// settings window wrote to the config of the user. Such a config still loads
         @Test func testAppIconsOfThePast_acceptedWithAWarning() {
-            let theme = parseConfig(lua: "inlay.config({ theme = {}, menuBar = { theme = 'chips-icons', showMode = true } })")
+            let theme = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { theme = 'chips-icons', show_mode = true } })")
             assertEquals(theme.strErrors, [])
             assertEquals(theme.strWarnings, [
-                "[WARNING] menuBar.theme: The menu bar item doesn't show app icons anymore: 'chips-icons' is treated as 'chips'. Please change it in the config",
+                "[WARNING] menu_bar.theme: The menu bar item doesn't show app icons anymore: 'chips-icons' is treated as 'chips'. Please change it in the config",
             ])
             assertEquals(theme.config.menuBar, MenuBarConfig(theme: .chips, showMode: true))
 
             for value in ["true", "false"] {
-                let key = parseConfig(lua: "inlay.config({ theme = {}, menuBar = { theme = 'hypr', showAppIcons = \(value), dimEmptyWorkspaces = false } })")
+                let key = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { theme = 'hypr', show_app_icons = \(value), dim_empty_workspaces = false } })")
                 assertEquals(key.strErrors, [])
                 assertEquals(key.strWarnings, [
-                    "[WARNING] menuBar.showAppIcons: The menu bar item doesn't show app icons anymore: 'showAppIcons' is ignored. Please drop it from the config",
+                    "[WARNING] menu_bar.show_app_icons: The menu bar item doesn't show app icons anymore: 'show_app_icons' is ignored. Please drop it from the config",
                 ])
                 assertEquals(key.config.menuBar, MenuBarConfig(theme: .hypr, dimEmptyWorkspaces: false))
             }
 
-            let both = parseConfig(lua: "inlay.config({ theme = {}, menuBar = { theme = 'chips-icons', showAppIcons = true } })")
+            let both = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { theme = 'chips-icons', show_app_icons = true } })")
             assertEquals(both.strErrors, [])
             assertEquals(both.warnings.count, 2)
             assertEquals(both.config.menuBar, MenuBarConfig(theme: .chips))
@@ -110,48 +110,48 @@ extension InlayTests {
 
         @Test func testErrors() {
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = { theme = 'bubbles' } })").strErrors,
-                ["[ERROR] menuBar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
+                parseConfig(lua: "inlay.config({ menu_bar = { theme = 'bubbles' } })").strErrors,
+                ["[ERROR] menu_bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
             )
             // The themes and the tables of the past are gone, with no compatibility
             for theme in ["square", "glyphs", "labels", "segments", "capsule"] {
                 assertEquals(
-                    parseConfig(lua: "inlay.config({ menuBar = { theme = '\(theme)' } })").strErrors,
-                    ["[ERROR] menuBar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
+                    parseConfig(lua: "inlay.config({ menu_bar = { theme = '\(theme)' } })").strErrors,
+                    ["[ERROR] menu_bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
                 )
             }
-            assertEquals(parseConfig(lua: "inlay.config({ menuBar = { labels = { ['1'] = 'Code' } } })").strErrors, ["[ERROR] menuBar.labels: Unknown key"])
-            assertEquals(parseConfig(lua: "inlay.config({ menuBar = { symbols = { ['1'] = 'globe' } } })").strErrors, ["[ERROR] menuBar.symbols: Unknown key"])
-            assertEquals(parseConfig(lua: "inlay.config({ menuBar = { them = 'chips' } })").strErrors, ["[ERROR] menuBar.them: Unknown key"])
-            assertEquals(parseConfig(lua: "inlay.config({ menuBar = { colors = { focus = 'auto' } } })").strErrors, ["[ERROR] menuBar.colors.focus: Unknown key"])
+            assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { labels = { ['1'] = 'Code' } } })").strErrors, ["[ERROR] menu_bar.labels: Unknown key"])
+            assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { symbols = { ['1'] = 'globe' } } })").strErrors, ["[ERROR] menu_bar.symbols: Unknown key"])
+            assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { them = 'chips' } })").strErrors, ["[ERROR] menu_bar.them: Unknown key"])
+            assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { colors = { focus = 'auto' } } })").strErrors, ["[ERROR] menu_bar.colors.focus: Unknown key"])
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = { enabled = 'yes' } })").strErrors,
-                ["[ERROR] menuBar.enabled: Expected type is 'Bool'. But actual type is 'String'"],
+                parseConfig(lua: "inlay.config({ menu_bar = { enabled = 'yes' } })").strErrors,
+                ["[ERROR] menu_bar.enabled: Expected type is 'Bool'. But actual type is 'String'"],
             )
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = { showAppIcons = 1 } })").strErrors,
-                ["[ERROR] menuBar.showAppIcons: Expected type is 'Bool'. But actual type is 'Int'"],
+                parseConfig(lua: "inlay.config({ menu_bar = { show_app_icons = 1 } })").strErrors,
+                ["[ERROR] menu_bar.show_app_icons: Expected type is 'Bool'. But actual type is 'Int'"],
             )
-            assertEquals(parseConfig(lua: "inlay.config({ theme = {}, menuBar = { showAppIcons = 1 } })").strWarnings, [])
+            assertEquals(parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { show_app_icons = 1 } })").strWarnings, [])
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = 'chips' })").strErrors,
-                ["[ERROR] menuBar: Expected type is 'Table'. But actual type is 'String'"],
+                parseConfig(lua: "inlay.config({ menu_bar = 'chips' })").strErrors,
+                ["[ERROR] menu_bar: Expected type is 'Table'. But actual type is 'String'"],
             )
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = { colors = { focused = 'red' } } })").strErrors,
-                ["[ERROR] menuBar.colors.focused: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent', 'auto'"],
+                parseConfig(lua: "inlay.config({ menu_bar = { colors = { focused = 'red' } } })").strErrors,
+                ["[ERROR] menu_bar.colors.focused: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent', 'auto'"],
             )
             // 'auto' for the accent: the marker of a binding mode is the one of the focused workspace
-            let auto = parseConfig(lua: "inlay.config({ theme = {}, menuBar = { colors = { accent = 'auto' } } })")
+            let auto = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { colors = { accent = 'auto' } } })")
             assertEquals(auto.strErrors, [])
             assertEquals(auto.config.menuBar.colors.accent, .auto)
-            assertEquals(parseConfig(lua: "inlay.config({ theme = {}, menuBar = { colors = { accent = 'system-accent' } } })").config.menuBar.colors.accent, .systemAccent)
+            assertEquals(parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { colors = { accent = 'system-accent' } } })").config.menuBar.colors.accent, .systemAccent)
             assertEquals(
-                parseConfig(lua: "inlay.config({ menuBar = { colors = { empty = 16711680 } } })").strErrors,
-                ["[ERROR] menuBar.colors.empty: Expected type is 'String'. But actual type is 'Int'"],
+                parseConfig(lua: "inlay.config({ menu_bar = { colors = { empty = 16711680 } } })").strErrors,
+                ["[ERROR] menu_bar.colors.empty: Expected type is 'String'. But actual type is 'Int'"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig(lua: "inlay.config({ menuBar = { colors = { focused = 'red' } } })").config.menuBar.colors.focused, .auto)
+            assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { colors = { focused = 'red' } } })").config.menuBar.colors.focused, .auto)
         }
     }
 

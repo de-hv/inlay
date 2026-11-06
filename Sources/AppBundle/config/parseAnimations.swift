@@ -79,7 +79,7 @@ struct AnimationStep: ConvenienceMutable, Equatable, Sendable {
 let animationsParserTable: [String: any ParserProtocol<AnimationsConfig>] = [
     "enabled": Parser(\.enabled, parseBool),
     "duration": Parser(\.duration, parseDuration),
-    "workspaceSwitch": Parser(\.workspaceSwitch, parseWorkspaceSwitch),
+    "workspace_switch": Parser(\.workspaceSwitch, parseWorkspaceSwitch),
     "curve": Parser(\.curve, parseString),
     "curves": Parser(\.curves, parseCurves),
     "open": Parser(\.open, parseStep),
@@ -137,7 +137,7 @@ private func parseWorkspaceSwitch(_ raw: OrderedJson, _ backtrace: ConfigBacktra
     if let bool = raw.asBoolOrNil { return .success(bool ? .horizontal : .off) }
     return parseString(raw, backtrace).flatMap {
         WorkspaceSwitch(rawValue: $0)
-            .toResult(.init(backtrace, "Can't parse workspaceSwitch '\($0)'. Possible values: \(WorkspaceSwitch.unionLiteral)"))
+            .toResult(.init(backtrace, "Can't parse workspace_switch '\($0)'. Possible values: \(WorkspaceSwitch.unionLiteral)"))
     }
 }
 

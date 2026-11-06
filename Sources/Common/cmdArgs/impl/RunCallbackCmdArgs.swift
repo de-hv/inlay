@@ -21,9 +21,9 @@ public struct RunCallbackCmdArgs: CmdArgs {
     public var callback: Lateinit<CallbackKind> = .uninitialized
 
     public enum CallbackKind: String, CaseIterable, Equatable, Sendable {
-        case onWindowDetected = "onWindowDetected"
-        case onFocusChanged = "onFocusChanged"
-        case onFocusedMonitorChanged = "onFocusedMonitorChanged"
+        case onWindowDetected = "on_window_detected"
+        case onFocusChanged = "on_focus_changed"
+        case onFocusedMonitorChanged = "on_focused_monitor_changed"
     }
 }
 
@@ -33,10 +33,10 @@ private func parseCallbackKind(i: PosArgParserInput) -> ParsedCliArgs<RunCallbac
 
 public func parseRunCallbackCmdArgs(_ args: StrArrSlice) -> ParsedCmd<RunCallbackCmdArgs> {
     parseSpecificCmdArgs(RunCallbackCmdArgs(rawArgs: args), args)
-        .filter("--for-every-window is only allowed with 'onWindowDetected'") {
+        .filter("--for-every-window is only allowed with 'on_window_detected'") {
             $0.forEveryWindow.implies($0.callback.val == .onWindowDetected)
         }
-        .filter("--window-id is only allowed with 'onWindowDetected'") {
+        .filter("--window-id is only allowed with 'on_window_detected'") {
             ($0.windowId != nil).implies($0.callback.val == .onWindowDetected)
         }
 }

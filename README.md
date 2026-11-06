@@ -15,7 +15,7 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.6.1, in its first round of real use.** The config is Lua since 0.3.0, made of calls like `inlay.config` and `inlay.bind` since 0.6.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Your
+**Version 0.6.2, in its first round of real use.** The config is Lua since 0.3.0, made of calls like `inlay.config` and `inlay.bind` since 0.6.0, with snake_case keys since 0.6.2 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Your
 config goes over the built-in config of Inlay, so it only says what is yours, and `inlay config --show` prints
 the config in use (see [Configuration](#configuration)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing
@@ -26,7 +26,7 @@ new windows (*dwindle*), without the *accordion* layout, with its own menu bar i
 | Build, install and uninstall without Xcode | Done | Clean build from scratch with the Command Line Tools; `install.sh` and `inlay uninstall` run end to end in an isolated environment (another `HOME`, another install folder) |
 | Window manager (tree, workspaces, commands, CLI) | The one of AeroSpace `74a1bf1`, under another name | Tests (simulated windows) |
 | *Dwindle*-style auto-tiling, no *accordion* layout | Done (see [Tiling](#tiling)) | Tests (simulated windows), including a pseudorandom session of 800 steps |
-| Menu bar item with eight themes, configured only in the file | Done (see [Menu bar](#menuBar)) | Tests and rendered images |
+| Menu bar item with eight themes, configured only in the file | Done (see [Menu bar](#menu_bar)) | Tests and rendered images |
 | Themes: the colors of the borders and of the menu bar, from a file | Done (see [Themes](#themes)) | Tests |
 | The config of the user over the built-in one, `workspaces`, `config --show`, types for editors | Done (see [Configuration](#configuration)) | Tests |
 | Window borders | Done, with public API (see [Window borders](#window-borders)) | Tests, rendered images and `--debug-borders` on real windows |
@@ -37,7 +37,7 @@ installed and used with the Accessibility permission in two rounds (2026-10-11).
 version that already had the stable signature, the grid at startup, the place recovery, the *glow*, the
 informational-only item and the colors per mode, no problem was noticed with the borders (no lag, no wrong
 order, no orphan borders). The changes of this revision came out of that second round, and they **have not
-yet been tried in real use**, only with tests: `splitTarget` and `minWindowSize`, dialogs without a border,
+yet been tried in real use**, only with tests: `split_target` and `min_window_size`, dialogs without a border,
 6 workspaces in the shipped config, the menu bar item without a highlight on left click, the key bindings of
 the menu as text, and the minimized window that goes back to its workspace. The same goes for the third
 revision (installing without options, `inlay.toml` as the shipped config, the question about the symbolic link,
@@ -45,16 +45,16 @@ revision (installing without options, `inlay.toml` as the shipped config, the qu
 environment and with tests, not yet in real use. And for the latest one: the binding mode in the marker of
 the focused workspace, the menu without icons, the config folder
 linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the border and the gap
-of a window alone in its workspace or in fullscreen (`borders.singleWindow`), and the themes taken from
+of a window alone in its workspace or in fullscreen (`borders.single_window`), and the themes taken from
 Hyprland setups (`dots`, `underline`, `liquid`, `hypr`): they are checked with tests and renders, including the
-frames of their animations. The same goes for the curves of the animations, `perMonitor`, undo, the export of the config, and the latest
+frames of their animations. The same goes for the curves of the animations, `per_monitor`, undo, the export of the config, and the latest
 revision, which simplified the look: no palettes (every color is set on its own), no notice after a reload
 (the menu says when the config was reloaded last), and a menu of native items. Untried in real use too: the menu as a panel with
 the layouts of the window and of its workspace. The newest: **there is no Settings window anymore**. Everything
 that can be changed without touching the code is in the config file, like the tools of a Linux desktop that are
 configured from dotfiles, and `inlay config --use`, `--unlink` and `--export` do from the CLI what the window did
 with the file. Untried in real use too: the [themes](#themes), with a theme for each appearance of macOS and
-`borders.fullscreenColor`; and the newest, the config of the user over the built-in one, `workspaces`,
+`borders.fullscreen_color`; and the newest, the config of the user over the built-in one, `workspaces`,
 `inlay config --show` and `--types`.
 
 Known limitations of this version:
@@ -108,7 +108,7 @@ the `inlay` CLI in the `bin` folder of Homebrew. Nothing is built, so the Comman
 - **The config**: without one, Inlay creates a short `~/.config/inlay/inlay.lua` when it starts: your
   config goes over the built-in one, so it only has what is yours (see [Configuration](#configuration)). To use a folder of your own instead: `inlay config --use ~/.dotfiles/inlay` (see
   [Changing the config from the CLI](#changing-the-config-from-the-cli)).
-- **Start at login**: open Inlay once (`open -a Inlay`). With `startAtLogin = true` in the config (the built-in
+- **Start at login**: open Inlay once (`open -a Inlay`). With `start_at_login = true` in the config (the built-in
   one has it) it adds itself to the login items.
 - Then allow it in the Accessibility permission (see [Before opening Inlay](#before-opening-inlay)).
 
@@ -124,7 +124,7 @@ never touches it. **From 0.2 to 0.3**: the config is Lua now, `inlay.lua`. An `i
 is replaced on its own; one of your own isn't read anymore, and Inlay says so and uses its built-in config until
 you write your `inlay.lua` (see [Configuration](#configuration)). **From 0.3 to 0.4**: the colors come from a theme, `material`
 without the key `theme`. An `inlay.lua` that you never edited is replaced on its own; in one of your own, the
-colors you set in `borders` and `menuBar` still win over the theme: drop them to use one (see [Themes](#themes)).
+colors you set in `borders` and `menu_bar` still win over the theme: drop them to use one (see [Themes](#themes)).
 **From 0.4 to 0.5**: your config goes over the built-in config of Inlay, which has the rest, so your
 `inlay.lua` only needs what is yours (see [Configuration](#configuration)). An `inlay.lua` that you never edited
 is replaced by the short one. A full config of yours keeps working: it repeats the values of Inlay (`inlay config
@@ -250,7 +250,7 @@ one next to the new one as `<file>.backup-<date>` (`inlay.lua.backup-20261012-15
   is, it is replaced by the `inlay.lua` of the repo.
 
 Any other config is **kept as it is**, and its line says whether it is the one of the repo (`up to date`) or
-`yours`. It also tells if the config leaves out the built-in config (`builtInConfig = false`) and has no `onWindowDetected` rule (in `inlay.lua` or a file next to it).
+`yours`. It also tells if the config leaves out the built-in config (`built_in_config = false`) and has no `on_window_detected` rule (in `inlay.lua` or a file next to it).
 When there is a terminal, the menu of the question has `Use the repo's inlay.lua` (yours is kept as a
 backup), and `d` shows the diff with the one of the repo, in `less`. A config in a linked folder can only be
 kept: edit it in your folder. Without a terminal it prints the two commands that matter:
@@ -317,16 +317,16 @@ both exist, it warns about the ambiguity and loads neither. The app and the CLI 
 shell: `install.sh` warns when it sees it set.)
 
 **The config is a Lua file made of calls to the functions of `inlay`**, like the Lua config of Hyprland. The
-keys are camelCase; the functions, snake_case:
+keys, the functions and the events are all snake_case (see [Config keys](#config-keys) for every key):
 
 ```lua
 inlay.config({
-  startAtLogin = true,
-  borders = { width = 2, activeColor = '#B59DF7' },
+  start_at_login = true,
+  borders = { width = 2, active_color = '#B59DF7' },
 })
 inlay.theme('nord')
 inlay.bind('cmd-alt-h', 'focus left')
-inlay.window_rule({ match = { appId = 'com.1password.1password' }, run = 'layout floating' })
+inlay.window_rule({ match = { app_id = 'com.1password.1password' }, run = 'layout floating' })
 ```
 
 | Function | What it sets |
@@ -338,7 +338,7 @@ inlay.window_rule({ match = { appId = 'com.1password.1password' }, run = 'layout
 | `inlay.unbind(keys, options?)` | Removes a key binding of the built-in config |
 | `inlay.window_rule(rule)` | A window rule, in the order of the calls; `'workspaces'` marks the place of the rules of the apps of the workspaces |
 | `inlay.on(event, commands)` | `start`, `focus_changed`, `monitor_changed`, `mode_changed`; `workspace_changed` takes a program and its arguments |
-| `inlay.env(name, value)` | A variable of the programs that Inlay starts (`exec.envVars`) |
+| `inlay.env(name, value)` | A variable of the programs that Inlay starts (`exec.env_vars`) |
 | `inlay.curve(name, points)` | A curve of your own for the animations: `{ x1, y1, x2, y2 }` |
 | `inlay.animation(animation)` | An animation: `{ leaf = 'open', curve = 'quint', duration = 200 }`; `leaf = 'global'` for the keys of `animations` |
 | `inlay.dsp.<command>(…)` | A command as a function, which gives its string: `inlay.dsp.focus('left')` is `'focus left'`, `inlay.dsp.exec('open -a Terminal')` is `'exec-and-forget open -a Terminal'` |
@@ -363,8 +363,9 @@ line (`binds.lua:12: attempt to index a nil value`, `binds.lua:3: inlay.bind: th
 list of them`).
 
 Inlay 0.2 read a TOML config, `inlay.toml`, with kebab-case keys. Inlay 0.3 doesn't read it: the error says
-so, and a key with dashes gets its camelCase name (`corner-radius` is `cornerRadius`, `[[on-window-detected]]`
-is `onWindowDetected`, and the `if` of a rule is `match`).
+so. From 0.3.0 to 0.6.1 the keys were camelCase; **since 0.6.2 they are snake_case**, and an unknown key in
+camelCase or with dashes gets its new name in the error (`cornerRadius` and `corner-radius` are `corner_radius`,
+`onWindowDetected` and `[[on-window-detected]]` are `on_window_detected`, and the `if` of a rule is `match`).
 
 **Your config only says what is yours.** It goes over the **built-in config** of Inlay,
 [`builtin-config.lua`](./builtin-config.lua), which travels inside the app (`Inlay.app/Contents/Resources`) and
@@ -381,14 +382,14 @@ How your config goes over the built-in one:
 
 | What you write | What happens | Example |
 |---|---|---|
-| A table | Merged key by key, also the tables in it: the keys you don't write keep the values of Inlay | `inlay.config({ menuBar = { perMonitor = true } })` |
+| A table | Merged key by key, also the tables in it: the keys you don't write keep the values of Inlay | `inlay.config({ menu_bar = { per_monitor = true } })` |
 | A value | Replaces the one of Inlay | `inlay.config({ gaps = { inner = { horizontal = 12 } } })` |
-| A list (`persistentWorkspaces`, `afterStartupCommand`…) | Replaces the one of Inlay, whole | `inlay.on('start', 'workspace 1')` |
+| A list (`persistent_workspaces`, `after_startup_command`…) | Replaces the one of Inlay, whole | `inlay.on('start', 'workspace 1')` |
 | Your workspaces | Replace the ones of Inlay, all of them | `inlay.workspace({ id = '1', key = 'h' })` |
 | `theme` | Replaces the one of Inlay, whatever it is | `inlay.theme('nord')` |
 | A key binding | Added, or replaces the one of Inlay with the same keys; `inlay.unbind` removes it | `inlay.unbind('cmd-alt-shift-b')` |
-| A window rule | Goes **before** the rules of Inlay: the first rule that matches is the one that runs | `inlay.window_rule({ match = { appId = '…' }, run = 'layout floating' })` |
-| `builtInConfig = false` | Your config alone, over the defaults of the code: no workspaces, key bindings or rules of Inlay | `inlay.config({ builtInConfig = false })` |
+| A window rule | Goes **before** the rules of Inlay: the first rule that matches is the one that runs | `inlay.window_rule({ match = { app_id = '…' }, run = 'layout floating' })` |
+| `built_in_config = false` | Your config alone, over the defaults of the code: no workspaces, key bindings or rules of Inlay | `inlay.config({ built_in_config = false })` |
 
 The errors still point at your keys (`borders.width: width must be in [1, 20] range`).
 
@@ -412,13 +413,13 @@ inlay.workspace({ id = '7', name = 'Free',      key = 'o' })
 
 From the list, Inlay makes the persistent workspaces (the ones the menu bar item always shows), the monitor of
 each one (`'main'` without one), two key bindings for each workspace with a `key` (`cmd-alt-ctrl-<key>` goes to
-it, `cmd-alt-shift-<key>` moves the focused window there; `workspaceKeys = { focus = …, move = … }` changes the
-modifiers, `false` drops them: `inlay.config({ workspaceKeys = { … } })`) and a window rule for each app, which tiles its windows and sends them to the
+it, `cmd-alt-shift-<key>` moves the focused window there; `workspace_keys = { focus = …, move = … }` changes the
+modifiers, `false` drops them: `inlay.config({ workspace_keys = { … } })`) and a window rule for each app, which tiles its windows and sends them to the
 workspace. The `name` shows in the menu of the menu bar item (*Workspace 2 · Code · Zed*). A key binding of
 yours with the same keys wins. The bundle id of an app: `inlay list-apps`.
 
 **The window rules** are checked from top to bottom, and **the first one that matches a window is the only one
-that runs for it** (a rule with `checkFurtherCallbacks = true` lets the next ones run too). In the config in use
+that runs for it** (a rule with `check_further_callbacks = true` lets the next ones run too). In the config in use
 they come in this order:
 
 1. your rules;
@@ -457,7 +458,7 @@ values. Copy a line to your config to change it:
 
 ```sh
 inlay config --show                  # everything
-inlay config --show menuBar          # one table, or one key: --show borders.width
+inlay config --show menu_bar          # one table, or one key: --show borders.width
 inlay config --show bind             # the key bindings; also window_rule, workspace, mode.service
 inlay config --show --mine           # only your calls, by file, and the ones that repeat Inlay without effect
 inlay config --show --keys           # every key, one per line: inlay config --show --keys | grep glow
@@ -468,11 +469,11 @@ inlay config --file builtin-config   # one of them: builtin-config, themes/nord,
 
 ```lua
 inlay.config({
-  menuBar = {
+  menu_bar = {
     enabled = true,                -- Inlay · true|false
     theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots|underline|liquid|dms
-    perMonitor = true,             -- yours (inlay.lua:3) · true|false
-    systemColors = true,           -- theme · true|false
+    per_monitor = true,             -- yours (inlay.lua:3) · true|false
+    system_colors = true,           -- theme · true|false
     colors = {
       focused = '#D8A657',         -- theme
       occupied = 'auto',           -- default
@@ -503,7 +504,7 @@ its possible values and its default. The `inlay` CLI prints it, without needing 
 ```sh
 inlay config --explain                 # the whole reference
 inlay config --explain borders.width   # one key
-inlay config --explain tiling          # one table (menuBar also prints menuBar.colors)
+inlay config --explain tiling          # one table (menu_bar also prints menu_bar.colors)
 inlay config --explain gaps.inner      # a group of keys
 inlay config --explain bind            # a function of inlay
 inlay config --explain inlay           # how a config is made, and every function
@@ -528,12 +529,12 @@ reference when the app is built, so an update of Inlay updates them: nothing to 
 Of the keys that came from AeroSpace, the ones that were only there to read its configs are gone and are
 unknown keys now: `configVersion`, `afterLoginCommand`, `accordionPadding`,
 `nonEmptyWorkspacesRootContainersLayoutOnStartup`, `indentForNestedContainersWithTheSameOrientation` and
-`match.duringAerospaceStartup` (`duringInlayStartup` stays). The variables `AEROSPACE_*` that your scripts get
+`match.duringAerospaceStartup` (`during_inlay_startup` stays). The variables `AEROSPACE_*` that your scripts get
 stay.
 
 A test fails if the config parser accepts a key that the reference does not document, or the other way round.
 
-**Inlay follows the files.** With `autoReloadConfig = true` (it is set in the built-in config; the
+**Inlay follows the files.** With `auto_reload_config = true` (it is set in the built-in config; the
 default of the key is `false`), Inlay reloads the config when `inlay.lua`, one of the files it requires or one
 of your themes is saved, and the menu bar item and the borders show the new values right away. Creating a file that `require`
 didn't find reloads it too. It works when `~/.config/inlay` is a symbolic link to a folder of yours, when a
@@ -544,11 +545,159 @@ picked up as usual.
 Without that key, reload by hand: `inlay reload-config` or *Reload Config* in the menu.
 
 ```lua
-inlay.config({ autoReloadConfig = true }) -- the built-in one. With false: reload with 'inlay reload-config' or from the menu
+inlay.config({ auto_reload_config = true }) -- the built-in one. With false: reload with 'inlay reload-config' or from the menu
 ```
 
 Nothing shows up on the screen after a reload: the menu says when the config was reloaded last. A
 `notifications` or `settings` table of a previous version is accepted with a warning and ignored.
+
+#### Config keys
+
+Every key that `inlay.config({ … })` takes, by table. All of them are **snake_case**. The *Default* column is
+the value in use with the built-in config of Inlay and its `material` theme (what you get without writing the
+key); `inlay config --show <key>` prints the value in use and where it comes from, and
+`inlay config --explain <key>` the whole documentation of a key, with its fallback value in the code.
+
+```lua
+-- Any key, alone or with others: the tables are merged key by key with the ones of Inlay
+inlay.config({
+  start_at_login = true,
+  menu_bar = { theme = 'dms', per_monitor = true },
+  borders  = { width = 3, single_window = { gap = 4 } },
+})
+```
+
+**General**
+
+| Key | Default | What it does |
+|---|---|---|
+| `start_at_login` | `true` | Adds Inlay to the login items of macOS (or removes it) every time the config loads |
+| `auto_reload_config` | `true` | Reloads the config when one of its files is saved |
+| `built_in_config` | `true` | `false`: your config alone, over the defaults of the code (no workspaces, bindings or rules of Inlay) |
+| `after_startup_command` | `{}` | Commands that run after Inlay starts. Also `inlay.on('start', …)` |
+| `automatically_unhide_macos_hidden_apps` | `false` | Shows again the apps hidden with `cmd-h` |
+| `enable_normalization_flatten_containers` | `true` | A container with a single child is flattened |
+| `enable_normalization_opposite_orientation_for_nested_containers` | `true` | A container nested in another one takes the opposite orientation |
+| `default_root_container_layout` | `'tiles'` | The layout of the root container of a new workspace |
+| `default_root_container_orientation` | `'horizontal'` | `horizontal` · `vertical` · `auto` (by the shape of the monitor) |
+| `theme` | `'material'` | The look of the borders and of the menu bar: a name, a table, or `{ dark = …, light = … }`. Also `inlay.theme(…)`. See [Themes](#themes) |
+
+**Callbacks** (also `inlay.on(event, …)`)
+
+| Key | Default | What it does |
+|---|---|---|
+| `on_focus_changed` | `'move-mouse window-lazy-center'` | Commands that run when the focused window changes (`inlay.on('focus_changed', …)`) |
+| `on_focused_monitor_changed` | `'move-mouse monitor-lazy-center'` | Commands that run when the focused monitor changes (`inlay.on('monitor_changed', …)`) |
+| `on_mode_changed` | `{}` | Commands that run when the binding mode changes (`inlay.on('mode_changed', …)`) |
+| `exec_on_workspace_change` | `{}` | A program and its arguments, run when the focused workspace changes (`inlay.on('workspace_changed', …)`). It gets `INLAY_FOCUSED_WORKSPACE` and `INLAY_PREV_WORKSPACE` |
+
+**Workspaces & monitors**
+
+| Key | Default | What it does |
+|---|---|---|
+| `workspaces` | 7 workspaces, `1`–`7` on `h j k l u i o` | Your workspaces: `{ id, name, key, monitor, apps }` each. Better with `inlay.workspace(…)`. Yours replace the ones of Inlay |
+| `workspace_keys.focus` | `'cmd-alt-ctrl'` | Modifiers of the binding that goes to a workspace (`<focus>-<key>`). `false`: no such bindings |
+| `workspace_keys.move` | `'cmd-alt-shift'` | Modifiers of the binding that moves the focused window there. `false`: no such bindings |
+| `persistent_workspaces` | made from `workspaces` | Workspaces that stay alive without windows: the ones the menu bar item always shows |
+| `workspace_to_monitor_force_assignment` | made from `workspaces` | Workspace = a monitor pattern (`'main'`, `'secondary'`, a number, a regex of its name) or a list of them |
+
+**Layout: `gaps`** (in points)
+
+| Key | Default | What it does |
+|---|---|---|
+| `gaps.inner.horizontal` | `8` | Between two windows side by side |
+| `gaps.inner.vertical` | `8` | Between two windows one above the other |
+| `gaps.outer.left` · `.right` · `.top` · `.bottom` | `8` | Between the windows and the edges of the monitor. A value can be per monitor: `{ { monitor = { main = 16 } }, 24 }` |
+
+**Layout: `tiling`**
+
+| Key | Default | What it does |
+|---|---|---|
+| `tiling.new_window_placement` | `'dwindle'` | `dwindle`: the new window splits the focused one · `after-focused`: after it, like i3 |
+| `tiling.split_target` | `'focused'` | The window a new one splits: `focused` · `cursor` (the one under the mouse) |
+| `tiling.split_ratio` | `0.5` | What the split window keeps: `0.1` … `0.9` |
+| `tiling.startup_layout` | `'dwindle'` | How the windows open at startup are arranged: `grid` · `row` · `dwindle` |
+| `tiling.min_window_size` | `100` | The smallest size, in points, that resizing leaves to a window: `20` … `500` |
+| `focus_follows_mouse.enabled` | `false` | The window under the mouse cursor gets the focus |
+
+**Animations: `animations`** (also `inlay.animation({ leaf = …, … })`)
+
+| Key | Default | What it does |
+|---|---|---|
+| `animations.enabled` | `true` | Animates the tiling windows: open, close, `swap`/`move`, `fullscreen`, switching workspaces |
+| `animations.duration` | `160` | Milliseconds: `0` … `500` |
+| `animations.curve` | `'quint'` | `quint` · `expo` · `quick` · `ease-out` · `linear` · `ease` · `ease-in-out` · `snappy` · `overshot`, or one of `animations.curves` |
+| `animations.workspace_switch` | `'horizontal'` | How switching workspaces slides the windows: `horizontal` · `vertical` · `auto` · `off` |
+| `animations.open` | `{ curve = 'quint', duration = 200 }` | A new window |
+| `animations.move` | `{ curve = 'quint', duration = 160 }` | The windows that make room, take the space of one that closed, or move with `swap`/`move` |
+| `animations.fullscreen` | `{ curve = 'expo', duration = 220 }` | The `fullscreen` command, in and out |
+| `animations.workspace` | `{ curve = 'expo', duration = 140 }` | The windows that slide when switching workspaces |
+| `animations.curves` | `{}` | Curves of your own: name = `{ x1, y1, x2, y2 }`. Also `inlay.curve(…)` |
+
+**Menu bar: `menu_bar`**
+
+| Key | Default | What it does |
+|---|---|---|
+| `menu_bar.enabled` | `true` | Shows the menu bar item |
+| `menu_bar.theme` | `'hypr'` | `pills` · `chips` · `hypr` · `minimal` · `dots` · `underline` · `liquid` · `dms`. See [Menu bar](#menu-bar) |
+| `menu_bar.dim_empty_workspaces` | `true` | The workspaces without windows are fainter |
+| `menu_bar.show_mode` | `true` | The initial of the binding mode on the focused workspace, outside of `main` |
+| `menu_bar.per_monitor` | `false` | Groups the workspaces by monitor, and marks the one another monitor shows |
+| `menu_bar.system_colors` | `true` (theme) | Draws the item like the other icons of the menu bar, whatever `menu_bar.colors` says |
+| `menu_bar.colors.focused` | `'auto'` | The background of the focused workspace. `'#RRGGBB[AA]'` · `'system-accent'` · `'auto'` |
+| `menu_bar.colors.occupied` | `'auto'` | The workspaces with windows |
+| `menu_bar.colors.empty` | `'auto'` | The workspaces without windows |
+| `menu_bar.colors.accent` | `'auto'` | The focus marker while it shows the binding mode (`auto`: the one of `focused`) |
+
+**Borders: `borders`** (the colors and the glow come from the theme)
+
+| Key | Default | What it does |
+|---|---|---|
+| `borders.enabled` | `true` | A border around every normal window of the visible workspaces |
+| `borders.width` | `2` | Points: `1` … `20`. Drawn outside of the window, in the gap |
+| `borders.corner_radius` | `16` | Points: `0` … `40`. 16 is close to macOS 26, 10 to macOS 14 and 15 |
+| `borders.square_corners` | `false` | Fills the rounded corners of the windows, so that they look square |
+| `borders.active_color` | theme | The focused tiling window. `'#RRGGBB[AA]'` · `'system-accent'`; `'#00000000'` is no border |
+| `borders.inactive_color` | theme | The windows that aren't focused |
+| `borders.floating_color` | theme | The focused floating window |
+| `borders.fullscreen_color` | the color it has without fullscreen | The focused window in fullscreen |
+| `borders.mode_colors` | theme | The focused window in a binding mode: mode name = color |
+| `borders.glow` | theme | A halo of the color of the border around the focused window |
+| `borders.glow_radius` | theme | Points: `1` … `40` |
+| `borders.single_window.enabled` | `true` | A window alone in its workspace (or in fullscreen) gets a border and a gap of its own; `false`: it fills the screen |
+| `borders.single_window.width` | `2` | Points: `1` … `20` |
+| `borders.single_window.gap` | `2` | Points: `0` … `40`, never less than `width` |
+| `borders.single_window.fullscreen_width` | the one of `width` | The border of the window in fullscreen: `1` … `20` |
+
+**Programs: `exec`**
+
+| Key | Default | What it does |
+|---|---|---|
+| `exec.inherit_env_vars` | `true` | The programs that Inlay starts inherit its environment |
+| `exec.env_vars` | `PATH` with Homebrew | Variables set or replaced; `${NAME}` is the value of the variable. Also `inlay.env(name, value)` |
+
+**Key bindings**
+
+| Key | Default | What it does |
+|---|---|---|
+| `key_mapping.preset` | `'qwerty'` | The layout the names of the keys refer to: `qwerty` · `dvorak` · `colemak` |
+| `key_mapping.key_notation_to_key_code` | `{}` | Names of your own for keys: `{ unicorn = 'q' }` |
+| `mode.<name>.binding` | the bindings of Inlay | Keys = commands per binding mode. Better with `inlay.bind(keys, commands, { mode = … })` |
+
+**Window rules: `on_window_detected`** (better with `inlay.window_rule(…)`)
+
+| Key | What it does |
+|---|---|
+| `match.app_id` | The bundle id of the app (`inlay list-apps`) |
+| `match.app_name_regex_substring` | A regex (case insensitive) in the name of the app |
+| `match.window_title_regex_substring` | A regex (case insensitive) in the title of the window |
+| `match.workspace` | The workspace where the window is detected |
+| `match.during_inlay_startup` | `true`: only the windows open when Inlay starts; `false`: only the later ones |
+| `match` (a string) | A command instead of conditions: the rule matches when it succeeds (`'test %{window-layout} ~= _tiles'`) |
+| `check_further_callbacks` | `true`: the rules that follow are checked too (default `false`: the first match wins) |
+| `run` | The commands for the window: a command or a list of them |
+
+`inlay run-callback on_window_detected --for-every-window` runs the rules again for every open window.
 
 #### Changing the config from the CLI
 
@@ -612,7 +761,7 @@ gaps = {
 The window borders are drawn in the gaps: see [Window borders](#window-borders) for how the two fit together.
 
 **A window alone in its workspace** doesn't take the outer gaps: it has a gap and a border of its own,
-`borders.singleWindow` (see [Window borders](#window-borders)). By default a thin border of 1 point and a gap of
+`borders.single_window` (see [Window borders](#window-borders)). By default a thin border of 1 point and a gap of
 2 points, from the edges of the visible part of the screen; with `enabled = false`, the window fills the screen
 without a border. The outer gaps and the border of `borders` come back as soon as a second tiling window joins
 it, sliding like any other change of the layout. `fullscreen` looks the same. Floating windows don't count.
@@ -624,30 +773,30 @@ A new window **splits the focused window in two**, like the *dwindle* layout of 
 wider than it is tall they end up side by side; otherwise, stacked. The new one goes to the right or below.
 When a window is closed, its neighbor gets the space back.
 
-![Illustration, animated: with newWindowPlacement = 'dwindle', five windows open one after another. The first one takes the whole workspace; the second one splits it side by side; the third one splits the second one, which is taller than wide, in two stacked halves; the fourth and the fifth keep splitting the focused window, in a spiral. Then they are closed one by one and every time the neighbor gets the space back](docs/images/tiling-dwindle.gif)
+![Illustration, animated: with new_window_placement = 'dwindle', five windows open one after another. The first one takes the whole workspace; the second one splits it side by side; the third one splits the second one, which is taller than wide, in two stacked halves; the fourth and the fifth keep splitting the focused window, in a spiral. Then they are closed one by one and every time the neighbor gets the space back](docs/images/tiling-dwindle.gif)
 
 ```lua
 tiling = {
-  newWindowPlacement = 'dwindle', -- or 'after-focused': the behavior of AeroSpace
-  splitRatio = 0.5, -- 0.1 – 0.9: fraction kept by the window that is split
-  splitTarget = 'focused', -- or 'cursor': the new one splits the window under the cursor
-  startupLayout = 'grid', -- 'grid' | 'row' | 'dwindle': the windows that were already open
-  minWindowSize = 100, -- 20 – 500 pt: how far `resize` and the mouse can shrink
+  new_window_placement = 'dwindle', -- or 'after-focused': the behavior of AeroSpace
+  split_ratio = 0.5, -- 0.1 – 0.9: fraction kept by the window that is split
+  split_target = 'focused', -- or 'cursor': the new one splits the window under the cursor
+  startup_layout = 'grid', -- 'grid' | 'row' | 'dwindle': the windows that were already open
+  min_window_size = 100, -- 20 – 500 pt: how far `resize` and the mouse can shrink
 },
 ```
 
-**How much each one gets** (`splitRatio`, only with `dwindle`): the fraction of its space that the window that
+**How much each one gets** (`split_ratio`, only with `dwindle`): the fraction of its space that the window that
 is split keeps, from 0.1 to 0.9. With 0.5, two halves; with 0.6, it keeps 60% and the new window gets 40%.
 
 ```lua
 tiling = {
-  splitRatio = 0.5,
+  split_ratio = 0.5,
 },
 ```
 
-![Illustration, animated: three screens side by side with splitRatio = 0.3, 0.5 and 0.7. A second window opens in each one: the first window keeps 30%, 50% and 70% of the width, and the new window gets the rest](docs/images/tiling-split-ratio.gif)
+![Illustration, animated: three screens side by side with split_ratio = 0.3, 0.5 and 0.7. A second window opens in each one: the first window keeps 30%, 50% and 70% of the width, and the new window gets the rest](docs/images/tiling-split-ratio.gif)
 
-**Which window is split** (`splitTarget`, only with `dwindle`): with `'focused'` (the default), the focused
+**Which window is split** (`split_target`, only with `dwindle`): with `'focused'` (the default), the focused
 one; if the focused one is not tiled in that workspace, the most recent tiled one. With `'cursor'`, the tiled
 window under the mouse cursor, as in Hyprland; if there is none (the cursor is in a gap, on another monitor or
 over a fullscreen window, or the target workspace is not visible), `'focused'` applies. Floating windows do
@@ -655,13 +804,13 @@ not count: under a floating one, the tiled window behind it is considered.
 
 ```lua
 tiling = {
-  splitTarget = 'focused', -- or 'cursor'
+  split_target = 'focused', -- or 'cursor'
 },
 ```
 
-![Illustration, animated: two screens with the same three windows, the focus on window 1 and the mouse cursor over window 3. A fourth window opens. With splitTarget = 'focused' it splits window 1 and appears below it; with splitTarget = 'cursor' it splits window 3 and appears to its right](docs/images/tiling-split-target.gif)
+![Illustration, animated: two screens with the same three windows, the focus on window 1 and the mouse cursor over window 3. A fourth window opens. With split_target = 'focused' it splits window 1 and appears below it; with split_target = 'cursor' it splits window 3 and appears to its right](docs/images/tiling-split-target.gif)
 
-**Minimum size** (`minWindowSize`, 100 pt by default): the `resize` command and dragging an edge with the
+**Minimum size** (`min_window_size`, 100 pt by default): the `resize` command and dragging an edge with the
 mouse stop shrinking a window when it reaches that width or height, and they do not shrink the neighbors below
 it either when the other one is the one growing (the neighbors that still have room give up the rest). With
 the mouse, the edge that was dragged beyond it goes back to the limit on release. Reaching the limit is not an
@@ -673,38 +822,38 @@ and `resize` simply does not shrink them any further. `resize` always works in s
 
 ```lua
 tiling = {
-  minWindowSize = 100, -- 20 ... 500 points
+  min_window_size = 100, -- 20 ... 500 points
 },
 ```
 
-![Illustration, animated: two windows side by side. 'resize width -50' is run again and again on the left one, whose width goes down from 616 points in steps of 50 until it reaches a dashed line marked 'minWindowSize = 100', where it stays at 100 points however many more times the command runs](docs/images/tiling-min-window-size.gif)
+![Illustration, animated: two windows side by side. 'resize width -50' is run again and again on the left one, whose width goes down from 616 points in steps of 50 until it reaches a dashed line marked 'min_window_size = 100', where it stays at 100 points however many more times the command runs](docs/images/tiling-min-window-size.gif)
 
 The windows that **are already open when Inlay starts** (or when it is resumed with `inlay enable on`) are not
-placed one by one. First the `onWindowDetected` rules of the config run for each of them, exactly as for a
+placed one by one. First the `on_window_detected` rules of the config run for each of them, exactly as for a
 new window, so every window goes to the workspace of its rule (or becomes floating, or whatever the rule
-says). Then the windows are distributed, workspace by workspace, according to `startupLayout`. With apps in
+says). Then the windows are distributed, workspace by workspace, according to `startup_layout`. With apps in
 your `workspaces`, the terminals end up in workspace 1, the editors in 2, the browsers in 3, and so on, each
 workspace with its own grid. The workspaces are arranged
 once the rules of every window are over, also when macOS reports another event in the middle of the startup. The rules run once per window: later refreshes do not evaluate them again, so a
 window that you move somewhere else stays there. On resume, they only run for the windows that appeared
 while Inlay was paused. To run them again for all the open windows, use
-`inlay run-callback onWindowDetected --for-every-window` (`w` in the `service` mode of the built-in config).
+`inlay run-callback on_window_detected --for-every-window` (`w` in the `service` mode of the built-in config).
 
-| `startupLayout` | Result |
+| `startup_layout` | Result |
 |---|---|
 | `'grid'` (the default) | Balanced grid: `ceil(√n)` columns and as many rows as needed, all rows with the same height. The last row shares its width among the windows it has: 5 windows are 3 on top and 2 below; 3 are 2 on top and 1 below |
 | `'row'` | A single row with all the windows at the same width |
-| `'dwindle'` | No distribution: each window enters as a new window, one after another (with `newWindowPlacement = 'dwindle'`, a spiral with the last ones very small) |
+| `'dwindle'` | No distribution: each window enters as a new window, one after another (with `new_window_placement = 'dwindle'`, a spiral with the last ones very small) |
 
 ```lua
 tiling = {
-  startupLayout = 'grid', -- 'grid' | 'row' | 'dwindle'
+  startup_layout = 'grid', -- 'grid' | 'row' | 'dwindle'
 },
 ```
 
-![Illustration, animated: three screens with the same five overlapping windows, as they were before Inlay started, which are then arranged at once. With startupLayout = 'grid': three windows on top and two below. With 'row': a single row of five windows of the same width. With 'dwindle': a spiral, with the first window on the left half and the last two very small](docs/images/tiling-startup-layout.gif)
+![Illustration, animated: three screens with the same five overlapping windows, as they were before Inlay started, which are then arranged at once. With startup_layout = 'grid': three windows on top and two below. With 'row': a single row of five windows of the same width. With 'dwindle': a spiral, with the first window on the left half and the last two very small](docs/images/tiling-startup-layout.gif)
 
-It only affects that moment. The windows you open afterwards follow `newWindowPlacement`, and the grid is a
+It only affects that moment. The windows you open afterwards follow `new_window_placement`, and the grid is a
 normal tree: it can be moved, resized and rearranged with the usual commands. When resuming after a pause,
 only the workspaces in which some window appeared while Inlay was paused are rearranged; the others keep
 their arrangement.
@@ -712,8 +861,8 @@ their arrangement.
 **To arrange a workspace again** at any moment, `inlay arrange-workspace dwindle|grid|row` rebuilds its tiling
 tree out of its tiling windows, in the order they have in the tree (`--workspace <name>` for another one than
 the focused one). With `dwindle` they come back one after another and each one splits the previous one, like
-new windows: two side by side on a wide screen, then the spiral, with `splitRatio`. `grid` and `row` are the
-ones of `startupLayout`. The floating windows stay where they are. The shipped config runs
+new windows: two side by side on a wide screen, then the spiral, with `split_ratio`. `grid` and `row` are the
+ones of `startup_layout`. The floating windows stay where they are. The shipped config runs
 `arrange-workspace dwindle` with `cmd-alt-shift-d`: useful for a workspace that was left as a row, or with two
 windows one above the other.
 
@@ -748,7 +897,7 @@ with an error) and are treated as `tiles`:
 
 | In the config | In Inlay |
 |---|---|
-| `defaultRootContainerLayout = 'accordion'` | `'tiles'` is used |
+| `default_root_container_layout = 'accordion'` | `'tiles'` is used |
 | `accordionPadding = 30` | Ignored |
 | `layout accordion`, `layout h_accordion`, `layout v_accordion` | `layout tiles`, `layout h_tiles`, `layout v_tiles` |
 | `layout tiles accordion` (toggle) | `layout tiles` |
@@ -789,10 +938,10 @@ go out by one side of the screen and the ones of the workspace you go to come in
 workspace (in the order of the menu bar item) they move to the left, toward an earlier one to the right. Only
 the tiling windows slide: the floating ones appear and disappear as before.
 
-The windows never cross another screen. `workspaceSwitch` picks the direction, and each screen that switches
+The windows never cross another screen. `workspace_switch` picks the direction, and each screen that switches
 workspace applies it as far as the screens around it allow:
 
-| `workspaceSwitch` | No screen around | A screen on one side | Screens on both sides | A screen below |
+| `workspace_switch` | No screen around | A screen on one side | Screens on both sides | A screen below |
 |---|---|---|---|---|
 | `'horizontal'` (default) | Side to side | In and out by the free side | No slide | Side to side |
 | `'vertical'` | Through the bottom | Through the bottom | Through the bottom | No slide |
@@ -805,7 +954,7 @@ top of a screen can't be used. `'off'` turns the slide off and keeps the other a
 animations = {
   enabled = true,
   duration = 180, -- 0 ... 500 milliseconds. 0 = no animation
-  workspaceSwitch = 'horizontal', -- 'horizontal' | 'vertical' | 'auto' | 'off'
+  workspace_switch = 'horizontal', -- 'horizontal' | 'vertical' | 'auto' | 'off'
 },
 ```
 
@@ -838,7 +987,7 @@ A curve that overshoots also resizes the window past its tile for a moment: some
 ## Menu bar
 
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
-is configured in the `menuBar` table of the config; `inlay config --explain menuBar` documents it.
+is configured in the `menu_bar` table of the config; `inlay config --explain menu_bar` documents it.
 
 <p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: a ring around the focused workspace when it has a fullscreen window, a ring around the square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
 
@@ -846,22 +995,22 @@ is configured in the `menuBar` table of the config; `inlay config --explain menu
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
 | `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'`, `'underline'`, `'liquid'`, `'dms'` | `'liquid'` |
-| `dimEmptyWorkspaces` | `true`, `false` | `true` |
-| `showMode` | `true`, `false` | `true` |
-| `perMonitor` | `true`, `false` | `false` |
-| `systemColors` | `true`, `false` | `false` |
-| `menuBar.colors` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
+| `dim_empty_workspaces` | `true`, `false` | `true` |
+| `show_mode` | `true`, `false` | `true` |
+| `per_monitor` | `true`, `false` | `false` |
+| `system_colors` | `true`, `false` | `false` |
+| `menu_bar.colors` `accent`, `focused`, `occupied`, `empty` | color or `'auto'` | `'auto'` |
 
 **`theme`**: the shape of the item.
 
 ```lua
-menuBar = {
+menu_bar = {
   theme = 'liquid', -- 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots' | 'underline' | 'liquid' | 'dms'
 },
 ```
 
 **Pick a theme** from this gallery: each one as Inlay draws it, on a dark and on a light menu bar, with
-workspace 2 focused and 6 empty. Copy its line into `menuBar`.
+workspace 2 focused and 6 empty. Copy its line into `menu_bar`.
 
 <table>
 <tr><td valign="middle"><code>'liquid'</code><br><sub><b>the default</b>: a dot per workspace, and a drop with the name of the focused one</sub></td><td><img src="docs/images/themes/liquid.png" alt="Real render of the 'liquid' theme of the menu bar item, on a dark and on a light menu bar: the default: a dot per workspace, and a drop with the name of the focused one" width="560"></td></tr>
@@ -883,16 +1032,16 @@ them. With "Reduce motion" nothing slides.
 
 **`hypr`** is the workspace indicator of the [Monitor Workspaces](https://github.com/vadim-su/omarchy-monitor-workspaces)
 plugin of the Omarchy bar: the names in slots of the same width, and a square in place of the focused one. It
-is made for `perMonitor`: a frame goes around the name of the workspace that another monitor shows, and a bolder
+is made for `per_monitor`: a frame goes around the name of the workspace that another monitor shows, and a bolder
 line divides the monitors.
 
 **`dms`** is the workspace switcher of [Dank Material Shell](https://github.com/AvengeMedia/DankMaterialShell)
 (Quickshell, Material 3): small round workspaces on a tonal track, and the focused one a wider pill with its
 name. With `'auto'` colors it follows the menu bar like every theme; Material 3 colors suit it, and with
-`perMonitor` each monitor gets its own track instead of a line.
+`per_monitor` each monitor gets its own track instead of a line.
 
 ```lua
-menuBar = {
+menu_bar = {
   theme = 'dms',
   colors = {
     focused = '#D0BCFF', -- primary
@@ -903,48 +1052,48 @@ menuBar = {
 },
 ```
 
-**`perMonitor`** groups the workspaces by the monitor they are on, from left to right, with a line between
+**`per_monitor`** groups the workspaces by the monitor they are on, from left to right, with a line between
 the monitors, and draws a hollow marker on the workspace that another monitor shows. With a single monitor it
 changes nothing. Every theme supports it, and it is off by default.
 
 ```lua
-menuBar = {
-  perMonitor = true,
+menu_bar = {
+  per_monitor = true,
 },
 ```
 
-<p align="center"><img src="docs/images/menu-bar-per-monitor.png" alt="Real render of perMonitor in every theme, on a dark menu bar: workspaces 1 to 4 on the left monitor and 5 and 6 on the right one, which shows 5. Without perMonitor the workspaces are in one row; with it, a line divides the two monitors and a hollow marker is on workspace 5. In 'hypr' the line is bolder and the marker is a frame around the 5" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-per-monitor.png" alt="Real render of per_monitor in every theme, on a dark menu bar: workspaces 1 to 4 on the left monitor and 5 and 6 on the right one, which shows 5. Without per_monitor the workspaces are in one row; with it, a line divides the two monitors and a hollow marker is on workspace 5. In 'hypr' the line is bolder and the marker is a frame around the 5" width="880"></p>
 
-The item shows no app icons. `theme = 'chips-icons'` and the `showAppIcons` key, of a previous version, are
+The item shows no app icons. `theme = 'chips-icons'` and the `show_app_icons` key, of a previous version, are
 still accepted so that a config that has them loads: they give a warning, the theme is treated as `'chips'`
 and the key is ignored.
 
-**`systemColors`**: draws the item like the other icons of the menu bar, whatever theme is in use and
-whatever `menuBar.colors` says: in the color of the menu bar text, as an image that macOS colors itself. The
-colors of `menuBar.colors` stay in the file, and apply again with `false`.
+**`system_colors`**: draws the item like the other icons of the menu bar, whatever theme is in use and
+whatever `menu_bar.colors` says: in the color of the menu bar text, as an image that macOS colors itself. The
+colors of `menu_bar.colors` stay in the file, and apply again with `false`.
 
 ```lua
-menuBar = {
-  systemColors = true,
+menu_bar = {
+  system_colors = true,
 },
 ```
 
 **Colors**: they come from a theme (see [Themes](#themes)), and each one can be set on its own: the ones of the
-item in `menuBar.colors` (below) and the ones of the borders in `borders`. What you set wins over the theme.
+item in `menu_bar.colors` (below) and the ones of the borders in `borders`. What you set wins over the theme.
 
-**`dimEmptyWorkspaces`, `showMode`**: what the item shows besides the names. With
+**`dim_empty_workspaces`, `show_mode`**: what the item shows besides the names. With
 `enabled = false` there is no item at all, and Inlay keeps working with the key bindings and the CLI; opening
 Inlay again from Applications opens the config in an editor.
 
 ```lua
-menuBar = {
+menu_bar = {
   enabled = true,
-  dimEmptyWorkspaces = true,
-  showMode = true, -- the initial of the binding mode on the marker of the focused workspace
+  dim_empty_workspaces = true,
+  show_mode = true, -- the initial of the binding mode on the marker of the focused workspace
 },
 ```
 
-With `showMode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
+With `show_mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
 focused workspace carries the initial of the mode**, the way Aeromenu did it. In `chips` and `minimal` the
 initial takes the place of the name in the chip; in `hypr` the square grows from 8.5 to 14 pt to hold it.
 In `dots` the pill grows taller to hold it, in
@@ -953,16 +1102,16 @@ Nothing is added next to the workspaces, so the item is exactly as wide in every
 bar moves. While a window of the workspace is fullscreen, a ring goes around the marker, which stays filled,
 in every theme. The key governs every theme.
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dimEmptyWorkspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. showMode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, a ring around the chip of the R" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim_empty_workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show_mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, a ring around the chip of the R" width="880"></p>
 
-**`menuBar.colors`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
+**`menu_bar.colors`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
 the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'`, the
 item is a template image identical to the one of Aeromenu, also while it shows a binding mode; a fixed color
 does not adapt to the bar. `accent` is the color of the marker while it shows the binding mode: `'auto'` is
 the same as `focused`, and over a fixed color the initial is white, or black if the color is light.
 
 ```lua
-menuBar = {
+menu_bar = {
   colors = {
     accent = 'auto', -- the marker of the focused workspace while it shows the binding mode
     focused = 'auto', -- the background of the focused workspace
@@ -994,7 +1143,7 @@ menuBar = {
   drawn, the one in use selected (disabled without a focused window). They run the commands of the key bindings
   (`fullscreen` toggles, like `cmd-alt-shift-enter`) once the menu is closed; *Fullscreen* tiles a floating window
   first, so that it looks like with the key binding: like a window alone in its workspace
-  (`borders.singleWindow`). Then **Arrange Workspace**: *Dwindle*, *Grid* and *Row* run `arrange-workspace` on
+  (`borders.single_window`). Then **Arrange Workspace**: *Dwindle*, *Grid* and *Row* run `arrange-workspace` on
   the focused workspace. Last, a row of buttons with a tooltip each: *Reload Config* (⌘R), *Open inlay.lua…*,
   *Pause Inlay* (⌘E) and *Quit Inlay* (⌘Q). Paused, the title says so and the layouts are
   disabled; without the Accessibility permission the menu only has the button that asks for it, and *Quit*. Switching workspaces, moving a window, balancing the sizes (`cmd-alt-shift-b`) and
@@ -1018,7 +1167,7 @@ theme = 'tokyo-night',
 ```
 
 Inlay ships with eight. `material` is the theme of a config without the key: Material You, with the menu bar
-item drawn like the other icons of the menu bar (`systemColors`). The other seven are the most used themes of
+item drawn like the other icons of the menu bar (`system_colors`). The other seven are the most used themes of
 Omarchy and of Hyprland setups, from the palette of the Omarchy theme of the same name:
 
 | Theme | Active | Inactive | Floating | Fullscreen | `resize` · `service` modes |
@@ -1039,37 +1188,37 @@ dark to match the wallpaper, and `'auto'` follows it.
 **The wallpaper is not part of a theme.** Pick it in System Settings as always: Inlay never reads it nor
 changes it, so changing it, a second display or a dynamic wallpaper have nothing to do with the theme.
 
-**Keep the look in themes.** The values of the theme go under the tables `borders` and `menuBar` of the config:
+**Keep the look in themes.** The values of the theme go under the tables `borders` and `menu_bar` of the config:
 a value that the config sets replaces the one of the theme, and one that neither sets keeps its default. The
 built-in config sets none of them, so the theme is all there is; set one in the config only to override it.
 `theme = {}` is no theme at all: the defaults of every key.
 
 ```lua
 theme = 'nord',
-borders = { activeColor = '#ECEFF4' }, -- the rest of the colors, from Nord
+borders = { active_color = '#ECEFF4' }, -- the rest of the colors, from Nord
 ```
 
 **A theme of your own** is a file `themes/<name>.lua` next to `inlay.lua`, with the shape of the config and
-the look only: `borders` (`activeColor`, `inactiveColor`, `floatingColor`, `fullscreenColor`, `modeColors`,
-`glow`, `glowRadius`) and `menuBar` (`systemColors`, `colors`). It can start from another theme with `extends`, and it takes the place of a theme of Inlay
+the look only: `borders` (`active_color`, `inactive_color`, `floating_color`, `fullscreen_color`, `mode_colors`,
+`glow`, `glow_radius`) and `menu_bar` (`system_colors`, `colors`). It can start from another theme with `extends`, and it takes the place of a theme of Inlay
 with the same name. Saving it reloads the config, like any file of the config.
 
 ```lua
 -- ~/.config/inlay/themes/mio.lua
 return {
   extends = 'nord', -- optional
-  borders = { activeColor = '#E06C75', floatingColor = '#C678DD', glow = true },
-  menuBar = { colors = { focused = '#E06C75' } },
+  borders = { active_color = '#E06C75', floating_color = '#C678DD', glow = true },
+  menu_bar = { colors = { focused = '#E06C75' } },
 }
 ```
 
 ```lua
 theme = 'mio',
 -- or the same table, written in the config:
-theme = { extends = 'nord', borders = { activeColor = '#E06C75' } },
+theme = { extends = 'nord', borders = { active_color = '#E06C75' } },
 ```
 
-What a theme doesn't set keeps its default (not the one of `material`): a theme with only `activeColor` leaves
+What a theme doesn't set keeps its default (not the one of `material`): a theme with only `active_color` leaves
 the inactive borders gray. A key that isn't one of those is an error, and the rest of the theme still applies.
 
 **A theme for each appearance** of macOS: Inlay switches between them when macOS goes light or dark, without
@@ -1089,38 +1238,38 @@ Inlay draws a colored border around each managed window (tiled or floating) of t
 color comes from the state the manager already knows, with no focus heuristics. It is configured in the
 `borders` table (`inlay config --explain borders` documents it).
 
-<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (activeColor) and the others with a gray one (inactiveColor); a focused floating window with a purple border (floatingColor); the focused window with a green border in the resize mode, from borders.modeColors; only the focused window with a border, with inactiveColor = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
+<p align="center"><img src="docs/images/borders-states.png" alt="Real render of the window borders in six cases, around the windows of a sample desktop. The focused window with an orange border (active_color) and the others with a gray one (inactive_color); a focused floating window with a purple border (floating_color); the focused window with a green border in the resize mode, from borders.mode_colors; only the focused window with a border, with inactive_color = '#00000000'; a focused dialog without a border, and no window with the active color; and a fullscreen window with its border, drawn just inside of the screen" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
 | `width` | 1 … 20 (points) | `4` |
-| `cornerRadius` | 0 … 40 (points) | `16` |
-| `squareCorners` | `true`, `false` | `true` |
-| `activeColor` | color | `'system-accent'` |
-| `inactiveColor` | color | `'#8E8E9373'` |
-| `floatingColor` | color | `'#BF5AF2'` |
-| `fullscreenColor` | color | the color without fullscreen |
+| `corner_radius` | 0 … 40 (points) | `16` |
+| `square_corners` | `true`, `false` | `true` |
+| `active_color` | color | `'system-accent'` |
+| `inactive_color` | color | `'#8E8E9373'` |
+| `floating_color` | color | `'#BF5AF2'` |
+| `fullscreen_color` | color | the color without fullscreen |
 | `glow` | `true`, `false` | `false` |
-| `glowRadius` | 1 … 40 (points) | `12` |
-| `borders.singleWindow` `enabled` | `true`, `false` | `true` |
-| `borders.singleWindow` `width` | 1 … 20 (points) | `1` |
-| `borders.singleWindow` `gap` | 0 … 40 (points), never less than its `width` | `4` |
-| `borders.singleWindow` `fullscreenWidth` | 1 … 20 (points): the border of the window in fullscreen | its `width` |
-| `borders.modeColors` `<mode>` | color | empty table |
+| `glow_radius` | 1 … 40 (points) | `12` |
+| `borders.single_window` `enabled` | `true`, `false` | `true` |
+| `borders.single_window` `width` | 1 … 20 (points) | `1` |
+| `borders.single_window` `gap` | 0 … 40 (points), never less than its `width` | `4` |
+| `borders.single_window` `fullscreen_width` | 1 … 20 (points): the border of the window in fullscreen | its `width` |
+| `borders.mode_colors` `<mode>` | color | empty table |
 
 **The colors.** The image above shows them all.
 
 ```lua
 borders = {
   enabled = true,
-  activeColor = 'system-accent', -- the focused window, if it is tiled
-  inactiveColor = '#8E8E9373', -- the windows that are not focused. '#00000000': no border
-  floatingColor = '#BF5AF2', -- the focused window, if it is floating
-  fullscreenColor = '#FF9E64', -- the focused window in fullscreen. Without it: the color it would have
+  active_color = 'system-accent', -- the focused window, if it is tiled
+  inactive_color = '#8E8E9373', -- the windows that are not focused. '#00000000': no border
+  floating_color = '#BF5AF2', -- the focused window, if it is floating
+  fullscreen_color = '#FF9E64', -- the focused window in fullscreen. Without it: the color it would have
 
   -- the focused window while a binding mode is active
-  modeColors = {
+  mode_colors = {
     resize = '#30D158',
   },
 },
@@ -1136,17 +1285,17 @@ borders = {
 
 <p align="center"><img src="docs/images/borders-width.png" alt="Real render, detail of the gap between two windows with width = 2, width = 4 (the default) and width = 8: the border of the focused window, orange, and the one of its neighbor, gray, get thicker and take more of the gap" width="880"></p>
 
-**`cornerRadius`**: tuned by eye, because macOS does not let Inlay read the radius of the windows of other apps.
+**`corner_radius`**: tuned by eye, because macOS does not let Inlay read the radius of the windows of other apps.
 
 ```lua
 borders = {
-  cornerRadius = 16, -- 0 ... 40 points. The radius of the corners of the windows
+  corner_radius = 16, -- 0 ... 40 points. The radius of the corners of the windows
 },
 ```
 
-<p align="center"><img src="docs/images/borders-corner-radius.png" alt="Real render, detail of the corner of two neighboring windows with cornerRadius = 0 (square corners), 8, 16 (the default) and 24" width="880"></p>
+<p align="center"><img src="docs/images/borders-corner-radius.png" alt="Real render, detail of the corner of two neighboring windows with corner_radius = 0 (square corners), 8, 16 (the default) and 24" width="880"></p>
 
-**`squareCorners`**: the windows of macOS have rounded corners, and Inlay can't change them (that would need
+**`square_corners`**: the windows of macOS have rounded corners, and Inlay can't change them (that would need
 System Integrity Protection disabled). What it can do is fill them: the outer edge of the border is square, and
 its inner edge follows the corners of the window, so the corners that the window leaves empty take the color of
 the border and the window looks square. It applies to every window with a border: focused, not focused and
@@ -1154,44 +1303,44 @@ floating.
 
 ```lua
 borders = {
-  squareCorners = true, -- false: the border follows the rounded corners of the windows
-  cornerRadius = 16, -- the radius of the windows, or a bit more
+  square_corners = true, -- false: the border follows the rounded corners of the windows
+  corner_radius = 16, -- the radius of the windows, or a bit more
 },
 ```
 
-Keep `cornerRadius` at the radius of the windows or a bit above it: with less, a bit of what is behind the
-window shows in its corners. A border with a translucent color, like the default `inactiveColor`, fills the
+Keep `corner_radius` at the radius of the windows or a bit above it: with less, a bit of what is behind the
+window shows in its corners. A border with a translucent color, like the default `inactive_color`, fills the
 corners with that same translucent color, and a window without a border keeps its round corners. The shadow of
 the window, which macOS draws, stays round.
 
-**`glow` and `glowRadius`**: a halo around the focused window.
+**`glow` and `glow_radius`**: a halo around the focused window.
 
 ```lua
 borders = {
   glow = true,
-  glowRadius = 12, -- 1 ... 40 points
+  glow_radius = 12, -- 1 ... 40 points
 },
 ```
 
-<p align="center"><img src="docs/images/borders-glow.png" alt="Real render, detail of the border of the focused window with glow = false, and with glow = true and glowRadius = 6, 12 (the default) and 24: an orange halo outside of the border that reaches farther as the radius grows, over the gap and the edge of the neighboring window" width="880"></p>
+<p align="center"><img src="docs/images/borders-glow.png" alt="Real render, detail of the border of the focused window with glow = false, and with glow = true and glow_radius = 6, 12 (the default) and 24: an orange halo outside of the border that reaches farther as the radius grows, over the gap and the edge of the neighboring window" width="880"></p>
 
-**`borders.singleWindow`**: the tiling window alone in its workspace, and the window in fullscreen (the
+**`borders.single_window`**: the tiling window alone in its workspace, and the window in fullscreen (the
 `fullscreen` command, also with other windows behind it), look the same: a border of their own, in the colors of
 the other borders (active, inactive, floating, the binding mode), and a gap around the window, from the edges of
 the visible part of the screen. The gap is never narrower than the border, so that the edge of the screen doesn't
-cut it. `fullscreenWidth` gives the window in fullscreen a border of its own (without it, `width`), and its gap
+cut it. `fullscreen_width` gives the window in fullscreen a border of its own (without it, `width`), and its gap
 grows with it. With `enabled = false` they fill the screen, without a border. Floating windows don't count and keep their
 border; a floating window made fullscreen looks like the others. `fullscreen --no-outer-gaps` fills the screen
-without a border. (`hideWhenSingle`, of a previous version, is accepted
+without a border. (`hide_when_single`, of a previous version, is accepted
 with a warning and ignored.)
 
 ```lua
 borders = {
-  singleWindow = {
+  single_window = {
     enabled = true,
     width = 1, -- 1 ... 20 points
     gap = 2, -- 0 ... 40 points, never less than 'width'
-    fullscreenWidth = 4, -- 1 ... 20 points: the border in fullscreen. Without it, 'width'
+    fullscreen_width = 4, -- 1 ... 20 points: the border in fullscreen. Without it, 'width'
   },
 },
 ```
@@ -1214,10 +1363,10 @@ borders = {
 The details:
 
 - **Color of the focused window**: the one of the active binding mode if it has an entry in
-  `borders.modeColors`; otherwise, `fullscreenColor` if it is in fullscreen and the key is set; otherwise,
-  `floatingColor` if it is floating; otherwise, `activeColor`. The other windows use `inactiveColor`.
+  `borders.mode_colors`; otherwise, `fullscreen_color` if it is in fullscreen and the key is set; otherwise,
+  `floating_color` if it is floating; otherwise, `active_color`. The other windows use `inactive_color`.
 - A **fully transparent** color (`'#00000000'`) means "no border": with
-  `inactiveColor = '#00000000'` only the active window has a border.
+  `inactive_color = '#00000000'` only the active window has a border.
 - A **fullscreen** window (the `fullscreen` command) keeps its border. Where the outer gaps leave no room for
   it, as with `fullscreen --no-outer-gaps`, it is drawn just inside of the screen.
 - **No border**: windows in the native fullscreen of macOS, the tiled windows that a fullscreen window covers,
@@ -1226,7 +1375,7 @@ The details:
 - **Dialogs and sheets, no border**: only normal windows, tiled or floating, have a border. What Inlay
   detects as a dialog (the same AeroSpace heuristics that decide which window becomes floating on its own:
   open and save panels, sheets, windows without a fullscreen button…) has no border. A normal window that you
-  make floating (`layout floating`, or an `onWindowDetected` rule) does have one. If you turn a dialog into
+  make floating (`layout floating`, or an `on_window_detected` rule) does have one. If you turn a dialog into
   a tiled window it has a border while it is tiled. With a dialog focused, no window has the color of the
   active one.
 - The border goes **outside** the window frame, in the gap between windows: it does not cover content and does
@@ -1234,16 +1383,16 @@ The details:
   neighboring windows touch or overlap. The shipped config has gaps of 8 and the default border of 4, so
   neighboring borders touch: lower `width` to 2 or 3, or raise the gaps, to leave air between them.
 - **Glow** (`glow = true`): a glow in the color of the border around the **focused** window (with whatever
-  color applies to it: active, floating or mode), which fades outwards over about `glowRadius` points.
+  color applies to it: active, floating or mode), which fades outwards over about `glow_radius` points.
   Unfocused windows never have it. It is exterior: it is not drawn under the border or over the window, but it
   is drawn over whatever is around it (the gap and, if it is wider than the gap, the edge of the neighboring
   windows). It does not receive clicks. It is a small image that Core Animation stretches, so moving or resizing
   redraws nothing.
 - The corner radius is fixed: macOS does not let you read the one of other apps' windows. Adjust it by eye.
 - The borders disappear when Inlay is paused (`inlay enable off`), on quit and with `enabled = false`.
-- **Colors per mode**: `borders.modeColors` has a color for each binding mode of your config
+- **Colors per mode**: `borders.mode_colors` has a color for each binding mode of your config
   (`mode.<name>.binding`); a mode without one uses the active color. The `main` mode needs none: it is the mode
-  that is always active, and a color of its own would replace `activeColor` and `floatingColor` for good,
+  that is always active, and a color of its own would replace `active_color` and `floating_color` for good,
   which exist for that purpose (you can still write `main = '…'`).
 
 Each border is a window of Inlay's own, transparent, placed right above its window in the stacking order, so
@@ -1270,9 +1419,9 @@ rest every `per-sec` should be 0. The one that is not tells what is going on:
 | `session.complete.*`, `session.light.*` | Refresh sessions: Inlay asks every app for its windows and lays them out |
 | `session.trigger.*` | What started each session: `ax.AXMoved` (a window moved), `workspace.NSWorkspaceDidActivateApplicationNotification`, `hotkey`, `cli.<command>`... |
 | `ui.publish` | Times the menu bar and the borders were told that something may have changed |
-| `menuBar.snapshot.changed` / `.same` | Whether that changed what the menu bar item shows |
-| `menuBar.draw.request.*` | Who asked to draw the item: `appearance` (the menu bar behind it), `systemColors`, `screens` |
-| `menuBar.draw.drawn` / `.skipped-same` | Images really drawn, and requests that needed none |
+| `menu_bar.snapshot.changed` / `.same` | Whether that changed what the menu bar item shows |
+| `menu_bar.draw.request.*` | Who asked to draw the item: `appearance` (the menu bar behind it), `system_colors`, `screens` |
+| `menu_bar.draw.drawn` / `.skipped-same` | Images really drawn, and requests that needed none |
 | `borders.op.*`, `borders.restack.*`, `borders.settle` | Borders created, moved, recolored, removed and reordered, and the checks that follow a refresh |
 | `config.watcher.*`, `config.load` | Events of the config file watcher, and loads of the config |
 

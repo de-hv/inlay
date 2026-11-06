@@ -22,32 +22,32 @@
 -- ━━ 1 · General ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 inlay.config({
-  startAtLogin     = true,
-  autoReloadConfig = true,    -- reload when one of the files of the config is saved
+  start_at_login     = true,
+  auto_reload_config = true,    -- reload when one of the files of the config is saved
 
   -- The look of the borders and of the menu bar comes from the theme: 'material' without the key
   -- 'theme' (see the inlay.lua of a new install)
 
   -- Commands that run after Inlay starts
-  afterStartupCommand = {},
+  after_startup_command = {},
 
   -- Show again the apps hidden with cmd-h, if you hit it by accident
-  automaticallyUnhideMacosHiddenApps = false,
+  automatically_unhide_macos_hidden_apps = false,
 
   -- Normalizations: a container with one child is flattened, and a container in another one takes
   -- the opposite orientation
-  enableNormalizationFlattenContainers                      = true,
-  enableNormalizationOppositeOrientationForNestedContainers = true,
+  enable_normalization_flatten_containers                      = true,
+  enable_normalization_opposite_orientation_for_nested_containers = true,
 
   -- tiles · horizontal | vertical | auto (by the shape of the monitor)
-  defaultRootContainerLayout      = 'tiles',
-  defaultRootContainerOrientation = 'horizontal',
+  default_root_container_layout      = 'tiles',
+  default_root_container_orientation = 'horizontal',
 })
 
 -- ━━ 2 · Callbacks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- The mouse follows the focus. To turn it off: inlay.config({ onFocusChanged = {} }), and the same
--- for onFocusedMonitorChanged
+-- The mouse follows the focus. To turn it off: inlay.config({ on_focus_changed = {} }), and the same
+-- for on_focused_monitor_changed
 inlay.on('monitor_changed', 'move-mouse monitor-lazy-center')
 inlay.on('focus_changed', 'move-mouse window-lazy-center')
 
@@ -60,7 +60,7 @@ inlay.on('focus_changed', 'move-mouse window-lazy-center')
 
 -- 7 workspaces without apps: put your own, with your apps, in 'workspaces' of your inlay.lua (yours
 -- replace these). Inlay makes from the list the persistent workspaces, the monitor of each one, two
--- key bindings for each one (workspaceKeys) and a window rule for each app.
+-- key bindings for each one (workspace_keys) and a window rule for each app.
 --
 -- The keys follow the right hand:   u i o -> 5 6 7
 --                                 h j k l -> 1 2 3 4
@@ -79,7 +79,7 @@ inlay.workspace({ id = '7', key = 'o' })
 
 inlay.config({
   -- The modifiers of the key bindings of each workspace: go to it, and move the window there
-  workspaceKeys = { focus = 'cmd-alt-ctrl', move = 'cmd-alt-shift' },
+  workspace_keys = { focus = 'cmd-alt-ctrl', move = 'cmd-alt-shift' },
 })
 
 -- ━━ 4 · Layout ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -93,14 +93,14 @@ inlay.config({
   },
 
   tiling = {
-    newWindowPlacement = 'dwindle',    -- dwindle | after-focused (i3 style)
-    splitTarget        = 'focused',    -- the window a new one splits: focused | cursor
-    splitRatio         = 0.5,          -- what the split window keeps: 0.1 … 0.9
-    startupLayout      = 'dwindle',    -- the windows open at startup: grid | row | dwindle
-    minWindowSize      = 100,          -- points left by resizing: 20 … 500
+    new_window_placement = 'dwindle',    -- dwindle | after-focused (i3 style)
+    split_target        = 'focused',    -- the window a new one splits: focused | cursor
+    split_ratio         = 0.5,          -- what the split window keeps: 0.1 … 0.9
+    startup_layout      = 'dwindle',    -- the windows open at startup: grid | row | dwindle
+    min_window_size      = 100,          -- points left by resizing: 20 … 500
   },
 
-  focusFollowsMouse = { enabled = false },
+  focus_follows_mouse = { enabled = false },
 })
 
 -- ━━ 5 · Animations ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -113,28 +113,28 @@ inlay.animation({
   enabled         = true,
   duration        = 160,             -- ms: 0 … 500
   curve           = 'quint',
-  workspaceSwitch = 'horizontal',    -- horizontal | vertical | auto | off
+  workspace_switch = 'horizontal',    -- horizontal | vertical | auto | off
 })
 
 -- Per kind of animation; without them, curve and duration above
 inlay.animation({ leaf = 'open',       curve = 'quint', duration = 200 })
 inlay.animation({ leaf = 'move',       curve = 'quint', duration = 160 })
 inlay.animation({ leaf = 'fullscreen', curve = 'expo',  duration = 220 })
-inlay.animation({ leaf = 'workspace',  curve = 'expo',  duration = 140 })    -- workspaceSwitch = 'off' if it stutters
+inlay.animation({ leaf = 'workspace',  curve = 'expo',  duration = 140 })    -- workspace_switch = 'off' if it stutters
 
 -- Curves of your own: inlay.curve('bounce', { 0.34, 1.56, 0.64, 1 })
 
 -- ━━ 6 · Menu bar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 inlay.config({
-  menuBar = {
+  menu_bar = {
     enabled            = true,
     -- pills | chips | hypr | minimal | dots | underline | liquid | dms
     theme              = 'hypr',
-    dimEmptyWorkspaces = true,
-    showMode           = true,     -- the initial of the binding mode on the focused workspace
-    perMonitor         = false,    -- group the workspaces by monitor
-    -- The colors and systemColors come from the theme (section 1)
+    dim_empty_workspaces = true,
+    show_mode           = true,     -- the initial of the binding mode on the focused workspace
+    per_monitor         = false,    -- group the workspaces by monitor
+    -- The colors and system_colors come from the theme (section 1)
   },
 })
 
@@ -145,25 +145,25 @@ inlay.config({
   borders = {
     enabled       = true,
     width         = 2,                -- points: 1 … 20
-    cornerRadius  = 16,               -- points: 0 … 40
-    squareCorners = false,            -- fill the rounded corners of the windows
+    corner_radius  = 16,               -- points: 0 … 40
+    square_corners = false,            -- fill the rounded corners of the windows
 
     -- A window alone in its workspace, or in fullscreen: a thin border and a small gap.
     -- enabled = false: it fills the screen without a border
-    singleWindow = {
+    single_window = {
       enabled = true,
       width   = 2,                    -- points: 1 … 20
       gap     = 2,                    -- points: 0 … 40, never less than width
       -- The border of the window in fullscreen: without it, width. The gap grows with it
-      -- fullscreenWidth = 4,         -- points: 1 … 20
+      -- fullscreen_width = 4,         -- points: 1 … 20
     },
   },
 })
 
 -- ━━ 8 · Programs ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
--- The environment of exec-and-forget and execOnWorkspaceChange
-inlay.config({ exec = { inheritEnvVars = true } })
+-- The environment of exec-and-forget and exec_on_workspace_change
+inlay.config({ exec = { inherit_env_vars = true } })
 -- ${NAME} is replaced by the value of the variable
 inlay.env('PATH', '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}')
 
@@ -176,9 +176,9 @@ inlay.env('PATH', '/opt/homebrew/bin:/opt/homebrew/sbin:${PATH}')
 
 -- The layout the names of the keys refer to: qwerty | dvorak | colemak
 inlay.config({
-  keyMapping = {
+  key_mapping = {
     preset = 'qwerty',
-    keyNotationToKeyCode = {},    -- names of your own, e.g. { unicorn = 'q' }
+    key_notation_to_key_code = {},    -- names of your own, e.g. { unicorn = 'q' }
   },
 })
 
@@ -205,7 +205,7 @@ inlay.bind('r',               { 'flatten-workspace-tree', 'mode main' }, service
 inlay.bind('f',               { 'layout floating tiling', 'mode main' }, service)  -- rescue a "popup"
 -- Every window back to the workspace of its app (after waking up with an external display).
 -- It runs every rule: windows moved or floated on purpose go back too
-inlay.bind('w',               { 'run-callback onWindowDetected --for-every-window', 'mode main' }, service)
+inlay.bind('w',               { 'run-callback on_window_detected --for-every-window', 'mode main' }, service)
 for _, direction in ipairs({ 'left', 'down', 'up', 'right' }) do
   inlay.bind('cmd-alt-ctrl-' .. direction, { 'join-with ' .. direction, 'mode main' }, service)
 end
@@ -231,7 +231,7 @@ inlay.bind('cmd-alt-ctrl-down', 'resize smart -50', resize)
 -- ── a · File dialogs
 -- The whole title, in English and Spanish: a document that only starts with "Open" still tiles
 inlay.window_rule({
-  match = { windowTitleRegexSubstring = [[(?i)^(open|open file|open folder|open file or folder|open workspace from file|add folder to workspace|save|save as|save workspace|choose|select|abrir|abrir archivo|abrir carpeta|guardar|guardar como|elegir|seleccionar)( ?…|\.\.\.)?$]] },
+  match = { window_title_regex_substring = [[(?i)^(open|open file|open folder|open file or folder|open workspace from file|add folder to workspace|save|save as|save workspace|choose|select|abrir|abrir archivo|abrir carpeta|guardar|guardar como|elegir|seleccionar)( ?…|\.\.\.)?$]] },
   run = { 'layout floating' },
 })
 
@@ -253,11 +253,11 @@ for _, app in ipairs({
   'com.apple.QuickTimePlayerX',             -- QuickTime Player
   'com.apple.archiveutility',               -- Archive Utility
 }) do
-  inlay.window_rule({ match = { appId = app }, run = { 'layout floating' } })
+  inlay.window_rule({ match = { app_id = app }, run = { 'layout floating' } })
 end
 
 -- The settings windows of any other app, by title
-inlay.window_rule({ match = { windowTitleRegexSubstring = '(?i)(settings|preferences)' }, run = { 'layout floating' } })
+inlay.window_rule({ match = { window_title_regex_substring = '(?i)(settings|preferences)' }, run = { 'layout floating' } })
 
 -- ── d · Everything else
 -- Must be the last rule. A tiling window of an app without a rule floats where it opens.

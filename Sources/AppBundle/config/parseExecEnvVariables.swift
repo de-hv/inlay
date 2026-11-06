@@ -7,8 +7,8 @@ private var env: [String: String] {
 }
 
 let rawExecConfigParser: [String: any ParserProtocol<RawExecConfig>] = [
-    "inheritEnvVars": Parser(\.inheritEnvVariables, parseBool),
-    "envVars": Parser(\.overriddenVars, parseEnvVariables),
+    "inherit_env_vars": Parser(\.inheritEnvVariables, parseBool),
+    "env_vars": Parser(\.overriddenVars, parseEnvVariables),
 ]
 
 let defaultOverriddenEnvVars = ["PATH": "/opt/homebrew/bin:/opt/homebrew/sbin:\(env["PATH"] ?? "")"]

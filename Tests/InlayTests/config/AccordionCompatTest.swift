@@ -13,26 +13,26 @@ extension InlayTests {
 
         @Test func testConfig_defaultRootContainerLayout() {
             let result = parseConfig(lua: """
-                inlay.config({ defaultRootContainerLayout = 'accordion' })
+                inlay.config({ default_root_container_layout = 'accordion' })
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerLayout, .tiles)
             assertEquals(
                 result.strWarnings,
-                ["[WARNING] defaultRootContainerLayout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'"],
+                ["[WARNING] default_root_container_layout: Inlay has no accordion layout: 'accordion' is treated as 'tiles'"],
             )
 
             assertEquals(
-                parseConfig(lua: "inlay.config({ defaultRootContainerLayout = 'accordeon' })").strErrors,
-                ["[ERROR] defaultRootContainerLayout: Can't parse layout 'accordeon'"],
+                parseConfig(lua: "inlay.config({ default_root_container_layout = 'accordeon' })").strErrors,
+                ["[ERROR] default_root_container_layout: Can't parse layout 'accordeon'"],
             )
         }
 
         @Test func testConfig_layoutCommands() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  afterStartupCommand = { 'layout tiles', 'layout accordion' },
+                  after_startup_command = { 'layout tiles', 'layout accordion' },
                   mode = {
                     main = {
                       binding = {
@@ -42,9 +42,9 @@ extension InlayTests {
                       },
                     },
                   },
-                  onWindowDetected = {
+                  on_window_detected = {
                     {
-                      match = { appId = 'com.apple.finder' },
+                      match = { app_id = 'com.apple.finder' },
                       run = 'layout v_accordion',
                     },
                   },
@@ -56,10 +56,10 @@ extension InlayTests {
             assertEquals(
                 result.strWarnings.sorted(),
                 [
-                    "[WARNING] afterStartupCommand[1]: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
+                    "[WARNING] after_startup_command[1]: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
                     "[WARNING] mode.main.binding.alt-a: Inlay has no accordion layout: 'accordion' is treated as 'tiles'",
                     "[WARNING] mode.main.binding.alt-b[0]: Inlay has no accordion layout: 'h_accordion' is treated as 'h_tiles'",
-                    "[WARNING] onWindowDetected[0].run: Inlay has no accordion layout: 'v_accordion' is treated as 'v_tiles'",
+                    "[WARNING] on_window_detected[0].run: Inlay has no accordion layout: 'v_accordion' is treated as 'v_tiles'",
                 ],
             )
             assertEquals(result.config.onWindowDetected.count, 1)

@@ -29,14 +29,14 @@ extension InlayTests {
                   borders = {
                     enabled = false,
                     width = 6,
-                    cornerRadius = 10,
-                    squareCorners = false,
-                    activeColor = '#D19A66',
-                    inactiveColor = '#00000000',
-                    floatingColor = 'system-accent',
+                    corner_radius = 10,
+                    square_corners = false,
+                    active_color = '#D19A66',
+                    inactive_color = '#00000000',
+                    floating_color = 'system-accent',
                     glow = true,
-                    glowRadius = 20,
-                    modeColors = { resize = '#30D158', service = '#FF453A80' },
+                    glow_radius = 20,
+                    mode_colors = { resize = '#30D158', service = '#FF453A80' },
                   },
                 })
                 """,
@@ -60,7 +60,7 @@ extension InlayTests {
         }
 
         @Test func testRanges() {
-            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("cornerRadius", [0, 40], [-1, 41]), ("glowRadius", [1, 12, 40], [0, 41, -1])] {
+            for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("corner_radius", [0, 40], [-1, 41]), ("glow_radius", [1, 12, 40], [0, 41, -1])] {
                 for value in good {
                     assertEquals(parseConfig(lua: "inlay.config({ borders = { ['\(key)'] = \(value) } })").errors, [])
                 }
@@ -73,15 +73,15 @@ extension InlayTests {
                 ["[ERROR] borders.width: width must be in [1, 20] range"],
             )
             assertEquals(
-                parseConfig(lua: "inlay.config({ borders = { cornerRadius = 41 } })").strErrors,
-                ["[ERROR] borders.cornerRadius: cornerRadius must be in [0, 40] range"],
+                parseConfig(lua: "inlay.config({ borders = { corner_radius = 41 } })").strErrors,
+                ["[ERROR] borders.corner_radius: corner_radius must be in [0, 40] range"],
             )
             assertEquals(
-                parseConfig(lua: "inlay.config({ borders = { glowRadius = 0 } })").strErrors,
-                ["[ERROR] borders.glowRadius: glowRadius must be in [1, 40] range"],
+                parseConfig(lua: "inlay.config({ borders = { glow_radius = 0 } })").strErrors,
+                ["[ERROR] borders.glow_radius: glow_radius must be in [1, 40] range"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig(lua: "inlay.config({ borders = { glowRadius = 0 } })").config.borders.glowRadius, 12)
+            assertEquals(parseConfig(lua: "inlay.config({ borders = { glow_radius = 0 } })").config.borders.glowRadius, 12)
         }
 
         @Test func testErrors() {
@@ -90,32 +90,32 @@ extension InlayTests {
                     inlay.config({
                       borders = {
                         glow = 'soft',
-                        glowRadius = 1.5,
+                        glow_radius = 1.5,
                         shadow = true,
                         width = '4',
                         enabled = 1,
-                        activeColor = 'auto',
-                        inactiveColor = 'red',
-                        modeColors = { resize = 'auto', service = 5 },
+                        active_color = 'auto',
+                        inactive_color = 'red',
+                        mode_colors = { resize = 'auto', service = 5 },
                       },
                     })
                     """,
                 ).strErrors,
                 [
                     // 'auto' has no meaning for a border
-                    "[ERROR] borders.activeColor: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.active_color: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
                     "[ERROR] borders.enabled: Expected type is 'Bool'. But actual type is 'Int'",
                     "[ERROR] borders.glow: Expected type is 'Bool'. But actual type is 'String'",
-                    "[ERROR] borders.glowRadius: Expected type is 'Int'. But actual type is 'Float'",
-                    "[ERROR] borders.inactiveColor: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
-                    "[ERROR] borders.modeColors.resize: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
-                    "[ERROR] borders.modeColors.service: Expected type is 'String'. But actual type is 'Int'",
+                    "[ERROR] borders.glow_radius: Expected type is 'Int'. But actual type is 'Float'",
+                    "[ERROR] borders.inactive_color: Can't parse color 'red'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.mode_colors.resize: Can't parse color 'auto'. Expected: '#RRGGBB', '#RRGGBBAA', 'system-accent'",
+                    "[ERROR] borders.mode_colors.service: Expected type is 'String'. But actual type is 'Int'",
                     "[ERROR] borders.shadow: Unknown key",
                     "[ERROR] borders.width: Expected type is 'Int'. But actual type is 'String'",
                 ],
             )
             assertEquals(parseConfig(lua: "inlay.config({ borders = 1 })").strErrors, ["[ERROR] borders: Expected type is 'Table'. But actual type is 'Int'"])
-            assertEquals(parseConfig(lua: "inlay.config({ borders = { modeColors = 1 } })").strErrors, ["[ERROR] borders.modeColors: Expected type is 'Table'. But actual type is 'Int'"])
+            assertEquals(parseConfig(lua: "inlay.config({ borders = { mode_colors = 1 } })").strErrors, ["[ERROR] borders.mode_colors: Expected type is 'Table'. But actual type is 'Int'"])
         }
     }
 }

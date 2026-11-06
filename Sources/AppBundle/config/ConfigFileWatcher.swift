@@ -78,7 +78,7 @@ final class FileWatcher {
     }
 }
 
-/// Reloads the config when one of its files is saved: inlay.lua or a module that it requires. See: 'autoReloadConfig'
+/// Reloads the config when one of its files is saved: inlay.lua or a module that it requires. See: 'auto_reload_config'
 /// config option
 @MainActor
 enum ConfigAutoReload {
@@ -90,7 +90,7 @@ enum ConfigAutoReload {
     private static let debounceDelay: Duration = .milliseconds(200)
 
     /// The config was loaded, or at least tried, from these files. Called after every (re)load: the files to watch may
-    /// be other ones, and so may the 'autoReloadConfig' option. A file that failed to load is still watched, so that
+    /// be other ones, and so may the 'auto_reload_config' option. A file that failed to load is still watched, so that
     /// fixing it loads it, and a module that doesn't exist yet too, so that creating it loads it
     static func sync(files: [LuaConfigFile]) {
         loadedFiles = files

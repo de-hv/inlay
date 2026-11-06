@@ -37,7 +37,7 @@ extension InlayTests {
         }
 
         @Test func testParse() {
-            let result = parseConfig(lua: "inlay.config({ menuBar = { perMonitor = true } })")
+            let result = parseConfig(lua: "inlay.config({ menu_bar = { per_monitor = true } })")
             assertEquals(result.errors, [])
             assertEquals(result.config.menuBar.perMonitor, true)
             assertEquals(MenuBarConfig().perMonitor, false)

@@ -8,7 +8,7 @@
 --     inlay config --types              autocompletion of the keys in your editor
 --
 -- The config is made of calls: inlay.config({ … }) for the keys (merged key by key with the ones of
--- Inlay: inlay.config({ menuBar = { perMonitor = true } }) changes that key alone), inlay.bind and
+-- Inlay: inlay.config({ menu_bar = { per_monitor = true } }) changes that key alone), inlay.bind and
 -- inlay.unbind for the key bindings, inlay.window_rule for the rules (yours go before the ones of
 -- Inlay), inlay.workspace for the workspaces, inlay.on for the events.
 -- To split this file, put a part in a file of this folder and require('<name>') it.

@@ -491,10 +491,10 @@ config_kept() {
   fi
   CONFIG_DIFFERS=true
   CONFIG_DETAIL="$label · yours"
-  # The rules of the built-in config apply under yours, unless it leaves the built-in config out ('builtInConfig =
+  # The rules of the built-in config apply under yours, unless it leaves the built-in config out ('built_in_config =
   # false'). The rules may be in a file that inlay.lua requires
-  if grep -qsE 'builtInConfig *= *false' "$(dirname "$config")"/*.lua && ! grep -qs onWindowDetected "$(dirname "$config")"/*.lua; then
-    warn "Your config has no onWindowDetected rule: every window stays in the workspace where it opens."
+  if grep -qsE 'built_in_config *= *false' "$(dirname "$config")"/*.lua && ! grep -qs on_window_detected "$(dirname "$config")"/*.lua; then
+    warn "Your config has no on_window_detected rule: every window stays in the workspace where it opens."
   fi
   if [ "$CAN_ASK" != true ]; then
     hint "How yours differs from the inlay.lua of the repo:  diff \"$config\" \"$PWD/inlay.lua\""
@@ -554,7 +554,7 @@ config_linked_folder() {
     CONFIG_STATE=warn
     CONFIG_DETAIL="$(pretty_path "$dir") → $(pretty_path "$target") · inlay.toml of Inlay 0.2, not read"
     warn "$(pretty_path "$target") has the inlay.toml of Inlay 0.2, which Inlay $REPO_VERSION doesn't read: the config is Lua"
-    warn "now, with camelCase keys. Inlay uses its built-in config until the folder has an inlay.lua. Write it there,"
+    warn "now, with snake_case keys. Inlay uses its built-in config until the folder has an inlay.lua. Write it there,"
     warn "starting from the inlay.lua of the repo:  cp \"$PWD/inlay.lua\" \"$target/\""
   elif ! path_exists "$dir/inlay.lua"; then
     CONFIG_STATE=warn
@@ -587,7 +587,7 @@ config_legacy() {
   CONFIG_STATE=warn
   CONFIG_DETAIL="$(pretty_path "$legacy") · Inlay 0.2, not read"
   warn "$(pretty_path "$legacy") is the config of Inlay 0.2, which Inlay $REPO_VERSION doesn't read: the config is Lua now,"
-  warn "with camelCase keys. Inlay uses its built-in config until $(pretty_path "$xdg") exists. Write it there,"
+  warn "with snake_case keys. Inlay uses its built-in config until $(pretty_path "$xdg") exists. Write it there,"
   if [ "$CAN_ASK" = true ]; then
     warn "starting from the inlay.lua of the repo, which the question below can put there (yours is kept as a backup)."
   else

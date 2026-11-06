@@ -29,7 +29,7 @@ extension InlayTests {
 
         /// A table is merged key by key; a value replaces the one of the built-in config
         @Test func testTablesAreMergedKeyByKey() {
-            let result = parse("inlay.config({ menuBar = { perMonitor = true }, gaps = { inner = { horizontal = 12 } }, tiling = { splitRatio = 0.6 } })")
+            let result = parse("inlay.config({ menu_bar = { per_monitor = true }, gaps = { inner = { horizontal = 12 } }, tiling = { split_ratio = 0.6 } })")
             assertEquals(result.strErrors, [])
             assertEquals(result.config.menuBar.perMonitor, true)
             assertEquals(result.config.menuBar.theme, .hypr) // Of the built-in config
@@ -41,7 +41,7 @@ extension InlayTests {
 
         /// A list replaces the one of the built-in config, and so does 'theme'
         @Test func testListsAndThemeReplace() {
-            let result = parse("inlay.config({ afterStartupCommand = { 'balance-sizes' }, theme = 'nord' })")
+            let result = parse("inlay.config({ after_startup_command = { 'balance-sizes' }, theme = 'nord' })")
             assertEquals(result.strErrors, [])
             assertEquals(result.config.afterStartupCommand.flatten().count, 1)
             assertEquals("\(result.config.borders.activeColor)", "#88C0D0")
@@ -69,7 +69,7 @@ extension InlayTests {
             let result = parse("""
                 inlay.config({
                   workspaces = { { id = 'a', key = 'q', apps = { 'com.example.app' } } },
-                  onWindowDetected = { { match = { appId = 'com.example.mine' }, run = 'layout floating' } },
+                  on_window_detected = { { match = { app_id = 'com.example.mine' }, run = 'layout floating' } },
                 })
                 """)
             assertEquals(result.strErrors, [])
@@ -80,7 +80,7 @@ extension InlayTests {
             assertEquals(Array(appIds.prefix(3)), ["com.example.mine", "title", "com.example.app"])
             assertEquals(appIds.last, "command") // The catch-all rule of the built-in config
             // '{}' adds no rules
-            assertEquals(parse("inlay.config({ onWindowDetected = {} })").config.onWindowDetected.count, defaultConfig.onWindowDetected.count)
+            assertEquals(parse("inlay.config({ on_window_detected = {} })").config.onWindowDetected.count, defaultConfig.onWindowDetected.count)
         }
 
         /// 'workspaces' of the user replace the 7 of the built-in config, and make their keys
@@ -91,7 +91,7 @@ extension InlayTests {
                     { id = 'web', name = 'Browsers', key = 'w', monitor = 'secondary', apps = { 'com.google.Chrome' } },
                     { id = 'mail' },
                   },
-                  workspaceKeys = { move = false },
+                  workspace_keys = { move = false },
                 })
                 """)
             assertEquals(result.strErrors, [])
@@ -113,17 +113,17 @@ extension InlayTests {
             assertEquals(parse("inlay.config({ workspaces = { { name = 'x' } } })").strErrors, ["[ERROR] workspaces[0]: A workspace needs an 'id': its name in the commands, like 'workspace 1'"])
             assertEquals(parse("inlay.config({ workspaces = { { id = '1' }, { id = '1' } } })").strErrors, ["[ERROR] workspaces[1].id: The workspace '1' is already in the list"])
             assertEquals(parse("inlay.config({ workspaces = { { id = '1', color = 'red' } } })").strErrors, ["[ERROR] workspaces[0].color: Unknown key"])
-            assertEquals(parse("inlay.config({ workspaceKeys = { focus = 1 } })").strErrors, ["[ERROR] workspaceKeys.focus: Expected the modifiers of the keys, like 'cmd-alt-ctrl', or false: no key bindings"])
+            assertEquals(parse("inlay.config({ workspace_keys = { focus = 1 } })").strErrors, ["[ERROR] workspace_keys.focus: Expected the modifiers of the keys, like 'cmd-alt-ctrl', or false: no key bindings"])
         }
 
         /// builtInConfig = false: the config of the user alone, over the defaults of the code
         @Test func testWithoutTheBuiltInConfig() {
-            let result = parse("inlay.config({ builtInConfig = false, persistentWorkspaces = { 'a' } })")
+            let result = parse("inlay.config({ built_in_config = false, persistent_workspaces = { 'a' } })")
             assertEquals(result.strErrors, [])
             assertEquals(Array(result.config.persistentWorkspaces), ["a"])
             assertEquals(result.config.modes, Config().modes)
             assertEquals(result.config.onWindowDetected.count, 0)
-            assertEquals(parse("inlay.config({ builtInConfig = 'no' })").strErrors, ["[ERROR] builtInConfig: Expected type is 'Bool'. But actual type is 'String'"])
+            assertEquals(parse("inlay.config({ built_in_config = 'no' })").strErrors, ["[ERROR] built_in_config: Expected type is 'Bool'. But actual type is 'String'"])
         }
 
         /// The errors point at the keys of the user
@@ -139,11 +139,11 @@ extension InlayTests {
             for key in configParser.keys where !["notifications", "settings"].contains(key) {
                 assertEquals(types.contains("InlayConfig.\(key) = nil") || types.contains("InlayConfig['\(key)'] = nil"), true, additionalMsg: key)
             }
-            for key in bordersParserTable.keys where key != "hideWhenSingle" {
+            for key in bordersParserTable.keys where key != "hide_when_single" {
                 assertEquals(types.contains("InlayConfig_borders.\(key) = nil"), true, additionalMsg: key)
             }
-            assertTrue(types.contains("---@type boolean?\nInlayConfig_menuBar.perMonitor = nil"))
-            assertTrue(types.contains("---@type 'pills'|'chips'|'hypr'|'minimal'|'dots'|'underline'|'liquid'|'dms'?\nInlayConfig_menuBar.theme = nil"))
+            assertTrue(types.contains("---@type boolean?\nInlayConfig_menu_bar.per_monitor = nil"))
+            assertTrue(types.contains("---@type 'pills'|'chips'|'hypr'|'minimal'|'dots'|'underline'|'liquid'|'dms'?\nInlayConfig_menu_bar.theme = nil"))
             assertTrue(types.contains("---@type integer?\nInlayConfig_borders.width = nil"))
             assertTrue(types.contains("---@class InlayConfig.workspaces"))
             assertTrue(types.contains("function inlay.bind(keys, command, options) end"))

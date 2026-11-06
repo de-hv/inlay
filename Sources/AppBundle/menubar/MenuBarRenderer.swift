@@ -122,7 +122,7 @@ enum MenuBarRenderer {
             case .liquid: drawLiquid(layout, palette, in: cg)
             case .dms: drawDms(layout, palette, in: cg)
         }
-        // 'perMonitor'
+        // 'per_monitor'
         let separatorOpacity = layout.style == .hypr ? MenuBarMetrics.hyprSeparatorOpacity : MenuBarMetrics.emptyWorkspaceOpacity
         for separator in layout.separators {
             cg.fill(CGPath(rect: separator, transform: nil), palette.base.opacity(separatorOpacity))

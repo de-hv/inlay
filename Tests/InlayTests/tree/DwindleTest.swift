@@ -3,7 +3,7 @@ import Common
 import Foundation
 import Testing
 
-/// Placement of new tiling windows with `tiling.newWindowPlacement = 'dwindle'`.
+/// Placement of new tiling windows with `tiling.new_window_placement = 'dwindle'`.
 /// The test monitor is 1920x1080. The layout takes 1920x1079 (see Workspace.layoutWorkspace)
 extension InlayTests {
     @Suite @MainActor struct DwindleTest {

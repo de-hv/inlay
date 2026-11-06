@@ -13,7 +13,7 @@ public struct ArrangeWorkspaceCmdArgs: CmdArgs {
     public var arrangement: Lateinit<WorkspaceArrangement> = .uninitialized
 }
 
-/// How `arrange-workspace` rebuilds the tiling tree. The same values as the 'tiling.startupLayout' config option
+/// How `arrange-workspace` rebuilds the tiling tree. The same values as the 'tiling.startup_layout' config option
 public enum WorkspaceArrangement: String, CaseIterable, Equatable, Sendable {
     case dwindle, grid, row
 }

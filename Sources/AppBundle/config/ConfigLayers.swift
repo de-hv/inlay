@@ -7,9 +7,9 @@ import Foundation
 /// 3. the theme ('theme'): the look of the borders and of the menu bar;
 /// 4. the config of the user (inlay.lua): only what is theirs.
 /// The tables are put together before they are parsed (see: mergedConfig), so the errors point at the keys of the
-/// user. `builtInConfig = false` leaves out the second layer: the config of the user over the defaults of the code
-let builtInConfigKey = "builtInConfig"
-let onWindowDetectedKey = "onWindowDetected"
+/// user. `built_in_config = false` leaves out the second layer: the config of the user over the defaults of the code
+let builtInConfigKey = "built_in_config"
+let onWindowDetectedKey = "on_window_detected"
 
 /// The raw tables of the config, put together
 struct LayeredConfig {
@@ -20,7 +20,7 @@ struct LayeredConfig {
     /// The layers on their own, for 'config --show'
     var base: OrderedJson.JsonDict?
     var user: OrderedJson.JsonDict
-    /// The values of the theme that went into the config: its 'borders' and 'menuBar'
+    /// The values of the theme that went into the config: its 'borders' and 'menu_bar'
     var themeValues: OrderedJson.JsonDict
     /// The name of the theme, for 'config --show'. nil: a table written in the config
     var themeName: String?
@@ -60,10 +60,10 @@ func layeredConfig(user: OrderedJson.JsonDict, base: OrderedJson.JsonDict?, conf
 
 @MainActor private var isLightAppearance: Bool { !isSystemAppearanceDark }
 
-/// The values of the theme over the tables 'borders' and 'menuBar' of the config: the theme wins
+/// The values of the theme over the tables 'borders' and 'menu_bar' of the config: the theme wins
 private func applyTheme(over config: OrderedJson.JsonDict, _ theme: OrderedJson.JsonDict) -> OrderedJson.JsonDict {
     var result = config
-    for key in ["borders", "menuBar"] {
+    for key in ["borders", "menu_bar"] {
         guard case .dict(let themeTable)? = theme[key] else { continue }
         switch config[key] {
             case nil: result[key] = .dict(themeTable)
@@ -112,11 +112,11 @@ private func mergedValue(_ base: OrderedJson?, _ user: OrderedJson) -> OrderedJs
 // MARK: - Workspaces
 
 let workspacesKey = "workspaces"
-let workspaceKeysKey = "workspaceKeys"
-/// In 'onWindowDetected', the place of the rules that 'workspaces' makes for its apps
+let workspaceKeysKey = "workspace_keys"
+/// In 'on_window_detected', the place of the rules that 'workspaces' makes for its apps
 let workspacesRulesMarker = "workspaces"
 
-/// The keys of an item of 'workspaces', and of 'workspaceKeys'. See: ConfigReferenceTest
+/// The keys of an item of 'workspaces', and of 'workspace_keys'. See: ConfigReferenceTest
 let workspaceSpecKeys = ["id", "name", "key", "monitor", "apps"]
 let workspaceKeysKeys = ["focus", "move"]
 
@@ -129,13 +129,13 @@ struct WorkspaceSpec: Equatable {
     var apps: [String] = []
 }
 
-/// 'workspaces' and 'workspaceKeys' become the keys that they stand for, in the raw table of the config:
+/// 'workspaces' and 'workspace_keys' become the keys that they stand for, in the raw table of the config:
 /// - persistentWorkspaces: the ids, in order (unless the config sets it);
 /// - workspaceToMonitorForceAssignment: the monitor of each one, 'main' without one (the config's own entries win);
 /// - two key bindings of the 'main' mode for each workspace with a key: go to it (workspaceKeys.focus + key) and move
 ///   the window there (workspaceKeys.move + key). A binding that the config sets wins, and false removes it;
 /// - a window rule for each app: tiling, and to its workspace. They take the place of the item 'workspaces' of
-///   'onWindowDetected' (the built-in config has it after the rule of the file dialogs), or go first without it.
+///   'on_window_detected' (the built-in config has it after the rule of the file dialogs), or go first without it.
 /// Then the key bindings set to false are removed (see: mergedConfig). Returns the names of the workspaces
 func expandWorkspaces(_ raw: inout OrderedJson.JsonDict, _ c: inout ConfigParserContext) -> [String: String] {
     let workspaces = raw[workspacesKey].map { parseWorkspaces($0, .rootKey(workspacesKey), &c) } ?? []
@@ -147,7 +147,7 @@ func expandWorkspaces(_ raw: inout OrderedJson.JsonDict, _ c: inout ConfigParser
         }
         var monitors: OrderedJson.JsonDict = [:]
         for workspace in workspaces { monitors[workspace.id] = workspace.monitor ?? .string("main") }
-        let assignmentKey = "workspaceToMonitorForceAssignment"
+        let assignmentKey = "workspace_to_monitor_force_assignment"
         if case .dict(let own)? = raw[assignmentKey] {
             raw[assignmentKey] = .dict(mergedTheme(monitors, own))
         } else if raw[assignmentKey] == nil {
@@ -176,7 +176,7 @@ func expandWorkspaces(_ raw: inout OrderedJson.JsonDict, _ c: inout ConfigParser
 
     let appRules: [OrderedJson] = workspaces.flatMap { workspace in
         workspace.apps.map { app -> OrderedJson in
-            .dict(["match": .dict(["appId": .string(app)]), "run": .array([.string("layout tiling"), .string("move-node-to-workspace \(workspace.id)")])])
+            .dict(["match": .dict(["app_id": .string(app)]), "run": .array([.string("layout tiling"), .string("move-node-to-workspace \(workspace.id)")])])
         }
     }
     switch raw[onWindowDetectedKey] {

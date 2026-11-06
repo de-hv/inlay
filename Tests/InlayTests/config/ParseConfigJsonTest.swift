@@ -10,10 +10,10 @@ extension InlayTests {
         @Test func testEmptyTableIsAnEmptyArray() {
             let result = parseConfig(LuaConfigLoader.load("""
                 inlay.config({
-                  afterStartupCommand = {},
-                  onWindowDetected = {},
-                  execOnWorkspaceChange = {},
-                  keyMapping = { keyNotationToKeyCode = {} },
+                  after_startup_command = {},
+                  on_window_detected = {},
+                  exec_on_workspace_change = {},
+                  key_mapping = { key_notation_to_key_code = {} },
                 })
                 """))
             assertEquals(result.errors, [])

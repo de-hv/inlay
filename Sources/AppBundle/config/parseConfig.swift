@@ -117,52 +117,52 @@ struct Parser<S: ConvenienceMutable, T>: ParserProtocol {
     }
 }
 
-private let keyMappingConfigRootKey = "keyMapping"
+private let keyMappingConfigRootKey = "key_mapping"
 let modeConfigRootKey = "mode"
-let persistentWorkspacesKey = "persistentWorkspaces"
+let persistentWorkspacesKey = "persistent_workspaces"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
 // 2. Prefer commands and commands flags over config options if possible
 // 3. Document it in docs/config-reference.lua. ConfigReferenceTest fails until every key of the parser tables is there
 let configParser: [String: any ParserProtocol<Config>] = [
-    "afterStartupCommand": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
+    "after_startup_command": Parser(\.afterStartupCommand, parseShellOfCommandsForConfig),
 
-    "onFocusChanged": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
-    "onModeChanged": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
-    "onFocusedMonitorChanged": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
+    "on_focus_changed": Parser(\.onFocusChanged, parseShellOfCommandsForConfig),
+    "on_mode_changed": Parser(\.onModeChanged, parseShellOfCommandsForConfig),
+    "on_focused_monitor_changed": Parser(\.onFocusedMonitorChanged, parseShellOfCommandsForConfig),
     // "on-focused-workspace-changed": Parser(\.onFocusedWorkspaceChanged, { parseCommandOrCommands($0).toParsedConfig($1) }),
 
-    "enableNormalizationFlattenContainers": Parser(\.enableNormalizationFlattenContainers, parseBool),
-    "enableNormalizationOppositeOrientationForNestedContainers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
+    "enable_normalization_flatten_containers": Parser(\.enableNormalizationFlattenContainers, parseBool),
+    "enable_normalization_opposite_orientation_for_nested_containers": Parser(\.enableNormalizationOppositeOrientationForNestedContainers, parseBool),
 
-    "defaultRootContainerLayout": Parser(\.defaultRootContainerLayout, parseLayout),
-    "defaultRootContainerOrientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
+    "default_root_container_layout": Parser(\.defaultRootContainerLayout, parseLayout),
+    "default_root_container_orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
 
-    "startAtLogin": Parser(\.startAtLogin, parseBool),
-    "autoReloadConfig": Parser(\.autoReloadConfig, parseBool),
-    "automaticallyUnhideMacosHiddenApps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
+    "start_at_login": Parser(\.startAtLogin, parseBool),
+    "auto_reload_config": Parser(\.autoReloadConfig, parseBool),
+    "automatically_unhide_macos_hidden_apps": Parser(\.automaticallyUnhideMacosHiddenApps, parseBool),
     persistentWorkspacesKey: Parser(\.persistentWorkspaces, parsePersistentWorkspaces),
     workspacesKey: Parser(\._workspaces, skipParsing(())), // Expanded before the config is parsed. See: expandWorkspaces
     workspaceKeysKey: Parser(\._workspaces, skipParsing(())), // The same
     builtInConfigKey: Parser(\._builtInConfig, skipParsing(())), // Read before the config is parsed. See: mergedConfig
-    "execOnWorkspaceChange": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
+    "exec_on_workspace_change": Parser(\.execOnWorkspaceChange, parseArrayOfStrings),
     "exec": Parser(\.execConfig, parseExecConfig),
 
     keyMappingConfigRootKey: Parser(\.keyMapping, skipParsing(Config().keyMapping)), // Parsed manually
     modeConfigRootKey: Parser(\.modes, skipParsing(Config().modes)), // Parsed manually
 
     "gaps": Parser(\.gaps, parseGaps),
-    "focusFollowsMouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
+    "focus_follows_mouse": Parser(\.focusFollowsMouse, parseFocusFollowsMouse),
     "tiling": Parser(\.tiling, parseTiling),
-    "menuBar": Parser(\.menuBar, parseMenuBar),
+    "menu_bar": Parser(\.menuBar, parseMenuBar),
     "borders": Parser(\.borders, parseBorders),
     "animations": Parser(\.animations, parseAnimations),
-    themeKey: Parser(\._theme, skipParsing(())), // Parsed manually, before 'borders' and 'menuBar'. See: ThemeResolver
+    themeKey: Parser(\._theme, skipParsing(())), // Parsed manually, before 'borders' and 'menu_bar'. See: ThemeResolver
     "notifications": Parser(\._notifications, parseObsolete("The notice of the reload is gone")),
     "settings": Parser(\._settings, parseObsolete("The Settings window is gone: the config is only this file")),
-    "workspaceToMonitorForceAssignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
-    "onWindowDetected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
+    "workspace_to_monitor_force_assignment": Parser(\.workspaceToMonitorForceAssignment, parseWorkspaceToMonitorAssignment),
+    "on_window_detected": Parser(\.onWindowDetected, parseOnWindowDetectedArray),
 ]
 
 extension ParsedCmd {
@@ -258,7 +258,7 @@ struct ParseConfigResult {
         _ = expandWorkspaces(&lightTable, &quiet)
         config.lightAppearance = AppearanceColors(
             borders: lightTable["borders"].map { parseBorders($0, .rootKey("borders"), &quiet) } ?? BordersConfig(),
-            menuBar: lightTable["menuBar"].map { parseMenuBar($0, .rootKey("menuBar"), &quiet) } ?? MenuBarConfig(),
+            menuBar: lightTable["menu_bar"].map { parseMenuBar($0, .rootKey("menu_bar"), &quiet) } ?? MenuBarConfig(),
         )
     }
 
@@ -281,8 +281,8 @@ struct ParseConfigResult {
                 """
                 The config contains:
                 1. usage of 'split' command
-                2. enableNormalizationFlattenContainers = true
-                These two settings don't play nicely together. 'split' command has no effect when enableNormalizationFlattenContainers is disabled.
+                2. enable_normalization_flatten_containers = true
+                These two settings don't play nicely together. 'split' command has no effect when enable_normalization_flatten_containers is disabled.
 
                 My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'.
                 """,
@@ -453,7 +453,7 @@ extension OrderedJson.JsonDict {
             let backtrace: ConfigBacktrace = backtrace + .key(key)
             switch fieldsParser[key] {
                 case let parser?: raw = parser.transformRawConfig(raw, value, backtrace, &c)
-                case nil: c.errors.append(unknownKeyDiagnostic(backtrace, key: key))
+                case nil: c.errors.append(unknownKeyDiagnostic(backtrace, key: key, knownKeys: Set(fieldsParser.keys)))
             }
         }
 
@@ -461,13 +461,29 @@ extension OrderedJson.JsonDict {
     }
 }
 
-func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace, key: String? = nil) -> ConfigParseDiagnostic {
+func unknownKeyDiagnostic(_ backtrace: ConfigBacktrace, key: String? = nil, knownKeys: Set<String> = []) -> ConfigParseDiagnostic {
     let message = backtrace.isRootKey ? "Unknown top-level key" : "Unknown key"
-    // The keys of Inlay 0.2 and of AeroSpace: 'corner-radius'
-    guard let key, key.contains("-") else { return .init(backtrace, message) }
-    let words = key.split(separator: "-")
-    let camelCase = String(words.first ?? "") + words.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
-    return .init(backtrace, "\(message). The keys are camelCase since Inlay 0.3.0: '\(camelCase)'")
+    // The keys of Inlay 0.2 and of AeroSpace ('corner-radius') and of Inlay 0.3 to 0.6.1 ('cornerRadius')
+    guard let key else { return .init(backtrace, message) }
+    let snakeCase = snakeCaseKey(key)
+    guard snakeCase != key, knownKeys.contains(snakeCase) else { return .init(backtrace, message) }
+    return .init(backtrace, "\(message). The keys are snake_case since Inlay 0.6.2: '\(snakeCase)'")
+}
+
+/// 'corner-radius' and 'cornerRadius' are 'corner_radius'
+func snakeCaseKey(_ key: String) -> String {
+    var result = ""
+    for char in key {
+        if char == "-" {
+            result.append("_")
+        } else if char.isUppercase {
+            result.append("_")
+            result.append(contentsOf: char.lowercased())
+        } else {
+            result.append(char)
+        }
+    }
+    return result
 }
 
 func expectedActualTypeDiagnostic(expected: ConfigValueType, actual: ConfigValueType, _ backtrace: ConfigBacktrace) -> ConfigParseDiagnostic {

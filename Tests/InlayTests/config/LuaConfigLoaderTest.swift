@@ -25,29 +25,29 @@ extension InlayTests {
         @Test func testScalarsAndTables() {
             let config = load("""
                 inlay.config({
-                  startAtLogin = true,
+                  start_at_login = true,
                   gaps = { inner = { horizontal = 8 } },
-                  splitRatio = 0.5,
+                  split_ratio = 0.5,
                   duration = 300 / 2,
                   theme = 'hypr',
-                  persistentWorkspaces = { '1', '2', '3' },
+                  persistent_workspaces = { '1', '2', '3' },
                 })
                 """)
             assertEquals(config.errors, [])
             assertEquals(config.table, [
                 "duration": .int(150),
                 "gaps": .dict(["inner": .dict(["horizontal": .int(8)])]),
-                "persistentWorkspaces": .array([.string("1"), .string("2"), .string("3")]),
-                "splitRatio": .double(0.5),
-                "startAtLogin": .bool(true),
+                "persistent_workspaces": .array([.string("1"), .string("2"), .string("3")]),
+                "split_ratio": .double(0.5),
+                "start_at_login": .bool(true),
                 "theme": .string("hypr"),
             ])
             // The keys are sorted: the order of a Lua table is no order
-            assertEquals(Array(config.table.keys), ["duration", "gaps", "persistentWorkspaces", "splitRatio", "startAtLogin", "theme"])
+            assertEquals(Array(config.table.keys), ["duration", "gaps", "persistent_workspaces", "split_ratio", "start_at_login", "theme"])
         }
 
         @Test func testEmptyTableIsATableOfKeys() {
-            assertEquals(load("inlay.config({ afterStartupCommand = {} })").table, ["afterStartupCommand": .dict([:])])
+            assertEquals(load("inlay.config({ after_startup_command = {} })").table, ["after_startup_command": .dict([:])])
             // A config without calls is an empty one
             assertEquals(load("-- nothing").table, [:])
             assertEquals(load("").errors, [])
@@ -117,7 +117,7 @@ extension InlayTests {
                 inlay.bind('cmd-alt-t', inlay.dsp.exec('open -a Terminal'))
                 inlay.bind('cmd-alt-1', inlay.dsp.move_node_to_workspace(1))
                 inlay.unbind('cmd-alt-shift-d')
-                inlay.window_rule({ match = { appId = 'a' }, run = 'layout floating' })
+                inlay.window_rule({ match = { app_id = 'a' }, run = 'layout floating' })
                 inlay.window_rule('workspaces')
                 inlay.on('start', 'exec-and-forget open -a Ghostty')
                 inlay.on('start', { 'workspace 1' })
@@ -145,11 +145,11 @@ extension InlayTests {
                     } },
                     service = { binding = { esc = { 'reload-config', 'mode main' } } },
                   },
-                  onWindowDetected = { { match = { appId = 'a' }, run = 'layout floating' }, 'workspaces' },
-                  afterStartupCommand = { 'exec-and-forget open -a Ghostty', 'workspace 1' },
-                  onFocusChanged = {},
-                  execOnWorkspaceChange = { '/bin/bash', '-c', 'true' },
-                  exec = { envVars = { PATH = '/bin:${PATH}' } },
+                  on_window_detected = { { match = { app_id = 'a' }, run = 'layout floating' }, 'workspaces' },
+                  after_startup_command = { 'exec-and-forget open -a Ghostty', 'workspace 1' },
+                  on_focus_changed = {},
+                  exec_on_workspace_change = { '/bin/bash', '-c', 'true' },
+                  exec = { env_vars = { PATH = '/bin:${PATH}' } },
                   animations = { duration = 160, curves = { bounce = { 0.34, 1.56, 0.64, 1 } }, open = { curve = 'quint', duration = 200 } },
                 }
                 """, kind: .table).table
@@ -165,7 +165,7 @@ extension InlayTests {
             assertEquals(messages(load("inlay.on('started', 'close')")),
                          ["[ERROR] inlay.lua:1: inlay.on: 'started' isn't an event: start, focus_changed, monitor_changed, mode_changed or workspace_changed"])
             assertEquals(messages(load("\ninlay.window_rule(1)")),
-                         ["[ERROR] inlay.lua:2: inlay.window_rule: it takes a table, { match = { appId = '…' }, run = 'layout floating' }, or 'workspaces'"])
+                         ["[ERROR] inlay.lua:2: inlay.window_rule: it takes a table, { match = { app_id = '…' }, run = 'layout floating' }, or 'workspaces'"])
         }
 
         /// Where each value was set: the file and the line of the call
@@ -175,25 +175,25 @@ extension InlayTests {
             let config = LuaConfigLoader.load(file: dir.appending(path: "inlay.lua"))
             assertEquals(config.errors, [])
             assertEquals(config.origins[["mode", "main", "binding", "cmd-alt-h"]], "binds.lua:1")
-            assertEquals(config.origins[["onWindowDetected"]], "binds.lua:3")
-            assertEquals(config.origins[["onWindowDetected", "1"]], "binds.lua:3")
+            assertEquals(config.origins[["on_window_detected"]], "binds.lua:3")
+            assertEquals(config.origins[["on_window_detected", "1"]], "binds.lua:3")
             assertEquals(config.origins[["gaps", "inner"]], "inlay.lua:2")
             assertEquals(config.origins[["workspaces", "1"]], "inlay.lua:5")
         }
 
         @Test func testRequire() throws {
             try write("return { primary = '#B59DF7' }", "colors.lua")
-            try write("local c = require('colors')\ninlay.config({ borders = { activeColor = c.primary } })", "borders.lua")
+            try write("local c = require('colors')\ninlay.config({ borders = { active_color = c.primary } })", "borders.lua")
             try FileManager.default.createDirectory(at: dir.appending(path: "conf"), withIntermediateDirectories: true)
-            try write("inlay.config({ menuBar = { colors = { focused = require('colors').primary } } })", "conf/menubar.lua")
+            try write("inlay.config({ menu_bar = { colors = { focused = require('colors').primary } } })", "conf/menubar.lua")
             let main = "require('borders')\nrequire('conf.menubar')"
             try write(main, "inlay.lua")
 
             let config = LuaConfigLoader.load(file: dir.appending(path: "inlay.lua"))
             assertEquals(config.errors, [])
             assertEquals(config.table, [
-                "borders": .dict(["activeColor": .string("#B59DF7")]),
-                "menuBar": .dict(["colors": .dict(["focused": .string("#B59DF7")])]),
+                "borders": .dict(["active_color": .string("#B59DF7")]),
+                "menu_bar": .dict(["colors": .dict(["focused": .string("#B59DF7")])]),
             ])
             // Every file, once, in the order of the first require
             assertEquals(config.files.map { $0.url?.path.replacingOccurrences(of: dir.path + "/", with: "") }, [

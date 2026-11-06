@@ -2,11 +2,11 @@ import Common
 import Foundation
 
 let tilingParserTable: [String: any ParserProtocol<TilingConfig>] = [
-    "newWindowPlacement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
-    "splitRatio": Parser(\.splitRatio, parseSplitRatio),
-    "startupLayout": Parser(\.startupLayout, parseStartupLayout),
-    "splitTarget": Parser(\.splitTarget, parseSplitTarget),
-    "minWindowSize": Parser(\.minWindowSize, parseMinWindowSize),
+    "new_window_placement": Parser(\.newWindowPlacement, parseNewWindowPlacement),
+    "split_ratio": Parser(\.splitRatio, parseSplitRatio),
+    "startup_layout": Parser(\.startupLayout, parseStartupLayout),
+    "split_target": Parser(\.splitTarget, parseSplitTarget),
+    "min_window_size": Parser(\.minWindowSize, parseMinWindowSize),
 ]
 
 func parseTiling(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> TilingConfig {
@@ -37,7 +37,7 @@ private func parseSplitTarget(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) 
 private func parseMinWindowSize(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<CGFloat> {
     let range = TilingConfig.minWindowSizeRange
     return parseInt(raw, backtrace)
-        .filter(.init(backtrace, "minWindowSize must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
+        .filter(.init(backtrace, "min_window_size must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
         .map { CGFloat($0) }
 }
 
@@ -46,5 +46,5 @@ private func parseSplitRatio(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -
     return raw.asDoubleOrNil
         .toResult(expectedActualTypeDiagnostic(expected: .float, actual: raw.valueType, backtrace))
         .map { CGFloat($0) }
-        .filter(.init(backtrace, "splitRatio must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
+        .filter(.init(backtrace, "split_ratio must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
 }

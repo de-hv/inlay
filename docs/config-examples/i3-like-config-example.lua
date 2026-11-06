@@ -2,17 +2,17 @@
 
 -- A whole config of its own, like i3: not over the built-in config of Inlay
 inlay.config({
-  builtInConfig = false,
+  built_in_config = false,
 
   -- In i3, all workspaces are phantom
-  persistentWorkspaces = {},
+  persistent_workspaces = {},
 
   -- i3 doesn't have "normalizations" feature that why we disable them here.
   -- But the feature is very helpful.
   -- Normalizations eliminate all sorts of weird tree configurations that don't make sense.
   -- Give normalizations a chance and enable them back.
-  enableNormalizationFlattenContainers = false,
-  enableNormalizationOppositeOrientationForNestedContainers = false,
+  enable_normalization_flatten_containers = false,
+  enable_normalization_opposite_orientation_for_nested_containers = false,
 })
 
 -- Mouse follows focus when focused monitor changes

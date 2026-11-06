@@ -9,10 +9,10 @@ import Common
 // That's why the split doesn't always create a container: if the container of the split window already has the
 // required orientation, the new window becomes its next sibling. The result on the screen is the same.
 
-/// Decides where a new tiling window goes when `newWindowPlacement = 'dwindle'`, and prepares the tree for it:
+/// Decides where a new tiling window goes when `new_window_placement = 'dwindle'`, and prepares the tree for it:
 /// the caller only has to bind the new window with the returned data.
 ///
-/// 1. Target. With `splitTarget = 'cursor'`, the tiling window of the workspace under the mouse cursor, if there is one.
+/// 1. Target. With `split_target = 'cursor'`, the tiling window of the workspace under the mouse cursor, if there is one.
 ///    Otherwise, the focused window, if it's a tiling window of the workspace.
 ///    Otherwise, the most recent tiling window of the workspace
 /// 2. Axis. Target wider than tall -> horizontal split (side by side). Otherwise, including a square -> vertical split
@@ -23,7 +23,7 @@ import Common
 ///    c. The opposite orientation -> a new container with the orientation of the axis takes the place and
 ///       the weight of the target. The target and the new window go inside
 ///
-/// The new window is always the right/bottom one. The target keeps `splitRatio` of its space.
+/// The new window is always the right/bottom one. The target keeps `split_ratio` of its space.
 ///
 /// nil if the workspace has no tiling windows. The new window must go to the root container then
 ///
@@ -121,7 +121,7 @@ extension TreeNode {
     /// Call it right before the node leaves the tiling tree: the window is closed, becomes floating, is moved to
     /// a different workspace, is minimized, etc.
     ///
-    /// With `newWindowPlacement = 'dwindle'`, the space of the node goes to its previous sibling (to the next one,
+    /// With `new_window_placement = 'dwindle'`, the space of the node goes to its previous sibling (to the next one,
     /// if the node is the first child), as if the split that created the node was undone.
     /// Without it, all the siblings share the space (AeroSpace behavior).
     ///

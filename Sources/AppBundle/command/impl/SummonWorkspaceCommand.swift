@@ -26,7 +26,7 @@ struct SummonWorkspaceCommand: Command {
             }
             return .from(bool: workspace.focusWorkspace())
         } else {
-            return .fail(io.err("Can't move workspace '\(workspace.name)' to monitor '\(monitor.name)'. workspaceToMonitorForceAssignment doesn't allow it"))
+            return .fail(io.err("Can't move workspace '\(workspace.name)' to monitor '\(monitor.name)'. workspace_to_monitor_force_assignment doesn't allow it"))
         }
     }
 }

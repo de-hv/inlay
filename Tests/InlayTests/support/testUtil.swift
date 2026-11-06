@@ -26,7 +26,7 @@ func setUpWorkspacesForTests() {
     config.tiling = TilingConfig()
     config.borders = BordersConfig()
     config.menuBar = MenuBarConfig()
-    // A window alone in its workspace fills it, like any other: the frames don't depend on [borders.singleWindow]
+    // A window alone in its workspace fills it, like any other: the frames don't depend on [borders.single_window]
     config.borders.singleWindow.enabled = false
     // Only WindowAnimatorTest turns the animations on: the other tests expect the frames right away
     WindowAnimator.shared.isEnabledInTests = false

@@ -148,7 +148,7 @@ extension Window {
     /// - Parameter previous: the frame of the window before, for an animated layout. nil: right away
     @MainActor
     fileprivate func layoutFullscreen(_ context: LayoutContext, previous: Rect?) {
-        // Like a window alone in its workspace, [borders.singleWindow], with the height that the layout gives it
+        // Like a window alone in its workspace, [borders.single_window], with the height that the layout gives it
         // (see: layoutFrame). With --no-outer-gaps, the whole visible part
         let single = context.workspace.workspaceMonitor.fullscreenRect
         let monitorRect = noOuterGapsInFullscreen

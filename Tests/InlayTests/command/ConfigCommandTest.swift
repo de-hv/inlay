@@ -26,7 +26,7 @@ extension InlayTests {
         }
 
         @Test func testParse() {
-            for command in ["config --show", "config --show borders", "config --show bind", "config --files", "config --file binds", "config --show --mine", "config --show --keys", "config --show menuBar --json", "config --types", "config --config-path", "config --unlink"] {
+            for command in ["config --show", "config --show borders", "config --show bind", "config --files", "config --file binds", "config --show --mine", "config --show --keys", "config --show menu_bar --json", "config --types", "config --config-path", "config --unlink"] {
                 assertEquals(parseCommand(command).errorOrNil, nil, additionalMsg: command)
             }
             assertEquals(parseCommand("config").errorOrNil, "Mandatory flag is not specified (--show|--files|--file|--explain|--types|--config-path|--use|--unlink)")
@@ -54,35 +54,35 @@ extension InlayTests {
         /// Every value, with where it comes from and its possible values
         @Test func testShow() async throws {
             try use(["inlay.lua": """
-                inlay.theme({ extends = 'gruvbox', menuBar = { systemColors = true } })
+                inlay.theme({ extends = 'gruvbox', menu_bar = { system_colors = true } })
                 inlay.config({
-                  menuBar = { perMonitor = true },
+                  menu_bar = { per_monitor = true },
                 })
                 """])
-            let result = await run("config --show menuBar")
+            let result = await run("config --show menu_bar")
             assertEquals(result.exitCode.rawValue, 0)
             let text = result.stdout.joined(separator: "\n")
-            assertEquals(text.hasPrefix("inlay.config({\n  menuBar = {"), true, additionalMsg: text)
+            assertEquals(text.hasPrefix("inlay.config({\n  menu_bar = {"), true, additionalMsg: text)
             assertEquals(text.hasSuffix("})"), true, additionalMsg: text)
             let lines = text.split(separator: "\n").map(String.init)
             func line(_ key: String) -> String { lines.first { $0.trimmingCharacters(in: .whitespaces).hasPrefix(key + " ") } ?? "" }
-            assertEquals(line("perMonitor").contains("= true,") && line("perMonitor").contains("-- yours (inlay.lua:2) · true|false"), true, additionalMsg: line("perMonitor"))
+            assertEquals(line("per_monitor").contains("= true,") && line("per_monitor").contains("-- yours (inlay.lua:2) · true|false"), true, additionalMsg: line("per_monitor"))
             assertEquals(line("theme").contains("= 'hypr',") && line("theme").contains("-- Inlay"), true, additionalMsg: line("theme"))
-            assertEquals(line("systemColors").contains("= true,") && line("systemColors").contains("-- theme"), true, additionalMsg: line("systemColors"))
+            assertEquals(line("system_colors").contains("= true,") && line("system_colors").contains("-- theme"), true, additionalMsg: line("system_colors"))
             assertEquals(line("focused").contains("'#D8A657'") && line("focused").contains("-- theme"), true, additionalMsg: line("focused"))
             assertEquals(line("occupied").contains("'auto'") && line("occupied").contains("-- default"), true, additionalMsg: line("occupied"))
 
             // The whole config is valid Lua: the calls that make it
             let all = await run("config --show")
             let lua = all.stdout.joined(separator: "\n")
-            assertEquals(lua.contains("\ninlay.theme({ extends = 'gruvbox', menuBar = { systemColors = true } })"), true, additionalMsg: lua)
+            assertEquals(lua.contains("\ninlay.theme({ extends = 'gruvbox', menu_bar = { system_colors = true } })"), true, additionalMsg: lua)
             assertEquals(lua.contains("\ninlay.workspace({ id = '1', key = 'h' })"), true, additionalMsg: lua)
             assertEquals(lua.contains("\ninlay.bind('cmd-alt-shift-b', 'balance-sizes')"), true, additionalMsg: lua)
             assertEquals(lua.contains("\ninlay.bind('esc', { 'reload-config', 'mode main' }, { mode = 'service' })"), true, additionalMsg: lua)
             assertEquals(lua.contains("\ninlay.window_rule('workspaces')"), true, additionalMsg: lua)
             let loaded = LuaConfigLoader.load(lua)
             assertEquals(loaded.errors, [])
-            assertEquals(loaded.table["menuBar"]?.asDictOrNil?["perMonitor"], .bool(true))
+            assertEquals(loaded.table["menu_bar"]?.asDictOrNil?["per_monitor"], .bool(true))
             assertEquals(loaded.table["workspaces"]?.asArrayOrNil?.count, 7)
             assertEquals(loaded.table["mode"]?.asDictOrNil?["main"]?.asDictOrNil?["binding"]?.asDictOrNil?["cmd-alt-shift-b"], .string("balance-sizes"))
         }
@@ -90,7 +90,7 @@ extension InlayTests {
         /// A function names the keys it sets: --show bind is the key bindings, as calls, with their files and lines
         @Test func testShowFunctions() async throws {
             try use([
-                "inlay.lua": "require('binds')\ninlay.window_rule({ match = { appId = 'a' }, run = 'layout floating' })",
+                "inlay.lua": "require('binds')\ninlay.window_rule({ match = { app_id = 'a' }, run = 'layout floating' })",
                 "binds.lua": "inlay.bind('cmd-alt-t', 'exec-and-forget open -a Terminal')\ninlay.unbind('cmd-alt-shift-d')\ninlay.bind('x', 'mode main', { mode = 'service' })",
             ])
             let binds = await run("config --show bind").stdout.joined(separator: "\n")
@@ -103,7 +103,7 @@ extension InlayTests {
             assertEquals(await run("config --show mode.service").stdout.joined(separator: "\n").contains("cmd-alt-shift-b"), false)
 
             let rules = await run("config --show window_rule").stdout.joined(separator: "\n").split(separator: "\n").map(String.init)
-            assertEquals(rules[1], "inlay.window_rule({ match = { appId = 'a' }, run = 'layout floating' })  -- yours (inlay.lua:2)")
+            assertEquals(rules[1], "inlay.window_rule({ match = { app_id = 'a' }, run = 'layout floating' })  -- yours (inlay.lua:2)")
             assertTrue(rules.contains("inlay.window_rule('workspaces')  -- Inlay"))
             let workspaces = await run("config --show inlay.workspace").stdout
             assertEquals(workspaces.joined().split(separator: "\n").first.map(String.init), "inlay.workspace({ id = '1', key = 'h' })  -- Inlay")
@@ -112,15 +112,15 @@ extension InlayTests {
         @Test func testShowKeysAndJson() async throws {
             try use(["inlay.lua": ""])
             let keys = await run("config --show --keys").stdout.joined(separator: "\n").split(separator: "\n").map(String.init)
-            for key in ["borders.width", "borders.glowRadius", "menuBar.colors.occupied", "gaps.inner.horizontal", "theme", "workspaces", "mode.main.binding['cmd-alt-shift-b']"] {
+            for key in ["borders.width", "borders.glow_radius", "menu_bar.colors.occupied", "gaps.inner.horizontal", "theme", "workspaces", "mode.main.binding['cmd-alt-shift-b']"] {
                 assertEquals(keys.contains(key), true, additionalMsg: key)
             }
-            assertEquals(keys.contains { $0.contains("-") && !$0.contains("[") }, false, additionalMsg: "camelCase names only")
+            assertEquals(keys.contains { $0.contains("-") && !$0.contains("[") }, false, additionalMsg: "snake_case names only")
 
             let json = await run("config --show borders --json").stdout.joined()
             let object = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
             assertEquals(object?["width"] as? Int, 2)
-            assertEquals(object?["glowRadius"] as? Int, 12)
+            assertEquals(object?["glow_radius"] as? Int, 12)
 
             let missing = await run("config --show bordres")
             assertEquals(missing.exitCode.rawValue != 0, true)
@@ -133,7 +133,7 @@ extension InlayTests {
                 "inlay.lua": """
                     require('binds')
                     inlay.config({
-                      menuBar = { perMonitor = true },
+                      menu_bar = { per_monitor = true },
                     })
                     """,
                 "binds.lua": """
@@ -145,7 +145,7 @@ extension InlayTests {
             let parts = text.components(separatedBy: "-- The same as without them")
             assertEquals(parts.count, 2, additionalMsg: text)
             guard parts.count == 2 else { return }
-            assertEquals(parts[0].contains("-- inlay.lua\ninlay.config({ menuBar = { perMonitor = true } })  -- inlay.lua:2\n-- binds.lua\ninlay.bind('cmd-alt-t', 'exec-and-forget open -a Terminal')  -- binds.lua:2"), true, additionalMsg: text)
+            assertEquals(parts[0].contains("-- inlay.lua\ninlay.config({ menu_bar = { per_monitor = true } })  -- inlay.lua:2\n-- binds.lua\ninlay.bind('cmd-alt-t', 'exec-and-forget open -a Terminal')  -- binds.lua:2"), true, additionalMsg: text)
             assertEquals(parts[1].contains("inlay.bind('cmd-alt-shift-b', 'balance-sizes')  -- binds.lua:1"), true, additionalMsg: text)
         }
 

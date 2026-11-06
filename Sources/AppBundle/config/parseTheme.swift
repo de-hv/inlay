@@ -15,7 +15,7 @@ import Foundation
 ///
 /// The value of the key is the name of a theme, a table like that one, or `{ dark = …, light = … }`: a theme for each
 /// appearance of macOS. Without the key, the theme is 'material' (defaultThemeName). The values of the theme go under
-/// the tables 'borders' and 'menuBar' of the config, so what the config writes wins, and what neither says keeps the
+/// the tables 'borders' and 'menu_bar' of the config, so what the config writes wins, and what neither says keeps the
 /// default of the code. `theme = {}`: no theme at all.
 /// The wallpaper is not part of a theme: Inlay never reads it nor changes it
 let themeKey = "theme"
@@ -154,16 +154,16 @@ struct ThemeResolver {
                     for (key, value) in table {
                         let path = ["borders", key]
                         switch key {
-                            case "activeColor", "inactiveColor", "floatingColor", "fullscreenColor":
+                            case "active_color", "inactive_color", "floating_color", "fullscreen_color":
                                 if isColor(value, allowAuto: false, path, backtrace, place, &c) { borders[key] = value }
                             case "glow":
                                 if isValid(parseBool(value, .emptyRoot), path, backtrace, place, &c) { borders[key] = value }
-                            case "glowRadius":
+                            case "glow_radius":
                                 let range = BordersConfig.glowRadiusRange
                                 let radius = parseInt(value, .emptyRoot)
-                                    .filter(.init(.emptyRoot, "glowRadius must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
+                                    .filter(.init(.emptyRoot, "glow_radius must be in [\(range.lowerBound), \(range.upperBound)] range")) { range.contains($0) }
                                 if isValid(radius, path, backtrace, place, &c) { borders[key] = value }
-                            case "modeColors":
+                            case "mode_colors":
                                 guard let modes = asTable(value, path, backtrace, place, &c) else { continue }
                                 var colors: OrderedJson.JsonDict = [:]
                                 for (mode, color) in modes where isColor(color, allowAuto: false, path + [mode], backtrace, place, &c) {
@@ -174,22 +174,22 @@ struct ThemeResolver {
                         }
                     }
                     result[key] = .dict(borders)
-                case "menuBar":
+                case "menu_bar":
                     guard let table = asTable(value, [key], backtrace, place, &c) else { continue }
                     var menuBar: OrderedJson.JsonDict = [:]
                     var colors: OrderedJson.JsonDict = [:]
                     for (key, value) in table {
-                        if key == "systemColors" {
-                            if isValid(parseBool(value, .emptyRoot), ["menuBar", key], backtrace, place, &c) { menuBar[key] = value }
+                        if key == "system_colors" {
+                            if isValid(parseBool(value, .emptyRoot), ["menu_bar", key], backtrace, place, &c) { menuBar[key] = value }
                             continue
                         }
                         guard key == "colors" else {
-                            c.errors.append(notAColor(backtrace, place, ["menuBar", key]))
+                            c.errors.append(notAColor(backtrace, place, ["menu_bar", key]))
                             continue
                         }
-                        guard let table = asTable(value, ["menuBar", key], backtrace, place, &c) else { continue }
+                        guard let table = asTable(value, ["menu_bar", key], backtrace, place, &c) else { continue }
                         for (key, value) in table {
-                            let path = ["menuBar", "colors", key]
+                            let path = ["menu_bar", "colors", key]
                             if !["focused", "accent", "occupied", "empty"].contains(key) {
                                 c.errors.append(notAColor(backtrace, place, path))
                             } else if isColor(value, allowAuto: true, path, backtrace, place, &c) {
@@ -241,7 +241,7 @@ struct ThemeResolver {
 
 /// What a theme can have
 let themeKeysMessage = "A theme only has the look of the borders and of the menu bar: the colors of 'borders' and of " +
-    "'menuBar.colors', 'borders.glow', 'borders.glowRadius' and 'menuBar.systemColors'"
+    "'menu_bar.colors', 'borders.glow', 'borders.glow_radius' and 'menu_bar.system_colors'"
 
 /// The tables of `over` merged into the ones of `base`; for anything else, the value of `over`. The keys of `over`
 /// keep their order and come first: the errors of the config are reported in the order it has

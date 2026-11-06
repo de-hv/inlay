@@ -20,7 +20,7 @@ public struct ConfigReference: Sendable {
     private let headerRange: Range<Int>
 
     private struct Part {
-        /// The dotted path: 'borders', 'borders.width', 'onWindowDetected.match.appId'
+        /// The dotted path: 'borders', 'borders.width', 'on_window_detected.match.app_id'
         var path: String
         /// The lines of the part, with its comment
         var range: Range<Int>
@@ -298,13 +298,13 @@ private func functionName(_ trimmedLine: String) -> String? {
     return !name.isEmpty && name.allSatisfy({ $0.isLowercase || $0 == "_" }) ? name : nil
 }
 
-/// 'accordionPadding' for '-- accordionPadding = 30'
+/// 'show_app_icons' for '-- show_app_icons = false'
 private func commentedOutKey(_ line: String) -> String? {
     let trimmed = line.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("-- ") else { return nil }
     let content = String(trimmed.dropFirst(3))
     guard content.first?.isLowercase == true, let key = assignedKey(content) else { return nil }
-    return key.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "." } ? key : nil
+    return key.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == "." } ? key : nil
 }
 
 private func normalizedKey(_ key: String) -> String {

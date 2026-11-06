@@ -48,7 +48,7 @@ struct ResizeCommand: Command {
         let siblingIndexes = parent.children.indices.filter { $0 != index }
         if siblingIndexes.isEmpty { return .fail }
 
-        // Nobody is shrunk under 'tiling.minWindowSize': the resize stops there. It isn't an error, and the command
+        // Nobody is shrunk under 'tiling.min_window_size': the resize stops there. It isn't an error, and the command
         // doesn't tell about it: a key that is held down in a resize mode reaches the limit all the time
         var weights = parent.children.map { $0.getWeight(orientation) }
         let minimums = parent.children.map(\.minimumResizeWeight)

@@ -36,19 +36,19 @@ struct LegacyWindowDetectedCallbackMatcher: ConvenienceMutable, Equatable {
     var debugJson: Json {
         var resultParts: [String] = []
         if let appId {
-            resultParts.append("appId=\"\(appId)\"")
+            resultParts.append("app_id=\"\(appId)\"")
         }
         if let appNameRegexSubstring {
-            resultParts.append("appNameRegexSubstring=\"\(appNameRegexSubstring.origin)\"")
+            resultParts.append("app_name_regex_substring=\"\(appNameRegexSubstring.origin)\"")
         }
         if let windowTitleRegexSubstring {
-            resultParts.append("windowTitleRegexSubstring=\"\(windowTitleRegexSubstring.origin)\"")
+            resultParts.append("window_title_regex_substring=\"\(windowTitleRegexSubstring.origin)\"")
         }
         if let workspace {
             resultParts.append("workspace=\"\(workspace)\"")
         }
         if let duringInlayStartup {
-            resultParts.append("duringInlayStartup=\(duringInlayStartup)")
+            resultParts.append("during_inlay_startup=\(duringInlayStartup)")
         }
         return .string(resultParts.joined(separator: ", "))
     }
@@ -69,16 +69,16 @@ enum WindowDetectedCallbackMatcher: Equatable {
 
 let windowDetectedParser: [String: any ParserProtocol<WindowDetectedCallback>] = [
     "match": Parser(\.matcher, parseMatcher),
-    "checkFurtherCallbacks": Parser(\.checkFurtherCallbacks, parseBool),
+    "check_further_callbacks": Parser(\.checkFurtherCallbacks, parseBool),
     "run": Parser(\.rawRun, parseShellOfCommandsForConfig),
 ]
 
 let windowDetectedMatcherParser: [String: any ParserProtocol<LegacyWindowDetectedCallbackMatcher>] = [
-    "appId": Parser(\.appId, upcast(parseString)),
+    "app_id": Parser(\.appId, upcast(parseString)),
     "workspace": Parser(\.workspace, upcast(parseString)),
-    "appNameRegexSubstring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
-    "windowTitleRegexSubstring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
-    "duringInlayStartup": Parser(\.duringInlayStartup, upcast(parseBool)),
+    "app_name_regex_substring": Parser(\.appNameRegexSubstring, upcast(parseCasInsensitiveRegex)),
+    "window_title_regex_substring": Parser(\.windowTitleRegexSubstring, upcast(parseCasInsensitiveRegex)),
+    "during_inlay_startup": Parser(\.duringInlayStartup, upcast(parseBool)),
 ]
 
 private func upcast<T>(
@@ -119,7 +119,7 @@ private func parseWindowDetectedCallback(_ raw: OrderedJson, _ backtrace: Config
 
     if callback.matcher == .command(.empty) && !callback.checkFurtherCallbacks {
         let msg = "Omitting 'match' is error prone. You can use `match = 'true'` to preserve the previous behavior.\n" +
-            "But heads up! You may have missed 'checkFurtherCallbacks = true'"
+            "But heads up! You may have missed 'check_further_callbacks = true'"
         myContext.errors.append(.init(backtrace, msg))
     }
 

@@ -34,30 +34,30 @@ extension InlayTests {
                 assertEquals(parseConfig(lua: "inlay.config({ \(key) })").strErrors, ["[ERROR] \(name): Unknown top-level key"])
             }
             assertEquals(
-                parseConfig(lua: "inlay.config({ onWindowDetected = { { match = { duringAerospaceStartup = true }, run = 'layout floating' } } })").strErrors,
-                ["[ERROR] onWindowDetected[0].match.duringAerospaceStartup: Unknown key"],
+                parseConfig(lua: "inlay.config({ on_window_detected = { { match = { duringAerospaceStartup = true }, run = 'layout floating' } } })").strErrors,
+                ["[ERROR] on_window_detected[0].match.duringAerospaceStartup: Unknown key"],
             )
         }
 
         @Test func testExecOnWorkspaceChangeDifferentTypesError() {
             let errors = parseConfig(lua: """
-                inlay.config({ execOnWorkspaceChange = { '', 1 } })
+                inlay.config({ exec_on_workspace_change = { '', 1 } })
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] execOnWorkspaceChange[1]: Expected type is \'String\'. But actual type is \'Int\'"])
+            assertEquals(errors, ["[ERROR] exec_on_workspace_change[1]: Expected type is \'String\'. But actual type is \'Int\'"])
         }
 
         @Test func testDuplicatedPersistentWorkspaces() {
             let errors = parseConfig(lua: """
-                inlay.config({ persistentWorkspaces = { 'a', 'a' } })
+                inlay.config({ persistent_workspaces = { 'a', 'a' } })
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] persistentWorkspaces: Contains duplicated workspace names"])
+            assertEquals(errors, ["[ERROR] persistent_workspaces: Contains duplicated workspace names"])
         }
 
         /// Always available: there is no configVersion anymore
         @Test func testPersistentWorkspaces() {
-            let result = parseConfig(lua: "inlay.config({ persistentWorkspaces = { 'a' } })")
+            let result = parseConfig(lua: "inlay.config({ persistent_workspaces = { 'a' } })")
             assertEquals(result.strErrors, [])
             assertEquals(Array(result.config.persistentWorkspaces), ["a"])
         }
@@ -154,7 +154,7 @@ extension InlayTests {
             )
         }
 
-        /// The persistent workspaces come from 'persistentWorkspaces', or from the ids of 'workspaces'. The key
+        /// The persistent workspaces come from 'persistent_workspaces', or from the ids of 'workspaces'. The key
         /// bindings don't make any
         @Test func testPermanentWorkspaceNames() {
             let fromBindings = parseConfig(lua: """
@@ -180,7 +180,7 @@ extension InlayTests {
 
         @Test func testUnknownTopLevelKeyParseError() {
             let result = parseConfig(lua: """
-                inlay.config({ unknownKey = true, enableNormalizationFlattenContainers = false })
+                inlay.config({ unknownKey = true, enable_normalization_flatten_containers = false })
                 """,
             )
             assertEquals(
@@ -193,7 +193,7 @@ extension InlayTests {
         @Test func testUnknownKeyParseError() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  enableNormalizationFlattenContainers = false,
+                  enable_normalization_flatten_containers = false,
                   gaps = { unknownKey = true },
                 })
                 """,
@@ -207,12 +207,12 @@ extension InlayTests {
 
         @Test func testTypeMismatch() {
             let errors = parseConfig(lua: """
-                inlay.config({ enableNormalizationFlattenContainers = 'true' })
+                inlay.config({ enable_normalization_flatten_containers = 'true' })
                 """,
             ).strErrors
             assertEquals(
                 errors,
-                ["[ERROR] enableNormalizationFlattenContainers: Expected type is \'Bool\'. But actual type is \'String\'"],
+                ["[ERROR] enable_normalization_flatten_containers: Expected type is \'Bool\'. But actual type is \'String\'"],
             )
         }
 
@@ -263,7 +263,7 @@ extension InlayTests {
         @Test func testSplitCommandAndFlattenContainersNormalization() {
             let errors = parseConfig(lua: """
                 inlay.config({
-                  enableNormalizationFlattenContainers = true,
+                  enable_normalization_flatten_containers = true,
                   mode = {
                     main = { binding = {} },
                     foo = {
@@ -276,8 +276,8 @@ extension InlayTests {
             let expected = """
                 [ERROR] The config contains:
                 1. usage of 'split' command
-                2. enableNormalizationFlattenContainers = true
-                These two settings don't play nicely together. 'split' command has no effect when enableNormalizationFlattenContainers is disabled.
+                2. enable_normalization_flatten_containers = true
+                These two settings don't play nicely together. 'split' command has no effect when enable_normalization_flatten_containers is disabled.
 
                 My recommendation: keep the normalizations enabled, and prefer 'join-with' over 'split'.
                 """
@@ -287,7 +287,7 @@ extension InlayTests {
         @Test func testParseWorkspaceToMonitorAssignment() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  workspaceToMonitorForceAssignment = {
+                  workspace_to_monitor_force_assignment = {
                     workspace_name_1 = 1,
                     workspace_name_2 = 'main',
                     workspace_name_3 = 'secondary',
@@ -318,8 +318,8 @@ extension InlayTests {
                 ],
             )
             assertEquals([
-                "[ERROR] workspaceToMonitorForceAssignment.w7[0]: Empty string is an illegal monitor description",
-                "[ERROR] workspaceToMonitorForceAssignment.w8: Monitor sequence numbers uses 1-based indexing. Values less than 1 are illegal",
+                "[ERROR] workspace_to_monitor_force_assignment.w7[0]: Empty string is an illegal monitor description",
+                "[ERROR] workspace_to_monitor_force_assignment.w8: Monitor sequence numbers uses 1-based indexing. Values less than 1 are illegal",
             ], result.strErrors)
             assertEquals([:], Config().workspaceToMonitorForceAssignment)
         }
@@ -327,14 +327,14 @@ extension InlayTests {
         @Test func testParseOnWindowDetected() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  onWindowDetected = {
+                  on_window_detected = {
                     { -- 0
                       match = 'true',
-                      checkFurtherCallbacks = true,
+                      check_further_callbacks = true,
                       run = { 'layout floating', 'move-node-to-workspace W' },
                     },
                     { -- 1
-                      match = { appId = 'com.apple.systempreferences' },
+                      match = { app_id = 'com.apple.systempreferences' },
                       run = {},
                     },
                     {}, -- 2
@@ -402,17 +402,17 @@ extension InlayTests {
             ])
 
             assertEquals(result.strErrors, [
-                "[ERROR] onWindowDetected[2]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'checkFurtherCallbacks = true\'",
-                "[ERROR] onWindowDetected[2]: \'run\' is mandatory key",
-                "[ERROR] onWindowDetected[7]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'checkFurtherCallbacks = true\'",
+                "[ERROR] on_window_detected[2]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'check_further_callbacks = true\'",
+                "[ERROR] on_window_detected[2]: \'run\' is mandatory key",
+                "[ERROR] on_window_detected[7]: Omitting \'match\' is error prone. You can use `match = \'true\'` to preserve the previous behavior.\nBut heads up! You may have missed \'check_further_callbacks = true\'",
             ])
         }
 
         @Test func testParseOnWindowDetected2() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  onWindowDetected = {
-                    { checkFurtherCallbacks = true, run = '' },
+                  on_window_detected = {
+                    { check_further_callbacks = true, run = '' },
                   },
                 })
                 """)
@@ -430,13 +430,13 @@ extension InlayTests {
         @Test func testParseInlineTables() {
             let errors = parseConfig(lua: """
                 inlay.config({
-                  onWindowDetected = {
+                  on_window_detected = {
                     {
-                      checkFurtherCallbacks = true,
+                      check_further_callbacks = true,
                       run = { 'layout floating', 'move-node-to-workspace W' },
                     },
                     {
-                      match = { appId = 'com.apple.systempreferences' },
+                      match = { app_id = 'com.apple.systempreferences' },
                       run = {},
                     },
                   },
@@ -449,9 +449,9 @@ extension InlayTests {
         @Test func testLuaSyntaxError() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  onWindowDetected = {
-                    { match = { appId = 'com.apple.findmy' }, run = 'layout floating' }
-                    { match = { appId = 'com.openai.chat' }, run = 'layout floating' },
+                  on_window_detected = {
+                    { match = { app_id = 'com.apple.findmy' }, run = 'layout floating' }
+                    { match = { app_id = 'com.openai.chat' }, run = 'layout floating' },
                   },
                 })
                 """)
@@ -462,9 +462,9 @@ extension InlayTests {
         @Test func testParseOnWindowDetectedRegex() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  onWindowDetected = {
+                  on_window_detected = {
                     {
-                      match = { appNameRegexSubstring = '^system settings$' },
+                      match = { app_name_regex_substring = '^system settings$' },
                       run = {},
                     },
                   },
@@ -576,9 +576,9 @@ extension InlayTests {
         @Test func testOnFocusChangedAsSingleStringAndAsList() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  onFocusChanged = 'focus left',
-                  onModeChanged = { 'focus right', 'focus up' },
-                  onFocusedMonitorChanged = 'focus down',
+                  on_focus_changed = 'focus left',
+                  on_mode_changed = { 'focus right', 'focus up' },
+                  on_focused_monitor_changed = 'focus down',
                 })
                 """,
             )
@@ -591,55 +591,55 @@ extension InlayTests {
 
         @Test func testOnFocusChangedTypeError() {
             let result = parseConfig(lua: """
-                inlay.config({ onFocusChanged = 1 })
+                inlay.config({ on_focus_changed = 1 })
                 """,
             )
             assertEquals(
                 result.strErrors,
-                ["[ERROR] onFocusChanged: Expected types are \'string\' or \'array\'. But actual type is \'int\'"],
+                ["[ERROR] on_focus_changed: Expected types are \'string\' or \'array\'. But actual type is \'int\'"],
             )
         }
 
         @Test func testParseDefaultRootContainerLayout() {
             let result = parseConfig(lua: """
-                inlay.config({ defaultRootContainerLayout = 'tiles' })
+                inlay.config({ default_root_container_layout = 'tiles' })
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerLayout, .tiles)
 
             let listResult = parseConfig(lua: """
-                inlay.config({ defaultRootContainerLayout = 'list' })
+                inlay.config({ default_root_container_layout = 'list' })
                 """,
             )
             assertEquals(listResult.errors, [])
             assertEquals(listResult.config.defaultRootContainerLayout, .tiles)
 
             let bad = parseConfig(lua: """
-                inlay.config({ defaultRootContainerLayout = 'bogus' })
+                inlay.config({ default_root_container_layout = 'bogus' })
                 """,
             )
             assertEquals(
                 bad.strErrors,
-                ["[ERROR] defaultRootContainerLayout: Can\'t parse layout \'bogus\'"],
+                ["[ERROR] default_root_container_layout: Can\'t parse layout \'bogus\'"],
             )
         }
 
         @Test func testParseDefaultRootContainerOrientation() {
             let result = parseConfig(lua: """
-                inlay.config({ defaultRootContainerOrientation = 'vertical' })
+                inlay.config({ default_root_container_orientation = 'vertical' })
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerOrientation, .vertical)
 
             let bad = parseConfig(lua: """
-                inlay.config({ defaultRootContainerOrientation = 'diagonal' })
+                inlay.config({ default_root_container_orientation = 'diagonal' })
                 """,
             )
             assertEquals(
                 bad.strErrors,
-                ["[ERROR] defaultRootContainerOrientation: Can\'t parse default container orientation \'diagonal\'"],
+                ["[ERROR] default_root_container_orientation: Can\'t parse default container orientation \'diagonal\'"],
             )
         }
 
@@ -652,8 +652,8 @@ extension InlayTests {
         @Test func testParseKeyMapping() {
             let result = parseConfig(lua: """
                 inlay.config({
-                  keyMapping = {
-                    keyNotationToKeyCode = { q = 'q', unicorn = 'u' },
+                  key_mapping = {
+                    key_notation_to_key_code = { q = 'q', unicorn = 'u' },
                   },
                   mode = {
                     main = {
@@ -673,20 +673,20 @@ extension InlayTests {
 
             let errors1 = parseConfig(lua: """
                 inlay.config({
-                  keyMapping = {
-                    keyNotationToKeyCode = { q = 'qw', [' f'] = 'f' },
+                  key_mapping = {
+                    key_notation_to_key_code = { q = 'qw', [' f'] = 'f' },
                   },
                 })
                 """,
             ).strErrors
             assertEquals(errors1, [
-                "[ERROR] keyMapping.keyNotationToKeyCode: ' f' is invalid key notation",
-                "[ERROR] keyMapping.keyNotationToKeyCode.q: 'qw' is invalid key code",
+                "[ERROR] key_mapping.key_notation_to_key_code: ' f' is invalid key notation",
+                "[ERROR] key_mapping.key_notation_to_key_code.q: 'qw' is invalid key code",
             ])
 
             let dvorakResult = parseConfig(lua: """
                 inlay.config({
-                  keyMapping = { preset = 'dvorak' },
+                  key_mapping = { preset = 'dvorak' },
                 })
                 """,
             )
@@ -695,7 +695,7 @@ extension InlayTests {
             assertEquals(dvorakResult.config.keyMapping.resolve()["quote"], .q)
             let colemakResult = parseConfig(lua: """
                 inlay.config({
-                  keyMapping = { preset = 'colemak' },
+                  key_mapping = { preset = 'colemak' },
                 })
                 """,
             )

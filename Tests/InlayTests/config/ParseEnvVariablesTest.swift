@@ -19,11 +19,11 @@ extension InlayTests {
         }
 
         @Test func testInherit() {
-            let result1 = parseConfig(lua: "inlay.config({ exec = { inheritEnvVars = false } })")
+            let result1 = parseConfig(lua: "inlay.config({ exec = { inherit_env_vars = false } })")
             assertEquals(result1.errors, [])
             assertEquals(result1.config.execConfig.envVariables, [:])
 
-            let result2 = parseConfig(lua: "inlay.config({ exec = { inheritEnvVars = true } })")
+            let result2 = parseConfig(lua: "inlay.config({ exec = { inherit_env_vars = true } })")
             assertEquals(result2.errors, [])
             assertEquals(result2.config.execConfig.envVariables, testEnv)
         }
@@ -32,7 +32,7 @@ extension InlayTests {
             let result = parseConfig(lua: """
                 inlay.config({
                   exec = {
-                    envVars = { FOO = 'BAR' },
+                    env_vars = { FOO = 'BAR' },
                   },
                 })
                 """,
@@ -45,14 +45,14 @@ extension InlayTests {
             let errors = parseConfig(lua: """
                 inlay.config({
                   exec = {
-                    envVars = { FOO = '${BAR}', BAR = '${FOO}' },
+                    env_vars = { FOO = '${BAR}', BAR = '${FOO}' },
                   },
                 })
                 """,
             ).strErrors
             assertEquals(errors, [
-                "[ERROR] exec.envVars.BAR: Env variable 'FOO' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
-                "[ERROR] exec.envVars.FOO: Env variable 'BAR' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
+                "[ERROR] exec.env_vars.BAR: Env variable 'FOO' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
+                "[ERROR] exec.env_vars.FOO: Env variable 'BAR' isn't presented in Inlay.app env vars, or not available for interpolation (because it's mutated)",
             ])
         }
 
@@ -60,12 +60,12 @@ extension InlayTests {
             let errors = parseConfig(lua: """
                 inlay.config({
                   exec = {
-                    envVars = { PWD = '' },
+                    env_vars = { PWD = '' },
                   },
                 })
                 """,
             ).strErrors
-            assertEquals(errors, ["[ERROR] exec.envVars.PWD: Changing 'PWD' is not allowed"])
+            assertEquals(errors, ["[ERROR] exec.env_vars.PWD: Changing 'PWD' is not allowed"])
         }
     }
 }

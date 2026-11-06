@@ -5,7 +5,7 @@ import Testing
 
 extension InlayTests {
     /// The windows that are already open when Inlay starts to manage the windows go to the workspaces of their
-    /// 'onWindowDetected' rules, and then every workspace is arranged. With the rules of the built-in config, under a
+    /// 'on_window_detected' rules, and then every workspace is arranged. With the rules of the built-in config, under a
     /// config of the user with workspaces and their apps (fixtures/workspaces-with-apps.lua).
     ///
     /// The windows are registered by the same code as the real ones (Window.afterRegistration), and the rest of the
@@ -171,7 +171,7 @@ extension InlayTests {
         /// window is registered, so the rules that run are the ones of the user. This is also the order when the
         /// Accessibility permission is granted after Inlay was opened: nothing is loaded or registered until then
         @Test func testTheRulesOfTheUserRunNotTheOnesOfTheBuiltInConfig() async throws {
-            let user = try temporaryConfig(rules: "{ match = { appId = 'com.mitchellh.ghostty' }, run = 'move-node-to-workspace 4' }")
+            let user = try temporaryConfig(rules: "{ match = { app_id = 'com.mitchellh.ghostty' }, run = 'move-node-to-workspace 4' }")
             defer { ServerState.shared.lastConfigLoad = nil }
             assertEquals(await reloadConfig_nonCancellable(forceConfigUrl: user).isOk, true)
             assertEquals(config.onWindowDetected.count, 1)
@@ -212,7 +212,7 @@ extension InlayTests {
             try await open(4, Self.ghostty)
             assertEquals(tiling("5"), [4])
             // Running them again is something the user asks for
-            assertEquals(await parseCommand("run-callback onWindowDetected --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
+            assertEquals(await parseCommand("run-callback on_window_detected --window-id 2").cmdOrDie.run(.defaultEnv, .emptyStdin).exitCode.rawValue, 0)
             assertEquals(Workspace.all.map { tiling($0.name) }, [[1], [], [], [], [2, 4], []])
             assertEquals(floating("1"), [3])
         }
@@ -312,10 +312,10 @@ extension InlayTests {
         private func temporaryConfig(rules: String) throws -> URL {
             let text = """
                 inlay.config({
-                  builtInConfig = false, -- Only these rules
-                  persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
-                  automaticallyUnhideMacosHiddenApps = true, -- See: init
-                  onWindowDetected = { \(rules) },
+                  built_in_config = false, -- Only these rules
+                  persistent_workspaces = { '1', '2', '3', '4', '5', '6' },
+                  automatically_unhide_macos_hidden_apps = true, -- See: init
+                  on_window_detected = { \(rules) },
                 })
                 """
             let url = FileManager.default.temporaryDirectory.appending(path: "inlay-startup-rules-\(UUID().uuidString).lua")

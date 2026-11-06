@@ -59,11 +59,11 @@ struct Config: ConvenienceMutable {
     var automaticallyUnhideMacosHiddenApps: Bool = false
     var enableNormalizationOppositeOrientationForNestedContainers: Bool = true
     var persistentWorkspaces: OrderedSet<String> = []
-    /// 'workspaces' and 'workspaceKeys' become the keys that they make before the config is parsed. See: expandWorkspaces
+    /// 'workspaces' and 'workspace_keys' become the keys that they make before the config is parsed. See: expandWorkspaces
     var _workspaces: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     /// The names of 'workspaces': the menu of the menu bar item shows them
     var workspaceNames: [String: String] = [:]
-    /// 'builtInConfig = false': the config of the user doesn't go over the built-in one. See: mergedConfig
+    /// 'built_in_config = false': the config of the user doesn't go over the built-in one. See: mergedConfig
     var _builtInConfig: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     var execOnWorkspaceChange: [String] = [] // todo deprecate
     var keyMapping = KeyMapping()
@@ -73,7 +73,7 @@ struct Config: ConvenienceMutable {
     var menuBar: MenuBarConfig = MenuBarConfig()
     var borders: BordersConfig = BordersConfig()
     var animations: AnimationsConfig = AnimationsConfig()
-    /// 'theme' goes into 'borders' and 'menuBar' before they are parsed. See: ThemeResolver
+    /// 'theme' goes into 'borders' and 'menu_bar' before they are parsed. See: ThemeResolver
     var _theme: Void { get { () } set {} } // swiftlint:disable:this unused_setter_value
     /// The colors of the light theme of `theme = { dark = …, light = … }`. nil: the same in both appearances
     var lightAppearance: AppearanceColors? = nil

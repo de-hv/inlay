@@ -6,13 +6,13 @@
 -- mode). The other colors of the menu bar stay 'auto': they follow the menu bar over any wallpaper
 return {
   borders = {
-    activeColor     = '#A7C080',
-    inactiveColor   = '#475258B3',
-    floatingColor   = '#D699B6',
-    fullscreenColor = '#DBBC7F',
-    modeColors = { resize = '#83C092', service = '#E67E80' },
+    active_color     = '#A7C080',
+    inactive_color   = '#475258B3',
+    floating_color   = '#D699B6',
+    fullscreen_color = '#DBBC7F',
+    mode_colors = { resize = '#83C092', service = '#E67E80' },
   },
-  menuBar = {
+  menu_bar = {
     colors = { focused = '#A7C080', accent = '#D699B6' },
   },
 }

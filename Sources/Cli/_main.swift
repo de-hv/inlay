@@ -3,55 +3,24 @@ import Darwin
 import Foundation
 import Network
 
-let usage =
-    """
-    USAGE: \(CommandLine.arguments.first ?? "inlay") [-h|--help] [-v|--version] <subcommand> [<args>...]
-
-    SUBCOMMANDS:
-    \(subcommandDescriptions.sortedBy { $0[0] }.toPaddingTable(columnSeparator: "   ").joined(separator: "\n"))
-    """
-
 @main
 struct Main {
     static func main() async {
         var args = CommandLine.arguments.slice(1...) ?? []
 
+        // Alone: what is running, where you are, and the commands people use
         if args.isEmpty {
-            exit(EXIT_CODE_TWO, err: usage)
+            await printStatus()
         }
-        if args.first == "--help" || args.first == "-h" {
-            exit(EXIT_CODE_ZERO, out: usage)
+        if args.first == "--help" || args.first == "-h" || args.first == "help" && args.count == 1 {
+            let all = args.contains("--all")
+            var descriptions: [String: String] = [:]
+            for pair in subcommandDescriptions { descriptions[pair[0].trimmingCharacters(in: .whitespaces)] = pair[1] }
+            exit(EXIT_CODE_ZERO, out: CliText.help(descriptions: all ? descriptions : nil, width: terminalColumns(), style: outStyle))
         }
 
-        if args.first == "--version" || args.first == "-v" {
-            let connection = NWConnection(to: NWEndpoint.unix(path: socketPath), using: .tcp)
-            let serverVersionAndHash: String?
-            switch await connection.initConnection().error {
-                case nil:
-                    let ans = await run(connection, [], stdin: "", windowId: nil, workspace: nil, failExitCode: EXIT_CODE_TWO)
-                    serverVersionAndHash = ans.serverVersionAndHash
-                case .nwError(let e):
-                    eprint(e.localizedDescription)
-                    serverVersionAndHash = nil
-                case .customError(let msg):
-                    exit(EXIT_CODE_TWO, err: msg)
-            }
-            print(
-                """
-                inlay CLI client version: \(cliClientVersionAndHash)
-                Inlay.app server version: \(serverVersionAndHash ?? "Unknown. The server is not responding")
-                """,
-            )
-            if serverVersionAndHash != nil && cliClientVersionAndHash != serverVersionAndHash {
-                eprint(
-                    """
-                    Warning: Inlay client/server versions don't match. Possible fixes:
-                      - Restart Inlay.app (server restart is required after each update)
-                      - Reinstall and restart Inlay (corrupted installation)
-                    """,
-                )
-            }
-            exit(EXIT_CODE_ZERO)
+        if args.first == "--version" || args.first == "-v" || args.first == "version" && args.count == 1 {
+            await printVersion()
         }
 
         // For scripts/build-app.sh: the file of types for the editors, made from the config reference. See: EditorTypes
@@ -75,7 +44,12 @@ struct Main {
 
             case .cmd(let _parsedArgs): parsedArgs = _parsedArgs
             case .help(let help): exit(EXIT_CODE_ZERO, out: help)
-            case .failure(let e): exit(e.exitCode, err: e.msg)
+            case .failure(let e):
+                if let name = args.first, e.msg == "Unrecognized subcommand '\(name)'" {
+                    let commands = subcommandDescriptions.map { $0[0].trimmingCharacters(in: .whitespaces) }
+                    exit(e.exitCode, err: CliText.unknownCommand(name, arguments: args.slice(1...)?.toArray() ?? [], commands: commands, style: errStyle))
+                }
+                exit(e.exitCode, err: errStyle.isEnabled ? "\(errStyle.paint("error:", .error)) \(e.msg)" : e.msg)
         }
 
         let failExitCode = parsedArgs.failExitCode
@@ -83,7 +57,7 @@ struct Main {
         // Documentation: answered from the reference that ships with Inlay, so it works without the server
         if let configArgs = parsedArgs as? ConfigCmdArgs, case .explain(let key) = configArgs.mode {
             switch ConfigReference.load().flatMap({ $0.explain(key) }) {
-                case .success(let text): exit(EXIT_CODE_ZERO, out: text)
+                case .success(let text): exit(EXIT_CODE_ZERO, out: prettyConfig(parsedArgs, text))
                 case .failure(let message): exit(failExitCode, err: message)
             }
         }
@@ -155,6 +129,12 @@ struct Main {
             exit(EXIT_CODE_ZERO) // Should not reach here
         }
 
+        if let table = await prettyList(connection, parsedArgs, args.toArray(), windowId: windowId, workspace: workspace, failExitCode: failExitCode) {
+            if !table.stdout.isEmpty { print(table.stdout) }
+            if !table.stderr.isEmpty { eprint(prettyDiagnostics(table.stderr)) }
+            exit(table.exitCode)
+        }
+
         var ans = await run(connection, args, stdin: stdin, windowId: windowId, workspace: workspace, failExitCode: failExitCode)
 
         // The server only knows how to answer once. Until interrupted (ctrl-c), or until the server is gone
@@ -167,19 +147,10 @@ struct Main {
             }
         }
 
-        if !ans.stdout.isEmpty { print(ans.stdout) }
-        if !ans.stderr.isEmpty { eprint(ans.stderr) }
+        if !ans.stdout.isEmpty { print(prettyConfig(parsedArgs, ans.stdout)) }
+        if !ans.stderr.isEmpty { eprint(prettyDiagnostics(ans.stderr)) }
         if ans.exitCode != EXIT_CODE_ZERO && ans.serverVersionAndHash != cliClientVersionAndHash {
-            eprint(
-                """
-                Warning: Inlay client/server versions don't match
-                  - inlay CLI client version: \(cliClientVersionAndHash)
-                  - Inlay.app server version: \(ans.serverVersionAndHash)
-                  Possible fixes:
-                  - Restart Inlay.app (server restart is required after each update)
-                  - Reinstall and restart Inlay (corrupted installation)
-                """,
-            )
+            eprint(versionMismatch(server: ans.serverVersionAndHash))
         }
         exit(ans.exitCode)
     }

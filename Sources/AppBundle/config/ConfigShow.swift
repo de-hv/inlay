@@ -93,7 +93,8 @@ enum ConfigShow {
         let (_, lua, layers, isBuiltIn) = load()
         var lines: [String] = []
         if layers.base != nil || isBuiltIn { lines.append("Inlay   \(builtInConfigUrl.path.tildePath)") }
-        if let name = layers.themeName {
+        // A table of the user: the theme it starts from
+        if let name = layers.themeName ?? layers.user[themeKey]?.asDictOrNil?["extends"]?.asStringOrNil {
             let users = layers.themeFiles.first { $0.url?.lastPathComponent == name + ".lua" && $0.text != nil }?.url
             let builtIn = builtInThemesUrl.appending(component: name + ".lua")
             if let url = users ?? (FileManager.default.fileExists(atPath: builtIn.path) ? builtIn : nil) {

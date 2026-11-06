@@ -168,10 +168,3 @@ extension URL {
     fileprivate func readText() -> String? { try? String(contentsOf: self, encoding: .utf8) }
 }
 
-extension String {
-    /// The path with ~ for the home folder, as the user writes it
-    var tildePath: String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return hasPrefix(home + "/") ? "~" + dropFirst(home.count) : self
-    }
-}

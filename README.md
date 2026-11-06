@@ -70,6 +70,21 @@ The commands are the ones of AeroSpace with the differences described in [Tiling
 (`inlay config --explain`), and `inlay config --show` prints the one in use.
 There is a copy of that documentation in [`docs/upstream-aerospace`](./docs/upstream-aerospace).
 
+**The CLI in a terminal.** `inlay` alone says whether Inlay is running, the binding mode, the focused workspace,
+where the config is (and whether it has errors), and the commands used most. `inlay --help` groups the commands by
+what they are for, with examples first; `inlay --help --all` adds what each one does. In a terminal the
+`list-windows`, `list-workspaces`, `list-monitors` and `list-apps` commands print a table (no borders, the focused
+one marked with `●`, the columns that don't fit dropped or cut instead of wrapped), `config --show`, `--file` and
+`--explain` print the Lua highlighted, and the errors start with `error:` and end with a `hint:`, with the line of
+Lua that fails and the command a typo was meant to be. The colors are One Dark when the terminal has truecolor
+(`COLORTERM=truecolor`), and the 16 colors of its theme otherwise.
+
+**Piped, nothing changes**: the output of every command is the plain text it always was, so `--format`, scripts
+and the bindings read the same. `--json`, `--format` and `--count` always print what they ask for, also in a
+terminal. `NO_COLOR` or `TERM=dumb` turn the colors off; `INLAY_COLOR=always|never` forces them on or off.
+`inlay --version` prints `inlay <version> <hash>` on its first line, and the version of the running Inlay.app on
+the second.
+
 ## Requirements
 
 - macOS 14 or later on Apple Silicon (tested on macOS 27).

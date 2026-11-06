@@ -9,7 +9,7 @@ extension InlayTests {
         private static func measure(_ string: String, _ font: MenuBarFont) -> CGSize {
             switch font {
                 case .chipName: CGSize(width: 7 * CGFloat(string.count), height: 15)
-                case .squareName: CGSize(width: 8 * CGFloat(string.count), height: 16)
+                case .squareName, .hyprName: CGSize(width: 8 * CGFloat(string.count), height: 16)
                 case .modeInitial: CGSize(width: 8, height: 12)
                 case .chipModeInitial: CGSize(width: 9, height: 13)
                 case .dmsName: CGSize(width: 6 * CGFloat(string.count), height: 12)
@@ -147,7 +147,7 @@ extension InlayTests {
             assertEquals(middle.tracks, end.tracks)
         }
 
-        /// The initial of the mode in place of the name, and the outline while a window is fullscreen
+        /// The initial of the mode in place of the name, and the halo while a window is fullscreen
         @Test func testDmsModeAndFullscreen() throws {
             var snapshot = snapshot
             snapshot.mode = "resize"
@@ -155,7 +155,8 @@ extension InlayTests {
             let main = layout(MenuBarConfig(theme: .dms, showMode: true))
             let mode = layout(MenuBarConfig(theme: .dms, showMode: true), snapshot)
             let marker = try #require(mode.marker)
-            assertEquals(marker.isOutlined, true)
+            assertEquals(marker.isOutlined, false)
+            assertNotNil(marker.halo)
             assertEquals(marker.initial?.string, "R")
             assertEquals(marker.initial?.font, .modeInitial)
             assertEquals(marker.initial?.frame.midX, marker.frame.midX)
@@ -283,10 +284,23 @@ extension InlayTests {
             assertEquals(layout(MenuBarConfig(theme: .chips, dimEmptyWorkspaces: false)).cells.map(\.isDimmed), [false, false, false, false])
         }
 
-        @Test func testFullscreen() {
+        /// The marker stays filled, with a ring 2 pt around it
+        @Test func testFullscreen() throws {
+            assertEquals(layout().marker?.halo, nil)
             snapshot.isFocusedWorkspaceFullscreen = true
-            assertEquals(layout().marker?.isOutlined, true)
-            assertEquals(layout(MenuBarConfig(theme: .hypr)).marker?.isOutlined, true)
+            assertEquals(layout().marker?.isOutlined, false)
+            assertEquals(layout().marker?.halo, .init(frame: CGRect(x: 17.5, y: 0.5, width: 21, height: 21), cornerRadius: 6.5))
+            assertEquals(layout(MenuBarConfig(theme: .hypr)).marker?.halo, .init(frame: CGRect(x: 22.5, y: 3.5, width: 15, height: 15), cornerRadius: 3.5))
+            // Never out of the item
+            for theme in MenuBarTheme.allCases {
+                let halo = try #require(layout(MenuBarConfig(theme: theme)).marker?.halo, "\(theme.rawValue)")
+                assertTrue(halo.frame.minY >= 0 && halo.frame.maxY <= MenuBarMetrics.height)
+            }
+            // The underline is too thin to go around: the ring goes around the name and its bar
+            let underline = try #require(layout(MenuBarConfig(theme: .underline)).marker)
+            let halo = try #require(underline.halo)
+            assertTrue(halo.frame.contains(underline.frame))
+            assertEquals(halo.frame.height, 20)
         }
 
         /// 'showMode': the initial of the binding mode in the chip of the focused workspace, like the Chips style
@@ -332,7 +346,8 @@ extension InlayTests {
             snapshot.isFocusedWorkspaceFullscreen = true
             for theme in MenuBarTheme.allCases {
                 let marker = layout(MenuBarConfig(theme: theme, showMode: true)).marker
-                assertEquals(marker?.isOutlined, true, additionalMsg: theme.rawValue)
+                assertEquals(marker?.isOutlined, false, additionalMsg: theme.rawValue)
+                assertNotNil(marker?.halo)
                 assertEquals(marker?.initial?.string, "R", additionalMsg: theme.rawValue)
             }
         }
@@ -366,17 +381,18 @@ extension InlayTests {
         @Test func testHypr() {
             let layout = layout(MenuBarConfig(theme: .hypr))
             assertEquals(layout.style, .hypr)
-            // Slots of 18 pt from the left edge, the focused one as wide as the others
+            // Slots of 20 pt from the left edge, the focused one as wide as the others
             assertEquals(layout.cells.map(\.frame), [
-                CGRect(x: 0, y: 0, width: 18, height: 22),
-                CGRect(x: 18, y: 0, width: 18, height: 22),
-                CGRect(x: 36, y: 0, width: 18, height: 22),
-                CGRect(x: 54, y: 0, width: 18, height: 22),
+                CGRect(x: 0, y: 0, width: 20, height: 22),
+                CGRect(x: 20, y: 0, width: 20, height: 22),
+                CGRect(x: 40, y: 0, width: 20, height: 22),
+                CGRect(x: 60, y: 0, width: 20, height: 22),
             ])
-            assertEquals(layout.size, CGSize(width: 72, height: 22))
-            assertEquals(layout.cells[0].name.frame, CGRect(x: 5, y: 3, width: 8, height: 16))
-            // A square of 8.5 pt in the place of the focused workspace
-            assertEquals(layout.marker, .init(frame: CGRect(x: 22.75, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(layout.size, CGSize(width: 80, height: 22))
+            assertEquals(layout.cells[0].name.frame, CGRect(x: 6, y: 3, width: 8, height: 16))
+            assertEquals(layout.cells[0].name.font, .hyprName)
+            // A square of 11 pt in the place of the focused workspace, like the one of Omarchy
+            assertEquals(layout.marker, .init(frame: CGRect(x: 24.5, y: 5.5, width: 11, height: 11), cornerRadius: 1.5, isOutlined: false))
             assertEquals(layout.needsColor, false)
         }
 
@@ -390,14 +406,14 @@ extension InlayTests {
             snapshot.mode = "resize"
             // Without 'showMode' the square is the one of the main mode
             let main = layout(MenuBarConfig(theme: .hypr, showMode: false))
-            assertEquals(main.marker, .init(frame: CGRect(x: 22.75, y: 6.75, width: 8.5, height: 8.5), cornerRadius: 2, isOutlined: false))
+            assertEquals(main.marker, .init(frame: CGRect(x: 24.5, y: 5.5, width: 11, height: 11), cornerRadius: 1.5, isOutlined: false))
             // With it, the square grows to 14 pt and carries the initial, like the Square style of Aeromenu
             let layout = layout(MenuBarConfig(theme: .hypr, showMode: true))
             assertEquals(layout.marker, .init(
-                frame: CGRect(x: 20, y: 4, width: 14, height: 14),
+                frame: CGRect(x: 23, y: 4, width: 14, height: 14),
                 cornerRadius: 3.5,
                 isOutlined: false,
-                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 23, y: 5, width: 8, height: 12)),
+                initial: .init(string: "R", font: .modeInitial, frame: CGRect(x: 26, y: 5, width: 8, height: 12)),
             ))
             assertEquals(layout.needsColor, true)
             // Nothing shifts when the mode changes: the slot of the focused workspace is always wide enough
@@ -436,8 +452,8 @@ extension InlayTests {
             // The slots don't move: only the square slides
             assertEquals(middle.cells.map(\.frame), layout(MenuBarConfig(theme: .hypr)).cells.map(\.frame))
             assertEquals(middle.cells.map(\.focus), [0, 0.5, 0, 0.5])
-            assertEquals(middle.marker?.frame.midX, (27 + 63) / 2)
-            assertEquals(middle.size.width, 72)
+            assertEquals(middle.marker?.frame.midX, (30 + 70) / 2)
+            assertEquals(middle.size.width, 80)
         }
 
         // MARK: - Placeholders

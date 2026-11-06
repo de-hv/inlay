@@ -840,7 +840,7 @@ A curve that overshoots also resizes the window past its tile for a moment: some
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
 is configured in the `menuBar` table of the config; `inlay config --explain menuBar` documents it.
 
-<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: an outline around the focused workspace when it has a fullscreen window, a hollow square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: a ring around the focused workspace when it has a fullscreen window, a ring around the square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|
@@ -950,10 +950,10 @@ initial takes the place of the name in the chip; in `hypr` the square grows from
 In `dots` the pill grows taller to hold it, in
 `underline` the initial takes the place of the name and in `liquid` the drop shows it.
 Nothing is added next to the workspaces, so the item is exactly as wide in every mode and nothing in the menu
-bar moves. While a window of the workspace is fullscreen, the marker is an outline and the initial is drawn
-inside it. The key governs every theme.
+bar moves. While a window of the workspace is fullscreen, a ring goes around the marker, which stays filled,
+in every theme. The key governs every theme.
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dimEmptyWorkspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. showMode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, the R inside of an outline" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dimEmptyWorkspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. showMode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, a ring around the chip of the R" width="880"></p>
 
 **`menuBar.colors`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
 the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'`, the

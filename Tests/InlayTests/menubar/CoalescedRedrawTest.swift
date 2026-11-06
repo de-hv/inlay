@@ -133,7 +133,7 @@ extension InlayTests {
         }
 
         @Test func testFontsAndSizesAreCached() {
-            for font in [MenuBarFont.chipName, .squareName, .modeInitial, .chipModeInitial, .dmsName] {
+            for font in [MenuBarFont.chipName, .squareName, .hyprName, .modeInitial, .chipModeInitial, .dmsName] {
                 #expect(font.nsFont === font.nsFont)
                 let size = MenuBarFont.size(of: "12", font)
                 assertEquals(MenuBarFont.size(of: "12", font), size)

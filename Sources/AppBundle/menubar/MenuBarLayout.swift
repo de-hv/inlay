@@ -19,15 +19,21 @@ enum MenuBarMetrics {
     static let chipNameOpacity: Double = 0.72
     static let emptyWorkspaceOpacity: Double = 0.35
     static let outlineWidth: CGFloat = 1.5
+    /// The ring around the focus marker while one of the windows of the workspace is fullscreen: this far from it
+    static let haloGap: CGFloat = 2
+    static let haloWidth: CGFloat = 1
+    static let haloOpacity: Double = 0.7
 
     static let workspaceFontSize: CGFloat = 13.5
-    /// The hypr theme: every workspace in a slot this wide
-    static let hyprSlot: CGFloat = 18
+    /// The hypr theme: every workspace in a slot this wide, and its name a bit smaller than in the underline theme,
+    /// like in the Omarchy bar
+    static let hyprSlot: CGFloat = 20
+    static let hyprFontSize: CGFloat = 13
     /// The hypr theme: the frame around the name of a workspace that another monitor shows ('perMonitor')
     static let hyprFrame: CGFloat = 15
     static let hyprFrameCornerRadius: CGFloat = 3.5
-    static let focusSquare: CGFloat = 8.5
-    static let focusSquareCornerRadius: CGFloat = 2
+    static let focusSquare: CGFloat = 11
+    static let focusSquareCornerRadius: CGFloat = 1.5
     static let markerClearance: CGFloat = 1.5
 
     /// The square of the hypr theme while it shows the initial of the binding mode
@@ -99,6 +105,8 @@ enum MenuBarFont: Equatable, Sendable {
     case chipName
     /// SF 13.5 pt medium, monospaced digits
     case squareName
+    /// SF 13 pt medium, monospaced digits: the names of the hypr theme
+    case hyprName
     /// SF 10.5 pt heavy: the initial of the binding mode in the square
     case modeInitial
     /// SF 11 pt heavy: the initial of the binding mode in a chip
@@ -160,7 +168,7 @@ struct MenuBarLayout: Equatable, Sendable {
     struct Marker: Equatable, Sendable {
         var frame: CGRect
         var cornerRadius: CGFloat
-        /// Outlined instead of filled: one of the windows of the workspace is fullscreen
+        /// Outlined instead of filled: the hollow marker of a workspace that another monitor shows ('perMonitor')
         var isOutlined: Bool
         /// With 'showMode', outside of the main mode: the initial of the binding mode inside of the marker.
         /// A chip shows it instead of the name of the workspace, and the square grows to make room for it.
@@ -168,6 +176,13 @@ struct MenuBarLayout: Equatable, Sendable {
         var initial: Text? = nil
         /// The liquid theme: the end of the trail that the drop leaves behind while it flows. nil at rest
         var trail: CGRect? = nil
+        /// A ring around the marker: one of the windows of the workspace is fullscreen
+        var halo: Halo? = nil
+    }
+
+    struct Halo: Equatable, Sendable {
+        var frame: CGRect
+        var cornerRadius: CGFloat
     }
 
     /// Shown instead of the workspaces when Inlay doesn't manage windows
@@ -317,9 +332,9 @@ extension MenuBarLayout {
         var cells: [Cell] = []
         var x: CGFloat = 0
         for workspace in snapshot.workspaces {
-            let nameSize = measure(workspace.name, .squareName)
+            let nameSize = measure(workspace.name, .hyprName)
             let slot = CGRect(x: x, y: 0, width: max(M.hyprSlot, nameSize.width + 4), height: M.height)
-            cells.append(cell(workspace, config, frame: slot, font: .squareName, focus: focusAmount(workspace.name), measure))
+            cells.append(cell(workspace, config, frame: slot, font: .hyprName, focus: focusAmount(workspace.name), measure))
             x = slot.maxX
         }
         return MenuBarLayout(style: .hypr, size: CGSize(width: x, height: M.height), cells: cells)
@@ -450,7 +465,7 @@ extension MenuBarLayout {
                 marker = Marker(
                     frame: frame,
                     cornerRadius: cornerRadius,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    isOutlined: false,
                     // The chip is at least as wide as it is tall, so one character always fits. The pill of dms is
                     // shorter: the smaller initial of the square
                     initial: mode.map { MenuBarLayout.initial(of: $0, style == .dms ? .modeInitial : .chipModeInitial, in: frame, measure) },
@@ -461,7 +476,7 @@ extension MenuBarLayout {
                 marker = Marker(
                     frame: frame,
                     cornerRadius: mode == nil ? M.focusSquareCornerRadius : M.modeSquareCornerRadius,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    isOutlined: false,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
                 )
             case .dots:
@@ -473,7 +488,7 @@ extension MenuBarLayout {
                 marker = Marker(
                     frame: frame,
                     cornerRadius: height / 2,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    isOutlined: false,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .modeInitial, in: frame, measure) },
                 )
             case .underline:
@@ -493,7 +508,7 @@ extension MenuBarLayout {
                 marker = Marker(
                     frame: CGRect(x: minX, y: to.minY, width: maxX - minX, height: to.height),
                     cornerRadius: M.underlineHeight / 2,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    isOutlined: false,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: nameArea, measure) },
                 )
             case .liquid:
@@ -504,7 +519,7 @@ extension MenuBarLayout {
                 marker = Marker(
                     frame: frame,
                     cornerRadius: M.liquidDrop / 2,
-                    isOutlined: snapshot.isFocusedWorkspaceFullscreen,
+                    isOutlined: false,
                     initial: mode.map { MenuBarLayout.initial(of: $0, .chipModeInitial, in: frame, measure) },
                     trail: abs(trailMidX - midX) < 0.5 ? nil : CGRect(
                         x: trailMidX - M.liquidTrail / 2,
@@ -514,6 +529,24 @@ extension MenuBarLayout {
                     ),
                 )
         }
+        if snapshot.isFocusedWorkspaceFullscreen, let frame = marker?.frame, let radius = marker?.cornerRadius {
+            let halo = halo(around: frame, radius, slot: CGRect(x: midX - end.width / 2, y: end.minY, width: end.width, height: end.height))
+            marker?.halo = halo
+        }
+    }
+
+    /// The ring of a fullscreen window, a bit away from the marker and always inside of the item. In the underline
+    /// theme the bar is too thin to go around: the ring goes around the name and its bar
+    private func halo(around frame: CGRect, _ radius: CGFloat, slot: CGRect) -> Halo {
+        typealias M = MenuBarMetrics
+        if style == .underline {
+            let ring = CGRect(x: slot.minX + 1, y: M.haloWidth, width: slot.width - 2, height: M.height - 2 * M.haloWidth)
+            return Halo(frame: ring, cornerRadius: 4)
+        }
+        let outer = frame.insetBy(dx: -M.haloGap, dy: -M.haloGap)
+        let minY = max(0, outer.minY)
+        let maxY = min(M.height, outer.maxY)
+        return Halo(frame: CGRect(x: outer.minX, y: minY, width: outer.width, height: maxY - minY), cornerRadius: radius + M.haloGap)
     }
 
     /// 'perMonitor': room and a line between the workspaces of two monitors (they are already in the order of the

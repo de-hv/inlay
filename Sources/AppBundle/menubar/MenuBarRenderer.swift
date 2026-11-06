@@ -10,6 +10,7 @@ extension MenuBarFont {
         return [
             .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold),
             .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium),
+            .hyprName: .monospacedDigitSystemFont(ofSize: M.hyprFontSize, weight: .medium),
             .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy),
             .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy),
             .dmsName: .monospacedDigitSystemFont(ofSize: M.dmsFontSize, weight: .semibold),
@@ -152,27 +153,23 @@ enum MenuBarRenderer {
         let path = roundedRect(marker.frame, marker.cornerRadius)
         // Clears the faint chip under the marker
         cg.fill(path, .black, blendMode: .destinationOut)
+        drawHalo(marker, palette, in: cg)
         if let initial = marker.initial {
             // A binding mode: its initial instead of the name of the workspace
             draw(marker, initial, palette, in: cg)
             return
         }
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
-        } else {
-            cg.fill(path, palette.focused)
-        }
+        cg.fill(path, palette.focused)
         // The same row again, names only. Whatever part of it the marker covers is what the marker shows,
         // so the names stay put while the marker slides over them
         cg.saveGState()
         cg.addPath(path)
         cg.clip()
         for cell in layout.cells {
-            switch (marker.isOutlined, palette.focusedName) {
-                case (true, _): draw(cell.name, palette.focused)
-                case (false, let color?): draw(cell.name, color)
+            switch palette.focusedName {
+                case let color?: draw(cell.name, color)
                 // In negative: cut out of the marker
-                case (false, nil): draw(cell.name, .black, blendMode: .destinationOut)
+                case nil: draw(cell.name, .black, blendMode: .destinationOut)
             }
         }
         cg.restoreGState()
@@ -207,10 +204,9 @@ enum MenuBarRenderer {
         // Clears what is under the marker first: mid-slide it passes over the names in between
         let clearance = marker.frame.insetBy(dx: -M.markerClearance, dy: -M.markerClearance)
         cg.fill(roundedRect(clearance, marker.cornerRadius + M.markerClearance), .black, blendMode: .destinationOut)
+        drawHalo(marker, palette, in: cg)
         if let initial = marker.initial {
             draw(marker, initial, palette, in: cg)
-        } else if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, palette.focused)
         } else {
             cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.focused)
         }
@@ -233,10 +229,9 @@ enum MenuBarRenderer {
         guard let marker = layout.marker else { return }
         let path = roundedRect(marker.frame, marker.cornerRadius)
         cg.fill(path, .black, blendMode: .destinationOut)
+        drawHalo(marker, palette, in: cg)
         if let initial = marker.initial {
             draw(marker, initial, palette, in: cg)
-        } else if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.dotLineWidth, palette.focused)
         } else {
             cg.fill(path, palette.focused)
         }
@@ -257,13 +252,8 @@ enum MenuBarRenderer {
         guard let marker = layout.marker else { return }
         let color = initial == nil ? palette.focused : palette.modeMarker
         if let initial { draw(initial, color) }
-        if marker.isOutlined {
-            // A hollow bar, a bit taller so that its hole can be seen
-            let frame = marker.frame.insetBy(dx: 0, dy: -0.75)
-            cg.strokeBorder(frame, frame.height / 2, lineWidth: 1, color)
-        } else {
-            cg.fill(roundedRect(marker.frame, marker.cornerRadius), color)
-        }
+        drawHalo(marker, palette, in: cg)
+        cg.fill(roundedRect(marker.frame, marker.cornerRadius), color)
     }
 
     // MARK: - Liquid
@@ -280,17 +270,13 @@ enum MenuBarRenderer {
         // Filled one by one: where they overlap, the winding of one path could cut a hole in another
         let drop = dropPaths(marker.frame, trail: marker.trail)
         for path in drop { cg.fill(path, .black, blendMode: .destinationOut) }
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: M.outlineWidth, color)
-        } else {
-            for path in drop { cg.fill(path, color) }
-        }
+        drawHalo(marker, palette, in: cg)
+        for path in drop { cg.fill(path, color) }
         if let initial = marker.initial {
-            if !marker.isOutlined { cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker) }
-            switch (marker.isOutlined, palette.modeInitial) {
-                case (true, _): draw(initial, palette.modeMarker)
-                case (false, let color?): draw(initial, color)
-                case (false, nil): draw(initial, .black, blendMode: .destinationOut)
+            cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker)
+            switch palette.modeInitial {
+                case let color?: draw(initial, color)
+                case nil: draw(initial, .black, blendMode: .destinationOut)
             }
             return
         }
@@ -298,10 +284,9 @@ enum MenuBarRenderer {
         guard let cell = layout.cells.max(by: { $0.focus < $1.focus }) else { return }
         var name = cell.name
         name.frame.origin = CGPoint(x: marker.frame.midX - name.frame.width / 2, y: marker.frame.midY - name.frame.height / 2)
-        switch (marker.isOutlined, palette.focusedName) {
-            case (true, _): draw(name, palette.focused)
-            case (false, let color?): draw(name, color)
-            case (false, nil): draw(name, .black, blendMode: .destinationOut)
+        switch palette.focusedName {
+            case let color?: draw(name, color)
+            case nil: draw(name, .black, blendMode: .destinationOut)
         }
     }
 
@@ -326,18 +311,23 @@ enum MenuBarRenderer {
     // MARK: - Binding mode
 
     /// The marker of a binding mode, the same in every theme: the initial of the mode cut out of a filled marker
-    /// (or in black or white, over a fixed color), or drawn inside of an outlined one while a window is fullscreen
+    /// (or in black or white, over a fixed color)
     private static func draw(_ marker: MenuBarLayout.Marker, _ initial: MenuBarLayout.Text, _ palette: MenuBarPalette, in cg: CGContext) {
-        if marker.isOutlined {
-            cg.strokeBorder(marker.frame, marker.cornerRadius, lineWidth: MenuBarMetrics.outlineWidth, palette.modeMarker)
-            draw(initial, palette.modeMarker)
-            return
-        }
         cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker)
         switch palette.modeInitial {
             case let color?: draw(initial, color)
             case nil: draw(initial, .black, blendMode: .destinationOut)
         }
+    }
+
+    // MARK: - Fullscreen
+
+    /// The ring around the marker of a workspace with a fullscreen window, in the color of the marker
+    private static func drawHalo(_ marker: MenuBarLayout.Marker, _ palette: MenuBarPalette, in cg: CGContext) {
+        typealias M = MenuBarMetrics
+        guard let halo = marker.halo else { return }
+        let color = marker.initial == nil ? palette.focused : palette.modeMarker
+        cg.strokeBorder(halo.frame, halo.cornerRadius, lineWidth: M.haloWidth, color.opacity(M.haloOpacity))
     }
 
     // MARK: - Placeholder

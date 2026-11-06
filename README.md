@@ -116,6 +116,12 @@ is replaced by the short one. A full config of yours keeps working: it repeats t
 --show --mine` lists them). Three things change: the built-in config sends no app to a workspace (put yours in
 `workspaces`), your window rules go before the ones of Inlay, and `configVersion` and the other keys of
 AeroSpace are unknown keys: drop them. `inlay config --get`/`--all-keys` are `inlay config --show` now.
+**From 0.5 to 0.6**: the config is made of calls, like the Lua config of Hyprland: `inlay.config({ … })`,
+`inlay.bind`, `inlay.window_rule`, `inlay.workspace`… instead of a table that `inlay.lua` returns, and
+`require('name')` runs a file without `inlay.merge` (see [Configuration](#configuration)). An `inlay.lua` that
+you never edited is replaced on its own. One of your own that returns a table gets an error that says how to move
+it: the table goes whole in `inlay.config({ … })`, and the key bindings and the rules can stay there or move to
+their functions.
 
 ### From source
 
@@ -295,34 +301,51 @@ both exist, it warns about the ambiguity and loads neither. The app and the CLI 
 **it is the only place where the config is kept**: Inlay has no settings window. (`XDG_CONFIG_HOME` only counts if it is set for the apps that macOS starts, not just in your
 shell: `install.sh` warns when it sees it set.)
 
-**The config is a Lua file that returns a table**, with camelCase keys:
+**The config is a Lua file made of calls to the functions of `inlay`**, like the Lua config of Hyprland. The
+keys are camelCase; the functions, snake_case:
 
 ```lua
-return {
+inlay.config({
   startAtLogin = true,
   borders = { width = 2, activeColor = '#B59DF7' },
-  mode = { main = { binding = { ['cmd-alt-h'] = 'focus left' } } },
-}
+})
+inlay.theme('nord')
+inlay.bind('cmd-alt-h', 'focus left')
+inlay.window_rule({ match = { appId = 'com.1password.1password' }, run = 'layout floating' })
 ```
 
-Lua runs it, so it can have variables, loops and functions: a palette in one place, the key bindings of ten
-workspaces in a loop. **It can be split into files of its folder**: `require('binds')` runs `binds.lua` (once)
-and gives what it returns, and `inlay.merge(...)` puts tables together. The tables of the same key are merged,
-the arrays (the window rules) are put one after the other, and for anything else the last one wins:
+| Function | What it sets |
+|---|---|
+| `inlay.config(values)` | Any key of the config, in a table. Many calls are merged in order: the tables key by key, the lists one after the other, the last value wins |
+| `inlay.theme(theme)` | `theme`: a name, or a table (see [Themes](#themes)) |
+| `inlay.workspace(workspace)` | A workspace: `{ id = '1', name = 'Terminals', key = 'h', apps = { … } }` |
+| `inlay.bind(keys, command, options?)` | A key binding: a command or a list of them. `{ mode = 'service' }` for a binding mode (`main` without it) |
+| `inlay.unbind(keys, options?)` | Removes a key binding of the built-in config |
+| `inlay.window_rule(rule)` | A window rule, in the order of the calls; `'workspaces'` marks the place of the rules of the apps of the workspaces |
+| `inlay.on(event, commands)` | `start`, `focus_changed`, `monitor_changed`, `mode_changed`; `workspace_changed` takes a program and its arguments |
+| `inlay.env(name, value)` | A variable of the programs that Inlay starts (`exec.envVars`) |
+| `inlay.curve(name, points)` | A curve of your own for the animations: `{ x1, y1, x2, y2 }` |
+| `inlay.animation(animation)` | An animation: `{ leaf = 'open', curve = 'quint', duration = 200 }`; `leaf = 'global'` for the keys of `animations` |
+| `inlay.dsp.<command>(…)` | A command as a function, which gives its string: `inlay.dsp.focus('left')` is `'focus left'`, `inlay.dsp.exec('open -a Terminal')` is `'exec-and-forget open -a Terminal'` |
+
+`inlay config --explain bind` prints what a function does, and `inlay config --explain inlay` how a config is
+made. Lua runs it, so it can have variables, loops and functions: a palette in one place, the key bindings of ten
+workspaces in a loop. **It can be split into files of its folder**: `require('binds')` runs `binds.lua` once,
+and its calls are part of the config, in the order they run; `require('conf.binds')` runs `conf/binds.lua`. A
+file may also return a value of its own (a palette) for the ones that require it:
 
 ```lua
 -- ~/.config/inlay/inlay.lua
-return inlay.merge(
-  { startAtLogin = true },
-  require('borders'),   -- borders.lua: return { borders = { width = 2 } }
-  require('binds'),
-  require('rules')
-)
+require('workspaces')   -- workspaces.lua: inlay.workspace({ id = '1', key = 'h', apps = { … } }) …
+require('binds')        -- binds.lua: inlay.bind('cmd-alt-shift-b', 'balance-sizes') …
+require('rules')
+inlay.config({ borders = { width = 2 } })
 ```
 
 The Lua of the config can't reach the system: no `os`, `io` or `require` of anything outside of the config
 folder, and a config that runs for too long (an endless loop) is stopped. The errors name the file and the
-line (`binds.lua:12: attempt to index a nil value`).
+line (`binds.lua:12: attempt to index a nil value`, `binds.lua:3: inlay.bind: the command is a string, or a
+list of them`).
 
 Inlay 0.2 read a TOML config, `inlay.toml`, with kebab-case keys. Inlay 0.3 doesn't read it: the error says
 so, and a key with dashes gets its camelCase name (`corner-radius` is `cornerRadius`, `[[on-window-detected]]`
@@ -343,20 +366,21 @@ How your config goes over the built-in one:
 
 | What you write | What happens | Example |
 |---|---|---|
-| A table | Merged key by key, also the tables in it: the keys you don't write keep the values of Inlay | `menuBar = { perMonitor = true }` |
-| A value | Replaces the one of Inlay | `gaps = { inner = { horizontal = 12 } }` |
-| A list (`workspaces`, `persistentWorkspaces`, `afterStartupCommand`…) | Replaces the one of Inlay, whole | `workspaces = { … }` |
-| `theme` | Replaces the one of Inlay, whatever it is | `theme = 'nord'` |
-| A key binding | Added, or replaces the one of Inlay with the same keys; `false` removes it | `['cmd-alt-shift-b'] = false` |
-| A window rule (`onWindowDetected`) | Goes **before** the rules of Inlay: the first rule that matches is the one that runs | `{ match = { appId = '…' }, run = 'layout floating' }` |
-| `builtInConfig = false` | Your config alone, over the defaults of the code: no workspaces, key bindings or rules of Inlay | |
+| A table | Merged key by key, also the tables in it: the keys you don't write keep the values of Inlay | `inlay.config({ menuBar = { perMonitor = true } })` |
+| A value | Replaces the one of Inlay | `inlay.config({ gaps = { inner = { horizontal = 12 } } })` |
+| A list (`persistentWorkspaces`, `afterStartupCommand`…) | Replaces the one of Inlay, whole | `inlay.on('start', 'workspace 1')` |
+| Your workspaces | Replace the ones of Inlay, all of them | `inlay.workspace({ id = '1', key = 'h' })` |
+| `theme` | Replaces the one of Inlay, whatever it is | `inlay.theme('nord')` |
+| A key binding | Added, or replaces the one of Inlay with the same keys; `inlay.unbind` removes it | `inlay.unbind('cmd-alt-shift-b')` |
+| A window rule | Goes **before** the rules of Inlay: the first rule that matches is the one that runs | `inlay.window_rule({ match = { appId = '…' }, run = 'layout floating' })` |
+| `builtInConfig = false` | Your config alone, over the defaults of the code: no workspaces, key bindings or rules of Inlay | `inlay.config({ builtInConfig = false })` |
 
 The errors still point at your keys (`borders.width: width must be in [1, 20] range`).
 
 **The config of a new install is short.** [`inlay.lua`](./inlay.lua), at the root of the repo, is what
 `install.sh` copies to `~/.config/inlay/inlay.lua`, and what the app creates there when it starts without a
-config (Homebrew): a header with the commands below, `theme = 'material'` and a commented example of
-`workspaces` with apps. A default config of a previous version, never edited, is replaced by it (and kept as
+config (Homebrew): a header with the commands below, `inlay.theme('material')` and a commented example of
+the workspaces with apps. A default config of a previous version, never edited, is replaced by it (and kept as
 `inlay.lua.backup-<date>`, or `inlay.toml.backup-<date>` for the one of Inlay 0.2). A config reached through a
 symbolic link is never written. Keep your config in a folder of your own and link it (the question of
 `install.sh`, `--config-link`, or `inlay config --use <folder>`).
@@ -365,18 +389,16 @@ symbolic link is never written. Keep your config in a folder of your own and lin
 secondary display when there are two), without apps: no app goes anywhere until you say so. Yours replace them:
 
 ```lua
-workspaces = {
-  { id = '1', name = 'Terminals', key = 'h', apps = { 'com.mitchellh.ghostty' } },
-  { id = '2', name = 'Code',      key = 'j', apps = { 'dev.zed.Zed', 'com.microsoft.VSCode' } },
-  { id = '6', name = 'Other',     key = 'i', monitor = { 'secondary', 'main' } },
-  { id = '7', name = 'Free',      key = 'o' },
-},
+inlay.workspace({ id = '1', name = 'Terminals', key = 'h', apps = { 'com.mitchellh.ghostty' } })
+inlay.workspace({ id = '2', name = 'Code',      key = 'j', apps = { 'dev.zed.Zed', 'com.microsoft.VSCode' } })
+inlay.workspace({ id = '6', name = 'Other',     key = 'i', monitor = { 'secondary', 'main' } })
+inlay.workspace({ id = '7', name = 'Free',      key = 'o' })
 ```
 
 From the list, Inlay makes the persistent workspaces (the ones the menu bar item always shows), the monitor of
 each one (`'main'` without one), two key bindings for each workspace with a `key` (`cmd-alt-ctrl-<key>` goes to
 it, `cmd-alt-shift-<key>` moves the focused window there; `workspaceKeys = { focus = …, move = … }` changes the
-modifiers, `false` drops them) and a window rule for each app, which tiles its windows and sends them to the
+modifiers, `false` drops them: `inlay.config({ workspaceKeys = { … } })`) and a window rule for each app, which tiles its windows and sends them to the
 workspace. The `name` shows in the menu of the menu bar item (*Workspace 2 · Code · Zed*). A key binding of
 yours with the same keys wins. The bundle id of an app: `inlay list-apps`.
 
@@ -395,12 +417,10 @@ they come in this order:
 The last rule is a catch-all one:
 
 ```lua
-onWindowDetected = {
-  {
-    match = 'test %{window-layout} ~= _tiles', -- h_tiles or v_tiles: a tiling window
-    run = 'layout floating',
-  },
-},
+inlay.window_rule({
+  match = 'test %{window-layout} ~= _tiles', -- h_tiles or v_tiles: a tiling window
+  run = 'layout floating',
+})
 ```
 
 It only matches the windows that Inlay tiles. What Inlay takes for a dialog (a sheet, an alert, an "About"
@@ -415,29 +435,48 @@ it in the `apps` of a workspace, or write a rule for it (`run = 'layout tiling'`
 every rule it runs once per window: a window that you tile stays tiled, until you run the rules again by hand
 (`w` in the `service` mode).
 
-**The config in use: `inlay config --show`.** It prints the whole config as Lua, every value with where it
-comes from (yours, with the file and the line; the theme; Inlay; or the default of the code) and its possible
+**The config in use: `inlay config --show`.** It prints the whole config as the calls that make it
+(`inlay.config`, `inlay.workspace`, `inlay.bind`, `inlay.window_rule`), every value with where it comes from
+(yours, with the file and the line of the call; the theme; Inlay; or the default of the code) and its possible
 values. Copy a line to your config to change it:
 
 ```sh
 inlay config --show                  # everything
 inlay config --show menuBar          # one table, or one key: --show borders.width
-inlay config --show --mine           # only what your files set, and what repeats Inlay without effect
+inlay config --show bind             # the key bindings; also window_rule, workspace, mode.service
+inlay config --show --mine           # only your calls, by file, and the ones that repeat Inlay without effect
 inlay config --show --keys           # every key, one per line: inlay config --show --keys | grep glow
 inlay config --show borders --json   # the values, for scripts
+inlay config --files                 # the files: the built-in config and the theme of the app, and yours
+inlay config --file builtin-config   # one of them: builtin-config, themes/nord, binds, conf.binds
 ```
 
 ```lua
-menuBar = {
-  enabled = true,                -- Inlay · true|false
-  theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots|underline|liquid|dms
-  perMonitor = true,             -- yours (inlay.lua:3) · true|false
-  systemColors = true,           -- theme · true|false
-  colors = {
-    focused = '#D8A657',         -- theme
-    occupied = 'auto',           -- default
+inlay.config({
+  menuBar = {
+    enabled = true,                -- Inlay · true|false
+    theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots|underline|liquid|dms
+    perMonitor = true,             -- yours (inlay.lua:3) · true|false
+    systemColors = true,           -- theme · true|false
+    colors = {
+      focused = '#D8A657',         -- theme
+      occupied = 'auto',           -- default
+    },
   },
-},
+})
+inlay.bind('cmd-alt-shift-b', 'balance-sizes')                       -- Inlay
+inlay.bind('cmd-alt-t', 'exec-and-forget open -a Terminal')          -- yours (binds.lua:4)
+inlay.bind('esc', { 'reload-config', 'mode main' }, { mode = 'service' })  -- Inlay
+```
+
+```text
+$ inlay config --files
+Inlay   /Applications/Inlay.app/Contents/Resources/builtin-config.lua
+theme   /Applications/Inlay.app/Contents/Resources/themes/gruvbox.lua
+yours   ~/.config/inlay/inlay.lua  → ~/.dotfiles/inlay/inlay.lua
+          ├─ workspaces.lua   require at inlay.lua:1
+          ├─ binds.lua        require at inlay.lua:2
+          └─ rules.lua        require at inlay.lua:3
 ```
 
 `config --get`, `--keys`, `--major-keys` and `--all-keys`, which came from AeroSpace, only knew the key
@@ -451,6 +490,8 @@ inlay config --explain                 # the whole reference
 inlay config --explain borders.width   # one key
 inlay config --explain tiling          # one table (menuBar also prints menuBar.colors)
 inlay config --explain gaps.inner      # a group of keys
+inlay config --explain bind            # a function of inlay
+inlay config --explain inlay           # how a config is made, and every function
 ```
 
 <p align="center"><img src="docs/images/terminal-cli.png" alt="Real output of two commands in a terminal: 'inlay config --explain borders.width' prints the line that opens the borders table, the comment that explains the key, its possible values (1 ... 20), its fallback value and 'width = 4'; 'inlay list-workspaces --all' prints the workspaces 1 to 6, one per line" width="880"></p>
@@ -466,9 +507,8 @@ inlay config --types
 It writes `.luarc.json` next to your `inlay.lua`, pointing at
 `/Applications/Inlay.app/Contents/Resources/types` (the folder of types of the app it runs from; a
 `.luarc.json` that exists is printed, never overwritten). Keep it in your dotfiles. The types are made from the
-reference when the app is built, so an update of Inlay updates them: nothing to run again. What goes through
-`inlay.merge` is typed; in a module that returns a part of the config, write `---@type InlayConfig` before a
-`local` and return it.
+reference when the app is built, so an update of Inlay updates them: nothing to run again. The functions of
+`inlay` are typed, with their arguments, and so are the keys of `inlay.config` and the commands of `inlay.dsp`.
 
 Of the keys that came from AeroSpace, the ones that were only there to read its configs are gone and are
 unknown keys now: `configVersion`, `afterLoginCommand`, `accordionPadding`,
@@ -483,13 +523,13 @@ default of the key is `false`), Inlay reloads the config when `inlay.lua`, one o
 of your themes is saved, and the menu bar item and the borders show the new values right away. Creating a file that `require`
 didn't find reloads it too. It works when `~/.config/inlay` is a symbolic link to a folder of yours, when a
 file is a link, with editors that save by writing a new file and renaming it over the old one, and when a link
-is pointed somewhere else. A save with an error (Lua that doesn't run, or that doesn't return a table) is not
+is pointed somewhere else. A save with an error (Lua that doesn't run, or a call of inlay with a wrong argument) is not
 applied (the previous config stays, and a window shows the error with its file and line); the next save is
 picked up as usual.
 Without that key, reload by hand: `inlay reload-config` or *Reload Config* in the menu.
 
 ```lua
-autoReloadConfig = true, -- the default. With false: reload with 'inlay reload-config' or from the menu
+inlay.config({ autoReloadConfig = true }) -- the built-in one. With false: reload with 'inlay reload-config' or from the menu
 ```
 
 Nothing shows up on the screen after a reload: the menu says when the config was reloaded last. A
@@ -1051,6 +1091,7 @@ color comes from the state the manager already knows, with no focus heuristics. 
 | `borders.singleWindow` `enabled` | `true`, `false` | `true` |
 | `borders.singleWindow` `width` | 1 … 20 (points) | `1` |
 | `borders.singleWindow` `gap` | 0 … 40 (points), never less than its `width` | `4` |
+| `borders.singleWindow` `fullscreenWidth` | 1 … 20 (points): the border of the window in fullscreen | its `width` |
 | `borders.modeColors` `<mode>` | color | empty table |
 
 **The colors.** The image above shows them all.
@@ -1123,7 +1164,8 @@ borders = {
 `fullscreen` command, also with other windows behind it), look the same: a border of their own, in the colors of
 the other borders (active, inactive, floating, the binding mode), and a gap around the window, from the edges of
 the visible part of the screen. The gap is never narrower than the border, so that the edge of the screen doesn't
-cut it. With `enabled = false` they fill the screen, without a border. Floating windows don't count and keep their
+cut it. `fullscreenWidth` gives the window in fullscreen a border of its own (without it, `width`), and its gap
+grows with it. With `enabled = false` they fill the screen, without a border. Floating windows don't count and keep their
 border; a floating window made fullscreen looks like the others. `fullscreen --no-outer-gaps` fills the screen
 without a border. (`hideWhenSingle`, of a previous version, is accepted
 with a warning and ignored.)
@@ -1134,6 +1176,7 @@ borders = {
     enabled = true,
     width = 1, -- 1 ... 20 points
     gap = 2, -- 0 ... 40 points, never less than 'width'
+    fullscreenWidth = 4, -- 1 ... 20 points: the border in fullscreen. Without it, 'width'
   },
 },
 ```

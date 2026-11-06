@@ -1,4 +1,4 @@
-return {
+inlay.config({
   -- ─────────────────────────────────────────────────────────────────────────────
   -- Inlay — configuración de ejemplo
   --
@@ -359,4 +359,4 @@ return {
   --   'layout tiles accordion' (alternar)           →  queda en 'layout tiles'
   --
   -- El aviso aparece en `inlay reload-config` y en Ajustes › General › Estado.
-}
+})

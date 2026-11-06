@@ -28,7 +28,7 @@ extension InlayTests {
             assertEquals(result.config.menuBar, defaultConfig.menuBar)
             let text = try String(contentsOf: projectRoot.appending(path: "inlay.lua"), encoding: .utf8)
             assertTrue(text.split(separator: "\n").count < 40)
-            assertTrue(text.contains("theme = 'material'"))
+            assertTrue(text.contains("inlay.theme('material')"))
             assertEquals(defaultConfigUrl.lastPathComponent, "inlay.lua")
             assertEquals(try String(contentsOf: defaultConfigUrl, encoding: .utf8), text)
         }

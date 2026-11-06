@@ -1,35 +1,98 @@
--- Reference of the config of Inlay: every key, what it does, its possible values and its default.
+-- Reference of the config of Inlay: the functions of 'inlay', and every key, what it does, its possible values and
+-- its default.
 --
 -- It is a documentation file, and it is also a valid config: every key is written with its default value
 -- (a few of them, with an example, where the default is an empty list or table).
--- 'inlay config --explain' prints it, and 'inlay config --explain <key>' prints the part of a key or a table:
+-- 'inlay config --explain' prints it, 'inlay config --explain <key>' prints the part of a key or a table, and
+-- 'inlay config --explain <function>' the one of a function:
 --
 --   inlay config --explain borders.width
 --   inlay config --explain tiling
---   inlay config --explain gaps
+--   inlay config --explain bind
+--   inlay config --explain inlay        this part: how a config is made
 --
 -- The config that Inlay ships with is another file: inlay.lua, at the root of the repo.
 -- Inlay reads ~/.config/inlay/inlay.lua (or $XDG_CONFIG_HOME/inlay/inlay.lua), or else ~/.inlay.lua.
 -- With both files it reports an ambiguity and keeps the config it had.
 --
--- The config is a Lua file that returns a table, like this one. It can be split into files of its folder:
--- require('name') runs name.lua, once, and gives what it returns. inlay.merge(...) puts tables together: the
--- tables of the same key are merged, the arrays are put one after the other, and for anything else the last
--- one wins. Inlay reloads the config when one of its files is saved.
+-- The config is a Lua file made of calls to the functions of 'inlay', and it returns nothing. It can be split
+-- into files of its folder: require('name') runs name.lua once (require('conf.binds') runs conf/binds.lua), and
+-- its calls are part of the config, in the order they run. Inlay reloads the config when one of its files is saved.
 --
--- Your config goes over the built-in config of Inlay (builtin-config.lua in the app), which has 7 workspaces,
--- the key bindings, the window rules, the gaps… So your inlay.lua only says what is yours:
+-- Your config goes over the built-in config of Inlay (builtin-config.lua in the app: 'inlay config --file
+-- builtin-config'), which has 7 workspaces, the key bindings, the window rules, the gaps… So your inlay.lua only
+-- says what is yours:
 -- - a table of yours is merged with the one of the built-in config key by key, also the tables in it;
--- - a value or a list (workspaces, persistentWorkspaces…) of yours replaces the one of the built-in config,
---   and so does 'theme', whatever it is;
--- - your window rules (onWindowDetected) go before the ones of the built-in config;
--- - ['<key>'] = false in the bindings of a mode removes a key binding of the built-in config.
--- 'inlay config --show' prints the config in use, and where each value comes from. The "Fallback value" of a
--- key below is the default of the code: the one in use when neither your config nor the built-in one sets it.
--- 'inlay config --show <key>' tells which one is in use.
+-- - a value or a list (persistentWorkspaces…) of yours replaces the one of the built-in config, and so do
+--   'theme' and your workspaces (inlay.workspace);
+-- - your key bindings (inlay.bind) go over the ones of the built-in config with the same keys, and
+--   inlay.unbind removes one;
+-- - your window rules (inlay.window_rule) go before the ones of the built-in config.
+-- 'inlay config --show' prints the config in use, as calls, and where each value comes from. The "Fallback
+-- value" of a key below is the default of the code: the one in use when neither your config nor the built-in
+-- one sets it. 'inlay config --show <key>' tells which one is in use, and 'inlay config --files' lists the files.
 -- The commands of the bindings and of the rules: inlay --help, and inlay <command> --help
+--
+-- ── The functions of inlay
+--
+-- inlay.config(values)
+--   The keys of the config below, in a table: inlay.config({ gaps = { inner = 8 } }). It can be called many times:
+--   the tables are merged key by key, the lists are put one after the other, and for anything else the last
+--   one wins.
+--
+-- inlay.theme(theme)
+--   The look of the borders and of the menu bar: the name of a theme, or a table. See: theme
+--   inlay.theme('gruvbox')
+--   inlay.theme({ extends = 'gruvbox', menuBar = { systemColors = true } })
+--
+-- inlay.workspace(workspace)
+--   A workspace, with the keys of an item of 'workspaces'. Yours replace the 7 of the built-in config
+--   inlay.workspace({ id = '1', name = 'Terminals', key = 'h', apps = { 'com.mitchellh.ghostty' } })
+--
+-- inlay.bind(keys, command, options?)
+--   A key binding: the keys, and a command or a list of commands. options: { mode = '<name>' }, the binding
+--   mode (without it, 'main'). See: mode
+--   inlay.bind('cmd-alt-shift-b', 'balance-sizes')
+--   inlay.bind('esc', { 'reload-config', 'mode main' }, { mode = 'service' })
+--
+-- inlay.unbind(keys, options?)
+--   Removes a key binding of the built-in config. options: { mode = '<name>' }
+--   inlay.unbind('cmd-alt-shift-d')
+--
+-- inlay.window_rule(rule)
+--   A window rule: a table with the keys of an item of 'onWindowDetected', or 'workspaces', the place of the
+--   rules that the workspaces make for their apps. The rules are checked in the order of the calls
+--   inlay.window_rule({ match = { appId = 'com.1password.1password' }, run = 'layout floating' })
+--
+-- inlay.on(event, commands)
+--   Commands that run on an event: a command or a list of them. The commands of the calls are put together
+--   - start              after Inlay starts (afterStartupCommand)
+--   - focus_changed      the focused window changes (onFocusChanged)
+--   - monitor_changed    the focused monitor changes (onFocusedMonitorChanged)
+--   - mode_changed       the binding mode changes (onModeChanged)
+--   - workspace_changed  a program and its arguments, not commands: the last call wins (execOnWorkspaceChange)
+--   inlay.on('start', 'exec-and-forget open -a Ghostty')
+--
+-- inlay.env(name, value)
+--   A variable of the programs that Inlay starts. See: exec.envVars
+--   inlay.env('PATH', '/opt/homebrew/bin:${PATH}')
+--
+-- inlay.curve(name, points)
+--   A curve of your own for the animations: { x1, y1, x2, y2 }. See: animations.curves
+--   inlay.curve('bounce', { 0.34, 1.56, 0.64, 1 })
+--
+-- inlay.animation(animation)
+--   An animation: leaf is global (the keys of 'animations'), open, move, fullscreen or workspace; the rest are
+--   its keys. See: animations
+--   inlay.animation({ leaf = 'open', curve = 'quint', duration = 200 })
+--
+-- inlay.dsp.<command>(arguments…)
+--   A command as a function: the name with _ for -, and its arguments. exec is exec-and-forget
+--   inlay.dsp.focus('left')                 -- 'focus left'
+--   inlay.dsp.move_node_to_workspace('3')   -- 'move-node-to-workspace 3'
+--   inlay.dsp.exec('open -a Terminal')      -- 'exec-and-forget open -a Terminal'
 
-return {
+inlay.config({
   -- Your config goes over the built-in config of Inlay. With false, it doesn't: your config alone, over the
   -- defaults of the code (no workspaces, no key bindings, no window rules of Inlay)
   -- Possible values: true|false
@@ -583,6 +646,12 @@ return {
       -- Possible values: 0 ... 40
       -- Fallback value (if you omit the key): gap = 2
       gap = 2,
+
+      -- The width of the border of the window in fullscreen (the 'fullscreen' command), in points. Without it, the
+      -- one of 'width'. The gap grows with it, so that the edge of the screen doesn't cut it
+      -- Possible values: 1 ... 20
+      -- Fallback value (if you omit the key): the one of width
+      -- fullscreenWidth = 4
     },
   },
 
@@ -724,4 +793,4 @@ return {
     ['1'] = 'main',
     ['6'] = { 'secondary', 'main' },
   },
-}
+})

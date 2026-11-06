@@ -132,7 +132,7 @@ struct ThemeResolver {
     }
 
     private mutating func load(_ url: URL, place: String, _ backtrace: ConfigBacktrace, depth: Int, isUsers: Bool, _ c: inout ConfigParserContext) -> OrderedJson.JsonDict? {
-        let lua = LuaConfigLoader.load(file: url)
+        let lua = LuaConfigLoader.load(file: url, kind: .table)
         if isUsers { files += lua.files }
         guard lua.errors.isEmpty else {
             c.errors += lua.errors.map { .init(backtrace, "\(place): \($0.message)", preventConfigReload: $0.preventConfigReload) }

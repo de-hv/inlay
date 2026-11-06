@@ -99,6 +99,26 @@ extension InlayTests {
             assertBorders([2: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
         }
 
+        /// borders.singleWindow.fullscreenWidth: a border of its own for the fullscreen window, and the gap it needs.
+        /// The window alone in its workspace keeps the one of width
+        @Test func testFullscreenWidth() async throws {
+            config.borders.singleWindow = SingleWindowBorder(enabled: true, width: 1, gap: 2, fullscreenWidth: 5)
+            try await openWindow(1)
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
+            try await run("fullscreen")
+            assertRects([1: (5, 5, 1910, 1069)])
+            assertBorders([1: (CGRect(x: 5, y: 5, width: 1910, height: 1069), 5)])
+            try await run("fullscreen off")
+            assertBorders([1: (CGRect(x: 2, y: 2, width: 1916, height: 1075), 1)])
+
+            let parsed = parseConfig(lua: "inlay.config({ borders = { singleWindow = { fullscreenWidth = 4 } } })")
+            assertEquals(parsed.errors, [])
+            assertEquals(parsed.config.borders.singleWindow.widthInFullscreen, 4)
+            assertEquals(parseConfig(lua: "inlay.config({ theme = {} })").config.borders.singleWindow.fullscreenWidth, nil)
+            assertEquals(parseConfig(lua: "inlay.config({ borders = { singleWindow = { fullscreenWidth = 21 } } })").strErrors,
+                         ["[ERROR] borders.singleWindow.fullscreenWidth: fullscreenWidth must be in [1, 20] range"])
+        }
+
         @Test func testFullscreenWithoutIt_fillsTheScreenWithoutABorder() async throws {
             config.borders.singleWindow.enabled = false
             try await openWindow(1)
@@ -137,7 +157,7 @@ extension InlayTests {
         // MARK: - The old keys
 
         @Test func testTheKeysOfThePast() {
-            let result = parseConfig(lua: "return { gaps = { smart = true }, borders = { hideWhenSingle = true } }")
+            let result = parseConfig(lua: "inlay.config({ gaps = { smart = true }, borders = { hideWhenSingle = true } })")
             assertEquals(result.errors, [])
             assertEquals(result.strWarnings.count, 2, additionalMsg: result.strWarnings.joined(separator: "\n"))
             assertEquals(result.config.borders.singleWindow, SingleWindowBorder())

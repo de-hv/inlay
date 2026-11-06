@@ -148,6 +148,34 @@ extension InlayTests {
             assertEquals(notifications.hasSuffix("-- notifications = {}"), true)
         }
 
+        /// The functions of inlay, documented in the header of the reference
+        @Test func testExplainFunctions() throws {
+            let reference = try reference
+            assertEquals(reference.functionNames, ["config", "theme", "workspace", "bind", "unbind", "window_rule", "on", "env", "curve", "animation", "dsp"])
+            let bind = try reference.explain("bind").get()
+            assertEquals(bind.hasPrefix("inlay.bind(keys, command, options?)\n  A key binding"), true, additionalMsg: bind)
+            assertEquals(bind.contains("inlay.bind('esc', { 'reload-config', 'mode main' }, { mode = 'service' })"), true, additionalMsg: bind)
+            assertEquals(bind.contains("inlay.unbind"), false, additionalMsg: bind)
+            assertEquals(try reference.explain("inlay.window_rule").get(), try reference.explain("window_rule()").get())
+            // A function and the key of the same name: both
+            let theme = try reference.explain("theme").get()
+            assertEquals(theme.hasPrefix("inlay.theme(theme)"), true, additionalMsg: theme)
+            assertEquals(theme.contains("theme = 'material'") || theme.contains("-- theme ="), true, additionalMsg: theme)
+            // How a config is made: the header
+            let inlay = try reference.explain("inlay").get()
+            assertEquals(inlay.contains("require('conf.binds') runs conf/binds.lua"), true)
+            assertEquals(inlay.contains("inlay.config({"), true)
+            assertEquals(inlay.contains("startAtLogin"), false)
+            // Every function that the prelude has is documented
+            let prelude = LuaConfigLoader.load("""
+                local names = {}
+                for name in pairs(inlay) do if name ~= 'merge' then names[#names + 1] = name end end
+                table.sort(names)
+                inlay.config({ names = names })
+                """).table["names"]?.asArrayOrNil?.compactMap(\.asStringOrNil) ?? []
+            assertEquals(prelude, reference.functionNames.sorted())
+        }
+
         @Test func testExplainTable() throws {
             let tiling = try reference.explain("tiling").get()
             assertEquals(tiling.hasPrefix("-- Where the tiling windows are placed\ntiling = {\n"), true)

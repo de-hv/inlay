@@ -13,7 +13,7 @@ extension InlayTests {
 
         @Test func testConfig_defaultRootContainerLayout() {
             let result = parseConfig(lua: """
-                return { defaultRootContainerLayout = 'accordion' }
+                inlay.config({ defaultRootContainerLayout = 'accordion' })
                 """,
             )
             assertEquals(result.errors, [])
@@ -24,14 +24,14 @@ extension InlayTests {
             )
 
             assertEquals(
-                parseConfig(lua: "return { defaultRootContainerLayout = 'accordeon' }").strErrors,
+                parseConfig(lua: "inlay.config({ defaultRootContainerLayout = 'accordeon' })").strErrors,
                 ["[ERROR] defaultRootContainerLayout: Can't parse layout 'accordeon'"],
             )
         }
 
         @Test func testConfig_layoutCommands() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   afterStartupCommand = { 'layout tiles', 'layout accordion' },
                   mode = {
                     main = {
@@ -48,7 +48,7 @@ extension InlayTests {
                       run = 'layout v_accordion',
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])

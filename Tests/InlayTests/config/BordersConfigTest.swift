@@ -7,7 +7,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig(lua: "return { theme = {} }")
+            let result = parseConfig(lua: "inlay.config({ theme = {} })")
             assertEquals(result.errors, [])
             let borders = result.config.borders
             assertEquals(borders.enabled, true)
@@ -25,7 +25,7 @@ extension InlayTests {
 
         @Test func testParse() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   borders = {
                     enabled = false,
                     width = 6,
@@ -38,7 +38,7 @@ extension InlayTests {
                     glowRadius = 20,
                     modeColors = { resize = '#30D158', service = '#FF453A80' },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -62,32 +62,32 @@ extension InlayTests {
         @Test func testRanges() {
             for (key, good, bad) in [("width", [1, 20], [0, 21, -1]), ("cornerRadius", [0, 40], [-1, 41]), ("glowRadius", [1, 12, 40], [0, 41, -1])] {
                 for value in good {
-                    assertEquals(parseConfig(lua: "return { borders = { ['\(key)'] = \(value) } }").errors, [])
+                    assertEquals(parseConfig(lua: "inlay.config({ borders = { ['\(key)'] = \(value) } })").errors, [])
                 }
                 for value in bad {
-                    assertEquals(parseConfig(lua: "return { borders = { ['\(key)'] = \(value) } }").errors.count, 1)
+                    assertEquals(parseConfig(lua: "inlay.config({ borders = { ['\(key)'] = \(value) } })").errors.count, 1)
                 }
             }
             assertEquals(
-                parseConfig(lua: "return { borders = { width = 21 } }").strErrors,
+                parseConfig(lua: "inlay.config({ borders = { width = 21 } })").strErrors,
                 ["[ERROR] borders.width: width must be in [1, 20] range"],
             )
             assertEquals(
-                parseConfig(lua: "return { borders = { cornerRadius = 41 } }").strErrors,
+                parseConfig(lua: "inlay.config({ borders = { cornerRadius = 41 } })").strErrors,
                 ["[ERROR] borders.cornerRadius: cornerRadius must be in [0, 40] range"],
             )
             assertEquals(
-                parseConfig(lua: "return { borders = { glowRadius = 0 } }").strErrors,
+                parseConfig(lua: "inlay.config({ borders = { glowRadius = 0 } })").strErrors,
                 ["[ERROR] borders.glowRadius: glowRadius must be in [1, 40] range"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig(lua: "return { borders = { glowRadius = 0 } }").config.borders.glowRadius, 12)
+            assertEquals(parseConfig(lua: "inlay.config({ borders = { glowRadius = 0 } })").config.borders.glowRadius, 12)
         }
 
         @Test func testErrors() {
             assertEquals(
                 parseConfig(lua: """
-                    return {
+                    inlay.config({
                       borders = {
                         glow = 'soft',
                         glowRadius = 1.5,
@@ -98,7 +98,7 @@ extension InlayTests {
                         inactiveColor = 'red',
                         modeColors = { resize = 'auto', service = 5 },
                       },
-                    }
+                    })
                     """,
                 ).strErrors,
                 [
@@ -114,8 +114,8 @@ extension InlayTests {
                     "[ERROR] borders.width: Expected type is 'Int'. But actual type is 'String'",
                 ],
             )
-            assertEquals(parseConfig(lua: "return { borders = 1 }").strErrors, ["[ERROR] borders: Expected type is 'Table'. But actual type is 'Int'"])
-            assertEquals(parseConfig(lua: "return { borders = { modeColors = 1 } }").strErrors, ["[ERROR] borders.modeColors: Expected type is 'Table'. But actual type is 'Int'"])
+            assertEquals(parseConfig(lua: "inlay.config({ borders = 1 })").strErrors, ["[ERROR] borders: Expected type is 'Table'. But actual type is 'Int'"])
+            assertEquals(parseConfig(lua: "inlay.config({ borders = { modeColors = 1 } })").strErrors, ["[ERROR] borders.modeColors: Expected type is 'Table'. But actual type is 'Int'"])
         }
     }
 }

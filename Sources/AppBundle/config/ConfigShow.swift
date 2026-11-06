@@ -1,12 +1,14 @@
 import Common
 import Foundation
 
-/// 'inlay config --show': the config in use, as Lua, each value with where it comes from (the config of the user,
-/// the theme, the built-in config of Inlay, or the default of the code) and its possible values (from the
-/// config reference). It reads the files again, the same way readConfig does: see layeredConfig
+/// 'inlay config --show': the config in use, as the calls of Lua that make it (inlay.config, inlay.workspace,
+/// inlay.bind, inlay.window_rule…), each value with where it comes from (the config of the user, the theme, the
+/// built-in config of Inlay, or the default of the code) and its possible values (from the config reference).
+/// It reads the files again, the same way readConfig does: see layeredConfig.
+/// 'inlay config --files' and '--file <name>': the files that the config is made of
 enum ConfigShow {
     enum Origin: Equatable {
-        /// The config of the user. The file and the line, when they can be found
+        /// The config of the user. The file and the line, when they are known
         case yours(String?)
         case theme(String?)
         case inlay
@@ -29,29 +31,42 @@ enum ConfigShow {
         case table([(key: String, node: Node)])
         case value(OrderedJson, Origin)
         case literal(String, Origin)
-        /// The window rules: each one with its origin
+        /// The window rules, or the workspaces: each one with its origin
         case rules([(rule: OrderedJson, origin: Origin)])
     }
 
     /// The tables whose keys are names that the user chooses: their keys in the reference are examples
     static let freeFormTables = ["mode", "borders.modeColors", "exec.envVars", "keyMapping.keyNotationToKeyCode", "workspaceToMonitorForceAssignment", "animations.curves"]
 
+    /// The names of the functions that --show takes for the keys they set
+    static let functionKeys = ["bind": "mode", "unbind": "mode", "window_rule": onWindowDetectedKey, "workspace": workspacesKey]
+
+    /// The config of the user, and the layers that it makes with the built-in config and the theme
     @MainActor
-    static func text(key: String?, mine: Bool, keys: Bool, json: Bool) -> Result<String, String> {
+    private static func load() -> (show: Show, lua: LuaConfig?, layers: LayeredConfig, isBuiltIn: Bool) {
         let reference = (try? ConfigReference.load().get()) ?? ConfigReference("")
         let isBuiltIn = configUrl == builtInConfigUrl
         let lua: LuaConfig? = isBuiltIn ? nil : LuaConfigLoader.load(file: configUrl)
+        let builtIn = LuaConfigLoader.load(file: builtInConfigUrl)
         let files = (lua?.files ?? []).filter { $0.text != nil }
         var c = ConfigParserContext(errors: [], warnings: [])
-        let layers = layeredConfig(
-            user: lua?.table ?? [:],
-            base: isBuiltIn ? nil : builtInConfigTable,
+        var layers = layeredConfig(
+            user: (isBuiltIn ? builtIn.table : lua?.table) ?? [:],
+            base: isBuiltIn ? nil : builtIn.table,
             configFolder: isBuiltIn ? nil : configUrl.deletingLastPathComponent(),
             &c,
         )
-        let show = Show(layers: isBuiltIn ? builtInLayers(layers) : layers, reference: reference, files: files)
-        if mine { return .success(show.mine(fileNames: files.compactMap { $0.url?.lastPathComponent })) }
-        let path = key.map { $0.split(separator: ".").map(String.init) } ?? []
+        if isBuiltIn { layers = builtInLayers(layers) }
+        let show = Show(layers: layers, reference: reference, files: files, origins: lua?.origins ?? [:])
+        return (show, lua, layers, isBuiltIn)
+    }
+
+    @MainActor
+    static func text(key: String?, mine: Bool, keys: Bool, json: Bool) -> Result<String, String> {
+        let (show, lua, _, isBuiltIn) = load()
+        if mine { return .success(show.mine(fileNames: lua?.files.filter { $0.text != nil }.map { relativeName($0.url) } ?? [])) }
+        let name = key.map { functionKeys[$0.removingInlayPrefix] ?? $0.removingInlayPrefix } ?? nil
+        let path = name.map { $0.split(separator: ".").map(String.init) } ?? []
         guard let node = show.tree.find(path) else {
             let similar = show.tree.leafPaths([]).map { $0.joined(separator: ".") }.filter { $0.localizedCaseInsensitiveContains(path.last ?? "") }
             let hint = similar.isEmpty ? "'config --show --keys' lists every key" : "Did you mean: \(similar.prefix(8).joined(separator: ", "))"
@@ -62,11 +77,79 @@ enum ConfigShow {
         let header = key == nil
             ? """
             -- The config in use: \(isBuiltIn ? "the built-in config of Inlay (there is no config of yours)" : "\(configUrl.path.tildePath) over the built-in config of Inlay")
-            -- Where each value comes from: yours · theme · Inlay · default. 'inlay config --explain <key>' tells what a key does
+            -- Where each value comes from: yours · theme · Inlay · default. 'inlay config --explain <key>' tells what a key does,
+            -- and 'inlay config --files' lists the files
 
             """
             : ""
         return .success(header + show.render(path: path, node: node))
+    }
+
+    // MARK: - --files, --file
+
+    /// The files of the config in use: the built-in config and the theme, in the app, and the ones of the user
+    @MainActor
+    static func filesText() -> String {
+        let (_, lua, layers, isBuiltIn) = load()
+        var lines: [String] = []
+        if layers.base != nil || isBuiltIn { lines.append("Inlay   \(builtInConfigUrl.path.tildePath)") }
+        if let name = layers.themeName {
+            let users = layers.themeFiles.first { $0.url?.lastPathComponent == name + ".lua" && $0.text != nil }?.url
+            let builtIn = builtInThemesUrl.appending(component: name + ".lua")
+            if let url = users ?? (FileManager.default.fileExists(atPath: builtIn.path) ? builtIn : nil) {
+                lines.append("theme   \(url.path.tildePath)")
+            }
+        }
+        guard let lua, !isBuiltIn else {
+            lines.append("yours   none: the config in use is the built-in config of Inlay")
+            return lines.joined(separator: "\n")
+        }
+        let real = configUrl.resolvingSymlinksInPath()
+        lines.append("yours   \(configUrl.path.tildePath)" + (real.path != configUrl.path ? "  → \(real.path.tildePath)" : ""))
+        let modules = lua.files.dropFirst()
+        let width = modules.map { relativeName($0.url) .count }.max() ?? 0
+        for (index, module) in modules.enumerated() {
+            let branch = index == modules.count - 1 ? "└─" : "├─"
+            let name = relativeName(module.url)
+            let from = module.requiredAt.map { "require at \($0)" } ?? ""
+            let missing = module.text == nil ? "  (missing)" : ""
+            lines.append("          \(branch) \(name.padding(toLength: width, withPad: " ", startingAt: 0))   \(from)\(missing)")
+        }
+        for theme in layers.themeFiles where theme.text != nil && !lines.contains(where: { $0.contains(theme.url?.path.tildePath ?? "\u{0}") }) {
+            lines.append("          ·  \(relativeName(theme.url))   theme")
+        }
+        lines.append("")
+        lines.append("'inlay config --file <name>' prints one: builtin-config · themes/<name> · \(modules.first.map { relativeName($0.url).replacingOccurrences(of: ".lua", with: "") } ?? "inlay")")
+        return lines.joined(separator: "\n")
+    }
+
+    /// The text of a file of the config: 'builtin-config', 'themes/<name>' (of the user, or else of Inlay), or a file
+    /// of the folder of the config ('inlay', 'binds', 'conf/binds', with or without .lua)
+    @MainActor
+    static func fileText(_ name: String) -> Result<String, String> {
+        let bare = name.hasSuffix(".lua") ? String(name.dropLast(4)) : name
+        let folder = configUrl == builtInConfigUrl ? nil : configUrl.deletingLastPathComponent()
+        var candidates: [URL] = []
+        if bare == "builtin-config" { candidates.append(builtInConfigUrl) }
+        if let theme = bare.removingPrefix(themesFolderName + "/") {
+            if let folder { candidates.append(folder.appending(path: "\(themesFolderName)/\(theme).lua")) }
+            candidates.append(builtInThemesUrl.appending(component: theme + ".lua"))
+        }
+        if let folder, !bare.contains("..") { candidates.append(folder.appending(path: bare.replacingOccurrences(of: ".", with: "/") + ".lua")) }
+        for url in candidates {
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                return .success("-- \(url.path.tildePath)\n\n" + text.trimmingCharacters(in: .newlines))
+            }
+        }
+        return .failure("There is no file '\(name)' in the config. 'inlay config --files' lists them")
+    }
+
+    /// The name of a file of the config folder, as require names it: 'binds.lua', 'conf/binds.lua'
+    @MainActor
+    static func relativeName(_ url: URL?) -> String {
+        guard let url else { return "inlay.lua" }
+        let folder = configUrl.deletingLastPathComponent().path + "/"
+        return url.path.hasPrefix(folder) ? String(url.path.dropFirst(folder.count)) : url.lastPathComponent
     }
 
     /// Without a config of the user, the built-in config is the config: its values come from Inlay
@@ -88,15 +171,18 @@ private struct Show {
     let layers: LayeredConfig
     let reference: ConfigReference
     let files: [LuaConfigFile]
+    /// Where the calls of the user set each value. See: LuaConfig.origins
+    let origins: [[String]: String]
     let entries: [String: ConfigReference.Entry]
     let order: [String]
     let tree: ConfigShow.Node
 
     @MainActor
-    init(layers: LayeredConfig, reference: ConfigReference, files: [LuaConfigFile]) {
+    init(layers: LayeredConfig, reference: ConfigReference, files: [LuaConfigFile], origins: [[String]: String]) {
         self.layers = layers
         self.reference = reference
         self.files = files
+        self.origins = origins
         let all = reference.entries
         var entries: [String: ConfigReference.Entry] = [:]
         for entry in all where entries[entry.path] == nil { entries[entry.path] = entry }
@@ -105,7 +191,7 @@ private struct Show {
         let merged = isSystemAppearanceDark ? layers.dark : (layers.light ?? layers.dark)
         var tree = ConfigShow.Node.table([])
         // The values of the layers…
-        tree = Show.build(.dict(merged), [], layers: layers, files: files)
+        tree = Show.build(.dict(merged), [], layers: layers, origins: origins)
         // … and the defaults of the reference for the keys that no layer sets
         // A key that is only documented (commented out) and has a default: 'theme'
         for entry in all where !entry.isTable {
@@ -121,25 +207,29 @@ private struct Show {
     }
 
     @MainActor
-    private static func build(_ value: OrderedJson, _ path: [String], layers: LayeredConfig, files: [LuaConfigFile]) -> ConfigShow.Node {
-        if path == [onWindowDetectedKey], case .array(let rules) = value {
-            let userCount = layers.user[onWindowDetectedKey]?.asArrayOrNil?.count ?? 0
-            let origin = Show.origin(path, layers: layers, files: files)
-            return .rules(rules.enumerated().map { index, rule in
-                let isUser = index < userCount
-                return (rule, isUser ? origin : (layers.base?[onWindowDetectedKey] != nil ? .inlay : origin))
+    private static func build(_ value: OrderedJson, _ path: [String], layers: LayeredConfig, origins: [[String]: String]) -> ConfigShow.Node {
+        // The lists whose items come from calls: each item with the place of its call
+        if path == [onWindowDetectedKey] || path == [workspacesKey], case .array(let items) = value {
+            let key = path[0]
+            let userCount = layers.user[key]?.asArrayOrNil?.count ?? 0
+            let isFromInlay = key == onWindowDetectedKey ? layers.base?[key] != nil : layers.user[key] == nil
+            return .rules(items.enumerated().map { index, item in
+                if index < userCount && !(key == workspacesKey && isFromInlay) {
+                    return (item, .yours(origins[[key, String(index + 1)]] ?? Show.place(path, origins)))
+                }
+                return (item, isFromInlay || layers.base != nil ? .inlay : Show.origin(path, layers: layers, origins: origins))
             })
         }
         // A table of values (not a list): its keys one by one. 'theme' is one value, whatever it is
         if case .dict(let dict) = value, !dict.isEmpty, path != [themeKey] {
-            return .table(dict.map { key, child in (key, build(child, path + [key], layers: layers, files: files)) })
+            return .table(dict.map { key, child in (key, build(child, path + [key], layers: layers, origins: origins)) })
         }
-        return .value(value, origin(path, layers: layers, files: files))
+        return .value(value, origin(path, layers: layers, origins: origins))
     }
 
     @MainActor
-    static func origin(_ path: [String], layers: LayeredConfig, files: [LuaConfigFile]) -> ConfigShow.Origin {
-        if lookup(.dict(layers.user), path) != nil { return .yours(place(path, files)) }
+    static func origin(_ path: [String], layers: LayeredConfig, origins: [[String]: String]) -> ConfigShow.Origin {
+        if lookup(.dict(layers.user), path) != nil { return .yours(place(path, origins)) }
         if lookup(.dict(layers.themeValues), path) != nil { return .theme(layers.themeName) }
         if let base = layers.base, lookup(.dict(base), path) != nil { return .inlay }
         return .default
@@ -151,43 +241,104 @@ private struct Show {
         return lookup(child, Array(path.dropFirst()))
     }
 
-    /// 'binds.lua:12': the first line of the files of the config that sets the last key of the path
-    static func place(_ path: [String], _ files: [LuaConfigFile]) -> String? {
-        guard let key = path.last else { return nil }
-        let escaped = NSRegularExpression.escapedPattern(for: key)
-        let pattern = isIdentifier(key) ? "(^|[^A-Za-z0-9_.'\"])\(escaped)\\s*=" : "\\[\\s*['\"]\(escaped)['\"]\\s*\\]\\s*="
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
-        for file in files {
-            guard let text = file.text, let name = file.url?.lastPathComponent else { continue }
-            for (index, line) in text.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
-                let line = String(line)
-                if line.trimmingCharacters(in: .whitespaces).hasPrefix("--") { continue }
-                if regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil { return "\(name):\(index + 1)" }
-            }
+    /// 'binds.lua:12': the call that set the value, or the table it is in
+    static func place(_ path: [String], _ origins: [[String]: String]) -> String? {
+        var path = path
+        while !path.isEmpty {
+            if let place = origins[path] { return place }
+            path.removeLast()
         }
         return nil
     }
 
     // MARK: - Lua
 
+    /// The part of the config at the path, as the calls that make it. An empty path: all of it
     func render(path: [String], node: ConfigShow.Node) -> String {
+        guard let first = path.first else {
+            guard case .table(let children) = node else { return "" }
+            var sections: [[String]] = []
+            if let theme = children.first(where: { $0.key == themeKey })?.node { sections.append(renderTheme(theme)) }
+            let config = children.filter { ![themeKey, workspacesKey, "mode", onWindowDetectedKey].contains($0.key) }
+            if !config.isEmpty {
+                sections.append(["inlay.config({"] + config.flatMap { renderEntry($0.key, $0.node, [$0.key], 1) } + ["})"])
+            }
+            if let workspaces = children.first(where: { $0.key == workspacesKey })?.node { sections.append(renderCalls(workspacesKey, workspaces)) }
+            if let modes = children.first(where: { $0.key == "mode" })?.node { sections.append(renderBindings(["mode"], modes)) }
+            if let rules = children.first(where: { $0.key == onWindowDetectedKey })?.node { sections.append(renderCalls(onWindowDetectedKey, rules)) }
+            return sections.map { $0.joined(separator: "\n") }.joined(separator: "\n\n")
+        }
+        switch first {
+            case themeKey where path.count == 1: return renderTheme(node).joined(separator: "\n")
+            case workspacesKey where path.count == 1, onWindowDetectedKey where path.count == 1:
+                return renderCalls(first, node).joined(separator: "\n")
+            case "mode": return renderBindings(path, node).joined(separator: "\n")
+            default: break
+        }
         // The tables that the part is in, so that it is clear where it goes
-        var lines: [String] = []
+        var lines = ["inlay.config({"]
         for (depth, key) in path.dropLast().enumerated() {
-            lines.append(String(repeating: "  ", count: depth) + "\(luaKey(key)) = {")
+            lines.append(String(repeating: "  ", count: depth + 1) + "\(luaKey(key)) = {")
         }
-        let depth = max(path.count - 1, 0)
-        if let key = path.last {
-            lines += renderEntry(key, node, path, depth)
-        } else if case .table(let children) = node {
-            lines.append("return {")
-            for (key, child) in children { lines += renderEntry(key, child, [key], 1) }
-            lines.append("}")
-        }
+        lines += renderEntry(path.last ?? "", node, path, path.count)
         for depth in (0 ..< max(path.count - 1, 0)).reversed() {
-            lines.append(String(repeating: "  ", count: depth) + "},")
+            lines.append(String(repeating: "  ", count: depth + 1) + "},")
         }
+        lines.append("})")
         return lines.joined(separator: "\n")
+    }
+
+    private func renderTheme(_ node: ConfigShow.Node) -> [String] {
+        switch node {
+            case .value(let value, let origin): return withComment("inlay.theme(\(lua(value, depth: 0)))", origin, [themeKey])
+            case .literal(let text, let origin): return withComment("inlay.theme(\(text))", origin, [themeKey])
+            default: return []
+        }
+    }
+
+    /// inlay.workspace(…) or inlay.window_rule(…), one per item
+    private func renderCalls(_ key: String, _ node: ConfigShow.Node) -> [String] {
+        let function = key == workspacesKey ? "inlay.workspace" : "inlay.window_rule"
+        var lines: [String] = []
+        if key == onWindowDetectedKey {
+            lines.append("-- The window rules: the first one that matches runs. 'workspaces': the rules of the apps of the workspaces")
+        }
+        switch node {
+            case .rules(let items):
+                for (item, origin) in items { lines.append("\(function)(\(lua(item, depth: 0)))  -- \(origin.text)") }
+            case .value(.array(let items), let origin):
+                for item in items { lines.append("\(function)(\(lua(item, depth: 0)))  -- \(origin.text)") }
+            case .literal(let text, let origin):
+                lines.append("-- \(function): none. \(key) = \(text)  -- \(origin.text)")
+            default: break
+        }
+        return lines
+    }
+
+    /// inlay.bind(…) and inlay.unbind(…) of the modes under the path: 'mode', 'mode.service', 'mode.main.binding.alt-h'
+    private func renderBindings(_ path: [String], _ node: ConfigShow.Node) -> [String] {
+        var lines: [String] = []
+        if layers.dark[workspacesKey] != nil, path.count < 3 || path[1] == "main" {
+            lines.append("-- With the key bindings that the workspaces make (workspaceKeys + the key of each workspace)")
+        }
+        func visit(_ path: [String], _ node: ConfigShow.Node) {
+            switch node {
+                case .table(let children):
+                    // The main mode first
+                    let sorted = path.count == 1 ? children.filter { $0.key == "main" } + children.filter { $0.key != "main" } : children
+                    for (key, child) in sorted { visit(path + [key], child) }
+                case .value(let value, let origin) where path.count == 4:
+                    let mode = path[1] == "main" ? "" : ", { mode = \(lua(.string(path[1]), depth: 0)) }"
+                    let keys = lua(.string(path[3]), depth: 0)
+                    let call = value == .bool(false) ? "inlay.unbind(\(keys)\(mode))" : "inlay.bind(\(keys), \(lua(value, depth: 0))\(mode))"
+                    lines += withComment(call, origin, path)
+                case .value(let value, let origin):
+                    lines += withComment("-- \(ConfigShow.dotted(path)) = \(lua(value, depth: 0))", origin, path)
+                default: break
+            }
+        }
+        visit(path, node)
+        return lines
     }
 
     private func renderEntry(_ key: String, _ node: ConfigShow.Node, _ path: [String], _ depth: Int) -> [String] {
@@ -195,9 +346,6 @@ private struct Show {
         switch node {
             case .table(let children):
                 var lines = ["\(indent)\(luaKey(key)) = {"]
-                if path == ["mode", "main", "binding"], layers.dark[workspacesKey] != nil {
-                    lines.append("\(indent)  -- with the ones that 'workspaces' makes (workspaceKeys + the key of each workspace)")
-                }
                 for (childKey, child) in children { lines += renderEntry(childKey, child, path + [childKey], depth + 1) }
                 lines.append("\(indent)},")
                 return lines
@@ -210,9 +358,6 @@ private struct Show {
                 return withComment("\(indent)\(luaKey(key)) = \(text),", origin, path)
             case .rules(let rules):
                 var lines = ["\(indent)\(luaKey(key)) = {"]
-                if path == [onWindowDetectedKey] {
-                    lines.append("\(indent)  -- the first one that matches runs. 'workspaces': the rules of the apps of the workspaces")
-                }
                 for (rule, origin) in rules {
                     lines.append("\(indent)  \(lua(rule, depth: depth + 1)),  -- \(origin.text)")
                 }
@@ -222,9 +367,8 @@ private struct Show {
     }
 
     private func withComment(_ line: String, _ origin: ConfigShow.Origin, _ path: [String]) -> [String] {
-        let generalized = generalizedPath(path)
         var comment = origin.text
-        if let possible = entries[generalized]?.possibleValues { comment += " · " + possible }
+        if let possible = entries[path.joined(separator: ".")]?.possibleValues { comment += " · " + possible }
         // A long value: the comment goes above it
         if line.count + comment.count > 140 {
             let indent = String(line.prefix { $0 == " " })
@@ -234,36 +378,69 @@ private struct Show {
         return ["\(padded)  -- \(comment)"]
     }
 
-    private func generalizedPath(_ path: [String]) -> String {
-        path.joined(separator: ".")
-    }
-
     // MARK: - --mine
 
+    /// The calls of the user, by file in the order they were read, and by line: the ones that change something,
+    /// then the ones that repeat the base
+    @MainActor
     func mine(fileNames: [String]) -> String {
         let user = layers.user
         guard !user.isEmpty else { return "-- There is no config of yours: the config in use is the built-in config of Inlay" }
-        var effective: [String] = []
-        var noEffect: [String] = []
+        var effective: [(place: String?, line: String)] = []
+        var noEffect: [(place: String?, line: String)] = []
         for path in leafPaths(.dict(user), []) where path != [builtInConfigKey] {
             guard let value = Show.lookup(.dict(user), path) else { continue }
-            var place = Show.place(path, files).map { "  -- \($0)" } ?? ""
-            var line = "\(ConfigShow.dotted(path)) = \(lua(value, depth: 0))"
-            if case .array(let items) = value, items.contains(where: { $0.asDictOrNil != nil }) {
-                line = "\(ConfigShow.dotted(path)) = {\(place)\n" + items.map { "  \(lua($0, depth: 1))," }.joined(separator: "\n") + "\n}"
-                place = ""
+            if path == [onWindowDetectedKey] || path == [workspacesKey], case .array(let items) = value {
+                let function = path[0] == workspacesKey ? "inlay.workspace" : "inlay.window_rule"
+                for (index, item) in items.enumerated() {
+                    effective.append((origins[[path[0], String(index + 1)]] ?? Show.place(path, origins), "\(function)(\(lua(item, depth: 0)))"))
+                }
+                continue
             }
-            if repeatsTheBase(path, value) {
-                noEffect.append(line + place)
-            } else {
-                effective.append(line + place)
-            }
+            let entry = (Show.place(path, origins), call(path, value))
+            if repeatsTheBase(path, value) { noEffect.append(entry) } else { effective.append(entry) }
         }
-        var out = ["-- Yours, in \(fileNames.joined(separator: ", ")): \(effective.count) value(s)"] + effective
+        let fileOrder = fileNames
+        func grouped(_ entries: [(place: String?, line: String)]) -> [String] {
+            func split(_ place: String?) -> (file: String, line: Int) {
+                guard let place else { return ("", 0) }
+                let parts = place.split(separator: ":")
+                return (String(parts.first ?? ""), parts.count > 1 ? Int(parts[1]) ?? 0 : 0)
+            }
+            let sorted = entries.enumerated().sorted { a, b in
+                let (fa, la) = split(a.element.place), (fb, lb) = split(b.element.place)
+                let (ra, rb) = (fileOrder.firstIndex(of: fa) ?? Int.max, fileOrder.firstIndex(of: fb) ?? Int.max)
+                return (ra, la, a.offset) < (rb, lb, b.offset)
+            }.map(\.element)
+            var lines: [String] = []
+            var current: String? = nil
+            for entry in sorted {
+                let file = split(entry.place).file
+                if file != current {
+                    lines.append("-- \(file.isEmpty ? "elsewhere" : file)")
+                    current = file
+                }
+                lines.append(entry.line + (entry.place.map { "  -- \($0)" } ?? ""))
+            }
+            return lines
+        }
+        var out = ["-- Yours, in \(fileNames.joined(separator: ", ")): \(effective.count) value(s)"] + grouped(effective)
         if !noEffect.isEmpty {
-            out += ["", "-- The same as without them: nothing changes if you delete them (\(noEffect.count))"] + noEffect
+            out += ["", "-- The same as without them: nothing changes if you delete them (\(noEffect.count))"] + grouped(noEffect)
         }
         return out.joined(separator: "\n")
+    }
+
+    /// The call that sets one value: inlay.bind for a key binding, inlay.theme, inlay.config for the rest
+    private func call(_ path: [String], _ value: OrderedJson) -> String {
+        if path == [themeKey] { return "inlay.theme(\(lua(value, depth: 0)))" }
+        if path.count == 4, path[0] == "mode", path[2] == "binding" {
+            let mode = path[1] == "main" ? "" : ", { mode = \(lua(.string(path[1]), depth: 0)) }"
+            let keys = lua(.string(path[3]), depth: 0)
+            return value == .bool(false) ? "inlay.unbind(\(keys)\(mode))" : "inlay.bind(\(keys), \(lua(value, depth: 0))\(mode))"
+        }
+        let table = path.reversed().reduce(lua(value, depth: 0)) { inner, key in "{ \(luaKey(key)) = \(inner) }" }
+        return "inlay.config(\(table))"
     }
 
     /// The value of the user is the one that the config would have without it
@@ -287,6 +464,15 @@ private struct Show {
         }
         return [path]
     }
+}
+
+extension String {
+    /// 'bind' for 'inlay.bind' and 'inlay.bind()'
+    fileprivate var removingInlayPrefix: String {
+        (hasPrefix("inlay.") ? String(dropFirst(6)) : self).replacingOccurrences(of: "()", with: "")
+    }
+
+    fileprivate func removingPrefix(_ prefix: String) -> String? { hasPrefix(prefix) ? String(dropFirst(prefix.count)) : nil }
 }
 
 extension ConfigShow.Node {

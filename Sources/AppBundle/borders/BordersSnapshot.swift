@@ -111,7 +111,7 @@ extension BordersSnapshot {
             // [borders.singleWindow]. The other tiling windows are behind it, and their borders would stick out
             if let fullscreen = workspace.rootTilingContainer.mostRecentWindowRecursive, fullscreen.isFullscreen {
                 if single.enabled && !fullscreen.noOuterGapsInFullscreen {
-                    add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.singleWindowRect, isFloating: false, isFullscreen: true, width: single.width)
+                    add(fullscreen, currentRect(fullscreen) ?? fullscreen.fullscreenFrame ?? monitor.fullscreenRect, isFloating: false, isFullscreen: true, width: single.widthInFullscreen)
                 }
             } else if tiling.count == 1, let window = tiling.first {
                 if single.enabled, let rect = currentRect(window) ?? window.lastAppliedLayoutPhysicalRect {
@@ -130,13 +130,16 @@ extension BordersSnapshot {
                 guard window.detectedType != .dialog, let rect = window.lastKnownFloatingRect else { continue }
                 // A floating window that was made fullscreen looks like a fullscreen tiling window: [borders.singleWindow]
                 // (the layout gives it the area of a window alone in its workspace, one point shorter: see layoutFullscreen)
-                let full = monitor.singleWindowRect
-                let coversMonitor = rect.minX <= full.minX && rect.minY <= full.minY && rect.maxX >= full.maxX && rect.maxY >= full.maxY - 1
-                if !coversMonitor {
+                func covers(_ full: Rect) -> Bool {
+                    rect.minX <= full.minX && rect.minY <= full.minY && rect.maxX >= full.maxX && rect.maxY >= full.maxY - 1
+                }
+                let isFullscreen = window.isFullscreen && covers(monitor.fullscreenRect)
+                if !isFullscreen && !covers(monitor.singleWindowRect) {
                     add(window, rect, isFloating: true)
                 } else if single.enabled {
                     // The border is drawn outside of the frame: around a window that fills the screen it is pulled in
-                    add(window, rect.intersection(monitor.visibleRect.insetBy(single.width)), isFloating: true, isFullscreen: window.isFullscreen, width: single.width)
+                    let width = isFullscreen ? single.widthInFullscreen : single.width
+                    add(window, rect.intersection(monitor.visibleRect.insetBy(width)), isFloating: true, isFullscreen: window.isFullscreen, width: width)
                 }
             }
         }

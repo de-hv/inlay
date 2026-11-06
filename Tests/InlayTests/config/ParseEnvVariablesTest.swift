@@ -19,22 +19,22 @@ extension InlayTests {
         }
 
         @Test func testInherit() {
-            let result1 = parseConfig(lua: "return { exec = { inheritEnvVars = false } }")
+            let result1 = parseConfig(lua: "inlay.config({ exec = { inheritEnvVars = false } })")
             assertEquals(result1.errors, [])
             assertEquals(result1.config.execConfig.envVariables, [:])
 
-            let result2 = parseConfig(lua: "return { exec = { inheritEnvVars = true } }")
+            let result2 = parseConfig(lua: "inlay.config({ exec = { inheritEnvVars = true } })")
             assertEquals(result2.errors, [])
             assertEquals(result2.config.execConfig.envVariables, testEnv)
         }
 
         @Test func testAddVars() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   exec = {
                     envVars = { FOO = 'BAR' },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -43,11 +43,11 @@ extension InlayTests {
 
         @Test func testCyclicDep() {
             let errors = parseConfig(lua: """
-                return {
+                inlay.config({
                   exec = {
                     envVars = { FOO = '${BAR}', BAR = '${FOO}' },
                   },
-                }
+                })
                 """,
             ).strErrors
             assertEquals(errors, [
@@ -58,11 +58,11 @@ extension InlayTests {
 
         @Test func testForbidPwd() {
             let errors = parseConfig(lua: """
-                return {
+                inlay.config({
                   exec = {
                     envVars = { PWD = '' },
                   },
-                }
+                })
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] exec.envVars.PWD: Changing 'PWD' is not allowed"])

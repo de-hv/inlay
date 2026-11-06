@@ -150,7 +150,7 @@ extension Window {
     fileprivate func layoutFullscreen(_ context: LayoutContext, previous: Rect?) {
         // Like a window alone in its workspace, [borders.singleWindow], with the height that the layout gives it
         // (see: layoutFrame). With --no-outer-gaps, the whole visible part
-        let single = context.workspace.workspaceMonitor.singleWindowRect
+        let single = context.workspace.workspaceMonitor.fullscreenRect
         let monitorRect = noOuterGapsInFullscreen
             ? context.workspace.workspaceMonitor.visibleRect
             : Rect(topLeftX: single.topLeftX, topLeftY: single.topLeftY, width: single.width, height: single.height - 1)

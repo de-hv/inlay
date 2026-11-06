@@ -3,8 +3,9 @@ import Foundation
 /// The reference of the config (docs/config-reference.lua, a copy of which is in the app bundle), split into the
 /// parts that document a key or a table. See: 'inlay config --explain'
 ///
-/// The file is a Lua config that returns one table, written one key per line: `name = {` opens a table, a line
-/// with `}` closes it, a line with `{` alone is an item of an array (a rule of onWindowDetected), and
+/// The file is a Lua config: a header of comments that documents the functions of `inlay` (each one a block that
+/// starts with `-- inlay.<name>(`), then one call to `inlay.config({`, written one key per line: `name = {` opens a
+/// table, a line with `}` closes it, a line with `{` alone is an item of an array (a rule of onWindowDetected), and
 /// `name = value,` is a key. The comment lines right above a key or a table document it.
 /// A key that can't be written with a value (a deprecated one) is documented by a block of comment lines
 /// whose last line is the key, commented out: `-- accordionPadding = 30`
@@ -13,6 +14,10 @@ public struct ConfigReference: Sendable {
     private let lines: [String]
     private let tables: [Part]
     private let keys: [Part]
+    /// The functions of `inlay`, by name ('bind', 'window_rule', 'dsp'), in the order of the file
+    private let functions: [(name: String, range: Range<Int>)]
+    /// The lines before the table: how a config is made, and the functions
+    private let headerRange: Range<Int>
 
     private struct Part {
         /// The dotted path: 'borders', 'borders.width', 'onWindowDetected.match.appId'
@@ -38,9 +43,19 @@ public struct ConfigReference: Sendable {
             return table + "." + key
         }
         var headerLines: [Int] { open.filter { $0.path != nil }.map(\.line) }
+        var functions: [(name: String, range: Range<Int>)] = []
+        var headerEnd: Int? = nil
 
         for (index, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if headerEnd == nil {
+                // The header: a function goes from its line to the empty comment line
+                if let name = functionName(trimmed) {
+                    functions.append((name, index ..< index + 1))
+                } else if trimmed.hasPrefix("--"), trimmed != "--", let last = functions.last, last.range.upperBound == index {
+                    functions[functions.count - 1].range = last.range.lowerBound ..< index + 1
+                }
+            }
             if trimmed.isEmpty {
                 if let start = commentStart, let key = commentedOutKey(lines[index - 1]) {
                     keys.append(Part(path: qualified(key), range: start ..< index, headerLines: headerLines))
@@ -48,7 +63,8 @@ public struct ConfigReference: Sendable {
                 commentStart = nil
             } else if trimmed.hasPrefix("--") {
                 commentStart = commentStart ?? index
-            } else if trimmed == "return {" {
+            } else if trimmed == "inlay.config({" || trimmed == "return {" {
+                headerEnd = headerEnd ?? index
                 open.append((nil, index, nil))
                 commentStart = nil
             } else if trimmed == "{" { // An item of the array: a part of the array, like a table of it
@@ -76,7 +92,12 @@ public struct ConfigReference: Sendable {
         self.lines = lines
         self.tables = tables
         self.keys = keys
+        self.functions = functions
+        self.headerRange = 0 ..< (headerEnd ?? 0)
     }
+
+    /// The names of the functions of `inlay` that the reference documents: 'config', 'bind'…
+    public var functionNames: [String] { functions.map(\.name) }
 
     /// The paths of all the keys and tables that the reference documents, in the order of the file, without duplicates
     public var documentedKeys: [String] {
@@ -152,6 +173,21 @@ public struct ConfigReference: Sendable {
     /// The part of the reference about a key or a table, and about everything under it. nil key: the whole reference
     public func explain(_ key: String?) -> Result<String, String> {
         guard let key else { return .success(text.trimmingCharacters(in: .newlines)) }
+        if key == "inlay" { return .success(render([], headerRange)) }
+        // A function: 'bind', 'inlay.bind', 'inlay.bind()'. A key with the same name ('theme') follows it
+        let name = String(key.removingPrefix("inlay.") ?? key).replacingOccurrences(of: "()", with: "")
+        if let function = functions.first(where: { $0.name == name }) {
+            let part = dedented(lines[function.range].map { line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                return trimmed == "--" ? "" : String(trimmed.dropFirst(trimmed.hasPrefix("-- ") ? 3 : 2))
+            })
+            guard case .success(let keyPart) = explainKey(name) else { return .success(part) }
+            return .success(part + "\n\n" + keyPart)
+        }
+        return explainKey(key)
+    }
+
+    private func explainKey(_ key: String) -> Result<String, String> {
         let path = key.split(separator: ".").joined(separator: ".") // '.borders.' is 'borders'
         func covers(_ part: Part) -> Bool { part.path == path || part.path.hasPrefix(path + ".") }
 
@@ -174,7 +210,7 @@ public struct ConfigReference: Sendable {
             }
             return .success(dedented(result.joined(separator: "\n\n")))
         }
-        let similar = documentedKeys.filter { $0.contains(path) }
+        let similar = (functionNames.map { "inlay.\($0)" } + documentedKeys).filter { $0.contains(path) }
         let hint = similar.isEmpty
             ? "'config --explain' without a key prints the whole reference"
             : "Did you mean: \(similar.joined(separator: ", "))"
@@ -253,6 +289,13 @@ private func assignedKey(_ trimmedLine: String) -> String? {
     let key = trimmedLine[trimmedLine.startIndex ..< equals].trimmingCharacters(in: .whitespaces)
     let isKeyCharacter: (Character) -> Bool = { $0.isLetter || $0.isNumber || "-_.'\"[]".contains($0) }
     return !key.isEmpty && isKeyCharacter(first) && key.allSatisfy(isKeyCharacter) ? normalizedKey(key) : nil
+}
+
+/// 'bind' for '-- inlay.bind(keys, command, options?)', 'dsp' for '-- inlay.dsp.<command>(arguments…)'
+private func functionName(_ trimmedLine: String) -> String? {
+    guard let rest = trimmedLine.removingPrefix("-- inlay."), let paren = rest.firstIndex(of: "(") else { return nil }
+    let name = rest[..<paren].split(separator: ".").first.map(String.init) ?? ""
+    return !name.isEmpty && name.allSatisfy({ $0.isLowercase || $0 == "_" }) ? name : nil
 }
 
 /// 'accordionPadding' for '-- accordionPadding = 30'

@@ -59,9 +59,15 @@ struct SingleWindowBorder: ConvenienceMutable, Equatable, Sendable {
     var width: CGFloat = 1
     /// The room around the window, in points: between the window and the edges of the visible part of the screen
     var gap: CGFloat = 2
+    /// The width of the border of the window in fullscreen (the 'fullscreen' command). nil: `width`
+    var fullscreenWidth: CGFloat? = nil
+
+    var widthInFullscreen: CGFloat { fullscreenWidth ?? width }
 
     /// The gap is never narrower than the border: the edge of the screen would cut it
     var effectiveGap: CGFloat { max(gap, width) }
+    /// The same, for the window in fullscreen and its border
+    var effectiveFullscreenGap: CGFloat { max(gap, widthInFullscreen) }
 
     static let gapRange = 0 ... 40
 }
@@ -70,6 +76,9 @@ let singleWindowBorderParserTable: [String: any ParserProtocol<SingleWindowBorde
     "enabled": Parser(\.enabled, parseBool),
     "width": Parser(\.width, parsePoints("width", BordersConfig.widthRange)),
     "gap": Parser(\.gap, parsePoints("gap", SingleWindowBorder.gapRange)),
+    "fullscreenWidth": Parser(\.fullscreenWidth, { raw, backtrace in
+        parsePoints("fullscreenWidth", BordersConfig.widthRange)(raw, backtrace).map(Optional.some)
+    }),
 ]
 
 private func parseSingleWindowBorder(_ raw: OrderedJson, _ backtrace: ConfigBacktrace, _ c: inout ConfigParserContext) -> SingleWindowBorder {

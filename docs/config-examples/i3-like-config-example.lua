@@ -1,5 +1,23 @@
 -- Reference: https://github.com/i3/i3/blob/next/etc/config
 
+-- A whole config of its own, like i3: not over the built-in config of Inlay
+inlay.config({
+  builtInConfig = false,
+
+  -- In i3, all workspaces are phantom
+  persistentWorkspaces = {},
+
+  -- i3 doesn't have "normalizations" feature that why we disable them here.
+  -- But the feature is very helpful.
+  -- Normalizations eliminate all sorts of weird tree configurations that don't make sense.
+  -- Give normalizations a chance and enable them back.
+  enableNormalizationFlattenContainers = false,
+  enableNormalizationOppositeOrientationForNestedContainers = false,
+})
+
+-- Mouse follows focus when focused monitor changes
+inlay.on('monitor_changed', 'move-mouse monitor-lazy-center')
+
 local main = {
   -- A new Terminal window, through AppleScript
   ['alt-enter'] = [[exec-and-forget osascript -e \
@@ -48,34 +66,14 @@ for i = 1, 10 do
   main['alt-shift-' .. key] = 'move-node-to-workspace ' .. i
 end
 
-return {
-  -- A whole config of its own, like i3: not over the built-in config of Inlay
-  builtInConfig = false,
+for keys, command in pairs(main) do
+  inlay.bind(keys, command)
+end
 
-  -- In i3, all workspaces are phantom
-  persistentWorkspaces = {},
-
-  -- i3 doesn't have "normalizations" feature that why we disable them here.
-  -- But the feature is very helpful.
-  -- Normalizations eliminate all sorts of weird tree configurations that don't make sense.
-  -- Give normalizations a chance and enable them back.
-  enableNormalizationFlattenContainers = false,
-  enableNormalizationOppositeOrientationForNestedContainers = false,
-
-  -- Mouse follows focus when focused monitor changes
-  onFocusedMonitorChanged = { 'move-mouse monitor-lazy-center' },
-
-  mode = {
-    main = { binding = main },
-    resize = {
-      binding = {
-        h = 'resize width -50',
-        j = 'resize height +50',
-        k = 'resize height -50',
-        l = 'resize width +50',
-        enter = 'mode main',
-        esc = 'mode main',
-      },
-    },
-  },
-}
+local resize = { mode = 'resize' }
+inlay.bind('h', 'resize width -50', resize)
+inlay.bind('j', 'resize height +50', resize)
+inlay.bind('k', 'resize height -50', resize)
+inlay.bind('l', 'resize width +50', resize)
+inlay.bind('enter', 'mode main', resize)
+inlay.bind('esc', 'mode main', resize)

@@ -12,6 +12,13 @@ struct ConfigCommand: Command {
                     case .success(let text): .succ(io.out(text))
                     case .failure(let message): .fail(io.err(message))
                 }
+            case .files:
+                return .succ(io.out(ConfigShow.filesText()))
+            case .file(let name):
+                return switch ConfigShow.fileText(name) {
+                    case .success(let text): .succ(io.out(text))
+                    case .failure(let message): .fail(io.err(message))
+                }
             case .configPath:
                 return .succ(io.out(configUrl.absoluteURL.path))
             case .use(let path):

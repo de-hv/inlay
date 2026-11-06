@@ -119,7 +119,7 @@ extension InlayTests {
 
         @Test func testAnimationsCanBeTurnedOff() async throws {
             // Every kind of animation, whatever its own default duration
-            config.animations = parseConfig(lua: "return { animations = { duration = 0 } }").config.animations
+            config.animations = parseConfig(lua: "inlay.config({ animations = { duration = 0 } })").config.animations
             let workspace = focus.workspace
             assertEquals(TestWindow.new(id: 1, parent: workspace.rootTilingContainer).focusWindow(), true)
             try await workspace.layoutWorkspace()

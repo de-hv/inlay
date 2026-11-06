@@ -211,7 +211,7 @@ extension InlayTests {
 
         @Test func testHotkeyRegistrationWarnings() {
             let modes = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     main = {
                       binding = {
@@ -224,7 +224,7 @@ extension InlayTests {
                       binding = { esc = 'mode main' },
                     },
                   },
-                }
+                })
                 """,
             ).config.modes
             assertEquals(hotkeyRegistrationWarnings(modes) { _ in true }, [])

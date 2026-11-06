@@ -311,12 +311,12 @@ extension InlayTests {
         /// A config file with six workspaces and these rules (the items of the Lua array)
         private func temporaryConfig(rules: String) throws -> URL {
             let text = """
-                return {
+                inlay.config({
                   builtInConfig = false, -- Only these rules
                   persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
                   automaticallyUnhideMacosHiddenApps = true, -- See: init
                   onWindowDetected = { \(rules) },
-                }
+                })
                 """
             let url = FileManager.default.temporaryDirectory.appending(path: "inlay-startup-rules-\(UUID().uuidString).lua")
             try text.write(to: url, atomically: true, encoding: .utf8)

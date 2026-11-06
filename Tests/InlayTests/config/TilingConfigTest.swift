@@ -8,7 +8,7 @@ extension InlayTests {
         init() { setUpWorkspacesForTests() }
 
         @Test func testDefaults() {
-            let result = parseConfig(lua: "return {}")
+            let result = parseConfig(lua: "inlay.config({})")
             assertEquals(result.errors, [])
             assertEquals(
                 result.config.tiling,
@@ -18,7 +18,7 @@ extension InlayTests {
 
         @Test func testParse() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   tiling = {
                     newWindowPlacement = 'after-focused',
                     splitRatio = 0.6,
@@ -26,7 +26,7 @@ extension InlayTests {
                     splitTarget = 'cursor',
                     minWindowSize = 240,
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -36,92 +36,92 @@ extension InlayTests {
                 TilingConfig(newWindowPlacement: .afterFocused, splitRatio: 0.6, startupLayout: .row, splitTarget: .cursor, minWindowSize: 240),
             )
             for target in SplitTarget.allCases {
-                let parsed = parseConfig(lua: "return { tiling = { splitTarget = '\(target.rawValue)' } }")
+                let parsed = parseConfig(lua: "inlay.config({ tiling = { splitTarget = '\(target.rawValue)' } })")
                 assertEquals(parsed.errors, [])
                 assertEquals(parsed.config.tiling.splitTarget, target)
             }
             for layout in StartupLayout.allCases {
-                let parsed = parseConfig(lua: "return { tiling = { startupLayout = '\(layout.rawValue)' } }")
+                let parsed = parseConfig(lua: "inlay.config({ tiling = { startupLayout = '\(layout.rawValue)' } })")
                 assertEquals(parsed.errors, [])
                 assertEquals(parsed.config.tiling.startupLayout, layout)
             }
 
-            let dwindle = parseConfig(lua: "return { tiling = { newWindowPlacement = 'dwindle' } }")
+            let dwindle = parseConfig(lua: "inlay.config({ tiling = { newWindowPlacement = 'dwindle' } })")
             assertEquals(dwindle.errors, [])
             assertEquals(dwindle.config.tiling, TilingConfig(newWindowPlacement: .dwindle, splitRatio: 0.5))
         }
 
         @Test func testSplitRatioBounds() {
             for (raw, expected) in [("0.1", 0.1), ("0.9", 0.9), ("0.25", 0.25)] {
-                let result = parseConfig(lua: "return { tiling = { splitRatio = \(raw) } }")
+                let result = parseConfig(lua: "inlay.config({ tiling = { splitRatio = \(raw) } })")
                 assertEquals(result.errors, [])
                 assertEquals(result.config.tiling.splitRatio, expected)
             }
             for raw in ["0.09", "0.91", "0.0", "1.0", "-0.5", "1", "0"] {
                 assertEquals(
-                    parseConfig(lua: "return { tiling = { splitRatio = \(raw) } }").strErrors,
+                    parseConfig(lua: "inlay.config({ tiling = { splitRatio = \(raw) } })").strErrors,
                     ["[ERROR] tiling.splitRatio: splitRatio must be in [0.1, 0.9] range"],
                     additionalMsg: raw,
                 )
             }
             // The value with an error is ignored
-            assertEquals(parseConfig(lua: "return { tiling = { splitRatio = 2.0 } }").config.tiling.splitRatio, 0.5)
+            assertEquals(parseConfig(lua: "inlay.config({ tiling = { splitRatio = 2.0 } })").config.tiling.splitRatio, 0.5)
         }
 
         @Test func testMinWindowSizeBounds() {
             for (raw, expected) in [("20", 20), ("100", 100), ("500", 500)] as [(String, CGFloat)] {
-                let result = parseConfig(lua: "return { tiling = { minWindowSize = \(raw) } }")
+                let result = parseConfig(lua: "inlay.config({ tiling = { minWindowSize = \(raw) } })")
                 assertEquals(result.errors, [])
                 assertEquals(result.config.tiling.minWindowSize, expected)
             }
             for raw in ["19", "501", "0", "-100"] {
                 assertEquals(
-                    parseConfig(lua: "return { tiling = { minWindowSize = \(raw) } }").strErrors,
+                    parseConfig(lua: "inlay.config({ tiling = { minWindowSize = \(raw) } })").strErrors,
                     ["[ERROR] tiling.minWindowSize: minWindowSize must be in [20, 500] range"],
                     additionalMsg: raw,
                 )
             }
             assertEquals(
-                parseConfig(lua: "return { tiling = { minWindowSize = 100.5 } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { minWindowSize = 100.5 } })").strErrors,
                 ["[ERROR] tiling.minWindowSize: Expected type is 'Int'. But actual type is 'Float'"],
             )
             // The value with an error is ignored
-            assertEquals(parseConfig(lua: "return { tiling = { minWindowSize = 5 } }").config.tiling.minWindowSize, 100)
+            assertEquals(parseConfig(lua: "inlay.config({ tiling = { minWindowSize = 5 } })").config.tiling.minWindowSize, 100)
         }
 
         @Test func testErrors() {
             assertEquals(
-                parseConfig(lua: "return { tiling = { newWindowPlacement = 'spiral' } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { newWindowPlacement = 'spiral' } })").strErrors,
                 ["[ERROR] tiling.newWindowPlacement: Can't parse new window placement 'spiral'. Possible values: (dwindle|after-focused)"],
             )
             assertEquals(
-                parseConfig(lua: "return { tiling = { newWindowPlacement = 1 } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { newWindowPlacement = 1 } })").strErrors,
                 ["[ERROR] tiling.newWindowPlacement: Expected type is 'String'. But actual type is 'Int'"],
             )
             assertEquals(
-                parseConfig(lua: "return { tiling = { splitRatio = 'half' } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { splitRatio = 'half' } })").strErrors,
                 ["[ERROR] tiling.splitRatio: Expected type is 'Float'. But actual type is 'String'"],
             )
             assertEquals(
-                parseConfig(lua: "return { tiling = { startupLayout = 'spiral' } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { startupLayout = 'spiral' } })").strErrors,
                 ["[ERROR] tiling.startupLayout: Can't parse startup layout 'spiral'. Possible values: (grid|row|dwindle)"],
             )
-            assertEquals(parseConfig(lua: "return { tiling = { startupLayout = 'spiral' } }").config.tiling.startupLayout, .grid)
+            assertEquals(parseConfig(lua: "inlay.config({ tiling = { startupLayout = 'spiral' } })").config.tiling.startupLayout, .grid)
             assertEquals(
-                parseConfig(lua: "return { tiling = { startupLayout = true } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { startupLayout = true } })").strErrors,
                 ["[ERROR] tiling.startupLayout: Expected type is 'String'. But actual type is 'Bool'"],
             )
             assertEquals(
-                parseConfig(lua: "return { tiling = { splitTarget = 'mouse' } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { splitTarget = 'mouse' } })").strErrors,
                 ["[ERROR] tiling.splitTarget: Can't parse split target 'mouse'. Possible values: (focused|cursor)"],
             )
-            assertEquals(parseConfig(lua: "return { tiling = { splitTarget = 'mouse' } }").config.tiling.splitTarget, .focused)
+            assertEquals(parseConfig(lua: "inlay.config({ tiling = { splitTarget = 'mouse' } })").config.tiling.splitTarget, .focused)
             assertEquals(
-                parseConfig(lua: "return { tiling = { ['split-ration'] = 0.5 } }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = { ['split-ration'] = 0.5 } })").strErrors,
                 ["[ERROR] tiling.split-ration: Unknown key. The keys are camelCase since Inlay 0.3.0: 'splitRation'"],
             )
             assertEquals(
-                parseConfig(lua: "return { tiling = 'dwindle' }").strErrors,
+                parseConfig(lua: "inlay.config({ tiling = 'dwindle' })").strErrors,
                 ["[ERROR] tiling: Expected type is 'Table'. But actual type is 'String'"],
             )
         }

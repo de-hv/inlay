@@ -224,4 +224,12 @@ extension MonitorInfo {
         let single = config.borders.singleWindow
         return single.enabled ? visibleRect.insetBy(single.effectiveGap) : visibleRect
     }
+
+    /// Where the fullscreen window goes: like singleWindowRect, with the gap that its border needs
+    /// (borders.singleWindow.fullscreenWidth)
+    @MainActor
+    var fullscreenRect: Rect {
+        let single = config.borders.singleWindow
+        return single.enabled ? visibleRect.insetBy(single.effectiveFullscreenGap) : visibleRect
+    }
 }

@@ -7,41 +7,54 @@ struct LuaConfigFile: Equatable, Sendable {
     let url: URL?
     /// nil: a module that `require` couldn't read. Creating it must reload the config
     let text: String?
+    /// The call of `require` that read it first: 'inlay.lua:3'. nil: the main file
+    var requiredAt: String? = nil
 }
 
 /// What running a Lua config gives
 struct LuaConfig {
-    /// The table that the main file returns. Empty if it couldn't be run
+    /// The table of the config: what the calls of `inlay` made (or, for a theme, what the file returns). Empty if it
+    /// couldn't be run
     var table: OrderedJson.JsonDict
     /// The main file first, then every module, in the order of the first `require`. Also the ones read before an
     /// error, and the one that couldn't be read: fixing them must reload the config
     var files: [LuaConfigFile]
     var errors: [ConfigParseDiagnostic]
+    /// Where each value was set: 'binds.lua:12'. The keys are the paths of the values in `table`; an item of a list
+    /// (a workspace, a window rule) is at its number, from 1: ["onWindowDetected", "2"]
+    var origins: [[String]: String] = [:]
 }
 
-/// Runs the config: `inlay.lua` returns a table, which becomes the same OrderedJson that the parsers of the config
-/// read. The Lua it runs can't reach the system:
+/// Runs the config. `inlay.lua` doesn't return a table: it calls the functions of `inlay` (inlay.config,
+/// inlay.bind, inlay.window_rule…), which make the same OrderedJson that the parsers of the config read.
+/// The Lua it runs can't reach the system:
 /// - only the base, string, table, math and utf8 libraries, without dofile and loadfile, and `load` only takes text;
-/// - `require(name)` loads `<name>.lua` of the folder of the main file, once, like the require of Lua;
-/// - `inlay.merge(...)` puts tables together: the tables of the same key are merged, the arrays are concatenated, and
-///   for anything else the last one wins;
+/// - `require(name)` runs `<name>.lua` of the folder of the main file, once, like the require of Lua (`a.b`:
+///   `a/b.lua`);
 /// - a config that runs for too long (an endless loop) is stopped.
 ///
 /// A table is an array when its keys are 1…n, and a table of keys when they are all strings. The empty table is a
 /// table of keys: the parsers take it as an empty array too
 enum LuaConfigLoader {
+    enum Kind {
+        /// A config: the calls of `inlay` make it, and the file returns nothing
+        case config
+        /// A file that returns a table of keys: a theme
+        case table
+    }
+
     /// Runs the file and the modules of its folder
-    static func load(file: URL) -> LuaConfig {
+    static func load(file: URL, kind: Kind = .config) -> LuaConfig {
         guard let text = try? String(contentsOf: file, encoding: .utf8) else {
             let message = "Can't read contents of \(file.path.singleQuoted) as a utf8 string"
             return LuaConfig(table: [:], files: [], errors: [.init(.emptyRoot, message, preventConfigReload: true)])
         }
-        return load(text, url: file)
+        return load(text, url: file, kind: kind)
     }
 
     /// - Parameter url: where the text comes from: its name is the name of the file in the errors, and its folder has the
     ///   modules. Without it, `require` fails
-    static func load(_ text: String, url: URL? = nil) -> LuaConfig {
+    static func load(_ text: String, url: URL? = nil, kind: Kind = .config) -> LuaConfig {
         let state = unsafe luaL_newstate().orDie("Lua can't allocate its state")
         defer { unsafe lua_close(state) }
         var config = LuaConfig(table: [:], files: [LuaConfigFile(url: url, text: text)], errors: [])
@@ -49,7 +62,7 @@ enum LuaConfigLoader {
         unsafe openLibraries(state)
         unsafe lua_sethook(state, stopEndlessConfig, LUA_MASKCOUNT, maxInstructions)
 
-        // The prelude leaves the table of the modules it reads at the bottom of the stack
+        // The prelude leaves its state (the modules it reads, the config that the calls make) at the bottom of the stack
         let folder = url?.deletingLastPathComponent()
         let name = url?.lastPathComponent ?? "inlay.lua"
         let isPreludeLoaded = unsafe run(state, prelude, chunkName: "=inlay", arguments: { state in
@@ -59,20 +72,40 @@ enum LuaConfigLoader {
             return 3
         })
         guard isPreludeLoaded else { die("The prelude of the Lua config fails: \(unsafe popString(state) ?? "")") }
-        let modulesIndex = unsafe lua_gettop(state)
+        let preludeIndex = unsafe lua_gettop(state)
 
         let isRun = unsafe run(state, text, chunkName: "@" + name, arguments: { _ in 0 })
+        config.files += unsafe readModules(state, preludeIndex, folder: folder)
         guard isRun else {
             config.errors.append(.init(.emptyRoot, unsafe popString(state) ?? "\(name) fails", preventConfigReload: true))
-            config.files += unsafe readModules(state, modulesIndex, folder: folder)
             return config
         }
-        config.files += unsafe readModules(state, modulesIndex, folder: folder)
 
-        guard unsafe lua_type(state, -1) == LUA_TTABLE else {
-            let message = "\(name) must return the table of the config. It returns: \(unsafe typeName(state, -1))"
-            config.errors.append(.init(.emptyRoot, message, preventConfigReload: true))
-            return config
+        switch kind {
+            case .table:
+                guard unsafe lua_type(state, -1) == LUA_TTABLE else {
+                    let message = "\(name) must return the table of the config. It returns: \(unsafe typeName(state, -1))"
+                    config.errors.append(.init(.emptyRoot, message, preventConfigReload: true))
+                    return config
+                }
+            case .config:
+                switch unsafe lua_type(state, -1) {
+                    case LUA_TNIL: break
+                    case LUA_TTABLE:
+                        config.errors.append(.init(.emptyRoot, """
+                            \(name) returns a table: the config is no longer a table that it returns, but calls. Put the \
+                            table in inlay.config({ … }) (the key bindings in inlay.bind, the window rules in inlay.window_rule, \
+                            the workspaces in inlay.workspace), and require('name') the other files. 'inlay config --explain inlay' tells how
+                            """, preventConfigReload: true))
+                        return config
+                    default:
+                        let message = "\(name) returns a \(unsafe typeName(state, -1)): the config is the calls of inlay (inlay.config, inlay.bind…), and it returns nothing"
+                        config.errors.append(.init(.emptyRoot, message, preventConfigReload: true))
+                        return config
+                }
+                unsafe lua_settop(state, -2)
+                unsafe lua_getfield(state, preludeIndex, "config")
+                config.origins = unsafe readOrigins(state, preludeIndex)
         }
         var path: Set<Int> = []
         switch unsafe toJson(state, -1, .emptyRoot, &path, &config.errors) {
@@ -118,9 +151,12 @@ enum LuaConfigLoader {
         return unsafe lua_pcallk(state, arguments(state), 1, 0, 0, nil) == LUA_OK
     }
 
-    /// The modules that the prelude has read: `{ { name = 'binds', text = '…' }, … }`
-    private static func readModules(_ state: OpaquePointer, _ index: Int32, folder: URL?) -> [LuaConfigFile] {
+    /// The modules that the prelude has read: `{ { name = 'binds', text = '…' }, … }`, in its state at the index
+    private static func readModules(_ state: OpaquePointer, _ preludeIndex: Int32, folder: URL?) -> [LuaConfigFile] {
         guard let folder else { return [] }
+        unsafe lua_getfield(state, preludeIndex, "modules")
+        let index = unsafe lua_gettop(state)
+        defer { unsafe lua_settop(state, -2) }
         let count = unsafe lua_rawlen(state, index)
         guard count > 0 else { return [] }
         return (1 ... Int64(count)).compactMap { i in
@@ -128,13 +164,31 @@ enum LuaConfigLoader {
             defer { unsafe lua_settop(state, -2) }
             unsafe lua_getfield(state, -1, "name")
             unsafe lua_getfield(state, -2, "text")
-            defer { unsafe lua_settop(state, -3) }
-            guard let name = unsafe string(state, -2) else { return nil }
-            return LuaConfigFile(url: moduleUrl(folder, name), text: unsafe string(state, -1))
+            unsafe lua_getfield(state, -3, "from")
+            defer { unsafe lua_settop(state, -4) }
+            guard let name = unsafe string(state, -3) else { return nil }
+            return LuaConfigFile(url: moduleUrl(folder, name), text: unsafe string(state, -2), requiredAt: unsafe string(state, -1))
         }
     }
 
     static func moduleUrl(_ folder: URL, _ name: String) -> URL { folder.appending(path: name + ".lua") }
+
+    /// Where the calls of `inlay` set each value: `{ { path = { 'mode', 'main', 'binding', 'cmd-alt-h' }, place = 'binds.lua:3' }, … }`.
+    /// A later call over the same path wins, like its value
+    private static func readOrigins(_ state: OpaquePointer, _ preludeIndex: Int32) -> [[String]: String] {
+        unsafe lua_getfield(state, preludeIndex, "origins")
+        defer { unsafe lua_settop(state, -2) }
+        var path: Set<Int> = []
+        var errors: [ConfigParseDiagnostic] = []
+        guard case .array(let items)? = unsafe toJson(state, -1, .emptyRoot, &path, &errors) else { return [:] }
+        var origins: [[String]: String] = [:]
+        for item in items {
+            guard let dict = item.asDictOrNil, let place = dict["place"]?.asStringOrNil else { continue }
+            let keys = dict["path"]?.asArrayOrNil?.compactMap(\.asStringOrNil) ?? []
+            origins[keys] = place
+        }
+        return origins
+    }
 
     /// The value at the index as OrderedJson. `path`: the tables that contain it, to tell a table that contains
     /// itself. nil: the value can't be one, and an error says why
@@ -239,8 +293,11 @@ enum LuaConfigLoader {
         unsafe String(cString: lua_typename(state, lua_type(state, index)))
     }
 
-    /// The Lua side: `require` and `inlay`. It is called with the function that reads a module, the folder of the
-    /// config (nil without one) and the name of the main file, and returns the table of the modules it reads
+    /// The Lua side: `require` and the API of `inlay`. It is called with the function that reads a module, the folder
+    /// of the config (nil without one) and the name of the main file, and returns its state:
+    /// `{ modules = { { name = 'binds', text = '…' }, … }, config = { … }, origins = { { path = { … }, place = 'binds.lua:3' }, … } }`.
+    /// The functions of `inlay` fill `config`, the same table of keys that the parsers read, and `origins`, where each
+    /// value was set
     private static let prelude = """
         local readModule, folder, mainFile = ...
         local modules, loaded, loading = {}, {}, {}
@@ -250,33 +307,47 @@ enum LuaConfigLoader {
         -- The file that runs now: the place of an error when the line is unknown
         local currentFile = mainFile
 
-        -- 'file:line: ' of the code at the level of the stack. A tail call (return require('x')) leaves no line
-        local function where(level)
+        -- 'file:line' of the code at the level of the stack. A tail call (return require('x')) leaves no line
+        local function place(level)
           local info = getinfo(level + 1, 'Sl')
           if info and info.currentline > 0 and info.source ~= '=inlay' then
-            return info.short_src .. ':' .. info.currentline .. ': '
+            return info.short_src .. ':' .. info.currentline
           end
-          return currentFile .. ': '
+          return currentFile
         end
 
-        function require(name)
-          if type(name) ~= 'string' or not name:match('^[%w_%-]+$') then
-            error(where(2) .. "require: '" .. tostring(name) .. "' isn't a file of the config folder: write its name without .lua", 0)
+        -- The same, for the first level at or above it that is code of the config, not of here
+        local function placeOfConfig(level)
+          level = level + 1
+          local info = getinfo(level, 'S')
+          while info and info.source == '=inlay' do
+            level = level + 1
+            info = getinfo(level, 'S')
           end
-          if loaded[name] ~= nil then return loaded[name] end
-          if loading[name] then error(where(2) .. 'require: ' .. name .. '.lua requires itself', 0) end
+          return place(level - 1)
+        end
+
+        local function where(level) return place(level + 1) .. ': ' end
+
+        function require(name)
+          if type(name) ~= 'string' or not name:match('^[%w_%-]+$') and not name:match('^[%w_%-]+[%w_%-%.]*[%w_%-]$') or name:find('%.%.') then
+            error(where(2) .. "require: '" .. tostring(name) .. "' isn't a file of the config folder: write its name without .lua (a.b for a/b.lua)", 0)
+          end
+          local path = name:gsub('%.', '/')
+          if loaded[path] ~= nil then return loaded[path] end
+          if loading[path] then error(where(2) .. 'require: ' .. path .. '.lua requires itself', 0) end
           if not folder then error(where(2) .. 'require: this config has no folder', 0) end
-          local text, problem = readModule(folder .. '/' .. name .. '.lua')
-          modules[#modules + 1] = { name = name, text = text }
+          local text, problem = readModule(folder .. '/' .. path .. '.lua')
+          modules[#modules + 1] = { name = path, text = text, from = place(2) }
           if not text then error(where(2) .. 'require: ' .. problem, 0) end
-          local chunk, syntaxError = rawLoad(text, '@' .. name .. '.lua', 't')
+          local chunk, syntaxError = rawLoad(text, '@' .. path .. '.lua', 't')
           if not chunk then error(syntaxError, 0) end
           local previousFile = currentFile
-          loading[name], currentFile = true, name .. '.lua'
+          loading[path], currentFile = true, path .. '.lua'
           local value = chunk()
-          loading[name], currentFile = nil, previousFile
+          loading[path], currentFile = nil, previousFile
           if value == nil then value = true end
-          loaded[name] = value
+          loaded[path] = value
           return value
         end
 
@@ -291,10 +362,14 @@ enum LuaConfigLoader {
           return count > 0 and count == #t
         end
 
-        local function copy(value)
+        -- A table that contains itself stays so: the error of the config says it
+        local function copy(value, seen)
           if type(value) ~= 'table' then return value end
+          seen = seen or {}
+          if seen[value] then return seen[value] end
           local result = {}
-          for k, v in pairs(value) do result[k] = copy(v) end
+          seen[value] = result
+          for k, v in pairs(value) do result[k] = copy(v, seen) end
           return result
         end
 
@@ -319,24 +394,194 @@ enum LuaConfigLoader {
           end
         end
 
-        inlay = {}
+        -- What the functions of inlay make: the table of the config, and where each value comes from
+        local config, origins = {}, {}
 
-        function inlay.merge(...)
-          local result = {}
-          for i = 1, select('#', ...) do
-            local part = select(i, ...)
-            if type(part) ~= 'table' then
-              error(where(2) .. 'inlay.merge: argument ' .. i .. ' is a ' .. type(part) .. ', not a table', 0)
-            end
-            local problem = mergeInto(result, part)
-            if problem then error(where(2) .. 'inlay.merge: ' .. problem, 0) end
-          end
-          return result
+        local function record(path, at)
+          origins[#origins + 1] = { path = path, place = at }
         end
 
-        return modules
+        -- Every value of the table, under the path: a table of keys is gone into; a list and a value are one
+        local function recordValues(path, value, at)
+          if type(value) == 'table' and next(value) ~= nil and not isArray(value) and #path < 16 then
+            for key, child in pairs(value) do
+              if type(key) == 'string' then
+                local childPath = { table.unpack(path) }
+                childPath[#childPath + 1] = key
+                recordValues(childPath, child, at)
+              end
+            end
+          else
+            record(path, at)
+          end
+        end
+
+        -- The table of keys at the path of the config, made if it isn't there
+        local function tableAt(...)
+          local t = config
+          for _, key in ipairs({ ... }) do
+            if type(t[key]) ~= 'table' then t[key] = {} end
+            t = t[key]
+          end
+          return t
+        end
+
+        local function fail(name, message) error(placeOfConfig(2) .. ': inlay.' .. name .. ': ' .. message, 0) end
+
+        local function isTableOfKeys(value) return type(value) == 'table' and not isArray(value) end
+
+        local function checkOptions(name, options, allowed)
+          if options == nil then return {} end
+          if not isTableOfKeys(options) then fail(name, 'the options are a table, like { mode = \\'service\\' }') end
+          for key in pairs(options) do
+            if not allowed[key] then fail(name, "'" .. tostring(key) .. "' isn't an option") end
+          end
+          return options
+        end
+
+        local function isCommand(value)
+          if type(value) == 'string' then return true end
+          if type(value) ~= 'table' or (next(value) ~= nil and not isArray(value)) then return false end
+          for _, item in ipairs(value) do if type(item) ~= 'string' then return false end end
+          return true
+        end
+
+        local function appendItem(key, item, at)
+          local list = config[key]
+          if type(list) ~= 'table' then
+            list = {}
+            config[key] = list
+            record({ key }, at)
+          end
+          list[#list + 1] = copy(item)
+          record({ key, tostring(#list) }, at)
+        end
+
+        inlay = {}
+
+        function inlay.config(values)
+          if not isTableOfKeys(values) then fail('config', 'it takes a table of keys, like { gaps = { inner = 8 } }') end
+          local problem = mergeInto(config, values)
+          if problem then fail('config', problem) end
+          recordValues({}, values, place(2))
+        end
+
+        function inlay.theme(theme)
+          if type(theme) ~= 'string' and type(theme) ~= 'table' then
+            fail('theme', 'it takes the name of a theme, or a table: { extends = \\'gruvbox\\', borders = { … } }')
+          end
+          config.theme = copy(theme)
+          record({ 'theme' }, place(2))
+        end
+
+        function inlay.workspace(workspace)
+          if not isTableOfKeys(workspace) then fail('workspace', "it takes a table: { id = '1', key = 'h', apps = { … } }") end
+          appendItem('workspaces', workspace, place(2))
+        end
+
+        local bindOptions = { mode = true }
+
+        local function bindingsOf(name, options)
+          local mode = checkOptions(name, options, bindOptions).mode or 'main'
+          if type(mode) ~= 'string' then fail(name, 'mode is the name of a binding mode') end
+          return mode, tableAt('mode', mode, 'binding')
+        end
+
+        function inlay.bind(keys, command, options)
+          if type(keys) ~= 'string' then fail('bind', "the keys are a string, like 'cmd-alt-h'") end
+          if not isCommand(command) then fail('bind', 'the command is a string, or a list of them') end
+          local mode, bindings = bindingsOf('bind', options)
+          bindings[keys] = copy(command)
+          record({ 'mode', mode, 'binding', keys }, place(2))
+        end
+
+        function inlay.unbind(keys, options)
+          if type(keys) ~= 'string' then fail('unbind', "the keys are a string, like 'cmd-alt-h'") end
+          local mode, bindings = bindingsOf('unbind', options)
+          bindings[keys] = false
+          record({ 'mode', mode, 'binding', keys }, place(2))
+        end
+
+        function inlay.window_rule(rule)
+          if rule ~= 'workspaces' and not isTableOfKeys(rule) then
+            fail('window_rule', "it takes a table, { match = { appId = '…' }, run = 'layout floating' }, or 'workspaces'")
+          end
+          appendItem('onWindowDetected', rule, place(2))
+        end
+
+        local events = {
+          start = 'afterStartupCommand',
+          focus_changed = 'onFocusChanged',
+          monitor_changed = 'onFocusedMonitorChanged',
+          mode_changed = 'onModeChanged',
+          workspace_changed = 'execOnWorkspaceChange',
+        }
+
+        function inlay.on(event, commands)
+          local key = events[event]
+          if not key then fail('on', "'" .. tostring(event) .. "' isn't an event: start, focus_changed, monitor_changed, mode_changed or workspace_changed") end
+          if not isCommand(commands) then fail('on', 'the commands are a string, or a list of them') end
+          local at = place(2)
+          if key == 'execOnWorkspaceChange' then
+            -- A program and its arguments: one, the last one
+            config[key] = copy(type(commands) == 'string' and { commands } or commands)
+          else
+            local list = config[key]
+            if type(list) ~= 'table' then list = {} config[key] = list end
+            if type(commands) == 'string' then commands = { commands } end
+            for _, command in ipairs(commands) do list[#list + 1] = command end
+          end
+          record({ key }, at)
+        end
+
+        function inlay.env(name, value)
+          if type(name) ~= 'string' or type(value) ~= 'string' then fail('env', "it takes a name and a value: inlay.env('PATH', '/opt/homebrew/bin:${PATH}')") end
+          tableAt('exec', 'envVars')[name] = value
+          record({ 'exec', 'envVars', name }, place(2))
+        end
+
+        function inlay.curve(name, points)
+          if type(name) ~= 'string' or type(points) ~= 'table' then fail('curve', 'it takes a name and { x1, y1, x2, y2 }') end
+          tableAt('animations', 'curves')[name] = copy(points)
+          record({ 'animations', 'curves', name }, place(2))
+        end
+
+        local leaves = { global = true, open = true, move = true, fullscreen = true, workspace = true }
+
+        function inlay.animation(animation)
+          if not isTableOfKeys(animation) or not leaves[animation.leaf] then
+            fail('animation', "it takes { leaf = 'open', curve = 'quint', duration = 200 }. leaf: global, open, move, fullscreen or workspace")
+          end
+          local values = copy(animation)
+          local leaf = values.leaf
+          values.leaf = nil
+          local path = leaf == 'global' and { 'animations' } or { 'animations', leaf }
+          local problem = mergeInto(tableAt(table.unpack(path)), values)
+          if problem then fail('animation', problem) end
+          recordValues(path, values, place(2))
+        end
+
+        -- The commands, as functions: inlay.dsp.focus('left') is 'focus left'. Each one gives the string
+        local aliases = { exec = 'exec-and-forget' }
+        inlay.dsp = setmetatable({}, {
+          __index = function(_, name)
+            local command = aliases[name] or tostring(name):gsub('_', '-')
+            return function(...)
+              local parts = { command }
+              for i = 1, select('#', ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+              return table.concat(parts, ' ')
+            end
+          end,
+        })
+
+        function inlay.merge()
+          error(where(2) .. "inlay.merge is gone: require('name') runs name.lua, whose inlay.config, inlay.bind… calls are part of the config", 0)
+        end
+
+        return { modules = modules, config = config, origins = origins }
         """
 }
+
 
 /// `readModule(path)`: the text of the file, or nil and why. It never raises an error: a Lua error would jump over
 /// the Swift code

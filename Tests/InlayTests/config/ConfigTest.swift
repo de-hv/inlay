@@ -14,7 +14,7 @@ extension InlayTests {
         }
 
         @Test func testEmptyConfig() {
-            let result = parseConfig(lua: "return {}")
+            let result = parseConfig(lua: "inlay.config({})")
             assertEquals(result.errors, [])
             assertTrue(result.allowReloadConfig)
             assertEquals(result.warnings, [])
@@ -31,17 +31,17 @@ extension InlayTests {
         @Test func testKeysOfAeroSpaceAreUnknown() {
             for key in ["configVersion = 2", "afterLoginCommand = {}", "accordionPadding = 30", "nonEmptyWorkspacesRootContainersLayoutOnStartup = 'smart'", "indentForNestedContainersWithTheSameOrientation = 30"] {
                 let name = String(key.prefix { $0 != " " })
-                assertEquals(parseConfig(lua: "return { \(key) }").strErrors, ["[ERROR] \(name): Unknown top-level key"])
+                assertEquals(parseConfig(lua: "inlay.config({ \(key) })").strErrors, ["[ERROR] \(name): Unknown top-level key"])
             }
             assertEquals(
-                parseConfig(lua: "return { onWindowDetected = { { match = { duringAerospaceStartup = true }, run = 'layout floating' } } }").strErrors,
+                parseConfig(lua: "inlay.config({ onWindowDetected = { { match = { duringAerospaceStartup = true }, run = 'layout floating' } } })").strErrors,
                 ["[ERROR] onWindowDetected[0].match.duringAerospaceStartup: Unknown key"],
             )
         }
 
         @Test func testExecOnWorkspaceChangeDifferentTypesError() {
             let errors = parseConfig(lua: """
-                return { execOnWorkspaceChange = { '', 1 } }
+                inlay.config({ execOnWorkspaceChange = { '', 1 } })
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] execOnWorkspaceChange[1]: Expected type is \'String\'. But actual type is \'Int\'"])
@@ -49,7 +49,7 @@ extension InlayTests {
 
         @Test func testDuplicatedPersistentWorkspaces() {
             let errors = parseConfig(lua: """
-                return { persistentWorkspaces = { 'a', 'a' } }
+                inlay.config({ persistentWorkspaces = { 'a', 'a' } })
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] persistentWorkspaces: Contains duplicated workspace names"])
@@ -57,20 +57,20 @@ extension InlayTests {
 
         /// Always available: there is no configVersion anymore
         @Test func testPersistentWorkspaces() {
-            let result = parseConfig(lua: "return { persistentWorkspaces = { 'a' } }")
+            let result = parseConfig(lua: "inlay.config({ persistentWorkspaces = { 'a' } })")
             assertEquals(result.strErrors, [])
             assertEquals(Array(result.config.persistentWorkspaces), ["a"])
         }
 
         @Test func testWrongTypeForCommand() {
             let errors = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     main = {
                       binding = { ['alt-a'] = { 1, 'focus right' } },
                     },
                   },
-                }
+                })
                 """,
             ).strErrors
             assertEquals(errors, ["[ERROR] mode.main.binding.alt-a[0]: Expected type is \'String\'. But actual type is \'Int\'"])
@@ -78,9 +78,9 @@ extension InlayTests {
 
         @Test func testDropBindings() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = { main = {} },
-                }
+                })
                 """,
             )
             assertTrue(result.allowReloadConfig)
@@ -90,13 +90,13 @@ extension InlayTests {
 
         @Test func testParseMode() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     main = {
                       binding = { ['alt-h'] = 'focus left' },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -109,13 +109,13 @@ extension InlayTests {
 
         @Test func testModesMustContainDefaultModeError() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     foo = {
                       binding = { ['alt-h'] = 'focus left' },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(
@@ -127,7 +127,7 @@ extension InlayTests {
 
         @Test func testHotkeyParseError() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     main = {
                       binding = {
@@ -137,7 +137,7 @@ extension InlayTests {
                       },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(
@@ -158,7 +158,7 @@ extension InlayTests {
         /// bindings don't make any
         @Test func testPermanentWorkspaceNames() {
             let fromBindings = parseConfig(lua: """
-                return {
+                inlay.config({
                   mode = {
                     main = {
                       binding = {
@@ -167,20 +167,20 @@ extension InlayTests {
                       },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(fromBindings.errors, [])
             assertEquals(fromBindings.config.persistentWorkspaces, [])
 
-            let fromWorkspaces = parseConfig(lua: "return { workspaces = { { id = '1' }, { id = '2' }, { id = '3' }, { id = '4' } } }")
+            let fromWorkspaces = parseConfig(lua: "inlay.config({ workspaces = { { id = '1' }, { id = '2' }, { id = '3' }, { id = '4' } } })")
             assertEquals(fromWorkspaces.errors, [])
             assertEquals(Array(fromWorkspaces.config.persistentWorkspaces), ["1", "2", "3", "4"])
         }
 
         @Test func testUnknownTopLevelKeyParseError() {
             let result = parseConfig(lua: """
-                return { unknownKey = true, enableNormalizationFlattenContainers = false }
+                inlay.config({ unknownKey = true, enableNormalizationFlattenContainers = false })
                 """,
             )
             assertEquals(
@@ -192,10 +192,10 @@ extension InlayTests {
 
         @Test func testUnknownKeyParseError() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   enableNormalizationFlattenContainers = false,
                   gaps = { unknownKey = true },
-                }
+                })
                 """,
             )
             assertEquals(
@@ -207,7 +207,7 @@ extension InlayTests {
 
         @Test func testTypeMismatch() {
             let errors = parseConfig(lua: """
-                return { enableNormalizationFlattenContainers = 'true' }
+                inlay.config({ enableNormalizationFlattenContainers = 'true' })
                 """,
             ).strErrors
             assertEquals(
@@ -217,29 +217,29 @@ extension InlayTests {
         }
 
         @Test func testConfigParseError() {
-            assertFalse(parseConfig(lua: "return {").allowReloadConfig)
+            assertFalse(parseConfig(lua: "inlay.config({").allowReloadConfig)
             assertEquals(
-                parseConfig(lua: "return {").strErrors,
+                parseConfig(lua: "inlay.config({").strErrors,
                 ["[ERROR] inlay.lua:1: unexpected symbol near <eof>"],
             )
 
             assertEquals(
                 parseConfig(lua: "\nreturn 1").strErrors,
-                ["[ERROR] inlay.lua must return the table of the config. It returns: number"],
+                ["[ERROR] inlay.lua returns a number: the config is the calls of inlay (inlay.config, inlay.bind…), and it returns nothing"],
             )
 
             assertEquals(
-                parseConfig(lua: "return { foo: 1 }").strErrors,
+                parseConfig(lua: "inlay.config({ foo: 1 })").strErrors,
                 ["[ERROR] inlay.lua:1: <name> expected near '1'"],
             )
 
             assertEquals(
-                parseConfig(lua: "return { foo = function() end }").strErrors,
+                parseConfig(lua: "inlay.config({ foo = function() end })").strErrors,
                 ["[ERROR] foo: Unsupported Lua type: function"],
             )
 
             assertEquals(
-                parseConfig(lua: "return { foo = { bar = print } }").strErrors,
+                parseConfig(lua: "inlay.config({ foo = { bar = print } })").strErrors,
                 ["[ERROR] foo.bar: Unsupported Lua type: function", "[ERROR] foo: Unknown top-level key"],
             )
         }
@@ -262,7 +262,7 @@ extension InlayTests {
 
         @Test func testSplitCommandAndFlattenContainersNormalization() {
             let errors = parseConfig(lua: """
-                return {
+                inlay.config({
                   enableNormalizationFlattenContainers = true,
                   mode = {
                     main = { binding = {} },
@@ -270,7 +270,7 @@ extension InlayTests {
                       binding = { ['alt-s'] = 'split horizontal' },
                     },
                   },
-                }
+                })
                 """,
             ).strErrors
             let expected = """
@@ -286,7 +286,7 @@ extension InlayTests {
 
         @Test func testParseWorkspaceToMonitorAssignment() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   workspaceToMonitorForceAssignment = {
                     workspace_name_1 = 1,
                     workspace_name_2 = 'main',
@@ -299,7 +299,7 @@ extension InlayTests {
                     w8 = 0,
                     workspace_name_x = '2',
                   },
-                }
+                })
                 """,
             )
             assertEquals(
@@ -326,7 +326,7 @@ extension InlayTests {
 
         @Test func testParseOnWindowDetected() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   onWindowDetected = {
                     { -- 0
                       match = 'true',
@@ -353,7 +353,7 @@ extension InlayTests {
                     },
                     { match = '', run = '' }, -- 7
                   },
-                }
+                })
                 """)
             let matcher6Args = TestCmdArgs(rawArgs: [])
                 .copy(\.lhs, .initialized(.app(.appBundleId)))
@@ -410,11 +410,11 @@ extension InlayTests {
 
         @Test func testParseOnWindowDetected2() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   onWindowDetected = {
                     { checkFurtherCallbacks = true, run = '' },
                   },
-                }
+                })
                 """)
             assertEquals(result.config.onWindowDetected, [
                 WindowDetectedCallback(
@@ -429,7 +429,7 @@ extension InlayTests {
 
         @Test func testParseInlineTables() {
             let errors = parseConfig(lua: """
-                return {
+                inlay.config({
                   onWindowDetected = {
                     {
                       checkFurtherCallbacks = true,
@@ -440,7 +440,7 @@ extension InlayTests {
                       run = {},
                     },
                   },
-                }
+                })
                 """).errors
             assertEquals(errors, [])
         }
@@ -448,12 +448,12 @@ extension InlayTests {
         /// A syntax error stops the reload, with its line
         @Test func testLuaSyntaxError() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   onWindowDetected = {
                     { match = { appId = 'com.apple.findmy' }, run = 'layout floating' }
                     { match = { appId = 'com.openai.chat' }, run = 'layout floating' },
                   },
-                }
+                })
                 """)
             assertFalse(result.allowReloadConfig)
             assertEquals(result.strErrors, ["[ERROR] inlay.lua:4: '}' expected (to close '{' at line 2) near '{'"])
@@ -461,14 +461,14 @@ extension InlayTests {
 
         @Test func testParseOnWindowDetectedRegex() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   onWindowDetected = {
                     {
                       match = { appNameRegexSubstring = '^system settings$' },
                       run = {},
                     },
                   },
-                }
+                })
                 """,
             )
             let expected = WindowDetectedCallbackMatcher.legacy(LegacyWindowDetectedCallbackMatcher(appNameRegexSubstring: .new("^system settings$").getOrDie()))
@@ -484,7 +484,7 @@ extension InlayTests {
 
         @Test func testParseGaps() {
             let result1 = parseConfig(lua: """
-                return {
+                inlay.config({
                   gaps = {
                     inner = {
                       horizontal = 10,
@@ -518,7 +518,7 @@ extension InlayTests {
                       },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result1.errors, [])
@@ -548,7 +548,7 @@ extension InlayTests {
             )
 
             let result2 = parseConfig(lua: """
-                return {
+                inlay.config({
                   gaps = {
                     inner = {
                       horizontal = { true },
@@ -563,7 +563,7 @@ extension InlayTests {
                       },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result2.strErrors, [
@@ -575,11 +575,11 @@ extension InlayTests {
 
         @Test func testOnFocusChangedAsSingleStringAndAsList() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   onFocusChanged = 'focus left',
                   onModeChanged = { 'focus right', 'focus up' },
                   onFocusedMonitorChanged = 'focus down',
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -591,7 +591,7 @@ extension InlayTests {
 
         @Test func testOnFocusChangedTypeError() {
             let result = parseConfig(lua: """
-                return { onFocusChanged = 1 }
+                inlay.config({ onFocusChanged = 1 })
                 """,
             )
             assertEquals(
@@ -602,21 +602,21 @@ extension InlayTests {
 
         @Test func testParseDefaultRootContainerLayout() {
             let result = parseConfig(lua: """
-                return { defaultRootContainerLayout = 'tiles' }
+                inlay.config({ defaultRootContainerLayout = 'tiles' })
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerLayout, .tiles)
 
             let listResult = parseConfig(lua: """
-                return { defaultRootContainerLayout = 'list' }
+                inlay.config({ defaultRootContainerLayout = 'list' })
                 """,
             )
             assertEquals(listResult.errors, [])
             assertEquals(listResult.config.defaultRootContainerLayout, .tiles)
 
             let bad = parseConfig(lua: """
-                return { defaultRootContainerLayout = 'bogus' }
+                inlay.config({ defaultRootContainerLayout = 'bogus' })
                 """,
             )
             assertEquals(
@@ -627,14 +627,14 @@ extension InlayTests {
 
         @Test func testParseDefaultRootContainerOrientation() {
             let result = parseConfig(lua: """
-                return { defaultRootContainerOrientation = 'vertical' }
+                inlay.config({ defaultRootContainerOrientation = 'vertical' })
                 """,
             )
             assertEquals(result.errors, [])
             assertEquals(result.config.defaultRootContainerOrientation, .vertical)
 
             let bad = parseConfig(lua: """
-                return { defaultRootContainerOrientation = 'diagonal' }
+                inlay.config({ defaultRootContainerOrientation = 'diagonal' })
                 """,
             )
             assertEquals(
@@ -645,13 +645,13 @@ extension InlayTests {
 
         @Test func testTopLevelTypeIsNotTable() {
             // A config that doesn't return a table of keys isn't applied
-            assertFalse(parseConfig(lua: "return { 'a' }").allowReloadConfig)
+            assertFalse(parseConfig(lua: "inlay.config({ 'a' })").allowReloadConfig)
             assertFalse(parseConfig(lua: "return 'a'").allowReloadConfig)
         }
 
         @Test func testParseKeyMapping() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   keyMapping = {
                     keyNotationToKeyCode = { q = 'q', unicorn = 'u' },
                   },
@@ -660,7 +660,7 @@ extension InlayTests {
                       binding = { ['alt-unicorn'] = 'workspace wonderland' },
                     },
                   },
-                }
+                })
                 """,
             )
             assertEquals(result.errors, [])
@@ -672,11 +672,11 @@ extension InlayTests {
             assertEquals(result.config.modes[mainModeId]?.bindings, [binding.descriptionWithKeyCode: binding])
 
             let errors1 = parseConfig(lua: """
-                return {
+                inlay.config({
                   keyMapping = {
                     keyNotationToKeyCode = { q = 'qw', [' f'] = 'f' },
                   },
-                }
+                })
                 """,
             ).strErrors
             assertEquals(errors1, [
@@ -685,18 +685,18 @@ extension InlayTests {
             ])
 
             let dvorakResult = parseConfig(lua: """
-                return {
+                inlay.config({
                   keyMapping = { preset = 'dvorak' },
-                }
+                })
                 """,
             )
             assertEquals(dvorakResult.errors, [])
             assertEquals(dvorakResult.config.keyMapping, KeyMapping(preset: .dvorak, rawKeyNotationToKeyCode: [:]))
             assertEquals(dvorakResult.config.keyMapping.resolve()["quote"], .q)
             let colemakResult = parseConfig(lua: """
-                return {
+                inlay.config({
                   keyMapping = { preset = 'colemak' },
-                }
+                })
                 """,
             )
             assertEquals(colemakResult.errors, [])

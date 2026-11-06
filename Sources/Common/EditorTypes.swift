@@ -101,7 +101,6 @@ public enum EditorTypes {
             ---@meta
             -- The keys of the config of Inlay, for lua-language-server: autocompletion, their values and what
             -- they do. Made from config-reference.lua by scripts/build-app.sh: don't edit it.
-            -- In a module of the config that returns a part of it:  ---@type InlayConfig  before a local.
 
 
             """
@@ -141,23 +140,86 @@ public enum EditorTypes {
                 out += "\(variable)\(access) = nil\n\n"
             }
         }
-        out += """
-            ---@class inlay
-            inlay = {}
-
-            --- Puts tables of the config together: the tables of the same key are merged, the arrays (the window
-            --- rules) are put one after the other, and for anything else the last one wins
-            ---@param ... InlayConfig
-            ---@return InlayConfig
-            function inlay.merge(...) end
-
-            ---@param name string The name of a file of the config folder, without .lua
-            ---@return any
-            function require(name) end
-
-            """
+        out += functions
+        // 'true' and 'false' are words of Lua: inlay.dsp['true']() still works
+        let commands = CmdKind.allCases.map(\.rawValue).filter { !["true", "false"].contains($0) }.sorted()
+        out += "---@class inlay.dsp: { [string]: fun(...: any): string }\n"
+        for command in commands {
+            let name = command == "exec-and-forget" ? "exec" : command.replacingOccurrences(of: "-", with: "_")
+            out += "---@field \(name) fun(...: any): string '\(command) …'\n"
+        }
+        out += "inlay.dsp = {}\n"
         return out
     }
+
+    /// The functions of inlay. See: the prelude of LuaConfigLoader, and the header of config-reference.lua
+    private static let functions = """
+        ---@class inlay
+        inlay = {}
+
+        ---@class inlay.bind_options
+        ---@field mode? string The binding mode: 'main' without it
+
+        ---@alias inlay.command string|string[]
+
+        --- The keys of the config, in a table. Many calls are merged: the tables key by key, the lists one after the
+        --- other, and for anything else the last one wins
+        ---@param values InlayConfig
+        function inlay.config(values) end
+
+        --- The look of the borders and of the menu bar: the name of a theme, or a table
+        ---@param theme string|table
+        function inlay.theme(theme) end
+
+        --- A workspace. Yours replace the 7 of the built-in config
+        ---@param workspace InlayConfig.workspaces
+        function inlay.workspace(workspace) end
+
+        --- A key binding: the keys, and a command or a list of commands
+        ---@param keys string 'cmd-alt-h'
+        ---@param command inlay.command
+        ---@param options? inlay.bind_options
+        function inlay.bind(keys, command, options) end
+
+        --- Removes a key binding of the built-in config
+        ---@param keys string
+        ---@param options? inlay.bind_options
+        function inlay.unbind(keys, options) end
+
+        --- A window rule, or 'workspaces': the place of the rules of the apps of the workspaces
+        ---@param rule InlayConfig.onWindowDetected|'workspaces'
+        function inlay.window_rule(rule) end
+
+        --- Commands that run on an event. workspace_changed: a program and its arguments
+        ---@param event 'start'|'focus_changed'|'monitor_changed'|'mode_changed'|'workspace_changed'
+        ---@param commands inlay.command
+        function inlay.on(event, commands) end
+
+        --- A variable of the programs that Inlay starts. ${NAME} is replaced by the value of the variable
+        ---@param name string
+        ---@param value string
+        function inlay.env(name, value) end
+
+        --- A curve of your own for the animations
+        ---@param name string
+        ---@param points number[] { x1, y1, x2, y2 }
+        function inlay.curve(name, points) end
+
+        ---@class inlay.animation: InlayConfig.animations
+        ---@field leaf 'global'|'open'|'move'|'fullscreen'|'workspace'
+        ---@field curve? string
+        ---@field duration? integer
+
+        --- An animation: leaf, and its keys
+        ---@param animation inlay.animation
+        function inlay.animation(animation) end
+
+        ---@param name string A file of the config folder, without .lua: 'binds', 'conf.binds' for conf/binds.lua
+        ---@return any
+        function require(name) end
+
+
+        """
 
     private static func type(of entry: ConfigReference.Entry, _ reference: ConfigReference) -> String {
         if let free = freeFormTables[entry.path] { return free }

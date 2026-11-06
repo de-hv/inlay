@@ -33,14 +33,14 @@ extension InlayTests {
 
         @Test func testParseCurvesAndSteps() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   animations = {
                     curve = 'bounce',
                     open = { curve = 'overshot', duration = 220 },
                     workspace = { duration = 120 },
                     curves = { bounce = { 0.34, 1.56, 0.64, 1 } },
                   },
-                }
+                })
                 """)
             assertEquals(result.errors, [])
             let animations = result.config.animations
@@ -52,24 +52,24 @@ extension InlayTests {
             assertEquals(animations.effectiveDuration(.fullscreen), .milliseconds(220))
             assertEquals(animations.copy(\.enabled, false).effectiveDuration(.open), .zero)
             // The default: easeOutQuint
-            assertEquals(parseConfig(lua: "return {}").config.animations.effectiveCurve(.move), AnimationCurve.presets["quint"])
+            assertEquals(parseConfig(lua: "inlay.config({})").config.animations.effectiveCurve(.move), AnimationCurve.presets["quint"])
         }
 
         @Test func testCurveErrors() {
             assertEquals(
-                parseConfig(lua: "return { animations = { curve = 'wobble' } }").strErrors,
+                parseConfig(lua: "inlay.config({ animations = { curve = 'wobble' } })").strErrors,
                 ["[ERROR] animations.curve: Unknown curve 'wobble'. Possible values: ease, ease-in-out, ease-out, expo, linear, overshot, quick, quint, snappy, or a curve of [animations.curves]"],
             )
             assertEquals(
-                parseConfig(lua: "return { animations = { open = { curve = 'wobble' } } }").strErrors.count,
+                parseConfig(lua: "inlay.config({ animations = { open = { curve = 'wobble' } } })").strErrors.count,
                 1,
             )
             assertEquals(
-                parseConfig(lua: "return { animations = { curves = { bad = { 1.5, 0, 0.5, 1 } } } }").strErrors,
+                parseConfig(lua: "inlay.config({ animations = { curves = { bad = { 1.5, 0, 0.5, 1 } } } })").strErrors,
                 ["[ERROR] animations.curves.bad: x1 and x2 of a curve must be in [0, 1] range"],
             )
             assertEquals(
-                parseConfig(lua: "return { animations = { curves = { bad = { 0.5, 1 } } } }").strErrors,
+                parseConfig(lua: "inlay.config({ animations = { curves = { bad = { 0.5, 1 } } } })").strErrors,
                 ["[ERROR] animations.curves.bad: A curve is four numbers: [x1, y1, x2, y2]"],
             )
         }
@@ -79,9 +79,9 @@ extension InlayTests {
         /// [notifications] is gone: an old config still loads, with a warning. ('theme' is a key again: see ThemeConfigTest)
         @Test func testObsoleteTables() {
             let result = parseConfig(lua: """
-                return {
+                inlay.config({
                   notifications = { ['on-reload'] = 'diff' },
-                }
+                })
                 """)
             assertEquals(result.errors, [])
             assertEquals(result.strWarnings.count, 1, additionalMsg: result.strWarnings.joined(separator: "\n"))

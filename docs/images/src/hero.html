@@ -65,7 +65,10 @@
     <div class="side"><div>▾ dotfiles</div><div style="padding-left:28px">▾ inlay</div><div class="sel" style="padding-left:42px">inlay.lua</div><div style="padding-left:42px">binds.lua</div><div style="padding-left:42px">rules.lua</div><div style="padding-left:28px">▸ zsh</div><div style="padding-left:28px">▸ git</div><div style="padding-left:28px">README.md</div></div>
     <div class="ed"><div class="tabs"><span class="sel">inlay.lua</span><span>binds.lua</span></div>
 <div class="lua mono">
-return inlay.merge({
+require('binds')
+require('rules')
+
+inlay.config({
   startAtLogin = true,
   autoReloadConfig = true,
   persistentWorkspaces = { '1', '2', '3', '4', '5', '6' },
@@ -98,10 +101,7 @@ return inlay.merge({
     inactiveColor = '#8E8E9373',
     floatingColor = '#BF5AF2',
   },
-},
-  require('binds'),
-  require('rules')
-)
+})
 </div></div>
   </div></div></div>
 

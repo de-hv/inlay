@@ -132,7 +132,7 @@ extension InlayTests {
             let missing = directory.appending(path: "missing.lua")
             assertEquals(ConfigFiles.use(missing).errorOrNil, .notFound(missing))
             let broken = directory.appending(path: "broken.lua")
-            try "return { menuBar = { theme = 'bubbles' } }".write(to: broken, atomically: true, encoding: .utf8)
+            try "inlay.config({ menuBar = { theme = 'bubbles' } })".write(to: broken, atomically: true, encoding: .utf8)
             assertEquals(ConfigFiles.use(broken).okOrNil, nil)
             if case .invalidConfig(let errors) = ConfigFiles.use(broken).errorOrNil {
                 assertEquals(errors.count, 1)

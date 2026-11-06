@@ -15,6 +15,8 @@ public struct ConfigCmdArgs: CmdArgs, Equatable {
             "--json": trueBoolFlag(\.json),
             "--types": trueBoolFlag(\.types),
             "--config-path": trueBoolFlag(\.configPath),
+            "--files": trueBoolFlag(\.files),
+            "--file": singleValueSubArgParser(\.file, "<name>", Result.success),
             "--use": singleValueSubArgParser(\.pathToUse, "<path>", Result.success),
             "--unlink": trueBoolFlag(\.unlink),
             "--explain": ArgParser(\.explain) { input in
@@ -42,6 +44,10 @@ public struct ConfigCmdArgs: CmdArgs, Equatable {
     /// The .luarc.json of the config folder, for the autocompletion of the editor
     public var types: Bool = false
     public var configPath: Bool = false
+    /// The files that the config is made of: the ones of Inlay and the ones of the user
+    public var files: Bool = false
+    /// The text of one of them: 'builtin-config', 'themes/gruvbox', 'binds'
+    public var file: String? = nil
     /// A file whose text replaces the config, or a folder that ~/.config/inlay links to. The CLI makes it absolute
     public var pathToUse: String? = nil
     public var unlink: Bool = false
@@ -62,6 +68,10 @@ extension ConfigCmdArgs {
         /// The config in use. nil key: all of it
         case show(key: String?)
         case configPath
+        /// The files of the config in use
+        case files
+        /// The text of one file of the config: of Inlay, a theme, or of the user
+        case file(name: String)
         /// Changes the config: see ConfigFiles
         case use(path: String), unlink
         /// Answered from the config reference, without the server. nil key: the whole reference
@@ -77,6 +87,8 @@ extension ConfigCmdArgs {
             case nil: break
         }
         if configPath { return .configPath }
+        if files { return .files }
+        if let file { return .file(name: file) }
         if let pathToUse { return .use(path: pathToUse) }
         if unlink { return .unlink }
         if types { return .types }
@@ -89,7 +101,7 @@ extension ConfigCmdArgs {
     }
 }
 
-private let mandatoryFlags = "--show|--explain|--types|--config-path|--use|--unlink"
+private let mandatoryFlags = "--show|--files|--file|--explain|--types|--config-path|--use|--unlink"
 
 func parseConfigCmdArgs(_ args: StrArrSlice) -> ParsedCmd<ConfigCmdArgs> {
     parseSpecificCmdArgs(ConfigCmdArgs(commonState: .init(args)), args)
@@ -98,6 +110,8 @@ func parseConfigCmdArgs(_ args: StrArrSlice) -> ParsedCmd<ConfigCmdArgs> {
             var conflicting: Set<String> = []
             if raw.show != nil { conflicting.insert("--show") }
             if raw.configPath { conflicting.insert("--config-path") }
+            if raw.files { conflicting.insert("--files") }
+            if raw.file != nil { conflicting.insert("--file") }
             if raw.explain != nil { conflicting.insert("--explain") }
             if raw.pathToUse != nil { conflicting.insert("--use") }
             if raw.unlink { conflicting.insert("--unlink") }

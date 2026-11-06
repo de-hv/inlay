@@ -15,7 +15,7 @@ like the one above and all the animations, are drawings that follow the rules of
 
 ## Project status
 
-**Version 0.5.0, in its first round of real use.** The config is Lua since 0.3.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Your
+**Version 0.6.0, in its first round of real use.** The config is Lua since 0.3.0, made of calls like `inlay.config` and `inlay.bind` since 0.6.0 (see [Configuration](#configuration)), and the look of the borders and of the menu bar comes from a theme since 0.4.0 (see [Themes](#themes)). Your
 config goes over the built-in config of Inlay, so it only says what is yours, and `inlay config --show` prints
 the config in use (see [Configuration](#configuration)). Inlay is a fork of
 [AeroSpace](https://github.com/nikitabobko/AeroSpace) that builds without Xcode, with its own way of placing

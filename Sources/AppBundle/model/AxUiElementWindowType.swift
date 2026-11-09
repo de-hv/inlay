@@ -111,8 +111,11 @@ extension AxUiElementMock {
         }
 
         if windowLevel != .normalWindow &&
-            // Slowly roll out windowLevel for applications for which we have the appropriate dumps
-            (id == .slack || id == .chrome || id?.isFirefox == true || id == .braveBrowser || id == .screenstudio || id == .cleanshotx || id == .iterm2 || id == .outlook || id == .codex || id == .wisprFlow)
+            // Slowly roll out windowLevel for applications for which we have the appropriate dumps.
+            // Browsers: their Picture in Picture window is always on top (chrome_pip, brave_pip,
+            // microsoft_edge_pip, firefox_pip, zen_browser_pip). Managed, it would belong to a
+            // workspace and hide in a corner as soon as another workspace shows
+            (id?.isBrowser == true || id == .slack || id == .screenstudio || id == .cleanshotx || id == .iterm2 || id == .outlook || id == .codex || id == .wisprFlow)
         {
             return false
         }

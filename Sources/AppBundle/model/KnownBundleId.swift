@@ -30,6 +30,34 @@ enum KnownBundleId: String, Equatable {
     case mozillaFirefoxDeveloperEdition = "org.mozilla.firefoxdeveloperedition"
     case mozillaFirefoxNightly = "org.mozilla.nightly"
 
+    // Browsers on Chromium. Their Picture in Picture window is always on top
+    case ardia = "com.ardia.browser"
+    case arc = "company.thebrowser.Browser"
+    case dia = "company.thebrowser.dia"
+    case braveBrowserBeta = "com.brave.Browser.beta"
+    case braveBrowserNightly = "com.brave.Browser.nightly"
+    case chromeBeta = "com.google.Chrome.beta"
+    case chromeDev = "com.google.Chrome.dev"
+    case chromeCanary = "com.google.Chrome.canary"
+    case chromium = "org.chromium.Chromium"
+    case comet = "ai.perplexity.comet"
+    case edge = "com.microsoft.edgemac"
+    case edgeBeta = "com.microsoft.edgemac.Beta"
+    case edgeDev = "com.microsoft.edgemac.Dev"
+    case edgeCanary = "com.microsoft.edgemac.Canary"
+    case helium = "net.imput.helium"
+    case opera = "com.operasoftware.Opera"
+    case operaGX = "com.operasoftware.OperaGX"
+    case vivaldi = "com.vivaldi.Vivaldi"
+    case yandex = "ru.yandex.desktop.yandex-browser"
+
+    // Browsers on Firefox (Gecko)
+    case floorp = "one.ablaze.floorp"
+    case librewolf = "org.mozilla.librewolf"
+    case mullvadBrowser = "net.mullvad.mullvadbrowser"
+    case torBrowser = "org.torproject.torbrowser"
+    case waterfox = "net.waterfox.waterfox"
+
     case vscode = "com.microsoft.VSCode"
     case vscodium = "com.vscodium"
 
@@ -38,7 +66,26 @@ enum KnownBundleId: String, Equatable {
             || self == .mozillaFirefoxDeveloperEdition
             || self == .mozillaFirefoxNightly
             || self == .zenBrowser
+            || self == .floorp
+            || self == .librewolf
+            || self == .mullvadBrowser
+            || self == .torBrowser
+            || self == .waterfox
     }
+
+    var isChromium: Bool {
+        switch self {
+            case .chrome, .chromeBeta, .chromeDev, .chromeCanary, .chromium,
+                 .braveBrowser, .braveBrowserBeta, .braveBrowserNightly,
+                 .edge, .edgeBeta, .edgeDev, .edgeCanary,
+                 .ardia, .arc, .dia, .comet, .helium, .opera, .operaGX, .vivaldi, .yandex:
+                true
+            default: false
+        }
+    }
+
+    /// A browser whose Picture in Picture window is always on top: Inlay leaves it alone
+    var isBrowser: Bool { isChromium || isFirefox }
 
     var isVscode: Bool {
         self == .vscode || self == .vscodium

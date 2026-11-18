@@ -129,7 +129,7 @@ inlay.animation({ leaf = 'workspace',  curve = 'expo',  duration = 140 })    -- 
 inlay.config({
   menu_bar = {
     enabled            = true,
-    -- pills | chips | hypr | minimal | dots | underline | liquid | dms
+    -- pills | chips | hypr | minimal | dots
     theme              = 'hypr',
     dim_empty_workspaces = true,
     show_mode           = true,     -- the initial of the binding mode on the focused workspace

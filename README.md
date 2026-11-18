@@ -46,7 +46,7 @@ environment and with tests, not yet in real use. And for the latest one: the bin
 the focused workspace, the menu without icons, the config folder
 linked by `install.sh` and `inlay uninstall` removing the config. Also untried in real use: the border and the gap
 of a window alone in its workspace or in fullscreen (`borders.single_window`), and the themes taken from
-Hyprland setups (`dots`, `underline`, `liquid`, `hypr`): they are checked with tests and renders, including the
+Hyprland setups (`dots`, `hypr`): they are checked with tests and renders, including the
 frames of their animations. The same goes for the curves of the animations, `per_monitor`, undo, the export of the config, and the latest
 revision, which simplified the look: no palettes (every color is set on its own), no notice after a reload
 (the menu says when the config was reloaded last), and a menu of native items. Untried in real use too: the menu as a panel with
@@ -471,7 +471,7 @@ inlay config --file builtin-config   # one of them: builtin-config, themes/nord,
 inlay.config({
   menu_bar = {
     enabled = true,                -- Inlay · true|false
-    theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots|underline|liquid|dms
+    theme = 'hypr',                -- Inlay · pills|chips|hypr|minimal|dots
     per_monitor = true,             -- yours (inlay.lua:3) · true|false
     system_colors = true,           -- theme · true|false
     colors = {
@@ -562,7 +562,7 @@ key); `inlay config --show <key>` prints the value in use and where it comes fro
 -- Any key, alone or with others: the tables are merged key by key with the ones of Inlay
 inlay.config({
   start_at_login = true,
-  menu_bar = { theme = 'dms', per_monitor = true },
+  menu_bar = { theme = 'hypr', per_monitor = true },
   borders  = { width = 3, single_window = { gap = 4 } },
 })
 ```
@@ -639,7 +639,7 @@ inlay.config({
 | Key | Default | What it does |
 |---|---|---|
 | `menu_bar.enabled` | `true` | Shows the menu bar item |
-| `menu_bar.theme` | `'hypr'` | `pills` · `chips` · `hypr` · `minimal` · `dots` · `underline` · `liquid` · `dms`. See [Menu bar](#menu-bar) |
+| `menu_bar.theme` | `'hypr'` | `pills` · `chips` · `hypr` · `minimal` · `dots`. See [Menu bar](#menu-bar) |
 | `menu_bar.dim_empty_workspaces` | `true` | The workspaces without windows are fainter |
 | `menu_bar.show_mode` | `true` | The initial of the binding mode on the focused workspace, outside of `main` |
 | `menu_bar.per_monitor` | `false` | Groups the workspaces by monitor, and marks the one another monitor shows |
@@ -989,12 +989,12 @@ A curve that overshoots also resizes the window past its tile for a moment: some
 The menu bar item shows **all the workspaces** and marks the focused one (it does not distinguish monitors). It
 is configured in the `menu_bar` table of the config; `inlay config --explain menu_bar` documents it.
 
-<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: a ring around the focused workspace when it has a fullscreen window, a ring around the square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
+<p align="center"><img src="docs/images/menu-bar-states.png" alt="Real render of the menu bar item, enlarged, with callouts: workspace 2, the focused one, has a solid background; the workspaces with windows have a faint background; the empty workspace 6 is dimmed and has no background. On the right, four more states: the focused chip with its top right corner cut off when a fullscreen window covers another one, a triangle in place of the square for the same in the 'hypr' theme, a pause sign when Inlay is paused, and a warning triangle when the Accessibility permission is not granted yet" width="880"></p>
 
 | Key | Values | Default |
 |---|---|---|
 | `enabled` | `true`, `false` | `true` |
-| `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'`, `'underline'`, `'liquid'`, `'dms'` | `'liquid'` |
+| `theme` | `'pills'`, `'chips'`, `'hypr'`, `'minimal'`, `'dots'` | `'hypr'` |
 | `dim_empty_workspaces` | `true`, `false` | `true` |
 | `show_mode` | `true`, `false` | `true` |
 | `per_monitor` | `true`, `false` | `false` |
@@ -1005,7 +1005,7 @@ is configured in the `menu_bar` table of the config; `inlay config --explain men
 
 ```lua
 menu_bar = {
-  theme = 'liquid', -- 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots' | 'underline' | 'liquid' | 'dms'
+  theme = 'hypr', -- 'pills' | 'chips' | 'hypr' | 'minimal' | 'dots'
 },
 ```
 
@@ -1013,44 +1013,20 @@ menu_bar = {
 workspace 2 focused and 6 empty. Copy its line into `menu_bar`.
 
 <table>
-<tr><td valign="middle"><code>'liquid'</code><br><sub><b>the default</b>: a dot per workspace, and a drop with the name of the focused one</sub></td><td><img src="docs/images/themes/liquid.png" alt="Real render of the 'liquid' theme of the menu bar item, on a dark and on a light menu bar: the default: a dot per workspace, and a drop with the name of the focused one" width="560"></td></tr>
 <tr><td valign="middle"><code>'pills'</code><br><sub>round workspaces, and the focused one a wider pill</sub></td><td><img src="docs/images/themes/pills.png" alt="Real render of the 'pills' theme of the menu bar item, on a dark and on a light menu bar: round workspaces, and the focused one a wider pill" width="560"></td></tr>
 <tr><td valign="middle"><code>'chips'</code><br><sub>the workspaces alone, as rounded squares</sub></td><td><img src="docs/images/themes/chips.png" alt="Real render of the 'chips' theme of the menu bar item, on a dark and on a light menu bar: the workspaces alone, as rounded squares" width="560"></td></tr>
-<tr><td valign="middle"><code>'hypr'</code><br><sub>the names, and a square in place of the focused workspace</sub></td><td><img src="docs/images/themes/hypr.png" alt="Real render of the 'hypr' theme of the menu bar item, on a dark and on a light menu bar: the names, and a square in place of the focused workspace" width="560"></td></tr>
+<tr><td valign="middle"><code>'hypr'</code><br><sub><b>the default</b>: the names, and a square in place of the focused workspace</sub></td><td><img src="docs/images/themes/hypr.png" alt="Real render of the 'hypr' theme of the menu bar item, on a dark and on a light menu bar: the names, and a square in place of the focused workspace" width="560"></td></tr>
 <tr><td valign="middle"><code>'minimal'</code><br><sub>only the focused workspace</sub></td><td><img src="docs/images/themes/minimal.png" alt="Real render of the 'minimal' theme of the menu bar item, on a dark and on a light menu bar: only the focused workspace" width="560"></td></tr>
 <tr><td valign="middle"><code>'dots'</code><br><sub>a dot per workspace, a ring if it is empty, and the focused one a pill</sub></td><td><img src="docs/images/themes/dots.png" alt="Real render of the 'dots' theme of the menu bar item, on a dark and on a light menu bar: a dot per workspace, a ring if it is empty, and the focused one a pill" width="560"></td></tr>
-<tr><td valign="middle"><code>'underline'</code><br><sub>the names, and a bar under the focused one</sub></td><td><img src="docs/images/themes/underline.png" alt="Real render of the 'underline' theme of the menu bar item, on a dark and on a light menu bar: the names, and a bar under the focused one" width="560"></td></tr>
-<tr><td valign="middle"><code>'dms'</code><br><sub>round workspaces on a track, and the focused one a pill with its name</sub></td><td><img src="docs/images/themes/dms.png" alt="Real render of the 'dms' theme of the menu bar item, on a dark and on a light menu bar: round workspaces on a track, and the focused one a pill with its name" width="560"></td></tr>
 </table>
 
-When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). Some of
-the themes taken from Hyprland setups move in their own way: the pill of **`dots`** stretches on its way,
-like the page indicator of iOS; the bar of **`underline`** leaves by its leading edge, stretches towards the
-new workspace and then shrinks into it; and the drop of **`liquid`** flows to the new workspace with a trail
-behind it that catches up at the end. The pills of **`dms`** make room for each other, and the track follows
-them. With "Reduce motion" nothing slides.
+When the focus moves, the marker slides from the workspace it leaves to the new one (not in `minimal`). The
+pill of **`dots`** stretches on its way, like the page indicator of iOS. With "Reduce motion" nothing slides.
 
 **`hypr`** is the workspace indicator of the [Monitor Workspaces](https://github.com/vadim-su/omarchy-monitor-workspaces)
 plugin of the Omarchy bar: the names in slots of the same width, and a square in place of the focused one. It
 is made for `per_monitor`: a frame goes around the name of the workspace that another monitor shows, and a bolder
 line divides the monitors.
-
-**`dms`** is the workspace switcher of [Dank Material Shell](https://github.com/AvengeMedia/DankMaterialShell)
-(Quickshell, Material 3): small round workspaces on a tonal track, and the focused one a wider pill with its
-name. With `'auto'` colors it follows the menu bar like every theme; Material 3 colors suit it, and with
-`per_monitor` each monitor gets its own track instead of a line.
-
-```lua
-menu_bar = {
-  theme = 'dms',
-  colors = {
-    focused = '#D0BCFF', -- primary
-    occupied = '#CCC2DC', -- secondary
-    empty = '#938F99', -- outline, and the track at 16%
-    accent = '#EFB8C8', -- tertiary
-  },
-},
-```
 
 **`per_monitor`** groups the workspaces by the monitor they are on, from left to right, with a line between
 the monitors, and draws a hollow marker on the workspace that another monitor shows. With a single monitor it
@@ -1096,13 +1072,17 @@ menu_bar = {
 With `show_mode = true`, while the binding mode is not `main` (`resize`, `service`…), **the marker of the
 focused workspace carries the initial of the mode**, the way Aeromenu did it. In `chips` and `minimal` the
 initial takes the place of the name in the chip; in `hypr` the square grows from 8.5 to 14 pt to hold it.
-In `dots` the pill grows taller to hold it, in
-`underline` the initial takes the place of the name and in `liquid` the drop shows it.
+In `dots` the pill grows taller to hold it.
 Nothing is added next to the workspaces, so the item is exactly as wide in every mode and nothing in the menu
-bar moves. While a window of the workspace is fullscreen, a ring goes around the marker, which stays filled,
-in every theme. The key governs every theme.
+bar moves. The key governs every theme.
 
-<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim_empty_workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show_mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, a ring around the chip of the R" width="880"></p>
+While a window of the workspace is fullscreen and covers another one, **the marker changes its shape**, in
+the same place: the square of `hypr` becomes a triangle, the chip of `chips` and `minimal` loses its top right
+corner, and the pill of `pills` and `dots` gets pointed ends. A window alone in its workspace already fills
+the screen, so making it fullscreen changes nothing in the item. The marker of a binding mode keeps its shape,
+to hold the initial.
+
+<p align="center"><img src="docs/images/menu-bar-options.png" alt="Real render of the options of the menu bar item. dim_empty_workspaces: with true the empty workspace 6 is fainter, with false it only lacks the background. show_mode: the plain item with false or in the main mode; with true, in the resize mode, an R in the chip of the focused workspace in 'chips' and in 'minimal', and in a larger square in 'hypr', the item as wide as before; and the same with a fullscreen window, the chip of the R unchanged" width="880"></p>
 
 **`menu_bar.colors`**: a color is `'#RRGGBB'`, `'#RRGGBBAA'` or `'system-accent'`. `'auto'` is the color of
 the menu bar text (white on a dark bar, black on a light one). With everything set to `'auto'`, the

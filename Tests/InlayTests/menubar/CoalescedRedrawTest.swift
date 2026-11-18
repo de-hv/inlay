@@ -112,7 +112,7 @@ extension InlayTests {
             assertEquals(first, second)
 
             var other = key
-            other.state.config.theme = .hypr
+            other.state.config.theme = .chips
             #expect(key != other)
             #expect(try #require(MenuBarRenderer.image(other)?.tiffRepresentation) != first)
         }
@@ -133,7 +133,7 @@ extension InlayTests {
         }
 
         @Test func testFontsAndSizesAreCached() {
-            for font in [MenuBarFont.chipName, .squareName, .hyprName, .modeInitial, .chipModeInitial, .dmsName] {
+            for font in [MenuBarFont.chipName, .hyprName, .modeInitial, .chipModeInitial] {
                 #expect(font.nsFont === font.nsFont)
                 let size = MenuBarFont.size(of: "12", font)
                 assertEquals(MenuBarFont.size(of: "12", font), size)

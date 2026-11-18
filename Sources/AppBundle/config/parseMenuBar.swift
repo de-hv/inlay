@@ -3,7 +3,7 @@ import Common
 /// [menu_bar] table of the config
 struct MenuBarConfig: ConvenienceMutable, Equatable, Sendable {
     var enabled: Bool = true
-    var theme: MenuBarTheme = .liquid
+    var theme: MenuBarTheme = .hypr
     var dimEmptyWorkspaces: Bool = true
     var showMode: Bool = true
     var colors: MenuBarColors = MenuBarColors()
@@ -31,15 +31,6 @@ enum MenuBarTheme: String, CaseIterable, Equatable, Sendable {
     /// A dot per workspace, without names, and the focused one stretched into a pill: the page indicator of iOS,
     /// that many waybar setups copy
     case dots
-    /// The names, and a bar under the focused one that stretches towards the next one and catches up with it:
-    /// the border-bottom of the workspaces of waybar
-    case underline
-    /// A dot per workspace, and a drop over the focused one that flows to the next one leaving a trail behind:
-    /// the "gooey" effect of the bars made with eww, AGS or Quickshell
-    case liquid
-    /// Small round workspaces on a tonal track, and the focused one stretched into a pill with its name: the workspace
-    /// switcher of Dank Material Shell (Quickshell, Material 3)
-    case dms
 }
 
 extension MenuBarConfig {

@@ -11,7 +11,7 @@ extension InlayTests {
             assertEquals(result.errors, [])
             let menuBar = result.config.menuBar
             assertEquals(menuBar.enabled, true)
-            assertEquals(menuBar.theme, .liquid)
+            assertEquals(menuBar.theme, .hypr)
             assertEquals(menuBar.dimEmptyWorkspaces, true)
             assertEquals(menuBar.showMode, true)
             assertEquals(menuBar.colors, MenuBarColors(accent: .auto, focused: .auto, occupied: .auto, empty: .auto))
@@ -72,7 +72,7 @@ extension InlayTests {
         }
 
         @Test func testThemes() {
-            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots", "underline", "liquid", "dms"])
+            assertEquals(MenuBarTheme.allCases.map(\.rawValue), ["pills", "chips", "hypr", "minimal", "dots"])
             for theme in MenuBarTheme.allCases {
                 let result = parseConfig(lua: "inlay.config({ theme = {}, menu_bar = { theme = '\(theme.rawValue)' } })")
                 assertEquals(result.errors, [])
@@ -111,13 +111,13 @@ extension InlayTests {
         @Test func testErrors() {
             assertEquals(
                 parseConfig(lua: "inlay.config({ menu_bar = { theme = 'bubbles' } })").strErrors,
-                ["[ERROR] menu_bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
+                ["[ERROR] menu_bar.theme: Can't parse menu bar theme 'bubbles'. Possible values: (pills|chips|hypr|minimal|dots)"],
             )
             // The themes and the tables of the past are gone, with no compatibility
-            for theme in ["square", "glyphs", "labels", "segments", "capsule"] {
+            for theme in ["square", "glyphs", "labels", "segments", "capsule", "underline", "liquid", "dms"] {
                 assertEquals(
                     parseConfig(lua: "inlay.config({ menu_bar = { theme = '\(theme)' } })").strErrors,
-                    ["[ERROR] menu_bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots|underline|liquid|dms)"],
+                    ["[ERROR] menu_bar.theme: Can't parse menu bar theme '\(theme)'. Possible values: (pills|chips|hypr|minimal|dots)"],
                 )
             }
             assertEquals(parseConfig(lua: "inlay.config({ menu_bar = { labels = { ['1'] = 'Code' } } })").strErrors, ["[ERROR] menu_bar.labels: Unknown key"])

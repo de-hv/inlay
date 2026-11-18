@@ -56,10 +56,11 @@ extension InlayTests {
             assertEquals(snapshot.focusedWindow, .init(isFloating: false, isFullscreen: false))
             assertEquals(snapshot.isFocusedWorkspaceFullscreen, false)
 
+            // Alone in its workspace, the window already fills the screen: no fullscreen to show
             window.isFullscreen = true
             snapshot = MenuBarSnapshot.fromModel()
             assertEquals(snapshot.focusedWindow, .init(isFloating: false, isFullscreen: true))
-            assertEquals(snapshot.isFocusedWorkspaceFullscreen, true)
+            assertEquals(snapshot.isFocusedWorkspaceFullscreen, false)
 
             window.isFullscreen = false
             let floating = TestWindow.new(id: 2, parent: workspace.floatingWindowsContainer)
@@ -75,6 +76,19 @@ extension InlayTests {
             let snapshot = MenuBarSnapshot.fromModel()
             assertEquals(snapshot.focusedWindow?.isFullscreen, false)
             assertEquals(snapshot.isFocusedWorkspaceFullscreen, true)
+        }
+
+        /// The fullscreen window covers another one: that is what the item shows
+        @Test func testFullscreenOverAnotherWindow() {
+            let workspace = focus.workspace
+            let window = TestWindow.new(id: 1, parent: workspace.rootTilingContainer)
+            let other = TestWindow.new(id: 2, parent: workspace.rootTilingContainer)
+            assertEquals(window.focusWindow(), true)
+            window.isFullscreen = true
+            assertEquals(MenuBarSnapshot.fromModel().isFocusedWorkspaceFullscreen, true)
+            // The other one is of a hidden app: the fullscreen window is alone on the screen again
+            other.bind(to: workspace.macOsNativeHiddenAppsWindowsContainer, adaptiveWeight: 1, index: INDEX_BIND_LAST)
+            assertEquals(MenuBarSnapshot.fromModel().isFocusedWorkspaceFullscreen, false)
         }
 
         @Test func testTheSnapshotDoesNotChangeTheTree() {
@@ -122,10 +136,10 @@ extension InlayTests {
             assertEquals(published.last?.snapshot.workspaces.first?.isOccupied, true)
 
             // The config
-            config.menuBar.theme = .hypr
+            config.menuBar.theme = .chips
             publishUiState()
             assertEquals(published.count, 2)
-            assertEquals(published.last?.config.theme, .hypr)
+            assertEquals(published.last?.config.theme, .chips)
 
             // The mode publishes on its own, without waiting for the end of the session
             config.modes["resize"] = Mode(bindings: [:])

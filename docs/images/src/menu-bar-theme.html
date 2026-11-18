@@ -17,7 +17,7 @@
   <div class="pair"><div><img class="item" id="dark"></div><div><img class="item" id="light"></div></div>
 </div>
 <script>
-  const theme = new URLSearchParams(location.search).get('theme') || 'liquid';
+  const theme = new URLSearchParams(location.search).get('theme') || 'hypr';
   document.getElementById('name').textContent = `theme = '${theme}'`;
   document.getElementById('dark').src = `render/menu-bar-6x/${theme}-default-dark.png`;
   document.getElementById('light').src = `render/menu-bar-6x/${theme}-default-light.png`;

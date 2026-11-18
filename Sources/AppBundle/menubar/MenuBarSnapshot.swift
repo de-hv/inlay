@@ -35,7 +35,8 @@ struct MenuBarSnapshot: Equatable, Sendable {
     /// All the existing workspaces, in the order of the item. Their monitors are told apart only with 'per-monitor'
     var workspaces: [Workspace]
     var focusedWorkspace: String
-    /// One of the windows of the focused workspace is fullscreen
+    /// One of the windows of the focused workspace is fullscreen, and it shares the workspace with another window. A window
+    /// alone already fills the screen: making it fullscreen changes nothing worth showing
     var isFocusedWorkspaceFullscreen: Bool = false
     /// The binding mode. nil if the key bindings are off (Inlay is paused)
     var mode: String? = mainModeId
@@ -51,7 +52,8 @@ extension MenuBarSnapshot {
         let state = ServerState.shared
         let focus = focus
         let focusedWorkspace = focus.workspace
-        let windows = focusedWorkspace.allLeafWindowsRecursive
+        // The windows of hidden apps don't share the screen. Minimized windows aren't in a workspace
+        let windows = focusedWorkspace.allLeafWindowsRecursive.filter { !($0.parent is MacosHiddenAppsWindowsContainer) }
         let monitors = sortedMonitorInfos.map(\.monitorAppKitNsScreenScreensId)
         let status: Status = switch true {
             case state.axPermissionStatus != .granted: .needsAccessibility
@@ -73,7 +75,7 @@ extension MenuBarSnapshot {
                 )
             },
             focusedWorkspace: focusedWorkspace.name,
-            isFocusedWorkspaceFullscreen: windows.contains { $0.isFullscreen || $0.parent is MacosFullscreenWindowsContainer },
+            isFocusedWorkspaceFullscreen: windows.count > 1 && windows.contains { $0.isFullscreen || $0.parent is MacosFullscreenWindowsContainer },
             mode: activeMode,
             focusedWindow: focus.windowOrNil.map { FocusedWindow(isFloating: $0.isFloating, isFullscreen: $0.isFullscreen) },
         )

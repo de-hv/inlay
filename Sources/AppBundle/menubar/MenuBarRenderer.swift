@@ -9,11 +9,9 @@ extension MenuBarFont {
         typealias M = MenuBarMetrics
         return [
             .chipName: .monospacedDigitSystemFont(ofSize: M.chipFontSize, weight: .semibold),
-            .squareName: .monospacedDigitSystemFont(ofSize: M.workspaceFontSize, weight: .medium),
             .hyprName: .monospacedDigitSystemFont(ofSize: M.hyprFontSize, weight: .medium),
             .modeInitial: .systemFont(ofSize: M.modeSquareFontSize, weight: .heavy),
             .chipModeInitial: .systemFont(ofSize: M.chipModeFontSize, weight: .heavy),
-            .dmsName: .monospacedDigitSystemFont(ofSize: M.dmsFontSize, weight: .semibold),
         ]
     }()
 
@@ -99,10 +97,9 @@ enum MenuBarRenderer {
         func snap(_ rect: CGRect) -> CGRect {
             CGRect(x: (rect.minX * scale).rounded() / scale, y: (rect.minY * scale).rounded() / scale, width: rect.width, height: rect.height)
         }
-        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots, .dms].contains(layout.style) {
+        for index in layout.cells.indices where [MenuBarLayout.Style.chips, .dots].contains(layout.style) {
             layout.cells[index].frame = snap(layout.cells[index].frame)
         }
-        layout.tracks = layout.tracks.map(snap)
         if let marker = layout.marker {
             let frame = snap(marker.frame)
             layout.marker?.frame = frame
@@ -118,9 +115,6 @@ enum MenuBarRenderer {
             case .chips: drawChips(layout, palette, in: cg)
             case .hypr: drawHypr(layout, palette, in: cg)
             case .dots: drawDots(layout, palette, in: cg)
-            case .underline: drawUnderline(layout, palette, in: cg)
-            case .liquid: drawLiquid(layout, palette, in: cg)
-            case .dms: drawDms(layout, palette, in: cg)
         }
         // 'per_monitor'
         let separatorOpacity = layout.style == .hypr ? MenuBarMetrics.hyprSeparatorOpacity : MenuBarMetrics.emptyWorkspaceOpacity
@@ -146,19 +140,18 @@ enum MenuBarRenderer {
         drawMarkerOverNames(layout, palette, in: cg)
     }
 
-    /// The marker of the chips and of dms, filled, with the names of the workspaces cut out of it
+    /// The marker of the chips, filled, with the names of the workspaces cut out of it
     private static func drawMarkerOverNames(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
         typealias M = MenuBarMetrics
         guard let marker = layout.marker else { return }
-        let path = roundedRect(marker.frame, marker.cornerRadius)
-        // Clears the faint chip under the marker
-        cg.fill(path, .black, blendMode: .destinationOut)
-        drawHalo(marker, palette, in: cg)
+        // Clears the faint chip under the marker, the whole of it: the corner that a fullscreen window cuts off is empty
+        cg.fill(roundedRect(marker.frame, marker.cornerRadius), .black, blendMode: .destinationOut)
         if let initial = marker.initial {
             // A binding mode: its initial instead of the name of the workspace
             draw(marker, initial, palette, in: cg)
             return
         }
+        let path = markerPath(marker, layout.style)
         cg.fill(path, palette.focused)
         // The same row again, names only. Whatever part of it the marker covers is what the marker shows,
         // so the names stay put while the marker slides over them
@@ -175,22 +168,6 @@ enum MenuBarRenderer {
         cg.restoreGState()
     }
 
-    // MARK: - Dms
-
-    private static func drawDms(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        for track in layout.tracks {
-            cg.fill(roundedRect(track, track.height / 2), palette.track)
-        }
-        // The pills are cut out of the track first: in a template image their opacity would add up with its own.
-        // Only the focused one has a name, in the marker
-        for cell in layout.cells {
-            let path = roundedRect(cell.frame, layout.cornerRadius)
-            cg.fill(path, .black, blendMode: .destinationOut)
-            cg.fill(path, palette.nameColor(of: cell))
-        }
-        drawMarkerOverNames(layout, palette, in: cg)
-    }
-
     // MARK: - Hypr
 
     private static func drawHypr(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
@@ -204,11 +181,10 @@ enum MenuBarRenderer {
         // Clears what is under the marker first: mid-slide it passes over the names in between
         let clearance = marker.frame.insetBy(dx: -M.markerClearance, dy: -M.markerClearance)
         cg.fill(roundedRect(clearance, marker.cornerRadius + M.markerClearance), .black, blendMode: .destinationOut)
-        drawHalo(marker, palette, in: cg)
         if let initial = marker.initial {
             draw(marker, initial, palette, in: cg)
         } else {
-            cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.focused)
+            cg.fill(markerPath(marker, layout.style), palette.focused)
         }
     }
 
@@ -227,85 +203,12 @@ enum MenuBarRenderer {
             }
         }
         guard let marker = layout.marker else { return }
-        let path = roundedRect(marker.frame, marker.cornerRadius)
-        cg.fill(path, .black, blendMode: .destinationOut)
-        drawHalo(marker, palette, in: cg)
+        cg.fill(roundedRect(marker.frame, marker.cornerRadius), .black, blendMode: .destinationOut)
         if let initial = marker.initial {
             draw(marker, initial, palette, in: cg)
         } else {
-            cg.fill(path, palette.focused)
+            cg.fill(markerPath(marker, layout.style), palette.focused)
         }
-    }
-
-    // MARK: - Underline
-
-    private static func drawUnderline(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        let initial = layout.marker?.initial
-        for cell in layout.cells {
-            // The focused name takes the color of the bar. In a binding mode the initial takes its place
-            draw(cell.name, palette.nameColor(of: cell).opacity(1 - cell.focus))
-            if initial == nil, cell.focus > 0 {
-                draw(cell.name, palette.focused.opacity(cell.focus))
-            }
-        }
-        guard let marker = layout.marker else { return }
-        let color = initial == nil ? palette.focused : palette.modeMarker
-        if let initial { draw(initial, color) }
-        drawHalo(marker, palette, in: cg)
-        cg.fill(roundedRect(marker.frame, marker.cornerRadius), color)
-    }
-
-    // MARK: - Liquid
-
-    private static func drawLiquid(_ layout: MenuBarLayout, _ palette: MenuBarPalette, in cg: CGContext) {
-        typealias M = MenuBarMetrics
-        for cell in layout.cells {
-            let side = cell.isOccupied ? M.liquidOccupiedDot : M.liquidEmptyDot
-            let dot = CGRect(x: cell.frame.midX - side / 2, y: cell.frame.midY - side / 2, width: side, height: side)
-            cg.fill(roundedRect(dot, side / 2), palette.nameColor(of: cell))
-        }
-        guard let marker = layout.marker else { return }
-        let color = marker.initial == nil ? palette.focused : palette.modeMarker
-        // Filled one by one: where they overlap, the winding of one path could cut a hole in another
-        let drop = dropPaths(marker.frame, trail: marker.trail)
-        for path in drop { cg.fill(path, .black, blendMode: .destinationOut) }
-        drawHalo(marker, palette, in: cg)
-        for path in drop { cg.fill(path, color) }
-        if let initial = marker.initial {
-            cg.fill(roundedRect(marker.frame, marker.cornerRadius), palette.modeMarker)
-            switch palette.modeInitial {
-                case let color?: draw(initial, color)
-                case nil: draw(initial, .black, blendMode: .destinationOut)
-            }
-            return
-        }
-        // The drop carries the name of the workspace it is closest to: the one it leaves, then the one it reaches
-        guard let cell = layout.cells.max(by: { $0.focus < $1.focus }) else { return }
-        var name = cell.name
-        name.frame.origin = CGPoint(x: marker.frame.midX - name.frame.width / 2, y: marker.frame.midY - name.frame.height / 2)
-        switch palette.focusedName {
-            case let color?: draw(name, color)
-            case nil: draw(name, .black, blendMode: .destinationOut)
-        }
-    }
-
-    /// The drop and its trail joined by a neck that gets thinner as they move apart: two circles on the same line,
-    /// and the curves between their tops and between their bottoms
-    private static func dropPaths(_ drop: CGRect, trail: CGRect?) -> [CGPath] {
-        guard let trail else { return [CGPath(ellipseIn: drop, transform: nil)] }
-        let path = CGMutablePath()
-        let (dropRadius, trailRadius) = (drop.height / 2, trail.height / 2)
-        let distance = abs(drop.midX - trail.midX)
-        let neck = trailRadius * max(0.35, 1 - distance / (4 * drop.width))
-        let midX = (drop.midX + trail.midX) / 2
-        let y = drop.midY
-        path.move(to: CGPoint(x: trail.midX, y: y - trailRadius))
-        path.addQuadCurve(to: CGPoint(x: drop.midX, y: y - dropRadius), control: CGPoint(x: midX, y: y - neck))
-        path.addLine(to: CGPoint(x: drop.midX, y: y + dropRadius))
-        path.addQuadCurve(to: CGPoint(x: trail.midX, y: y + trailRadius), control: CGPoint(x: midX, y: y + neck))
-        path.closeSubpath()
-        return [CGPath(ellipseIn: trail, transform: nil), path, CGPath(ellipseIn: drop, transform: nil)]
     }
 
     // MARK: - Binding mode
@@ -322,12 +225,64 @@ enum MenuBarRenderer {
 
     // MARK: - Fullscreen
 
-    /// The ring around the marker of a workspace with a fullscreen window, in the color of the marker
-    private static func drawHalo(_ marker: MenuBarLayout.Marker, _ palette: MenuBarPalette, in cg: CGContext) {
+    /// The shape of the focus marker. With a fullscreen window in the workspace it changes, in place of a ring around it:
+    /// hypr gets a triangle, a chip loses its top right corner, and a pill (pills, dots) gets pointed ends.
+    /// The marker of a binding mode keeps its shape: the initial needs the room
+    static func markerPath(_ marker: MenuBarLayout.Marker, _ style: MenuBarLayout.Style) -> CGPath {
         typealias M = MenuBarMetrics
-        guard let halo = marker.halo else { return }
-        let color = marker.initial == nil ? palette.focused : palette.modeMarker
-        cg.strokeBorder(halo.frame, halo.cornerRadius, lineWidth: M.haloWidth, color.opacity(M.haloOpacity))
+        let rect = marker.frame
+        guard marker.isFullscreen, marker.initial == nil else { return roundedRect(rect, marker.cornerRadius) }
+        let isPill = style == .dots || marker.cornerRadius >= rect.height / 2 - 0.01
+        switch style {
+            case .hypr:
+                let side = M.fullscreenTriangleSide
+                let height = side * 3.squareRoot() / 2
+                let top = rect.midY - height / 2
+                return roundedPolygon([
+                    CGPoint(x: rect.midX, y: top),
+                    CGPoint(x: rect.midX + side / 2, y: top + height),
+                    CGPoint(x: rect.midX - side / 2, y: top + height),
+                ], radius: M.fullscreenCornerRadius)
+            case .chips, .dots:
+                if !isPill { return notchedChip(rect, marker.cornerRadius) }
+                let half = rect.height / 2
+                return roundedPolygon([
+                    CGPoint(x: rect.minX + half, y: rect.minY),
+                    CGPoint(x: rect.maxX - half, y: rect.minY),
+                    CGPoint(x: rect.maxX, y: rect.midY),
+                    CGPoint(x: rect.maxX - half, y: rect.maxY),
+                    CGPoint(x: rect.minX + half, y: rect.maxY),
+                    CGPoint(x: rect.minX, y: rect.midY),
+                ], radius: M.fullscreenCornerRadius)
+        }
+    }
+
+    /// The corners of a rounded rect, but the top right one cut off
+    private static func notchedChip(_ rect: CGRect, _ radius: CGFloat) -> CGPath {
+        typealias M = MenuBarMetrics
+        let notch = min(M.fullscreenChipNotch, rect.width / 2, rect.height / 2)
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: rect.minX + radius, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - notch, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + notch))
+        path.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.maxY), radius: radius)
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.maxY), tangent2End: CGPoint(x: rect.minX, y: rect.minY), radius: radius)
+        path.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY), radius: radius)
+        path.closeSubpath()
+        return path
+    }
+
+    /// A closed polygon with its corners rounded
+    private static func roundedPolygon(_ points: [CGPoint], radius: CGFloat) -> CGPath {
+        let path = CGMutablePath()
+        guard let last = points.last, let first = points.first else { return path }
+        // Starts halfway along the last side, so that every corner gets its arc
+        path.move(to: CGPoint(x: (last.x + first.x) / 2, y: (last.y + first.y) / 2))
+        for (index, corner) in points.enumerated() {
+            path.addArc(tangent1End: corner, tangent2End: points[(index + 1) % points.count], radius: radius)
+        }
+        path.closeSubpath()
+        return path
     }
 
     // MARK: - Placeholder

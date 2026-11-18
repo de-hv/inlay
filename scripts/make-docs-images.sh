@@ -79,7 +79,7 @@ for page in "${PAGES[@]}"; do
 done
 
 # --- PNG: a theme of the menu bar item per image, for the gallery of the README ---
-THEMES=(liquid pills chips hypr minimal dots underline dms)
+THEMES=(hypr pills chips minimal dots)
 mkdir -p "$OUT/themes"
 for theme in "${THEMES[@]}"; do
   wanted "theme-$theme" || wanted themes || continue

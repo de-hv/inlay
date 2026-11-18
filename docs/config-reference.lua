@@ -378,7 +378,7 @@ inlay.config({
     enabled = true,
 
     -- The shape of the item. All the existing workspaces are shown, and the focused one is marked
-    -- Possible values: pills|chips|hypr|minimal|dots|underline|liquid|dms
+    -- Possible values: pills|chips|hypr|minimal|dots
     -- - pills.   Round workspaces, and the focused one a wider pill, like the workspace indicator of GNOME
     --            and of many Hyprland setups. Otherwise like chips.
     -- - chips.   The workspaces alone. The ones with windows have a faint background,
@@ -391,18 +391,12 @@ inlay.config({
     -- - dots.    A dot per workspace, without names: a disc if it has windows, a ring if it is empty.
     --            The focused one is a pill, which stretches on its way to the next one, like the page
     --            indicator of iOS. In a binding mode the pill grows to hold the initial of the mode.
-    -- - underline. The names of the workspaces, and a bar under the focused one, in its color. The bar
-    --            stretches towards the next workspace and then shrinks into it. In a binding mode the
-    --            initial of the mode takes the place of the name.
-    -- - liquid.  A dot per workspace, and a drop with the name of the focused one, which flows to the next
-    --            workspace leaving a trail behind. In a binding mode the drop shows the initial of the mode.
-    -- - dms.     Small round workspaces on a faint track, and the focused one a wider pill with its name,
-    --            like the workspace switcher of Dank Material Shell. With 'per_monitor' each monitor gets its
-    --            own track. Material 3 colors suit it:
-    --            focused = '#D0BCFF', occupied = '#CCC2DC', empty = '#938F99', accent = '#EFB8C8'
+    -- While a fullscreen window covers another one, the marker changes its shape: a triangle in 'hypr', a chip
+    -- with its top right corner cut off in 'chips' and 'minimal', a pill with pointed ends in 'pills' and 'dots'.
+    -- A window alone in its workspace changes nothing
     -- ('chips-icons', a theme of a previous version, is accepted with a warning and treated as 'chips')
-    -- Fallback value (if you omit the key): theme = 'liquid'
-    theme = 'liquid',
+    -- Fallback value (if you omit the key): theme = 'hypr'
+    theme = 'hypr',
 
     -- Not a key of Inlay anymore: the menu bar item doesn't show the icons of the apps. The key is accepted
     -- with a warning and ignored, so that a config written for a previous version still loads. Drop it from your config
@@ -414,15 +408,14 @@ inlay.config({
     dim_empty_workspaces = true,
 
     -- Show the binding mode when it isn't 'main': its initial ('R' for 'resize') on the marker of the focused
-    -- workspace. In 'chips', 'pills', 'minimal', 'underline', 'liquid' and 'dms' the initial takes the place of the name; in
+    -- workspace. In 'chips', 'pills' and 'minimal' the initial takes the place of the name; in
     -- 'hypr' and 'dots' the marker grows to hold it. The item keeps its width: nothing moves when the mode changes
     -- Possible values: true|false
     -- Fallback value (if you omit the key): show_mode = true
     show_mode = true,
 
     -- Group the workspaces by monitor, from left to right, with a line between the monitors, and draw a hollow
-    -- marker on the workspace that another monitor shows ('hypr': a frame around its name; 'dms': a track per monitor
-    -- instead of the line). With one monitor it changes nothing
+    -- marker on the workspace that another monitor shows ('hypr': a frame around its name). With one monitor it changes nothing
     -- Possible values: true|false
     -- Fallback value (if you omit the key): per_monitor = false
     per_monitor = false,

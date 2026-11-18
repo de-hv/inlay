@@ -116,11 +116,7 @@ inlay.config({
     --   'hypr'         Nombres sin fondo en huecos del mismo ancho y un cuadrado en
     --                  lugar del enfocado (lleva la inicial del modo si no es main).
     --   'minimal'      Solo el workspace enfocado.
-    --   'liquid'       Un punto por workspace y una gota con el nombre del enfocado,
-    --                  que fluye al siguiente dejando una estela.
-    --   'dms'          Workspaces redondos sobre una pista tenue y el enfocado una
-    --                  píldora con su nombre, como Dank Material Shell.
-    theme = 'liquid', -- defecto: 'liquid'
+    theme = 'hypr', -- defecto: 'hypr'
 
     -- Dibujar más tenues los workspaces sin ventanas.             (defecto: true)
     dim_empty_workspaces = true,

@@ -143,7 +143,7 @@ extension InlayTests {
                 assertEquals(types.contains("InlayConfig_borders.\(key) = nil"), true, additionalMsg: key)
             }
             assertTrue(types.contains("---@type boolean?\nInlayConfig_menu_bar.per_monitor = nil"))
-            assertTrue(types.contains("---@type 'pills'|'chips'|'hypr'|'minimal'|'dots'|'underline'|'liquid'|'dms'?\nInlayConfig_menu_bar.theme = nil"))
+            assertTrue(types.contains("---@type 'pills'|'chips'|'hypr'|'minimal'|'dots'?\nInlayConfig_menu_bar.theme = nil"))
             assertTrue(types.contains("---@type integer?\nInlayConfig_borders.width = nil"))
             assertTrue(types.contains("---@class InlayConfig.workspaces"))
             assertTrue(types.contains("function inlay.bind(keys, command, options) end"))

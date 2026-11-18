@@ -18,8 +18,6 @@ struct MenuBarPalette: Equatable, Sendable {
     var modeMarker: Rgba
     /// The initial of the binding mode. nil: it is cut out of the marker
     var modeInitial: Rgba?
-    /// The dms theme: the capsule behind the workspaces, a faint 'empty'
-    var track: Rgba
 
     /// - Parameter needsColor: the marker shows the initial of the binding mode. See: MenuBarLayout.needsColor
     /// - Parameter allowsTemplate: false to get the colors of the menu bar text baked in, for an image that isn't
@@ -40,8 +38,8 @@ struct MenuBarPalette: Equatable, Sendable {
         let base: Rgba = isTemplate || !isDarkBar ? .black : .white
         func fixed(_ color: ConfigColor) -> Rgba? { color == .auto ? nil : color.resolve(auto: base, systemAccent: systemAccent) }
 
-        // The names of the hypr and underline styles have no background to stand out from, so they aren't faded
-        let nameOpacity = style == .hypr || style == .underline ? 1 : M.chipNameOpacity
+        // The names of the hypr style have no background to stand out from, so they aren't faded
+        let nameOpacity = style == .hypr ? 1 : M.chipNameOpacity
         let occupiedName = fixed(colors.occupied) ?? base.opacity(nameOpacity)
         let accent = fixed(colors.accent)
         let focused = fixed(colors.focused) ?? base
@@ -58,7 +56,6 @@ struct MenuBarPalette: Equatable, Sendable {
             modeMarker: accent ?? focused,
             // White, like the system does over the accent color, unless the accent is too light for it
             modeInitial: accent.map { $0.luminance > 0.6 ? .black : .white } ?? focusedName,
-            track: fixed(colors.empty)?.opacity(M.chipColorOpacity) ?? base.opacity(M.chipOpacity),
         )
     }
 

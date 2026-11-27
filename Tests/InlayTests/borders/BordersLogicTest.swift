@@ -148,7 +148,7 @@ extension InlayTests {
             typealias Panel = BorderStacking.Panel
             // Front to back. 900 and 901 are the panels of the windows 10 and 20
             let glued = [50, 900, 10, 60, 901, 20]
-            let panels = [Panel(windowId: 10, panelNumber: 900, isVisible: true), Panel(windowId: 20, panelNumber: 901, isVisible: true)]
+            let panels = [Panel(windowId: 10, panelNumber: 900, isVisible: true, below: false), Panel(windowId: 20, panelNumber: 901, isVisible: true, below: false)]
             assertEquals(BorderStacking.plan(order: glued, panels: panels), [])
             // The window 20 was raised: its panel stayed behind
             assertEquals(BorderStacking.plan(order: [20, 50, 900, 10, 60, 901], panels: panels), [.orderAbove(windowId: 20)])
@@ -159,9 +159,27 @@ extension InlayTests {
             // The window isn't on the screen: another Space, minimized, closed
             assertEquals(BorderStacking.plan(order: [50, 900, 901, 20], panels: panels), [.hide(windowId: 10)])
             // A new panel isn't on the screen yet
-            let new = [Panel(windowId: 10, panelNumber: 900, isVisible: false), Panel(windowId: 30, panelNumber: 902, isVisible: false)]
+            let new = [Panel(windowId: 10, panelNumber: 900, isVisible: false, below: false), Panel(windowId: 30, panelNumber: 902, isVisible: false, below: false)]
             assertEquals(BorderStacking.plan(order: [50, 10], panels: new), [.orderAbove(windowId: 10)])
             assertEquals(BorderStacking.plan(order: [], panels: new), [])
+
+            // The ring is outside the window: the panel goes right below it. 900 and 901 are below 10 and 20
+            let below = [Panel(windowId: 10, panelNumber: 900, isVisible: true, below: true), Panel(windowId: 20, panelNumber: 901, isVisible: true, below: true)]
+            // A popover of the window 10 is above it, and so above its panel
+            assertEquals(BorderStacking.plan(order: [50, 10, 900, 60, 20, 901], panels: below), [])
+            assertEquals(BorderStacking.plan(order: [70, 10, 900, 20, 901], panels: below), [])
+            // The window 20 was raised: its panel stayed behind
+            assertEquals(BorderStacking.plan(order: [20, 10, 900, 901], panels: below), [.orderBelow(windowId: 20)])
+            // The panel is above its window
+            assertEquals(BorderStacking.plan(order: [900, 10, 901, 20], panels: below), [.orderBelow(windowId: 10), .orderBelow(windowId: 20)])
+            // A new panel isn't on the screen yet
+            let newBelow = [Panel(windowId: 10, panelNumber: 900, isVisible: false, below: true)]
+            assertEquals(BorderStacking.plan(order: [50, 10], panels: newBelow), [.orderBelow(windowId: 10)])
+            // The window isn't on the screen
+            assertEquals(BorderStacking.plan(order: [50, 20, 901], panels: below), [.hide(windowId: 10)])
+            // The corners became square (config reload): a panel right below its window has to go above
+            let squared = [Panel(windowId: 10, panelNumber: 900, isVisible: true, below: false)]
+            assertEquals(BorderStacking.plan(order: [10, 900], panels: squared), [.orderAbove(windowId: 10)])
         }
 
         // MARK: - Correction

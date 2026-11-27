@@ -4,9 +4,12 @@ import Common
 /// Shows the borders of the windows. It is driven by the model: publishUiState calls `refresh`, the controller compares
 /// the new snapshot with the borders on the screen, and creates, moves, recolors or destroys only what has changed.
 ///
-/// Z order. A border is a panel of Inlay in the normal window level, ordered right above the window it decorates with
-/// `NSWindow.order(.above, relativeTo:)`. The window server accepts the number of a window of another app there, so
-/// a floating window of another app covers the borders of the windows behind it. The window server doesn't keep
+/// Z order. A border is a panel of Inlay in the normal window level, ordered next to the window it decorates with
+/// `NSWindow.order(_:relativeTo:)`. The window server accepts the number of a window of another app there, so
+/// a floating window of another app covers the borders of the windows behind it. When the ring is entirely outside
+/// the window, the panel goes right below it: whatever the app puts above its window (popovers, child windows, menus)
+/// is above the border too, and the border never crosses it. When the ring paints over the rounded corners of the
+/// window (square corners), the panel has to go right above it. The window server doesn't keep
 /// the two windows together: when the window is raised, the panel stays where it was. That's why the order is checked
 /// (one cheap call, `NSWindow.windowNumbers`) on every refresh, and fixed only for the panels that are out of place.
 ///
@@ -139,12 +142,22 @@ final class BordersController {
         if panels.isEmpty { return }
         DebugStats.count("borders.restack.check")
         let order = (NSWindow.windowNumbers(options: [.allApplications]) ?? []).map(\.intValue)
-        let state = panels.map { BorderStacking.Panel(windowId: $0.key, panelNumber: $0.value.windowNumber, isVisible: $0.value.isVisible) }
+        let state = panels.map {
+            BorderStacking.Panel(
+                windowId: $0.key,
+                panelNumber: $0.value.windowNumber,
+                isVisible: $0.value.isVisible,
+                below: $0.value.geometry?.squareCorners == false,
+            )
+        }
         for op in BorderStacking.plan(order: order, panels: state) {
             switch op {
                 case .orderAbove(let windowId):
                     DebugStats.count("borders.restack.order-above")
                     panels[windowId]?.order(.above, relativeTo: Int(windowId))
+                case .orderBelow(let windowId):
+                    DebugStats.count("borders.restack.order-below")
+                    panels[windowId]?.order(.below, relativeTo: Int(windowId))
                 case .hide(let windowId):
                     DebugStats.count("borders.restack.hide")
                     panels[windowId]?.orderOut(nil)

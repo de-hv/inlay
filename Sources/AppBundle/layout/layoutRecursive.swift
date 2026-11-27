@@ -103,6 +103,16 @@ extension TreeNode {
     }
 }
 
+extension CGPoint {
+    /// Moves the top left corner of a window of this size, the least possible, so that the window fits in the rect
+    fileprivate func clamped(size: CGSize, in rect: Rect) -> CGPoint {
+        CGPoint(
+            x: x.coerce(in: rect.minX ... max(rect.minX, rect.maxX - size.width)),
+            y: y.coerce(in: rect.minY ... max(rect.minY, rect.maxY - size.height)),
+        )
+    }
+}
+
 private struct LayoutContext {
     let workspace: Workspace
     let resolvedGaps: ResolvedGaps
@@ -132,11 +142,20 @@ extension Window {
 
             let windowWidth = windowRect.width
             let windowHeight = windowRect.height
-            newX = newX.coerce(in: workspaceRect.minX ... max(workspaceRect.minX, workspaceRect.maxX - windowWidth))
-            newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
+            let origin = CGPoint(x: newX, y: newY).clamped(size: windowRect.size, in: workspaceRect)
 
-            setAxFrame(CGPoint(x: newX, y: newY), nil)
-            lastKnownFloatingRect = Rect(topLeftX: newX, topLeftY: newY, width: windowWidth, height: windowHeight)
+            setAxFrame(origin, nil)
+            lastKnownFloatingRect = Rect(topLeftX: origin.x, topLeftY: origin.y, width: windowWidth, height: windowHeight)
+        } else if let windowRect, windowId != currentlyManipulatedWithMouseWindowId, !isHiddenInCorner,
+                  !monitorInfos.contains(where: { $0.rect.contains(windowRect.center) })
+        {
+            // The center is outside every screen: the window was left in the corner where the windows of a hidden workspace
+            // go, or an app opened it next to a sibling that is hidden there, or it was a popup that became a window.
+            // Nothing else brings it back. A window that the user put partly off the screen is left alone
+            let workspaceRect = workspace.workspaceMonitor.visibleRect
+            let origin = windowRect.topLeftCorner.clamped(size: windowRect.size, in: workspaceRect)
+            setAxFrame(origin, nil)
+            lastKnownFloatingRect = Rect(topLeftX: origin.x, topLeftY: origin.y, width: windowRect.width, height: windowRect.height)
         }
         if isFullscreen {
             lastKnownFloatingRect = nil

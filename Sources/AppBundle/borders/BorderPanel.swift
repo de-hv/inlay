@@ -18,7 +18,7 @@ final class BorderPanel: NSPanel {
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         isFloatingPanel = false
-        // The normal level, the same one as the windows it decorates: the panel is ordered right above its window.
+        // The normal level, the same one as the windows it decorates: the panel is ordered right next to its window.
         // See: BorderStacking
         level = .normal
         // transient: hidden in Mission Control, and not a window of its own in the Spaces

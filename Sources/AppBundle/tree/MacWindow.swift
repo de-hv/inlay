@@ -184,8 +184,11 @@ final class MacWindow: Window {
                 newY = newY.coerce(in: workspaceRect.minY ... max(workspaceRect.minY, workspaceRect.maxY - windowHeight))
 
                 setAxFrame(CGPoint(x: newX, y: newY), nil)
-            case .macosNativeFullscreenWindow, .macosNativeHiddenAppWindow, .macosNativeMinimizedWindow,
-                 .macosPopupWindow, .tiling, .rootTilingContainer, .shimContainerRelation: break
+            case .tiling, .rootTilingContainer, .shimContainerRelation: break
+            // Not laid out by Inlay right now, so the window can't be moved back yet. The flag stays: if the window
+            // becomes floating again (the app is unhidden, the popup is promoted to a window), the next refresh finds
+            // it here and brings it back. Clearing the flag would leave it stuck in the corner for good
+            case .macosNativeFullscreenWindow, .macosNativeHiddenAppWindow, .macosNativeMinimizedWindow, .macosPopupWindow: return
         }
 
         self.prevUnhiddenProportionalPositionInsideWorkspaceRect = nil

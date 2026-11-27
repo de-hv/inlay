@@ -56,11 +56,16 @@ enum BorderStacking {
         /// The window number of the panel of the border
         var panelNumber: Int
         var isVisible: Bool
+        /// The ring is entirely outside the window: the panel goes right below it. Otherwise (square corners) the ring
+        /// paints over the rounded corners of the window, and the panel goes right above it
+        var below: Bool
     }
 
     enum Op: Equatable, Sendable {
         /// Put the panel right above its window, showing it if needed
         case orderAbove(windowId: UInt32)
+        /// Put the panel right below its window, showing it if needed
+        case orderBelow(windowId: UInt32)
         /// The window isn't on the screen (another Space, minimized, gone): its border must not be either
         case hide(windowId: UInt32)
     }
@@ -76,8 +81,10 @@ enum BorderStacking {
                 if panel.isVisible { result.append(.hide(windowId: panel.windowId)) }
                 continue
             }
-            if !panel.isVisible || index[panel.panelNumber] != target - 1 {
-                result.append(.orderAbove(windowId: panel.windowId))
+            // The order is front to back: right above the window is the index before it
+            let expected = panel.below ? target + 1 : target - 1
+            if !panel.isVisible || index[panel.panelNumber] != expected {
+                result.append(panel.below ? .orderBelow(windowId: panel.windowId) : .orderAbove(windowId: panel.windowId))
             }
         }
         return result
